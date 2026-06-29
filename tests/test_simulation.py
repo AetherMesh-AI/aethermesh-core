@@ -144,6 +144,22 @@ class LocalSimulationTests(unittest.TestCase):
             [["echo"], ["text_stats"]],
         )
 
+    def test_text_embed_flows_through_simulation_and_validation_accounting(self) -> None:
+        jobs = [
+            Job(
+                job_id="embed-1",
+                job_type="text_embed",
+                payload={"text": "alpha beta beta", "dimensions": 4},
+            )
+        ]
+
+        result = run_local_simulation(["node-a"], jobs).to_dict()
+
+        self.assertEqual(result["assignments"], [{"job_id": "embed-1", "node_id": "node-a"}])
+        self.assertEqual(result["results"][0]["output"]["vector"], [0, 2, 1, 0])
+        self.assertEqual(result["validations"], [{"job_id": "embed-1", "result_job_id": "embed-1", "valid": True, "reason": "ok"}])
+        self.assertEqual(result["totals"]["contribution_units"], 1)
+
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
         calls: list[str] = []
         original_process_inbox = LocalNodeService.process_inbox
@@ -244,7 +260,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -253,7 +269,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-b",
                     "status": "offline",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -262,7 +278,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-c",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,

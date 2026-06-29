@@ -31,6 +31,14 @@
         "text": "AetherMesh prepares local text chunks for future AI processing.",
         "max_chars": 24
       }
+    },
+    {
+      "job_id": "text-embed-1",
+      "job_type": "text_embed",
+      "payload": {
+        "text": "AetherMesh nodes prepare deterministic local feature vectors.",
+        "dimensions": 8
+      }
     }
   ]
 }

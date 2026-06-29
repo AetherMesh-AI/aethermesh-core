@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import Counter
 from typing import Any
@@ -16,6 +17,7 @@ class LocalRunner:
     SUPPORTED_TEXT_STATS_JOB_TYPE = "text_stats"
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"
     SUPPORTED_TEXT_CHUNK_JOB_TYPE = "text_chunk"
+    SUPPORTED_TEXT_EMBED_JOB_TYPE = "text_embed"
 
     def __init__(self, identity: NodeIdentity) -> None:
         self.identity = identity
@@ -95,6 +97,27 @@ class LocalRunner:
                 contribution_units=1,
             )
 
+        if job.job_type == self.SUPPORTED_TEXT_EMBED_JOB_TYPE:
+            try:
+                output = build_text_embed_output(job.payload)
+            except ValueError as exc:
+                return JobResult(
+                    job_id=job.job_id,
+                    node_id=self.identity.node_id,
+                    status="failed",
+                    output=None,
+                    error=str(exc),
+                    contribution_units=0,
+                )
+            return JobResult(
+                job_id=job.job_id,
+                node_id=self.identity.node_id,
+                status="completed",
+                output=output,
+                error=None,
+                contribution_units=1,
+            )
+
         return JobResult(
             job_id=job.job_id,
             node_id=self.identity.node_id,
@@ -122,6 +145,9 @@ KEYWORD_EXTRACT_STOPWORDS = frozenset(
     {"a", "an", "and", "are", "as", "for", "in", "is", "of", "on", "or", "the", "to", "with"}
 )
 _KEYWORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+TEXT_EMBED_DEFAULT_DIMENSIONS = 8
+TEXT_EMBED_MIN_DIMENSIONS = 2
+TEXT_EMBED_MAX_DIMENSIONS = 64
 
 
 def build_keyword_extract_output(payload: dict[str, Any]) -> dict[str, object]:
@@ -157,6 +183,41 @@ def build_keyword_extract_output(payload: dict[str, Any]) -> dict[str, object]:
         ],
         "unique_terms": len(counts),
         "total_terms": len(tokens),
+    }
+
+
+def build_text_embed_output(payload: dict[str, Any]) -> dict[str, object]:
+    """Build deterministic prototype feature counts for a local ``text_embed`` job."""
+
+    text = payload.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("text_embed payload requires non-empty string field: text")
+
+    dimensions = payload.get("dimensions", TEXT_EMBED_DEFAULT_DIMENSIONS)
+    if (
+        not isinstance(dimensions, int)
+        or isinstance(dimensions, bool)
+        or dimensions < TEXT_EMBED_MIN_DIMENSIONS
+        or dimensions > TEXT_EMBED_MAX_DIMENSIONS
+    ):
+        raise ValueError(
+            "text_embed payload requires integer field: "
+            f"dimensions between {TEXT_EMBED_MIN_DIMENSIONS} and {TEXT_EMBED_MAX_DIMENSIONS}"
+        )
+
+    tokens = _KEYWORD_TOKEN_PATTERN.findall(text.lower())
+    counts = Counter(tokens)
+    vector = [0] * dimensions
+    for token in tokens:
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        bucket = int.from_bytes(digest[:8], "big") % dimensions
+        vector[bucket] += 1
+
+    return {
+        "dimensions": dimensions,
+        "token_count": len(tokens),
+        "unique_terms": len(counts),
+        "vector": vector,
     }
 
 

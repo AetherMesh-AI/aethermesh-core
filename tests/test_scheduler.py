@@ -57,12 +57,13 @@ class LocalSchedulerTests(unittest.TestCase):
                 Job(job_id="echo-1", job_type="echo"),
                 Job(job_id="keyword-1", job_type="keyword_extract"),
                 Job(job_id="chunk-1", job_type="text_chunk"),
+                Job(job_id="embed-1", job_type="text_embed"),
                 Job(job_id="stats-1", job_type="text_stats"),
             ]
         )
         self.assertEqual(
             [assignment.node_id for assignment in assignments],
-            ["node-a", "node-a", "node-a", "node-a"],
+            ["node-a", "node-a", "node-a", "node-a", "node-a"],
         )
 
     def test_skips_offline_nodes_even_when_capable(self) -> None:
@@ -135,6 +136,18 @@ class LocalSchedulerTests(unittest.TestCase):
 
         self.assertEqual(assignments[0].to_dict(), {"job_id": "chunk-1", "node_id": "node-b"})
 
+    def test_routes_text_embed_by_declared_capability(self) -> None:
+        scheduler = LocalScheduler(
+            [
+                ScheduledNode("node-a", capabilities=("echo", "text_stats")),
+                ScheduledNode("node-b", capabilities=("text_embed",)),
+            ]
+        )
+
+        assignments = scheduler.assign_jobs([Job(job_id="embed-1", job_type="text_embed")])
+
+        self.assertEqual(assignments[0].to_dict(), {"job_id": "embed-1", "node_id": "node-b"})
+
     def test_returns_empty_assignments_when_no_jobs(self) -> None:
         scheduler = LocalScheduler([])
 
@@ -154,9 +167,9 @@ class LocalSchedulerTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            NoAvailableNodesError, "job_id=stats-1 job_type=text_stats"
+            NoAvailableNodesError, "job_id=embed-1 job_type=text_embed"
         ):
-            scheduler.assign_jobs([Job(job_id="stats-1", job_type="text_stats")])
+            scheduler.assign_jobs([Job(job_id="embed-1", job_type="text_embed")])
 
     def test_accepts_plain_node_ids_as_available_nodes(self) -> None:
         scheduler = LocalScheduler(["node-a"])
