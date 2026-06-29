@@ -21,6 +21,11 @@ from aethermesh_core.ledger import (
     load_ledger_document,
     save_ledger_document,
 )
+from aethermesh_core.local_transport import (
+    LocalTransportError,
+    load_local_inbox,
+    materialize_local_inboxes,
+)
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
@@ -171,9 +176,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to an existing version 1 local message log.",
     )
 
+    materialize = subcommands.add_parser(
+        "materialize-local-inboxes",
+        help="Materialize addressed message-log entries into file-backed local inboxes.",
+    )
+    materialize.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to a version 1 local dispatch/message log.",
+    )
+    materialize.add_argument(
+        "--transport-dir",
+        required=True,
+        help="Directory where per-node local transport inboxes should be written.",
+    )
+
     inbox = subcommands.add_parser(
         "process-local-inbox",
-        help="Replay a local message log and process one node's assigned inbox work.",
+        help="Replay a local message log or local transport inbox for one node's work.",
     )
     inbox.add_argument(
         "--node-id",
@@ -182,8 +202,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     inbox.add_argument(
         "--message-log-path",
-        required=True,
+        default=None,
         help="Path to a version 1 local message log produced by run-local-batch.",
+    )
+    inbox.add_argument(
+        "--transport-dir",
+        default=None,
+        help="Read this node's file-backed local transport inbox instead of a message log.",
     )
     inbox.add_argument(
         "--ledger-path",
@@ -515,16 +540,20 @@ def _node_artifact_filename(node_id: str) -> str:
 def process_local_inbox(
     *,
     node_id: str,
-    message_log_path: str,
+    message_log_path: str | None = None,
+    transport_dir: str | None = None,
     ledger_path: str | None = None,
     output_message_log_path: str | None = None,
     node_state_path: str | None = None,
 ) -> dict[str, object]:
-    """Replay a saved local message log and process one node inbox."""
+    """Replay a saved local message log or local transport inbox for one node."""
 
+    if (message_log_path is None) == (transport_dir is None):
+        raise ValueError("provide exactly one of --message-log-path or --transport-dir")
     payload, _inbox_result = _process_local_inbox(
         node_id=node_id,
         message_log_path=message_log_path,
+        transport_dir=transport_dir,
         ledger_path=ledger_path,
         output_message_log_path=output_message_log_path,
         node_state_path=node_state_path,
@@ -535,19 +564,29 @@ def process_local_inbox(
 def _process_local_inbox(
     *,
     node_id: str,
-    message_log_path: str,
+    message_log_path: str | None = None,
+    transport_dir: str | None = None,
     ledger_path: str | None = None,
     output_message_log_path: str | None = None,
     node_state_path: str | None = None,
 ) -> tuple[dict[str, object], InboxProcessResult]:
-    """Replay a saved local message log and return payload plus structured result."""
+    """Replay saved local messages and return payload plus structured result."""
 
+    if (message_log_path is None) == (transport_dir is None):
+        raise ValueError("provide exactly one of --message-log-path or --transport-dir")
     node_state = (
         load_node_processing_state(node_state_path, expected_node_id=node_id)
         if node_state_path is not None
         else None
     )
-    messages = load_message_log_messages(message_log_path)
+    if transport_dir is not None:
+        messages = load_local_inbox(transport_dir=transport_dir, node_id=node_id)
+        source_message_path = str(Path(transport_dir) / "inboxes" / f"{_node_artifact_filename(node_id)}.json")
+    else:
+        if message_log_path is None:
+            raise ValueError("message log path is required")
+        messages = load_message_log_messages(message_log_path)
+        source_message_path = message_log_path
     ledger, extra_fields = (
         load_ledger_document(ledger_path)
         if ledger_path is not None
@@ -578,7 +617,7 @@ def _process_local_inbox(
             replayed_messages=messages,
             emitted_messages=emitted_messages,
             node_id=node_id,
-            source_message_log_path=message_log_path,
+            source_message_log_path=source_message_path,
             ledger_path=ledger_path,
             processed_assignment_count=len(inbox_result.processed),
             ignored_message_ids=list(inbox_result.ignored_message_ids),
@@ -776,17 +815,31 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(payload, sort_keys=True))
         return 0
 
+    if args.command == "materialize-local-inboxes":
+        try:
+            payload = materialize_local_inboxes(
+                message_log_path=args.message_log_path,
+                transport_dir=args.transport_dir,
+            )
+        except (MessageLogPersistenceError, LocalTransportError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
     if args.command == "process-local-inbox":
         try:
             payload = process_local_inbox(
                 node_id=args.node_id,
                 message_log_path=args.message_log_path,
+                transport_dir=args.transport_dir,
                 ledger_path=args.ledger_path,
                 output_message_log_path=args.output_message_log_path,
                 node_state_path=args.node_state_path,
             )
         except (
             MessageLogPersistenceError,
+            LocalTransportError,
             LedgerPersistenceError,
             NodeStatePersistenceError,
             ValueError,
