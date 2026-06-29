@@ -41,9 +41,9 @@ Avoid:
 
 ## Current status
 
-The repository currently contains project direction and architecture notes. It does not yet contain a runnable node, package manifest, test runner, or network implementation.
+The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes a package manifest, a simple node identity model, an in-memory echo job runner, a CLI demo command, and unit tests.
 
-The next meaningful step is to make the project runnable with a minimal local node model or validation path. That first runnable slice should demonstrate real behavior without trying to solve networking, distributed coordination, rewards, or production security all at once.
+The next meaningful step is to strengthen the local node model and validation path without trying to solve networking, distributed coordination, rewards, or production security all at once.
 
 ## Near-term build direction
 
