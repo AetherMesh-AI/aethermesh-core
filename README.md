@@ -88,6 +88,14 @@ The demo is local-only. It creates an in-memory node identity, executes the buil
 
 To also print a local in-memory contribution summary for the demo result, add `--include-ledger`. This preserves the default single-result JSON output unless the ledger summary is explicitly requested. Ledger credit is recorded through the same local validation gate and the extended output includes the validation outcome.
 
+To opt in to local JSON-backed contribution persistence for the demo, pass `--ledger-path`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh" --ledger-path ./local-ledger.json
+```
+
+When enabled, the demo loads the ledger file if it exists, treats a missing file as an empty ledger, records one validated demo result, writes the updated JSON with a temp-file-and-replace path, and prints the validation result plus the persisted per-node summary. This is intentionally local-only storage for development and auditability; it is not networking, rewards, or a production database layer.
+
 ## Architecture
 
 See [docs/architecture.md](docs/architecture.md) for the current architecture direction.

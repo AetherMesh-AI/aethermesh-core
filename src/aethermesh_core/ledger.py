@@ -1,8 +1,12 @@
-"""In-memory contribution ledger for local job results."""
+"""Contribution ledger helpers for local job results."""
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 from aethermesh_core.models import JobResult
@@ -22,6 +26,27 @@ class ContributionRecord:
         """Serialize the record into a JSON-compatible dictionary."""
 
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "ContributionRecord":
+        """Deserialize one JSON-compatible contribution record."""
+
+        _require_record_field(payload, "node_id", str)
+        _require_record_field(payload, "job_id", str)
+        _require_record_field(payload, "status", str)
+        _require_record_field(payload, "contribution_units", int)
+        message = payload.get("message")
+        if message is not None and not isinstance(message, str):
+            raise LedgerPersistenceError(
+                "ledger record field 'message' must be a string or null"
+            )
+        return cls(
+            node_id=payload["node_id"],
+            job_id=payload["job_id"],
+            status=payload["status"],
+            contribution_units=payload["contribution_units"],
+            message=message,
+        )
 
 
 @dataclass(frozen=True)
@@ -43,8 +68,8 @@ class ContributionSummary:
 class ContributionLedger:
     """Small in-memory ledger for prototype contribution accounting."""
 
-    def __init__(self) -> None:
-        self._records: list[ContributionRecord] = []
+    def __init__(self, records: list[ContributionRecord] | None = None) -> None:
+        self._records = list(records) if records is not None else []
 
     def record(self, result: JobResult) -> ContributionRecord:
         """Record one result and return its local contribution record.
@@ -82,6 +107,89 @@ class ContributionLedger:
             ),
         )
 
+    def to_document(self, extra_fields: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Serialize the ledger into the small local JSON file shape."""
+
+        document = dict(extra_fields) if extra_fields is not None else {}
+        document["version"] = 1
+        document["records"] = [record.to_dict() for record in self._records]
+        return document
+
+    @classmethod
+    def from_document(cls, document: dict[str, Any]) -> "ContributionLedger":
+        """Deserialize a ledger from the local JSON file shape."""
+
+        version = document.get("version")
+        if version != 1:
+            raise LedgerPersistenceError("ledger JSON must contain version 1")
+        records = document.get("records")
+        if not isinstance(records, list):
+            raise LedgerPersistenceError("ledger JSON field 'records' must be a list")
+        return cls([_record_from_json_value(record) for record in records])
+
+
+class LedgerPersistenceError(ValueError):
+    """Raised when a local ledger JSON file cannot be safely loaded or saved."""
+
+
+def load_ledger_document(path: str | Path) -> tuple[ContributionLedger, dict[str, Any]]:
+    """Load a JSON-backed local ledger, treating a missing file as empty.
+
+    The returned metadata contains unknown top-level fields so callers can write
+    them back without introducing a migration layer.
+    """
+
+    ledger_path = Path(path)
+    if not ledger_path.exists():
+        return ContributionLedger(), {}
+
+    try:
+        with ledger_path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise LedgerPersistenceError(f"ledger JSON is malformed: {exc.msg}") from exc
+    except OSError as exc:
+        raise LedgerPersistenceError(f"could not read ledger file: {exc}") from exc
+
+    if not isinstance(document, dict):
+        raise LedgerPersistenceError("ledger JSON must be an object")
+    ledger = ContributionLedger.from_document(document)
+    extras = {
+        key: value for key, value in document.items() if key not in {"version", "records"}
+    }
+    return ledger, extras
+
+
+def save_ledger_document(
+    path: str | Path,
+    ledger: ContributionLedger,
+    extra_fields: dict[str, Any] | None = None,
+) -> None:
+    """Write a JSON-backed local ledger via temp-file then atomic replace."""
+
+    ledger_path = Path(path)
+    parent = ledger_path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    document = ledger.to_document(extra_fields)
+    temp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=parent,
+            prefix=f".{ledger_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_name = handle.name
+            json.dump(document, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+        os.replace(temp_name, ledger_path)
+    except OSError as exc:
+        if temp_name is not None:
+            _remove_temp_file(temp_name)
+        raise LedgerPersistenceError(f"could not write ledger file: {exc}") from exc
+
 
 def _accounted_units(result: JobResult) -> int:
     if result.status != "completed":
@@ -99,3 +207,26 @@ def _string_output(output: Any) -> str | None:
     if isinstance(output, str):
         return output
     return str(output)
+
+
+def _require_record_field(
+    payload: dict[str, Any], field_name: str, expected_type: type
+) -> None:
+    value = payload.get(field_name)
+    if not isinstance(value, expected_type) or isinstance(value, bool):
+        raise LedgerPersistenceError(
+            f"ledger record field '{field_name}' must be {expected_type.__name__}"
+        )
+
+
+def _record_from_json_value(value: Any) -> ContributionRecord:
+    if not isinstance(value, dict):
+        raise LedgerPersistenceError("ledger records must be objects")
+    return ContributionRecord.from_dict(value)
+
+
+def _remove_temp_file(path: str) -> None:
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        return

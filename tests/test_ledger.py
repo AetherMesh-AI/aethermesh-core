@@ -1,6 +1,15 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from aethermesh_core.ledger import ContributionLedger
+from aethermesh_core.ledger import (
+    ContributionLedger,
+    ContributionRecord,
+    LedgerPersistenceError,
+    load_ledger_document,
+    save_ledger_document,
+)
 from aethermesh_core.models import JobResult
 
 
@@ -134,6 +143,74 @@ class ContributionLedgerTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "contribution_units must be an integer"):
             ledger.record(result)
+
+    def test_contribution_record_round_trips_through_json_dict(self) -> None:
+        record = ContributionRecord(
+            node_id="node-a",
+            job_id="job-1",
+            status="completed",
+            contribution_units=1,
+            message="hello mesh",
+        )
+
+        decoded = ContributionRecord.from_dict(json.loads(json.dumps(record.to_dict())))
+
+        self.assertEqual(decoded, record)
+
+    def test_missing_json_ledger_loads_as_empty(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+
+            ledger, extra_fields = load_ledger_document(ledger_path)
+
+        self.assertEqual(extra_fields, {})
+        self.assertEqual(ledger.summary_for_node("node-a").total_result_count, 0)
+
+    def test_json_ledger_appends_and_persists_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger = ContributionLedger()
+            ledger.record(
+                JobResult(
+                    job_id="job-1",
+                    node_id="node-a",
+                    status="completed",
+                    output="hello mesh",
+                    error=None,
+                    contribution_units=1,
+                )
+            )
+            save_ledger_document(ledger_path, ledger, {"future_field": {"kept": True}})
+
+            loaded, extra_fields = load_ledger_document(ledger_path)
+            loaded.record(
+                JobResult(
+                    job_id="job-2",
+                    node_id="node-a",
+                    status="failed",
+                    output=None,
+                    error="boom",
+                    contribution_units=5,
+                )
+            )
+            save_ledger_document(ledger_path, loaded, extra_fields)
+            reloaded, reloaded_extras = load_ledger_document(ledger_path)
+
+        summary = reloaded.summary_for_node("node-a")
+        self.assertEqual(reloaded_extras, {"future_field": {"kept": True}})
+        self.assertEqual(summary.total_result_count, 2)
+        self.assertEqual(summary.failed_job_count, 1)
+        self.assertEqual(summary.total_contribution_units, 1)
+
+    def test_malformed_json_ledger_raises_clear_error_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger_path.write_text("{not json", encoding="utf-8")
+
+            with self.assertRaisesRegex(LedgerPersistenceError, "malformed"):
+                load_ledger_document(ledger_path)
+
+            self.assertEqual(ledger_path.read_text(encoding="utf-8"), "{not json")
 
 
 if __name__ == "__main__":
