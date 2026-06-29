@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from aethermesh_core.job_manifest import ManifestError, load_job_manifest
+from aethermesh_core.scheduler import NodeStatus
 
 
 class JobManifestTests(unittest.TestCase):
@@ -28,6 +29,10 @@ class JobManifestTests(unittest.TestCase):
         )
 
         self.assertEqual(batch.node_ids, ["local-node-a", "local-node-b"])
+        self.assertEqual(
+            [node.status for node in batch.nodes],
+            [NodeStatus.AVAILABLE, NodeStatus.AVAILABLE],
+        )
         self.assertEqual(batch.jobs[0].job_id, "echo-1")
         self.assertEqual(batch.jobs[0].job_type, "echo")
         self.assertEqual(batch.jobs[0].payload, {"message": "hello mesh"})
@@ -43,6 +48,25 @@ class JobManifestTests(unittest.TestCase):
         )
 
         self.assertEqual(batch.jobs[0].payload, {})
+
+    def test_loads_mixed_string_and_object_nodes_with_statuses(self) -> None:
+        batch = self._load(
+            {
+                "version": 1,
+                "nodes": [
+                    "local-node-a",
+                    {"node_id": "local-node-b", "status": "offline"},
+                    {"node_id": "local-node-c"},
+                ],
+                "jobs": [self._job()],
+            }
+        )
+
+        self.assertEqual(batch.node_ids, ["local-node-a", "local-node-b", "local-node-c"])
+        self.assertEqual(
+            [node.status for node in batch.nodes],
+            [NodeStatus.AVAILABLE, NodeStatus.OFFLINE, NodeStatus.AVAILABLE],
+        )
 
     def test_malformed_json_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -66,6 +90,53 @@ class JobManifestTests(unittest.TestCase):
                 {
                     "version": 1,
                     "nodes": ["local-node-a", "local-node-a"],
+                    "jobs": [self._job()],
+                }
+            )
+
+    def test_duplicate_nodes_are_rejected_across_mixed_entries(self) -> None:
+        with self.assertRaisesRegex(ManifestError, "duplicate node id: local-node-a"):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": [
+                        "local-node-a",
+                        {"node_id": "local-node-a", "status": "offline"},
+                    ],
+                    "jobs": [self._job()],
+                }
+            )
+
+    def test_invalid_node_object_is_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            ManifestError, "nodes\\[0\\].node_id must be a non-empty string"
+        ):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": [{"status": "available"}],
+                    "jobs": [self._job()],
+                }
+            )
+
+    def test_unknown_node_status_is_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            ManifestError, "nodes\\[0\\].status must be one of: available, offline"
+        ):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": [{"node_id": "local-node-a", "status": "busy"}],
+                    "jobs": [self._job()],
+                }
+            )
+
+    def test_non_string_node_status_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ManifestError, "nodes\\[0\\].status must be a string"):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": [{"node_id": "local-node-a", "status": False}],
                     "jobs": [self._job()],
                 }
             )

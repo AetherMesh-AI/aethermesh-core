@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -9,7 +10,7 @@ from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
-from aethermesh_core.scheduler import JobAssignment, LocalScheduler
+from aethermesh_core.scheduler import JobAssignment, LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.validation import ValidationResult, validate_job_result
 
 
@@ -26,6 +27,7 @@ class LocalSimulationResult:
     validations: list[ValidationResult]
     messages: list[MeshMessage]
     summaries: list[dict[str, Any]]
+    node_roster: list[dict[str, int | str]]
     validation_summary: dict[str, int]
     totals: dict[str, int]
     accounted_results: list[JobResult]
@@ -45,12 +47,15 @@ class LocalSimulationResult:
             "validations": [validation.to_dict() for validation in self.validations],
             "messages": [message.to_dict() for message in self.messages],
             "summaries": self.summaries,
+            "node_roster": self.node_roster,
             "validation_summary": self.validation_summary,
             "totals": self.totals,
         }
 
 
-def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulationResult:
+def run_local_simulation(
+    node_ids: Sequence[str | ScheduledNode], jobs: list[Job]
+) -> LocalSimulationResult:
     """Run local jobs across local node identities using scheduler assignment.
 
     This is intentionally local-only and in-memory: no networking, persistence,
@@ -60,11 +65,13 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
     if not node_ids:
         raise ValueError("node_ids must contain at least one node")
 
+    nodes = [_coerce_simulation_node(node) for node in node_ids]
+    ordered_node_ids = [node.node_id for node in nodes]
     ledger = ContributionLedger()
     runners = {
-        node_id: LocalRunner(NodeIdentity(node_id=node_id)) for node_id in node_ids
+        node.node_id: LocalRunner(NodeIdentity(node_id=node.node_id)) for node in nodes
     }
-    scheduler = LocalScheduler(node_ids)
+    scheduler = LocalScheduler(nodes)
     assignments = scheduler.assign_jobs(job.job_id for job in jobs)
     results: list[JobResult] = []
     accounted_results: list[JobResult] = []
@@ -129,19 +136,26 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
             )
         )
 
-    summaries = [_summary_to_simulation_dict(ledger, node_id) for node_id in node_ids]
+    summaries = [
+        _summary_to_simulation_dict(ledger, node_id) for node_id in ordered_node_ids
+    ]
+    node_roster = [
+        _node_roster_entry(node, assignments, summaries[index])
+        for index, node in enumerate(nodes)
+    ]
     completed_jobs = sum(1 for result in results if result.status == "completed")
     failed_jobs = sum(1 for result in results if result.status == "failed")
     validation_summary = _validation_summary(validations)
     contribution_units = sum(int(summary["contribution_units"]) for summary in summaries)
 
     return LocalSimulationResult(
-        nodes=list(node_ids),
+        nodes=ordered_node_ids,
         assignments=assignments,
         results=results,
         validations=validations,
         messages=messages,
         summaries=summaries,
+        node_roster=node_roster,
         validation_summary=validation_summary,
         totals={
             "nodes": len(node_ids),
@@ -156,6 +170,25 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
         },
         accounted_results=accounted_results,
     )
+
+
+def _coerce_simulation_node(node: str | ScheduledNode) -> ScheduledNode:
+    if isinstance(node, ScheduledNode):
+        return node
+    return ScheduledNode(node_id=node, status=NodeStatus.AVAILABLE)
+
+
+def _node_roster_entry(
+    node: ScheduledNode,
+    assignments: list[JobAssignment],
+    summary: dict[str, Any],
+) -> dict[str, int | str]:
+    return {
+        "node_id": node.node_id,
+        "status": node.status.value,
+        "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node.node_id),
+        "contribution_units": int(summary["contribution_units"]),
+    }
 
 
 def _simulation_message(

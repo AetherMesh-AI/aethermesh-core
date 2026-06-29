@@ -131,7 +131,7 @@ def run_local_batch(
     """Run a local simulation from a validated JSON manifest."""
 
     batch = load_job_manifest(manifest_path)
-    simulation = run_local_simulation(node_ids=batch.node_ids, jobs=batch.jobs)
+    simulation = run_local_simulation(node_ids=batch.nodes, jobs=batch.jobs)
     result = simulation.to_dict()
     unsupported_count = int(result["validation_summary"]["unsupported"])
     if unsupported_count:

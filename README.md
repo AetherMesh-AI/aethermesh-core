@@ -82,12 +82,16 @@ Run a custom local job batch from a versioned JSON manifest:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-batch --manifest examples/local-batch.json
 ```
 
-A minimal manifest lists ordered local node IDs and ordered jobs:
+A minimal manifest lists ordered local node IDs and ordered jobs. Node entries may use the original string form, which defaults to `available`, or an object form with `node_id` and optional `status` (`available` or `offline`). Offline nodes stay visible in the output `node_roster` but do not receive work:
 
 ```json
 {
   "version": 1,
-  "nodes": ["local-node-a", "local-node-b"],
+  "nodes": [
+    "local-node-a",
+    {"node_id": "local-node-b", "status": "offline"},
+    {"node_id": "local-node-c", "status": "available"}
+  ],
   "jobs": [
     {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}},
     {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}}
