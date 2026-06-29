@@ -1,0 +1,224 @@
+"""File-backed local transport inboxes for addressed mesh messages.
+
+Version 1 local transport inboxes live at ``<transport-dir>/inboxes/<node-id>.json``
+where ``<node-id>`` is URL-quoted for safe deterministic filenames. Empty inboxes
+are omitted: materialization writes files only for recipients with addressed
+messages in the source message log.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
+from urllib.parse import quote
+
+from aethermesh_core.message_log import load_message_log_messages
+from aethermesh_core.messages import MeshMessage
+
+LOCAL_TRANSPORT_INBOX_VERSION = 1
+
+
+class LocalTransportError(ValueError):
+    """Raised when a file-backed local transport inbox cannot be loaded or saved."""
+
+
+def materialize_local_inboxes(
+    *, message_log_path: str | Path, transport_dir: str | Path
+) -> dict[str, Any]:
+    """Materialize addressed messages from a message log into per-node inbox files."""
+
+    messages = load_message_log_messages(message_log_path)
+    inboxes: dict[str, list[MeshMessage]] = {}
+    seen_message_ids: set[str] = set()
+    for message in messages:
+        if message.message_id in seen_message_ids:
+            raise LocalTransportError(f"duplicate message_id in source log: {message.message_id}")
+        seen_message_ids.add(message.message_id)
+        if message.recipient_node_id is None:
+            continue
+        inboxes.setdefault(message.recipient_node_id, []).append(message)
+
+    inbox_paths: dict[str, str] = {}
+    for node_id in sorted(inboxes):
+        path = write_local_inbox(
+            transport_dir=transport_dir,
+            node_id=node_id,
+            messages=inboxes[node_id],
+            source_message_log_path=message_log_path,
+        )
+        inbox_paths[node_id] = str(path)
+
+    return {
+        "command": "materialize-local-inboxes",
+        "message_log_path": str(message_log_path),
+        "transport_dir": str(transport_dir),
+        "inbox_count": len(inbox_paths),
+        "message_count": sum(len(messages) for messages in inboxes.values()),
+        "node_ids": sorted(inbox_paths),
+        "inbox_paths": inbox_paths,
+    }
+
+
+def write_local_inbox(
+    *,
+    transport_dir: str | Path,
+    node_id: str,
+    messages: Iterable[MeshMessage],
+    source_message_log_path: str | Path | None = None,
+) -> Path:
+    """Write one version 1 local transport inbox with an atomic replace."""
+
+    _require_node_id(node_id)
+    message_list = list(messages)
+    _validate_unique_messages_for_node(node_id, message_list)
+    document: dict[str, Any] = {
+        "version": LOCAL_TRANSPORT_INBOX_VERSION,
+        "node_id": node_id,
+        "messages": [message.to_dict() for message in message_list],
+    }
+    if source_message_log_path is not None:
+        document["source_message_log_path"] = str(source_message_log_path)
+
+    path = local_inbox_path(transport_dir, node_id)
+    _atomic_write_json(path, document)
+    return path
+
+
+def load_local_inbox(
+    *, transport_dir: str | Path, node_id: str
+) -> list[MeshMessage]:
+    """Load and validate only ``node_id``'s local transport inbox messages."""
+
+    _require_node_id(node_id)
+    path = local_inbox_path(transport_dir, node_id)
+    document = _load_inbox_document(path)
+    document_node_id = document.get("node_id")
+    if document_node_id != node_id:
+        raise LocalTransportError(
+            f"local transport inbox node_id mismatch: expected {node_id}, found {document_node_id}"
+        )
+    entries = document.get("messages")
+    if not isinstance(entries, list):
+        raise LocalTransportError("local transport inbox field 'messages' must be a list")
+
+    messages: list[MeshMessage] = []
+    seen_ids: set[str] = set()
+    for index, entry in enumerate(entries):
+        message = _message_from_inbox_entry(entry, index)
+        if message.message_id in seen_ids:
+            raise LocalTransportError(f"duplicate message_id in local transport inbox: {message.message_id}")
+        seen_ids.add(message.message_id)
+        if message.recipient_node_id != node_id:
+            raise LocalTransportError(
+                f"local transport inbox entry {index} recipient_node_id must be {node_id}"
+            )
+        messages.append(message)
+    return messages
+
+
+def local_inbox_path(transport_dir: str | Path, node_id: str) -> Path:
+    """Return the deterministic inbox path for ``node_id``."""
+
+    _require_node_id(node_id)
+    return Path(transport_dir) / "inboxes" / f"{quote(node_id, safe='-._~')}.json"
+
+
+def _load_inbox_document(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise LocalTransportError(f"local transport inbox file does not exist: {path}")
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise LocalTransportError(f"local transport inbox JSON is malformed: {exc.msg}") from exc
+    except OSError as exc:
+        raise LocalTransportError(f"could not read local transport inbox: {exc}") from exc
+
+    if not isinstance(document, dict):
+        raise LocalTransportError("local transport inbox JSON must be an object")
+    if document.get("version") != LOCAL_TRANSPORT_INBOX_VERSION:
+        raise LocalTransportError("local transport inbox JSON must contain version 1")
+    return document
+
+
+def _message_from_inbox_entry(entry: Any, index: int) -> MeshMessage:
+    if not isinstance(entry, dict):
+        raise LocalTransportError(f"local transport inbox entry {index} must be an object")
+    message_id = entry.get("message_id")
+    message_type = entry.get("message_type")
+    sender_node_id = entry.get("sender_node_id")
+    recipient_node_id = entry.get("recipient_node_id")
+    payload = entry.get("payload", {})
+    correlation_id = entry.get("correlation_id")
+    try:
+        if not isinstance(message_id, str):
+            raise ValueError("message_id must be a non-empty string")
+        if not isinstance(message_type, str):
+            raise ValueError("message_type must be a non-empty string")
+        if not isinstance(sender_node_id, str):
+            raise ValueError("sender_node_id must be a non-empty string")
+        return MeshMessage(
+            message_id=message_id,
+            message_type=message_type,
+            sender_node_id=sender_node_id,
+            recipient_node_id=recipient_node_id,
+            payload=payload,
+            correlation_id=correlation_id,
+        )
+    except ValueError as exc:
+        raise LocalTransportError(
+            f"local transport inbox entry {index} is invalid: {exc}"
+        ) from exc
+
+
+def _validate_unique_messages_for_node(node_id: str, messages: list[MeshMessage]) -> None:
+    seen_ids: set[str] = set()
+    for index, message in enumerate(messages):
+        if message.message_id in seen_ids:
+            raise LocalTransportError(f"duplicate message_id in local transport inbox: {message.message_id}")
+        seen_ids.add(message.message_id)
+        if message.recipient_node_id != node_id:
+            raise LocalTransportError(
+                f"local transport inbox entry {index} recipient_node_id must be {node_id}"
+            )
+
+
+def _atomic_write_json(path: Path, document: dict[str, Any]) -> None:
+    parent = path.parent
+    temp_name: str | None = None
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_name = handle.name
+            json.dump(document, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_name, path)
+    except (OSError, TypeError, ValueError) as exc:
+        if temp_name is not None:
+            _remove_temp_file(temp_name)
+        raise LocalTransportError(f"could not write local transport inbox: {exc}") from exc
+
+
+def _remove_temp_file(path: str) -> None:
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        return
+
+
+def _require_node_id(node_id: object) -> None:
+    if not isinstance(node_id, str) or node_id == "":
+        raise LocalTransportError("node_id must be a non-empty string")
