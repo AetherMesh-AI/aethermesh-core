@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
 from aethermesh_core.ledger import load_existing_ledger_document
 from aethermesh_core.message_log import load_message_log_messages
-from aethermesh_core.receipts import load_receipt_document_if_exists
+from aethermesh_core.messages import MeshMessage
+from aethermesh_core.receipts import _output_summary, load_receipt_document_if_exists
 
 
 class FlowAuditError(ValueError):
@@ -31,33 +33,54 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         raise FlowAuditError(f"receipt file does not exist: {receipts_path}")
 
     receipts = receipt_document["receipts"]
-    dispatch_assignment_ids = {
-        message.message_id
+    dispatch_assignments_by_id = {
+        message.message_id: message
         for message in dispatch_messages
         if message.message_type == "job_assigned"
     }
-    flow_message_ids = {message.message_id for message in flow_messages}
+    flow_messages_by_id = {message.message_id: message for message in flow_messages}
 
+    expected_ledger_claims: Counter[tuple[Any, ...]] = Counter()
     for index, receipt in enumerate(receipts):
+        context = _receipt_context(index, receipt)
         assignment_message_id = receipt["assignment_message_id"]
-        if assignment_message_id not in dispatch_assignment_ids:
+        assignment_message = dispatch_assignments_by_id.get(assignment_message_id)
+        if assignment_message is None:
             raise FlowAuditError(
-                f"receipt entry {index} assignment_message_id not found in dispatch log: {assignment_message_id}"
+                f"{context} assignment_message_id not found in dispatch log: {assignment_message_id}"
             )
+        _assert_assignment_matches_receipt(context, receipt, assignment_message.payload)
+
         result_message_id = receipt["result_message_id"]
-        if result_message_id not in flow_message_ids:
+        result_message = flow_messages_by_id.get(result_message_id)
+        if result_message is None:
             raise FlowAuditError(
-                f"receipt entry {index} result_message_id not found in flow log: {result_message_id}"
+                f"{context} result_message_id not found in flow log: {result_message_id}"
             )
+        _assert_result_message_matches_receipt(context, receipt, result_message)
+
         contribution_message_id = receipt.get("contribution_message_id")
         if not isinstance(contribution_message_id, str) or contribution_message_id == "":
+            raise FlowAuditError(f"{context} contribution_message_id must be present")
+        contribution_message = flow_messages_by_id.get(contribution_message_id)
+        if contribution_message is None:
             raise FlowAuditError(
-                f"receipt entry {index} contribution_message_id must be present"
+                f"{context} contribution_message_id not found in flow log: {contribution_message_id}"
             )
-        if contribution_message_id not in flow_message_ids:
-            raise FlowAuditError(
-                f"receipt entry {index} contribution_message_id not found in flow log: {contribution_message_id}"
-            )
+        _assert_contribution_message_matches_receipt(
+            context, receipt, contribution_message
+        )
+        expected_ledger_claims[_ledger_claim_from_receipt(receipt)] += 1
+
+    actual_ledger_claims = Counter(
+        _ledger_claim_from_record(record)
+        for record in ledger.to_document()["records"]
+    )
+    if expected_ledger_claims != actual_ledger_claims:
+        missing = expected_ledger_claims - actual_ledger_claims
+        extra = actual_ledger_claims - expected_ledger_claims
+        detail = _ledger_mismatch_detail(missing, extra)
+        raise FlowAuditError(f"receipt contribution claims do not match ledger records: {detail}")
 
     ledger_summary = ledger.summary_document(ledger_path)
     ledger_total_units = int(ledger_summary["total_contribution_units"])
@@ -86,3 +109,127 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
             "credited_receipt_units": credited_receipt_units,
         },
     }
+
+
+def _receipt_context(index: int, receipt: dict[str, Any]) -> str:
+    return (
+        f"receipt entry {index} "
+        f"job={receipt.get('job_id')} node={receipt.get('node_id')}"
+    )
+
+
+def _assert_assignment_matches_receipt(
+    context: str, receipt: dict[str, Any], payload: dict[str, Any]
+) -> None:
+    _assert_equal(context, "assignment.job_id", receipt["job_id"], payload.get("job_id"))
+    _assert_equal(
+        context, "assignment.job_type", receipt["job_type"], payload.get("job_type")
+    )
+
+
+def _assert_result_message_matches_receipt(
+    context: str, receipt: dict[str, Any], message: MeshMessage
+) -> None:
+    if message.message_type != "job_result_reported":
+        raise FlowAuditError(
+            f"{context} result_message_id references {message.message_type}, expected job_result_reported"
+        )
+    _assert_equal(context, "result.job_id", receipt["job_id"], message.payload.get("job_id"))
+    _assert_equal(context, "result.node_id", receipt["node_id"], message.sender_node_id)
+    _assert_equal(
+        context, "result.status", receipt["result_status"], message.payload.get("status")
+    )
+    _assert_equal(
+        context,
+        "result.output_summary",
+        receipt["output_summary"],
+        _output_summary(message.payload.get("output")),
+    )
+
+
+def _assert_contribution_message_matches_receipt(
+    context: str, receipt: dict[str, Any], message: MeshMessage
+) -> None:
+    if message.message_type != "contribution_recorded":
+        raise FlowAuditError(
+            f"{context} contribution_message_id references {message.message_type}, expected contribution_recorded"
+        )
+    validation = receipt["validation"]
+    _assert_equal(
+        context, "contribution.job_id", receipt["job_id"], message.payload.get("job_id")
+    )
+    _assert_equal(
+        context, "contribution.node_id", receipt["node_id"], message.payload.get("node_id")
+    )
+    _assert_equal(
+        context,
+        "contribution.status",
+        receipt["result_status"],
+        message.payload.get("status"),
+    )
+    _assert_equal(
+        context, "contribution.valid", validation["valid"], message.payload.get("valid")
+    )
+    _assert_equal(
+        context,
+        "contribution.validation",
+        validation["reason"],
+        message.payload.get("validation"),
+    )
+    _assert_equal(
+        context,
+        "contribution.contribution_units",
+        receipt["credited_units"],
+        message.payload.get("contribution_units"),
+    )
+
+
+def _ledger_claim_from_receipt(receipt: dict[str, Any]) -> tuple[Any, ...]:
+    validation = receipt["validation"]
+    return (
+        receipt["node_id"],
+        receipt["job_id"],
+        receipt["result_status"],
+        receipt["credited_units"],
+        validation["valid"],
+        validation["reason"],
+        receipt["job_type"],
+    )
+
+
+def _ledger_claim_from_record(record: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        record.get("node_id"),
+        record.get("job_id"),
+        record.get("status"),
+        record.get("contribution_units"),
+        record.get("validation_valid"),
+        record.get("validation_reason"),
+        record.get("job_type"),
+    )
+
+
+def _ledger_mismatch_detail(
+    missing: Counter[tuple[Any, ...]], extra: Counter[tuple[Any, ...]]
+) -> str:
+    parts: list[str] = []
+    if missing:
+        parts.append(f"missing {_format_claim(next(iter(missing)))}")
+    if extra:
+        parts.append(f"extra {_format_claim(next(iter(extra)))}")
+    return "; ".join(parts)
+
+
+def _format_claim(claim: tuple[Any, ...]) -> str:
+    node_id, job_id, status, units, valid, reason, job_type = claim
+    return (
+        f"node={node_id} job={job_id} status={status} units={units} "
+        f"valid={valid} reason={reason!r} job_type={job_type}"
+    )
+
+
+def _assert_equal(context: str, field_name: str, expected: Any, actual: Any) -> None:
+    if actual != expected:
+        raise FlowAuditError(
+            f"{context} {field_name} mismatch: receipt={expected!r} artifact={actual!r}"
+        )
