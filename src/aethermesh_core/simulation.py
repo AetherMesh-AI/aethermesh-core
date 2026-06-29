@@ -2,27 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, replace
+from dataclasses import dataclass, replace
 from typing import Any
 
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
+from aethermesh_core.scheduler import JobAssignment, LocalScheduler
 from aethermesh_core.validation import ValidationResult, validate_job_result
 
 
-@dataclass(frozen=True)
-class SimulationJobAssignment:
-    """Deterministic local assignment of one job to one node."""
-
-    job_id: str
-    node_id: str
-
-    def to_dict(self) -> dict[str, str]:
-        """Serialize the assignment into a JSON-compatible dictionary."""
-
-        return asdict(self)
+SimulationJobAssignment = JobAssignment
 
 
 @dataclass(frozen=True)
@@ -30,7 +21,7 @@ class LocalSimulationResult:
     """Structured, deterministic output from a local multi-node simulation."""
 
     nodes: list[str]
-    assignments: list[SimulationJobAssignment]
+    assignments: list[JobAssignment]
     results: list[JobResult]
     validations: list[ValidationResult]
     messages: list[MeshMessage]
@@ -54,7 +45,7 @@ class LocalSimulationResult:
 
 
 def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulationResult:
-    """Run local jobs across local node identities using round-robin assignment.
+    """Run local jobs across local node identities using scheduler assignment.
 
     This is intentionally local-only and in-memory: no networking, persistence,
     retries, async scheduling, or separate contribution accounting path.
@@ -67,14 +58,14 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
     runners = {
         node_id: LocalRunner(NodeIdentity(node_id=node_id)) for node_id in node_ids
     }
-    assignments: list[SimulationJobAssignment] = []
+    scheduler = LocalScheduler(node_ids)
+    assignments = scheduler.assign_jobs(job.job_id for job in jobs)
     results: list[JobResult] = []
     validations: list[ValidationResult] = []
     messages: list[MeshMessage] = []
 
-    for index, job in enumerate(jobs):
-        node_id = node_ids[index % len(node_ids)]
-        assignment = SimulationJobAssignment(job_id=job.job_id, node_id=node_id)
+    for job, assignment in zip(jobs, assignments):
+        node_id = assignment.node_id
         messages.append(
             _simulation_message(
                 messages,
@@ -107,7 +98,6 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
             )
         )
 
-        assignments.append(assignment)
         results.append(result)
         validation = validate_job_result(job, result)
         validations.append(validation)

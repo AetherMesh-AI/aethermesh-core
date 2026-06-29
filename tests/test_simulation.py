@@ -1,6 +1,7 @@
 import unittest
 
 from aethermesh_core.models import Job
+from aethermesh_core.scheduler import JobAssignment
 from aethermesh_core.simulation import run_local_simulation
 
 
@@ -88,6 +89,25 @@ class LocalSimulationTests(unittest.TestCase):
                     "valid": True,
                     "contribution_units": 1,
                 },
+            ],
+        )
+
+    def test_simulation_preserves_default_output_with_scheduler(self) -> None:
+        jobs = [
+            Job(job_id="echo-1", job_type="echo", payload={"message": "one"}),
+            Job(job_id="echo-2", job_type="echo", payload={"message": "two"}),
+        ]
+
+        result = run_local_simulation(["node-a", "node-b"], jobs)
+
+        self.assertTrue(
+            all(isinstance(assignment, JobAssignment) for assignment in result.assignments)
+        )
+        self.assertEqual(
+            result.to_dict()["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "node-a"},
+                {"job_id": "echo-2", "node_id": "node-b"},
             ],
         )
 
