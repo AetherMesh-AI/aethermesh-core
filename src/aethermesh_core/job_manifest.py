@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.models import Job
-from aethermesh_core.scheduler import NodeStatus, ScheduledNode
+from aethermesh_core.scheduler import DEFAULT_LOCAL_CAPABILITIES, NodeStatus, ScheduledNode
 
 
 class ManifestError(ValueError):
@@ -100,7 +100,35 @@ def _parse_node_entry(entry: Any, index: int) -> ScheduledNode:
             f"manifest nodes[{index}].status must be one of: {supported_statuses}"
         ) from exc
 
-    return ScheduledNode(node_id=node_id, status=status)
+    capabilities = _parse_capabilities(entry.get("capabilities"), index)
+    return ScheduledNode(node_id=node_id, status=status, capabilities=capabilities)
+
+
+def _parse_capabilities(value: Any, node_index: int) -> tuple[str, ...]:
+    if value is None:
+        return DEFAULT_LOCAL_CAPABILITIES
+    if not isinstance(value, list) or not value:
+        raise ManifestError(
+            f"manifest nodes[{node_index}].capabilities must be a non-empty list"
+        )
+
+    capabilities: list[str] = []
+    seen: set[str] = set()
+    for capability_index, capability in enumerate(value):
+        if not isinstance(capability, str) or not capability.strip():
+            raise ManifestError(
+                "manifest "
+                f"nodes[{node_index}].capabilities[{capability_index}] "
+                "must be a non-empty string"
+            )
+        if capability in seen:
+            raise ManifestError(
+                f"manifest nodes[{node_index}].capabilities contains duplicate: "
+                f"{capability}"
+            )
+        seen.add(capability)
+        capabilities.append(capability)
+    return tuple(sorted(capabilities))
 
 
 def _parse_jobs(value: Any) -> list[Job]:

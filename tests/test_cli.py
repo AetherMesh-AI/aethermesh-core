@@ -22,9 +22,9 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-b"},
-                {"job_id": "echo-2", "node_id": "local-node-a"},
-                {"job_id": "echo-3", "node_id": "local-node-b"},
+                {"job_id": "text-stats-1", "node_id": "local-node-a"},
+                {"job_id": "echo-2", "node_id": "local-node-b"},
+                {"job_id": "echo-3", "node_id": "local-node-a"},
             ],
         )
         self.assertEqual(len(payload["results"]), 4)
@@ -66,18 +66,20 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
-                    "assigned_jobs": 2,
-                    "contribution_units": 2,
+                    "assigned_jobs": 3,
+                    "contribution_units": 3,
                 },
                 {
                     "node_id": "local-node-b",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
-                    "assigned_jobs": 2,
-                    "contribution_units": 2,
+                    "assigned_jobs": 1,
+                    "contribution_units": 1,
                 },
             ],
         )
@@ -132,7 +134,7 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-b"},
+                {"job_id": "text-stats-1", "node_id": "local-node-a"},
             ],
         )
         self.assertEqual(payload["results"][0]["output"], "hello mesh")
@@ -198,6 +200,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -206,6 +209,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-b",
                     "status": "offline",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -214,6 +218,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-c",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -278,7 +283,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("error: manifest JSON is malformed", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
-    def test_run_local_batch_unsupported_job_type_returns_nonzero(self) -> None:
+    def test_run_local_batch_no_capable_node_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             manifest_path.write_text(
@@ -301,7 +306,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
+        self.assertIn("job_id=bad-1 job_type=unknown", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_run_local_batch_does_not_write_ledger_by_default(self) -> None:
@@ -392,16 +397,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first_payload["ledger_path"], str(ledger_path))
         self.assertEqual(len(first_payload["results"]), 2)
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 1
+            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
         )
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 1
+            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
+            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 4
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 2
+            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
         )
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
@@ -409,7 +414,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["records"][0]["validation_valid"], True)
         self.assertEqual(persisted["records"][0]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][0]["job_type"], "echo")
-        self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
+        self.assertEqual(persisted["records"][1]["node_id"], "local-node-a")
         self.assertEqual(persisted["records"][1]["validation_valid"], True)
         self.assertEqual(persisted["records"][1]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][1]["job_type"], "text_stats")
@@ -505,7 +510,12 @@ class CliTests(unittest.TestCase):
                 json.dumps(
                     {
                         "version": 1,
-                        "nodes": ["local-node-a"],
+                        "nodes": [
+                            {
+                                "node_id": "local-node-a",
+                                "capabilities": ["unknown"],
+                            }
+                        ],
                         "jobs": [
                             {"job_id": "bad-1", "job_type": "unknown", "payload": {}}
                         ],

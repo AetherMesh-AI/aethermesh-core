@@ -118,6 +118,32 @@ class LocalSimulationTests(unittest.TestCase):
             ],
         )
 
+    def test_assignments_route_by_declared_capability(self) -> None:
+        jobs = [
+            Job(job_id="stats-1", job_type="text_stats", payload={"text": "hello mesh"}),
+            Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
+        ]
+
+        result = run_local_simulation(
+            [
+                ScheduledNode("node-a", capabilities=("echo",)),
+                ScheduledNode("node-b", capabilities=("text_stats",)),
+            ],
+            jobs,
+        ).to_dict()
+
+        self.assertEqual(
+            result["assignments"],
+            [
+                {"job_id": "stats-1", "node_id": "node-b"},
+                {"job_id": "echo-1", "node_id": "node-a"},
+            ],
+        )
+        self.assertEqual(
+            [entry["capabilities"] for entry in result["node_roster"]],
+            [["echo"], ["text_stats"]],
+        )
+
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
         calls: list[str] = []
         original_process_inbox = LocalNodeService.process_inbox
@@ -218,6 +244,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -226,6 +253,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-b",
                     "status": "offline",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -234,6 +262,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-c",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -359,7 +388,13 @@ class LocalSimulationTests(unittest.TestCase):
             Job(job_id="bad-1", job_type="unsupported", payload={}),
         ]
 
-        result = run_local_simulation(["node-a", "node-b"], jobs).to_dict()
+        result = run_local_simulation(
+            [
+                ScheduledNode("node-a", capabilities=("echo",)),
+                ScheduledNode("node-b", capabilities=("unsupported",)),
+            ],
+            jobs,
+        ).to_dict()
 
         self.assertEqual(result["results"][1]["job_id"], "bad-1")
         self.assertEqual(result["results"][1]["node_id"], "node-b")
