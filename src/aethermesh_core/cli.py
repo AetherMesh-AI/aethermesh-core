@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import replace
 
+from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
 from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
     ContributionLedger,
@@ -32,6 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--node-id",
         default=None,
         help="Node id to use for the demo. Defaults to an ephemeral id.",
+    )
+    demo.add_argument(
+        "--identity-path",
+        default=None,
+        help="Opt in to JSON-file-backed local node identity persistence.",
     )
     demo.add_argument(
         "--message",
@@ -77,8 +83,14 @@ def run_demo(
     message: str,
     include_ledger: bool = False,
     ledger_path: str | None = None,
+    identity_path: str | None = None,
 ) -> dict[str, object]:
-    identity = NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
+    if node_id and identity_path:
+        raise IdentityPersistenceError("--node-id and --identity-path are mutually exclusive")
+    if identity_path is not None:
+        identity = load_or_create_identity(identity_path)
+    else:
+        identity = NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
     result_dict = result.to_dict()
@@ -167,9 +179,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "run-demo":
         try:
             payload = run_demo(
-                args.node_id, args.message, args.include_ledger, args.ledger_path
+                args.node_id,
+                args.message,
+                args.include_ledger,
+                args.ledger_path,
+                args.identity_path,
             )
-        except LedgerPersistenceError as exc:
+        except (IdentityPersistenceError, LedgerPersistenceError) as exc:
             parser.error(str(exc))
         print(json.dumps(payload, sort_keys=True))
         return 0

@@ -562,6 +562,99 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("validation", payload)
         self.assertNotIn("ledger_summary", payload)
 
+    def test_run_demo_identity_path_creates_and_reuses_node_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            first_stdout = io.StringIO()
+            with contextlib.redirect_stdout(first_stdout):
+                first_exit = main(
+                    [
+                        "run-demo",
+                        "--identity-path",
+                        str(identity_path),
+                        "--message",
+                        "hello mesh",
+                    ]
+                )
+            second_stdout = io.StringIO()
+            with contextlib.redirect_stdout(second_stdout):
+                second_exit = main(
+                    [
+                        "run-demo",
+                        "--identity-path",
+                        str(identity_path),
+                        "--message",
+                        "hello again",
+                    ]
+                )
+            persisted = json.loads(identity_path.read_text(encoding="utf-8"))
+
+        first_payload = json.loads(first_stdout.getvalue())
+        second_payload = json.loads(second_stdout.getvalue())
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(second_exit, 0)
+        self.assertTrue(first_payload["node_id"].startswith("local-"))
+        self.assertEqual(second_payload["node_id"], first_payload["node_id"])
+        self.assertEqual(persisted["version"], 1)
+        self.assertEqual(persisted["node"]["node_id"], first_payload["node_id"])
+        self.assertNotIn("validation", first_payload)
+        self.assertNotIn("ledger_summary", first_payload)
+
+    def test_run_demo_node_id_and_identity_path_conflict_returns_cli_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+                main(
+                    [
+                        "run-demo",
+                        "--node-id",
+                        "local-demo-node",
+                        "--identity-path",
+                        str(identity_path),
+                    ]
+                )
+
+            self.assertFalse(identity_path.exists())
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("mutually exclusive", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_run_demo_malformed_identity_path_returns_cli_error_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            identity_path.write_text("not-json", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+                main(["run-demo", "--identity-path", str(identity_path)])
+
+            identity_contents = identity_path.read_text(encoding="utf-8")
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("identity JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(identity_contents, "not-json")
+
+    def test_run_demo_unsupported_identity_version_returns_cli_error_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            original = json.dumps({"version": 2, "node": {"node_id": "local-future"}})
+            identity_path.write_text(original, encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+                main(["run-demo", "--identity-path", str(identity_path)])
+
+            identity_contents = identity_path.read_text(encoding="utf-8")
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("identity JSON must contain version 1", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(identity_contents, original)
+
     def test_run_demo_persists_json_ledger_and_accumulates_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "ledger.json"
