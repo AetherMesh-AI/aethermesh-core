@@ -111,6 +111,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 When enabled, batch runs append validation-gated contribution records to the same version 1 local ledger JSON shape used by `run-demo` and print per-node persisted ledger summaries. New records include the validation outcome (`validation_valid`, `validation_reason`) and lightweight `job_type` metadata for local auditability; older ledger records that lack those fields still load. Without `--ledger-path`, batch output and file writes are unchanged.
 
+To opt in to local JSON-backed message trace persistence for a manifest batch, pass `--message-log-path`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-batch --manifest examples/local-batch.json --message-log-path ./local-messages.json
+```
+
+When enabled, the batch overwrites the requested version 1 local-only message log with a deterministic audit document. The document preserves ordered mesh message entries (`message_id`, `message_type`, sender, recipient, payload, and correlation id) plus run metadata such as message count, job count, completion/failure totals, validation summary, node ids, job ids, and total contribution units. Writes use a temp file and atomic replace; without `--message-log-path`, no message log file is written.
+
 Inspect an existing local contribution ledger without writing to it:
 
 ```bash
