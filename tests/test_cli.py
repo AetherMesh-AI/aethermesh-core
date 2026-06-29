@@ -1836,6 +1836,7 @@ class CliTests(unittest.TestCase):
 
             payload = json.loads(stdout.getvalue())
             ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
             flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
             dispatch_exists = (output_dir / "dispatch-message-log.json").exists()
             flow_log_exists = (output_dir / "flow-message-log.json").exists()
@@ -1857,6 +1858,8 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["skipped_processed_assignment_count"], 0)
         self.assertEqual(payload["total_contribution_units"], 2)
         self.assertEqual(payload["flow_message_log_path"], str(output_dir / "flow-message-log.json"))
+        self.assertEqual(payload["receipts_path"], str(output_dir / "receipts.json"))
+        self.assertEqual(payload["receipt_count"], 2)
         self.assertEqual(payload["flow_message_count"], 8)
         self.assertEqual(payload["flow_emitted_message_count"], 4)
         self.assertEqual(payload["ledger_summary"]["record_count"], 2)
@@ -1870,6 +1873,29 @@ class CliTests(unittest.TestCase):
         self.assertFalse(offline_state_exists)
         self.assertFalse(offline_log_exists)
         self.assertEqual(len(ledger["records"]), 2)
+        self.assertEqual(receipts["version"], 1)
+        self.assertEqual(receipts["run_source"], "run-local-flow")
+        self.assertEqual(len(receipts["receipts"]), 2)
+        self.assertEqual(
+            [receipt["assignment_message_id"] for receipt in receipts["receipts"]],
+            ["msg-0003", "msg-0004"],
+        )
+        self.assertEqual(
+            receipts["receipts"][0],
+            {
+                "job_id": "echo-1",
+                "job_type": "echo",
+                "node_id": "local-node-a",
+                "assignment_message_id": "msg-0003",
+                "correlation_id": "echo-1",
+                "result_message_id": "msg-0005",
+                "contribution_message_id": "msg-0006",
+                "result_status": "completed",
+                "validation": {"valid": True, "reason": "ok"},
+                "credited_units": 1,
+                "output_summary": {"value": "hello mesh"},
+            },
+        )
         self.assertEqual(flow_log["metadata"]["source"], "run-local-flow")
         self.assertEqual(flow_log["metadata"]["manifest_path"], str(manifest_path))
         self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 4)
@@ -1966,9 +1992,11 @@ class CliTests(unittest.TestCase):
                     ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
                 )
             first_payload = json.loads(first_stdout.getvalue())
+            first_receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
             second_payload = json.loads(second_stdout.getvalue())
             ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
             flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
+            second_receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
 
         self.assertEqual(first_exit, 0)
         self.assertEqual(first_payload["processed_assignment_count"], 1)
@@ -1976,12 +2004,59 @@ class CliTests(unittest.TestCase):
         self.assertEqual(second_exit, 0)
         self.assertEqual(second_payload["processed_assignment_count"], 0)
         self.assertEqual(second_payload["skipped_processed_assignment_count"], 1)
+        self.assertEqual(second_payload["receipt_count"], 1)
         self.assertEqual(second_payload["flow_emitted_message_count"], 0)
         self.assertEqual(second_payload["flow_message_count"], 2)
         self.assertEqual(second_payload["node_results"][0]["ignored_message_count"], 1)
         self.assertEqual(len(ledger["records"]), 1)
+        self.assertEqual(second_receipts, first_receipts)
+        self.assertEqual(len(second_receipts["receipts"]), 1)
         self.assertEqual(flow_log["metadata"]["emitted_message_count"], 0)
         self.assertEqual(flow_log["metadata"]["message_count"], 2)
+
+    def test_run_local_flow_malformed_existing_receipts_do_not_overwrite_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            dispatch_path = output_dir / "dispatch-message-log.json"
+            flow_log_path = output_dir / "flow-message-log.json"
+            receipts_path = output_dir / "receipts.json"
+            dispatch_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            flow_log_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            dispatch_path.write_text(dispatch_original, encoding="utf-8")
+            flow_log_path.write_text(flow_log_original, encoding="utf-8")
+            receipts_path.write_text("not-json", encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            dispatch_contents = dispatch_path.read_text(encoding="utf-8")
+            flow_log_contents = flow_log_path.read_text(encoding="utf-8")
+            receipts_contents = receipts_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("receipt JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(dispatch_contents, dispatch_original)
+        self.assertEqual(flow_log_contents, flow_log_original)
+        self.assertEqual(receipts_contents, "not-json")
 
     def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -18,6 +18,7 @@ class ProcessedAssignment:
     """Deterministic audit data for one inbox assignment processed locally."""
 
     message_id: str
+    correlation_id: str | None
     job: Job
     result: JobResult
     validation: ValidationResult
@@ -133,6 +134,7 @@ class LocalNodeService:
 
         return ProcessedAssignment(
             message_id=message.message_id,
+            correlation_id=message.correlation_id,
             job=job,
             result=result,
             validation=validation,
