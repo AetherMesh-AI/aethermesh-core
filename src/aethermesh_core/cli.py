@@ -7,6 +7,8 @@ import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
+from pathlib import Path
+from urllib.parse import quote
 
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
@@ -112,6 +114,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--message-log-path",
         required=True,
         help="Path to write the version 1 assignment-only local message log.",
+    )
+
+    local_flow = subcommands.add_parser(
+        "run-local-flow",
+        help="Run dispatch plus all available local worker inboxes for a manifest.",
+    )
+    local_flow.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job-batch JSON manifest.",
+    )
+    local_flow.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory for deterministic local flow artifacts.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -310,6 +327,108 @@ def summarize_ledger(ledger_path: str) -> dict[str, object]:
     return ledger.summary_document(ledger_path)
 
 
+def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
+    """Run dispatch and all available local worker inboxes as one local flow."""
+
+    batch = load_job_manifest(manifest_path)
+    output_path = Path(output_dir)
+    try:
+        output_path.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise ValueError(f"could not create output directory: {exc}") from exc
+
+    dispatch_message_log_path = output_path / "dispatch-message-log.json"
+    ledger_path = output_path / "ledger.json"
+    node_state_dir = output_path / "node-state"
+    worker_log_dir = output_path / "worker-message-logs"
+
+    available_node_ids = [
+        node.node_id for node in batch.nodes if node.status.value == "available"
+    ]
+    offline_node_ids = [node.node_id for node in batch.nodes if node.status.value == "offline"]
+
+    # Validate existing resumable inputs before overwriting any flow artifacts.
+    load_ledger_document(ledger_path)
+    for node_id in available_node_ids:
+        load_node_processing_state(
+            _node_artifact_path(node_state_dir, node_id), expected_node_id=node_id
+        )
+
+    dispatch_payload = dispatch_local_batch_command(
+        manifest_path, str(dispatch_message_log_path)
+    )
+
+    per_node_results: list[dict[str, object]] = []
+    for node_id in available_node_ids:
+        node_state_path = _node_artifact_path(node_state_dir, node_id)
+        worker_message_log_path = _node_artifact_path(worker_log_dir, node_id)
+        node_payload = process_local_inbox(
+            node_id=node_id,
+            message_log_path=str(dispatch_message_log_path),
+            ledger_path=str(ledger_path),
+            output_message_log_path=str(worker_message_log_path),
+            node_state_path=str(node_state_path),
+        )
+        raw_processed_count = node_payload["processed_assignment_count"]
+        if not isinstance(raw_processed_count, int):
+            raise ValueError("process-local-inbox returned invalid processed count")
+        processed_count = raw_processed_count
+        skipped_ids = node_payload.get("skipped_processed_message_ids", [])
+        if not isinstance(skipped_ids, list):
+            raise ValueError("process-local-inbox returned invalid skipped id list")
+        ignored_ids = node_payload["ignored_message_ids"]
+        if not isinstance(ignored_ids, list):
+            raise ValueError("process-local-inbox returned invalid ignored id list")
+        per_node_results.append(
+            {
+                "node_id": node_id,
+                "node_state_path": str(node_state_path),
+                "worker_message_log_path": str(worker_message_log_path),
+                "processed_assignment_count": processed_count,
+                "skipped_processed_assignment_count": len(skipped_ids),
+                "ignored_message_count": len(ignored_ids),
+                "ledger_summary": node_payload.get("ledger_summary"),
+            }
+        )
+
+    ledger_summary = summarize_ledger(str(ledger_path))
+    return {
+        "command": "run-local-flow",
+        "manifest_path": manifest_path,
+        "output_dir": output_dir,
+        "dispatch_message_log_path": str(dispatch_message_log_path),
+        "ledger_path": str(ledger_path),
+        "available_node_ids": available_node_ids,
+        "offline_node_ids": offline_node_ids,
+        "processed_node_ids": [result["node_id"] for result in per_node_results],
+        "processed_assignment_count": sum(
+            int(result["processed_assignment_count"]) for result in per_node_results
+        ),
+        "skipped_processed_assignment_count": sum(
+            int(result["skipped_processed_assignment_count"]) for result in per_node_results
+        ),
+        "ignored_message_count": sum(
+            int(result["ignored_message_count"]) for result in per_node_results
+        ),
+        "total_contribution_units": ledger_summary["total_contribution_units"],
+        "ledger_summary": ledger_summary,
+        "dispatch_summary": dispatch_payload,
+        "node_results": per_node_results,
+    }
+
+
+def _node_artifact_path(directory: Path, node_id: str) -> Path:
+    return directory / f"{_node_artifact_filename(node_id)}.json"
+
+
+def _node_artifact_filename(node_id: str) -> str:
+    """Return a deterministic, non-merging filename for one manifest node id."""
+
+    if not isinstance(node_id, str) or node_id == "":
+        raise ValueError("node id must be a non-empty string")
+    return quote(node_id, safe="-._~")
+
+
 def process_local_inbox(
     *,
     node_id: str,
@@ -500,6 +619,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"error: local batch dispatch failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "run-local-flow":
+        try:
+            payload = run_local_flow(args.manifest, args.output_dir)
+        except ManifestError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except (
+            MessageLogPersistenceError,
+            LedgerPersistenceError,
+            NodeStatePersistenceError,
+            ValueError,
+        ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0

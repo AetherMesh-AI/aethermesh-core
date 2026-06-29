@@ -1816,6 +1816,179 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertFalse(ledger_path.exists())
 
+    def test_run_local_flow_happy_path_with_example_manifest(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        manifest_path = repo_root / "examples" / "local-batch.json"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            dispatch_exists = (output_dir / "dispatch-message-log.json").exists()
+            node_a_state_exists = (output_dir / "node-state" / "local-node-a.json").exists()
+            node_c_state_exists = (output_dir / "node-state" / "local-node-c.json").exists()
+            node_a_log_exists = (output_dir / "worker-message-logs" / "local-node-a.json").exists()
+            node_c_log_exists = (output_dir / "worker-message-logs" / "local-node-c.json").exists()
+            offline_state_exists = (output_dir / "node-state" / "local-node-b.json").exists()
+            offline_log_exists = (output_dir / "worker-message-logs" / "local-node-b.json").exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["command"], "run-local-flow")
+        self.assertEqual(payload["manifest_path"], str(manifest_path))
+        self.assertEqual(payload["output_dir"], str(output_dir))
+        self.assertEqual(payload["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(payload["offline_node_ids"], ["local-node-b"])
+        self.assertEqual(payload["processed_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(payload["processed_assignment_count"], 2)
+        self.assertEqual(payload["skipped_processed_assignment_count"], 0)
+        self.assertEqual(payload["total_contribution_units"], 2)
+        self.assertEqual(payload["ledger_summary"]["record_count"], 2)
+        self.assertEqual(len(payload["node_results"]), 2)
+        self.assertTrue(dispatch_exists)
+        self.assertTrue(node_a_state_exists)
+        self.assertTrue(node_c_state_exists)
+        self.assertTrue(node_a_log_exists)
+        self.assertTrue(node_c_log_exists)
+        self.assertFalse(offline_state_exists)
+        self.assertFalse(offline_log_exists)
+        self.assertEqual(len(ledger["records"]), 2)
+
+    def test_run_local_flow_skips_offline_nodes_but_reports_them(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [
+                            {"node_id": "local-node-a", "status": "offline"},
+                            {"node_id": "local-node-b", "status": "available"},
+                        ],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            available_state_exists = (output_dir / "node-state" / "local-node-b.json").exists()
+            offline_state_exists = (output_dir / "node-state" / "local-node-a.json").exists()
+            offline_log_exists = (output_dir / "worker-message-logs" / "local-node-a.json").exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["available_node_ids"], ["local-node-b"])
+        self.assertEqual(payload["offline_node_ids"], ["local-node-a"])
+        self.assertEqual(payload["processed_node_ids"], ["local-node-b"])
+        self.assertEqual(payload["processed_assignment_count"], 1)
+        self.assertTrue(available_state_exists)
+        self.assertFalse(offline_state_exists)
+        self.assertFalse(offline_log_exists)
+
+    def test_run_local_flow_rerun_is_idempotent_with_node_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            first_stdout = io.StringIO()
+            with contextlib.redirect_stdout(first_stdout):
+                first_exit = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            second_stdout = io.StringIO()
+            with contextlib.redirect_stdout(second_stdout):
+                second_exit = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            first_payload = json.loads(first_stdout.getvalue())
+            second_payload = json.loads(second_stdout.getvalue())
+            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(first_payload["processed_assignment_count"], 1)
+        self.assertEqual(first_payload["skipped_processed_assignment_count"], 0)
+        self.assertEqual(second_exit, 0)
+        self.assertEqual(second_payload["processed_assignment_count"], 0)
+        self.assertEqual(second_payload["skipped_processed_assignment_count"], 1)
+        self.assertEqual(second_payload["node_results"][0]["ignored_message_count"], 1)
+        self.assertEqual(len(ledger["records"]), 1)
+
+    def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            dispatch_path = output_dir / "dispatch-message-log.json"
+            ledger_path = output_dir / "ledger.json"
+            dispatch_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            dispatch_path.write_text(dispatch_original, encoding="utf-8")
+            ledger_path.write_text("not-json", encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            dispatch_contents = dispatch_path.read_text(encoding="utf-8")
+            ledger_contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(dispatch_contents, dispatch_original)
+        self.assertEqual(ledger_contents, "not-json")
+
 
 if __name__ == "__main__":
     unittest.main()
