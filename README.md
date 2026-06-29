@@ -111,6 +111,12 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 When enabled, batch runs append validation-gated contribution records to the same version 1 local ledger JSON shape used by `run-demo` and print per-node persisted ledger summaries. Without `--ledger-path`, batch output and file writes are unchanged.
 
+Inspect an existing local contribution ledger without writing to it:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli ledger-summary --ledger-path ./local-ledger.json
+```
+
 Run the unit tests without installing anything:
 
 ```bash

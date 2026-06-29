@@ -746,6 +746,171 @@ class CliTests(unittest.TestCase):
             self.assertIn("ledger JSON is malformed", stderr.getvalue())
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), "not-json")
 
+    def test_ledger_summary_prints_deterministic_json_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            original = json.dumps(
+                {
+                    "version": 1,
+                    "records": [
+                        {
+                            "node_id": "node-b",
+                            "job_id": "job-1",
+                            "status": "completed",
+                            "contribution_units": 10,
+                            "message": "ok",
+                        },
+                        {
+                            "node_id": "node-a",
+                            "job_id": "job-2",
+                            "status": "failed",
+                            "contribution_units": 0,
+                            "message": "boom",
+                        },
+                        {
+                            "node_id": "node-a",
+                            "job_id": "job-3",
+                            "status": "completed",
+                            "contribution_units": 5,
+                            "message": "ok",
+                        },
+                    ],
+                    "owner": "local-dev",
+                },
+                sort_keys=True,
+            )
+            ledger_path.write_text(original, encoding="utf-8")
+            before_mtime = ledger_path.stat().st_mtime_ns
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+            after_mtime = ledger_path.stat().st_mtime_ns
+            after_contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(after_mtime, before_mtime)
+        self.assertEqual(after_contents, original)
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "ledger_path": str(ledger_path),
+                "record_count": 3,
+                "completed_result_count": 2,
+                "failed_result_count": 1,
+                "total_contribution_units": 15,
+                "nodes": [
+                    {
+                        "node_id": "node-a",
+                        "record_count": 2,
+                        "completed_result_count": 1,
+                        "failed_result_count": 1,
+                        "total_contribution_units": 5,
+                    },
+                    {
+                        "node_id": "node-b",
+                        "record_count": 1,
+                        "completed_result_count": 1,
+                        "failed_result_count": 0,
+                        "total_contribution_units": 10,
+                    },
+                ],
+            },
+        )
+
+    def test_ledger_summary_missing_file_returns_nonzero_without_creating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "missing" / "ledger.json"
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+            ledger_exists = ledger_path.exists()
+            parent_exists = ledger_path.parent.exists()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger file does not exist", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertFalse(ledger_exists)
+        self.assertFalse(parent_exists)
+
+    def test_ledger_summary_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+            contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(contents, "not-json")
+
+    def test_ledger_summary_non_object_ledger_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger_path.write_text("[]", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON must be an object", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_ledger_summary_unsupported_version_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            original = json.dumps({"version": 2, "records": []})
+            ledger_path.write_text(original, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+            contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON must contain version 1", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(contents, original)
+
+    def test_ledger_summary_invalid_record_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            original = json.dumps(
+                {"version": 1, "records": [{"node_id": "node-a"}]}, sort_keys=True
+            )
+            ledger_path.write_text(original, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["ledger-summary", "--ledger-path", str(ledger_path)])
+
+            contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger record field 'job_id' must be str", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(contents, original)
+
 
 if __name__ == "__main__":
     unittest.main()

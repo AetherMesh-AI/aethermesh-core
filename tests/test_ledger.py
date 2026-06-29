@@ -7,6 +7,7 @@ from aethermesh_core.ledger import (
     ContributionLedger,
     ContributionRecord,
     LedgerPersistenceError,
+    load_existing_ledger_document,
     load_ledger_document,
     save_ledger_document,
 )
@@ -211,6 +212,53 @@ class ContributionLedgerTests(unittest.TestCase):
                 load_ledger_document(ledger_path)
 
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), "{not json")
+
+    def test_existing_ledger_loader_rejects_missing_file_without_creating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+
+            with self.assertRaisesRegex(LedgerPersistenceError, "does not exist"):
+                load_existing_ledger_document(ledger_path)
+
+            self.assertFalse(ledger_path.exists())
+
+    def test_summary_document_sorts_nodes_and_uses_ledger_semantics(self) -> None:
+        ledger = ContributionLedger(
+            [
+                ContributionRecord("node-b", "job-1", "completed", 10, "ok"),
+                ContributionRecord("node-a", "job-2", "failed", 0, "boom"),
+                ContributionRecord("node-a", "job-3", "completed", 5, "ok"),
+            ]
+        )
+
+        summary = ledger.summary_document("./local-ledger.json")
+
+        self.assertEqual(
+            summary,
+            {
+                "ledger_path": "./local-ledger.json",
+                "record_count": 3,
+                "completed_result_count": 2,
+                "failed_result_count": 1,
+                "total_contribution_units": 15,
+                "nodes": [
+                    {
+                        "node_id": "node-a",
+                        "record_count": 2,
+                        "completed_result_count": 1,
+                        "failed_result_count": 1,
+                        "total_contribution_units": 5,
+                    },
+                    {
+                        "node_id": "node-b",
+                        "record_count": 1,
+                        "completed_result_count": 1,
+                        "failed_result_count": 0,
+                        "total_contribution_units": 10,
+                    },
+                ],
+            },
+        )
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
     ContributionLedger,
     LedgerPersistenceError,
+    load_existing_ledger_document,
     load_ledger_document,
     save_ledger_document,
 )
@@ -73,6 +74,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         default=None,
         help="Opt in to JSON-file-backed local contribution ledger persistence.",
+    )
+
+    ledger_summary = subcommands.add_parser(
+        "ledger-summary",
+        help="Inspect an existing local contribution ledger and print JSON totals.",
+    )
+    ledger_summary.add_argument(
+        "--ledger-path",
+        required=True,
+        help="Path to an existing version 1 local contribution ledger JSON file.",
     )
 
     return parser
@@ -172,6 +183,13 @@ def run_local_batch(
     return result
 
 
+def summarize_ledger(ledger_path: str) -> dict[str, object]:
+    """Load an existing ledger and return read-only aggregate totals."""
+
+    ledger, _extra_fields = load_existing_ledger_document(ledger_path)
+    return ledger.summary_document(ledger_path)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -205,6 +223,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"error: local batch execution failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "ledger-summary":
+        try:
+            payload = summarize_ledger(args.ledger_path)
+        except LedgerPersistenceError as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0
