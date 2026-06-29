@@ -17,6 +17,11 @@ from aethermesh_core.ledger import (
     load_ledger_document,
     save_ledger_document,
 )
+from aethermesh_core.message_log import (
+    MessageLogPersistenceError,
+    build_message_log_document,
+    write_message_log,
+)
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
@@ -74,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         default=None,
         help="Opt in to JSON-file-backed local contribution ledger persistence.",
+    )
+    batch.add_argument(
+        "--message-log-path",
+        default=None,
+        help="Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -159,7 +169,9 @@ def run_default_local_simulation() -> dict[str, object]:
 
 
 def run_local_batch(
-    manifest_path: str, ledger_path: str | None = None
+    manifest_path: str,
+    ledger_path: str | None = None,
+    message_log_path: str | None = None,
 ) -> dict[str, object]:
     """Run a local simulation from a validated JSON manifest."""
 
@@ -183,6 +195,15 @@ def run_local_batch(
         result["persisted_ledger_summaries"] = [
             ledger.summary_for_node(node_id).to_dict() for node_id in batch.node_ids
         ]
+
+    if message_log_path is not None:
+        message_log_document = build_message_log_document(
+            simulation=simulation,
+            jobs=batch.jobs,
+            manifest_path=manifest_path,
+        )
+        write_message_log(message_log_path, message_log_document)
+        result["message_log_path"] = message_log_path
 
     if unsupported_count:
         unsupported_errors = sorted(
@@ -231,11 +252,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run-local-batch":
         try:
-            payload = run_local_batch(args.manifest, args.ledger_path)
+            payload = run_local_batch(
+                args.manifest, args.ledger_path, args.message_log_path
+            )
         except ManifestError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-        except LedgerPersistenceError as exc:
+        except (LedgerPersistenceError, MessageLogPersistenceError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         except ValueError as exc:

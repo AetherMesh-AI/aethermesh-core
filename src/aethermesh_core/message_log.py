@@ -1,0 +1,88 @@
+"""JSON-backed local message log persistence for batch simulations."""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from aethermesh_core.messages import MeshMessage
+from aethermesh_core.models import Job
+from aethermesh_core.simulation import LocalSimulationResult
+
+
+class MessageLogPersistenceError(ValueError):
+    """Raised when a local message log JSON file cannot be safely saved."""
+
+
+def build_message_log_document(
+    *,
+    simulation: LocalSimulationResult,
+    jobs: list[Job],
+    manifest_path: str | Path,
+) -> dict[str, Any]:
+    """Build a deterministic version 1 audit document for local mesh messages."""
+
+    return {
+        "version": 1,
+        "metadata": {
+            "source": "run-local-batch",
+            "manifest_path": str(manifest_path),
+            "message_count": len(simulation.messages),
+            "node_count": len(simulation.nodes),
+            "job_count": len(jobs),
+            "completed_count": int(simulation.totals["completed_jobs"]),
+            "failed_count": int(simulation.totals["failed_jobs"]),
+            "total_contribution_units": int(simulation.totals["contribution_units"]),
+            "validation_summary": dict(simulation.validation_summary),
+            "node_ids": list(simulation.nodes),
+            "job_ids": [job.job_id for job in jobs],
+        },
+        "messages": [_message_to_document_entry(message) for message in simulation.messages],
+    }
+
+
+def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
+    """Write a local message log via temp-file then atomic replace."""
+
+    log_path = Path(path)
+    parent = log_path.parent
+    temp_name: str | None = None
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=parent,
+            prefix=f".{log_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_name = handle.name
+            json.dump(document, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+        os.replace(temp_name, log_path)
+    except (OSError, TypeError, ValueError) as exc:
+        if temp_name is not None:
+            _remove_temp_file(temp_name)
+        raise MessageLogPersistenceError(f"could not write message log file: {exc}") from exc
+
+
+def _message_to_document_entry(message: MeshMessage) -> dict[str, Any]:
+    return {
+        "message_id": message.message_id,
+        "message_type": message.message_type,
+        "sender_node_id": message.sender_node_id,
+        "recipient_node_id": message.recipient_node_id,
+        "payload": dict(message.payload),
+        "correlation_id": message.correlation_id,
+    }
+
+
+def _remove_temp_file(path: str) -> None:
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        return

@@ -341,6 +341,135 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("ledger_path", payload)
         self.assertNotIn("persisted_ledger_summaries", payload)
 
+    def test_run_local_batch_does_not_write_message_log_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+            payload = json.loads(stdout.getvalue())
+            message_log_exists = message_log_path.exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(message_log_exists)
+        self.assertNotIn("message_log_path", payload)
+
+    def test_run_local_batch_writes_message_log_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "nested" / "local-messages.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            },
+                            {
+                                "job_id": "text-stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh\nhello node"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(message_log_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["message_log_path"], str(message_log_path))
+        self.assertEqual(persisted["version"], 1)
+        self.assertEqual(persisted["metadata"]["manifest_path"], str(manifest_path))
+        self.assertEqual(persisted["metadata"]["message_count"], 8)
+        self.assertEqual(persisted["metadata"]["job_count"], 2)
+        self.assertEqual(persisted["metadata"]["completed_count"], 2)
+        self.assertEqual(persisted["metadata"]["failed_count"], 0)
+        self.assertEqual(persisted["metadata"]["total_contribution_units"], 2)
+        self.assertEqual(
+            [message["message_id"] for message in persisted["messages"]],
+            [f"msg-{index:04d}" for index in range(1, 9)],
+        )
+        self.assertEqual(persisted["messages"][0]["message_type"], "node_heartbeat")
+        self.assertEqual(persisted["messages"][2]["message_type"], "job_assigned")
+        self.assertEqual(persisted["messages"][3]["message_type"], "job_result_reported")
+        self.assertEqual(persisted["messages"][4]["message_type"], "contribution_recorded")
+
+    def test_run_local_batch_message_log_write_error_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            message_log_path.mkdir()
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("could not write message log file", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_run_local_batch_persists_json_ledger_and_accumulates(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
