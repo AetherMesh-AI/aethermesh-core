@@ -15,6 +15,14 @@
       "job_id": "text-stats-1",
       "job_type": "text_stats",
       "payload": {"text": "hello mesh\nhello node"}
+    },
+    {
+      "job_id": "keyword-extract-1",
+      "job_type": "keyword_extract",
+      "payload": {
+        "text": "AetherMesh nodes process useful local work for the mesh.",
+        "limit": 5
+      }
     }
   ]
 }
