@@ -1836,7 +1836,9 @@ class CliTests(unittest.TestCase):
 
             payload = json.loads(stdout.getvalue())
             ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
             dispatch_exists = (output_dir / "dispatch-message-log.json").exists()
+            flow_log_exists = (output_dir / "flow-message-log.json").exists()
             node_a_state_exists = (output_dir / "node-state" / "local-node-a.json").exists()
             node_c_state_exists = (output_dir / "node-state" / "local-node-c.json").exists()
             node_a_log_exists = (output_dir / "worker-message-logs" / "local-node-a.json").exists()
@@ -1854,9 +1856,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["processed_assignment_count"], 2)
         self.assertEqual(payload["skipped_processed_assignment_count"], 0)
         self.assertEqual(payload["total_contribution_units"], 2)
+        self.assertEqual(payload["flow_message_log_path"], str(output_dir / "flow-message-log.json"))
+        self.assertEqual(payload["flow_message_count"], 8)
+        self.assertEqual(payload["flow_emitted_message_count"], 4)
         self.assertEqual(payload["ledger_summary"]["record_count"], 2)
         self.assertEqual(len(payload["node_results"]), 2)
         self.assertTrue(dispatch_exists)
+        self.assertTrue(flow_log_exists)
         self.assertTrue(node_a_state_exists)
         self.assertTrue(node_c_state_exists)
         self.assertTrue(node_a_log_exists)
@@ -1864,6 +1870,28 @@ class CliTests(unittest.TestCase):
         self.assertFalse(offline_state_exists)
         self.assertFalse(offline_log_exists)
         self.assertEqual(len(ledger["records"]), 2)
+        self.assertEqual(flow_log["metadata"]["source"], "run-local-flow")
+        self.assertEqual(flow_log["metadata"]["manifest_path"], str(manifest_path))
+        self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 4)
+        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 4)
+        self.assertEqual(flow_log["metadata"]["message_count"], 8)
+        self.assertEqual(flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(flow_log["metadata"]["offline_node_ids"], ["local-node-b"])
+        self.assertEqual(flow_log["metadata"]["processed_assignment_count"], 2)
+        self.assertEqual(flow_log["metadata"]["skipped_processed_assignment_count"], 0)
+        self.assertEqual(
+            [message["message_type"] for message in flow_log["messages"]],
+            [
+                "node_heartbeat",
+                "node_heartbeat",
+                "job_assigned",
+                "job_assigned",
+                "job_result_reported",
+                "contribution_recorded",
+                "job_result_reported",
+                "contribution_recorded",
+            ],
+        )
 
     def test_run_local_flow_skips_offline_nodes_but_reports_them(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1940,6 +1968,7 @@ class CliTests(unittest.TestCase):
             first_payload = json.loads(first_stdout.getvalue())
             second_payload = json.loads(second_stdout.getvalue())
             ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
 
         self.assertEqual(first_exit, 0)
         self.assertEqual(first_payload["processed_assignment_count"], 1)
@@ -1947,8 +1976,12 @@ class CliTests(unittest.TestCase):
         self.assertEqual(second_exit, 0)
         self.assertEqual(second_payload["processed_assignment_count"], 0)
         self.assertEqual(second_payload["skipped_processed_assignment_count"], 1)
+        self.assertEqual(second_payload["flow_emitted_message_count"], 0)
+        self.assertEqual(second_payload["flow_message_count"], 2)
         self.assertEqual(second_payload["node_results"][0]["ignored_message_count"], 1)
         self.assertEqual(len(ledger["records"]), 1)
+        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 0)
+        self.assertEqual(flow_log["metadata"]["message_count"], 2)
 
     def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1956,9 +1989,12 @@ class CliTests(unittest.TestCase):
             output_dir = Path(temp_dir) / "flow"
             output_dir.mkdir()
             dispatch_path = output_dir / "dispatch-message-log.json"
+            flow_log_path = output_dir / "flow-message-log.json"
             ledger_path = output_dir / "ledger.json"
             dispatch_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            flow_log_original = json.dumps({"version": 1, "messages": [], "keep": True})
             dispatch_path.write_text(dispatch_original, encoding="utf-8")
+            flow_log_path.write_text(flow_log_original, encoding="utf-8")
             ledger_path.write_text("not-json", encoding="utf-8")
             manifest_path.write_text(
                 json.dumps(
@@ -1980,6 +2016,7 @@ class CliTests(unittest.TestCase):
                     ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
                 )
             dispatch_contents = dispatch_path.read_text(encoding="utf-8")
+            flow_log_contents = flow_log_path.read_text(encoding="utf-8")
             ledger_contents = ledger_path.read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 1)
@@ -1987,6 +2024,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("ledger JSON is malformed", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(dispatch_contents, dispatch_original)
+        self.assertEqual(flow_log_contents, flow_log_original)
         self.assertEqual(ledger_contents, "not-json")
 
 

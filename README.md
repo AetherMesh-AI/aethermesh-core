@@ -141,7 +141,7 @@ Run the full local dispatch-plus-workers prototype flow into one deterministic a
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-flow --manifest examples/local-batch.json --output-dir /tmp/aethermesh-local-flow
 ```
 
-The flow writes `dispatch-message-log.json`, one shared `ledger.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
+The flow writes `dispatch-message-log.json`, a merged run-level `flow-message-log.json`, one shared `ledger.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. The flow log is a deterministic local audit transcript: dispatch messages appear once, followed by worker-emitted result/contribution messages in stable available-node order. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
 
 To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
 

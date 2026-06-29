@@ -24,9 +24,11 @@ from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_dispatch_message_log_document,
+    build_flow_message_log_document,
     build_message_log_document,
     build_replayed_message_log_document,
     load_message_log_messages,
+    load_worker_emitted_messages,
     write_message_log,
 )
 from aethermesh_core.messages import MeshMessage
@@ -338,6 +340,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         raise ValueError(f"could not create output directory: {exc}") from exc
 
     dispatch_message_log_path = output_path / "dispatch-message-log.json"
+    flow_message_log_path = output_path / "flow-message-log.json"
     ledger_path = output_path / "ledger.json"
     node_state_dir = output_path / "node-state"
     worker_log_dir = output_path / "worker-message-logs"
@@ -359,9 +362,12 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     )
 
     per_node_results: list[dict[str, object]] = []
+    emitted_messages_by_node: dict[str, list[MeshMessage]] = {}
+    worker_message_log_paths: dict[str, str | Path] = {}
     for node_id in available_node_ids:
         node_state_path = _node_artifact_path(node_state_dir, node_id)
         worker_message_log_path = _node_artifact_path(worker_log_dir, node_id)
+        worker_message_log_paths[node_id] = worker_message_log_path
         node_payload = process_local_inbox(
             node_id=node_id,
             message_log_path=str(dispatch_message_log_path),
@@ -390,23 +396,47 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
                 "ledger_summary": node_payload.get("ledger_summary"),
             }
         )
+        emitted_messages_by_node[node_id] = load_worker_emitted_messages(worker_message_log_path)
 
     ledger_summary = summarize_ledger(str(ledger_path))
+    processed_node_ids = [str(result["node_id"]) for result in per_node_results]
+    processed_assignment_count = sum(
+        int(result["processed_assignment_count"]) for result in per_node_results
+    )
+    skipped_processed_assignment_count = sum(
+        int(result["skipped_processed_assignment_count"]) for result in per_node_results
+    )
+    flow_message_log_document = build_flow_message_log_document(
+        dispatch_messages=load_message_log_messages(dispatch_message_log_path),
+        emitted_messages_by_node=emitted_messages_by_node,
+        manifest_path=manifest_path,
+        dispatch_message_log_path=dispatch_message_log_path,
+        ledger_path=ledger_path,
+        worker_message_log_paths=worker_message_log_paths,
+        available_node_ids=available_node_ids,
+        offline_node_ids=offline_node_ids,
+        processed_node_ids=processed_node_ids,
+        processed_assignment_count=processed_assignment_count,
+        skipped_processed_assignment_count=skipped_processed_assignment_count,
+        total_contribution_units=int(str(ledger_summary["total_contribution_units"])),
+    )
+    write_message_log(flow_message_log_path, flow_message_log_document)
     return {
         "command": "run-local-flow",
         "manifest_path": manifest_path,
         "output_dir": output_dir,
         "dispatch_message_log_path": str(dispatch_message_log_path),
+        "flow_message_log_path": str(flow_message_log_path),
+        "flow_message_count": flow_message_log_document["metadata"]["message_count"],
+        "flow_emitted_message_count": flow_message_log_document["metadata"][
+            "emitted_message_count"
+        ],
         "ledger_path": str(ledger_path),
         "available_node_ids": available_node_ids,
         "offline_node_ids": offline_node_ids,
-        "processed_node_ids": [result["node_id"] for result in per_node_results],
-        "processed_assignment_count": sum(
-            int(result["processed_assignment_count"]) for result in per_node_results
-        ),
-        "skipped_processed_assignment_count": sum(
-            int(result["skipped_processed_assignment_count"]) for result in per_node_results
-        ),
+        "processed_node_ids": processed_node_ids,
+        "processed_assignment_count": processed_assignment_count,
+        "skipped_processed_assignment_count": skipped_processed_assignment_count,
         "ignored_message_count": sum(
             int(result["ignored_message_count"]) for result in per_node_results
         ),

@@ -6,9 +6,11 @@ from pathlib import Path
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_dispatch_message_log_document,
+    build_flow_message_log_document,
     build_message_log_document,
     build_replayed_message_log_document,
     load_message_log_messages,
+    load_worker_emitted_messages,
     write_message_log,
 )
 from aethermesh_core.messages import MeshMessage
@@ -168,6 +170,123 @@ class MessageLogTests(unittest.TestCase):
             [message["message_type"] for message in document["messages"]],
             ["node_heartbeat", "job_assigned"],
         )
+
+    def test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order(self) -> None:
+        dispatch_messages = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_assigned",
+                sender_node_id="local-scheduler",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                correlation_id="echo-1",
+            )
+        ]
+        emitted_messages_by_node = {
+            "local-node-b": [
+                MeshMessage(
+                    message_id="msg-0004",
+                    message_type="job_result_reported",
+                    sender_node_id="local-node-b",
+                    recipient_node_id="local-ledger",
+                    payload={"job_id": "echo-2", "status": "completed"},
+                    correlation_id="echo-2",
+                )
+            ],
+            "local-node-a": [
+                MeshMessage(
+                    message_id="msg-0002",
+                    message_type="job_result_reported",
+                    sender_node_id="local-node-a",
+                    recipient_node_id="local-ledger",
+                    payload={"job_id": "echo-1", "status": "completed"},
+                    correlation_id="echo-1",
+                ),
+                MeshMessage(
+                    message_id="msg-0003",
+                    message_type="contribution_recorded",
+                    sender_node_id="local-ledger",
+                    recipient_node_id="local-node-a",
+                    payload={"job_id": "echo-1", "contribution_units": 1},
+                    correlation_id="echo-1",
+                ),
+            ],
+        }
+
+        document = build_flow_message_log_document(
+            dispatch_messages=dispatch_messages,
+            emitted_messages_by_node=emitted_messages_by_node,
+            manifest_path="manifest.json",
+            dispatch_message_log_path="dispatch-message-log.json",
+            ledger_path="ledger.json",
+            worker_message_log_paths={
+                "local-node-a": "worker-message-logs/local-node-a.json",
+                "local-node-b": "worker-message-logs/local-node-b.json",
+            },
+            available_node_ids=["local-node-a", "local-node-b"],
+            offline_node_ids=["local-node-c"],
+            processed_node_ids=["local-node-a", "local-node-b"],
+            processed_assignment_count=2,
+            skipped_processed_assignment_count=0,
+            total_contribution_units=2,
+        )
+
+        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["metadata"]["source"], "run-local-flow")
+        self.assertEqual(document["metadata"]["dispatch_message_count"], 1)
+        self.assertEqual(document["metadata"]["emitted_message_count"], 3)
+        self.assertEqual(document["metadata"]["message_count"], 4)
+        self.assertEqual(document["metadata"]["available_node_ids"], ["local-node-a", "local-node-b"])
+        self.assertEqual(document["metadata"]["offline_node_ids"], ["local-node-c"])
+        self.assertEqual(
+            [message["message_id"] for message in document["messages"]],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
+        )
+
+    def test_load_worker_emitted_messages_skips_replayed_dispatch_messages(self) -> None:
+        replayed = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_assigned",
+                sender_node_id="local-scheduler",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "job_type": "echo"},
+                correlation_id="echo-1",
+            )
+        ]
+        emitted = [
+            MeshMessage(
+                message_id="msg-0002",
+                message_type="job_result_reported",
+                sender_node_id="local-node-a",
+                recipient_node_id="local-ledger",
+                payload={"job_id": "echo-1", "status": "completed"},
+                correlation_id="echo-1",
+            ),
+            MeshMessage(
+                message_id="msg-0003",
+                message_type="contribution_recorded",
+                sender_node_id="local-ledger",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "contribution_units": 1},
+                correlation_id="echo-1",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "worker.json"
+            write_message_log(
+                log_path,
+                build_replayed_message_log_document(
+                    replayed_messages=replayed,
+                    emitted_messages=emitted,
+                    node_id="local-node-a",
+                    source_message_log_path="dispatch.json",
+                ),
+            )
+
+            loaded = load_worker_emitted_messages(log_path)
+
+        self.assertEqual([message.message_id for message in loaded], ["msg-0002", "msg-0003"])
 
     def test_write_message_log_failure_preserves_existing_path(self) -> None:
         document = {
