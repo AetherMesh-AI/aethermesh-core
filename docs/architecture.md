@@ -66,7 +66,7 @@ This is a proposal only. Do not create empty directories, package manifests, sou
 
 ## First implementation seam
 
-The next PR should be small and testable:
+The first core module seam is defined in [0001: First Core Module Seam](decisions/0001-first-core-module-seam.md). The next implementation PR should be small and testable:
 
 - Add a minimal core library/module.
 - Model one mesh node identity.
@@ -74,13 +74,11 @@ The next PR should be small and testable:
 - Provide one executable validation path or unit test suite.
 - Prove valid and invalid inputs are handled predictably.
 
-The seam should avoid networking, persistence, discovery, transport behavior, daemon scaffolding, and configuration formats. It should also avoid committing to a broader architecture than the first model and validation path require.
+The seam should follow the decision record's TypeScript/Node.js first-module target and validation-result style. It should avoid networking, persistence, discovery, transport behavior, daemon scaffolding, and configuration formats. It should also avoid committing to a broader architecture than the first model and validation path require.
 
 ## Open questions
 
-- Which implementation language and runtime should own the first core module?
-- What is the minimum acceptable shape for a node identity?
-- What is the minimum acceptable shape for a peer endpoint before transport choices are made?
-- Should validation failures be represented as exceptions, result values, error collections, or another pattern?
+- What TypeScript package and test runner should be introduced for the first implementation PR?
+- Which URI schemes should the first endpoint validator accept without implying runtime transport support?
 - Which test runner or validation command should become the first standard project check?
 - What external consumers are expected to depend on AetherMesh Core first?

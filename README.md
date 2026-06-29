@@ -22,8 +22,8 @@ This repository is intentionally small right now. It should establish the projec
 
 AetherMesh Core is at the documentation foundation stage. There is no runnable implementation, package manifest, test runner, or public API yet.
 
-The initial project charter is in [docs/architecture.md](docs/architecture.md).
+The initial project charter is in [docs/architecture.md](docs/architecture.md). The first core module seam is defined in [docs/decisions/0001-first-core-module-seam.md](docs/decisions/0001-first-core-module-seam.md).
 
 ## Next implementation target
 
-The next small implementation step should add a minimal core library/module that models one mesh node identity and one validated peer endpoint, plus a single executable validation path or unit test suite proving valid and invalid inputs are handled predictably. See [docs/architecture.md](docs/architecture.md) for scope, non-goals, and open questions before choosing a language or runtime.
+The next small implementation step should add the minimal TypeScript/Node.js core module and validation tests described by [decision 0001](docs/decisions/0001-first-core-module-seam.md). That module should model one mesh node identity, one parsed/validated peer endpoint, and deterministic validation success/failure results without adding networking, discovery, persistence, daemon behavior, or cryptographic key management.
