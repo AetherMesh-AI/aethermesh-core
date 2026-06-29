@@ -10,6 +10,7 @@ from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.node_registry import NodeRegistry
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import JobAssignment, LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.validation import ValidationResult, validate_job_result
@@ -66,7 +67,12 @@ def run_local_simulation(
     if not node_ids:
         raise ValueError("node_ids must contain at least one node")
 
-    nodes = [_coerce_simulation_node(node) for node in node_ids]
+    registry = NodeRegistry()
+    for node in node_ids:
+        registered_node = registry.register(node)
+        if registered_node.status == NodeStatus.AVAILABLE:
+            registry.record_heartbeat(registered_node.node_id)
+    nodes = registry.scheduled_nodes()
     ordered_node_ids = [node.node_id for node in nodes]
     ledger = ContributionLedger()
     message_bus = LocalMessageBus()
@@ -77,7 +83,7 @@ def run_local_simulation(
     runners = {
         node.node_id: LocalRunner(NodeIdentity(node_id=node.node_id)) for node in nodes
     }
-    scheduler = LocalScheduler(nodes)
+    scheduler = LocalScheduler(registry.scheduled_nodes())
     assignments = scheduler.assign_jobs(job.job_id for job in jobs)
     results: list[JobResult] = []
     accounted_results: list[JobResult] = []
@@ -139,8 +145,8 @@ def run_local_simulation(
         _summary_to_simulation_dict(ledger, node_id) for node_id in ordered_node_ids
     ]
     node_roster = [
-        _node_roster_entry(node, assignments, summaries[index])
-        for index, node in enumerate(nodes)
+        _node_roster_entry(entry, assignments, summaries[index])
+        for index, entry in enumerate(registry.to_roster())
     ]
     completed_jobs = sum(1 for result in results if result.status == "completed")
     failed_jobs = sum(1 for result in results if result.status == "failed")
@@ -171,21 +177,14 @@ def run_local_simulation(
     )
 
 
-def _coerce_simulation_node(node: str | ScheduledNode) -> ScheduledNode:
-    if isinstance(node, ScheduledNode):
-        return node
-    return ScheduledNode(node_id=node, status=NodeStatus.AVAILABLE)
-
-
 def _node_roster_entry(
-    node: ScheduledNode,
+    roster_entry: dict[str, int | str],
     assignments: list[JobAssignment],
     summary: dict[str, Any],
 ) -> dict[str, int | str]:
-    return {
-        "node_id": node.node_id,
-        "status": node.status.value,
-        "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node.node_id),
+    node_id = str(roster_entry["node_id"])
+    return roster_entry | {
+        "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node_id),
         "contribution_units": int(summary["contribution_units"]),
     }
 
