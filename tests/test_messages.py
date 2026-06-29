@@ -30,9 +30,31 @@ class MeshMessageTests(unittest.TestCase):
         self.assertEqual(
             SUPPORTED_MESSAGE_TYPES,
             frozenset(
-                {"job_assigned", "job_result_reported", "contribution_recorded"}
+                {
+                    "node_heartbeat",
+                    "job_assigned",
+                    "job_result_reported",
+                    "contribution_recorded",
+                }
             ),
         )
+
+    def test_node_heartbeat_message_type_is_accepted(self) -> None:
+        message = MeshMessage(
+            message_id="msg-0001",
+            message_type="node_heartbeat",
+            sender_node_id="node-a",
+            recipient_node_id=None,
+            payload={
+                "node_id": "node-a",
+                "status": "available",
+                "heartbeat_sequence": 1,
+                "heartbeat_count": 1,
+            },
+            correlation_id=None,
+        )
+
+        self.assertEqual(message.message_type, "node_heartbeat")
 
     def test_unsupported_message_type_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "message_type must be one of"):

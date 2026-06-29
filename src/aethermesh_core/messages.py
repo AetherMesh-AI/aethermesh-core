@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 SUPPORTED_MESSAGE_TYPES = frozenset(
-    {"job_assigned", "job_result_reported", "contribution_recorded"}
+    {
+        "node_heartbeat",
+        "job_assigned",
+        "job_result_reported",
+        "contribution_recorded",
+    }
 )
 
 

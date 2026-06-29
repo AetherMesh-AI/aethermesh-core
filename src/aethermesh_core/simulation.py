@@ -81,6 +81,15 @@ def run_local_simulation(
         message_bus.register_node(node_id)
     message_bus.register_node("local-scheduler")
     message_bus.register_node("local-ledger")
+    for heartbeat_payload in _node_heartbeat_messages(registry):
+        _send_simulation_message(
+            message_bus,
+            message_type="node_heartbeat",
+            sender_node_id=str(heartbeat_payload["node_id"]),
+            recipient_node_id=None,
+            payload=heartbeat_payload,
+            correlation_id=None,
+        )
     services = {
         node.node_id: LocalNodeService(
             identity=NodeIdentity(node_id=node.node_id),
@@ -178,6 +187,21 @@ def _node_roster_entry(
         "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node_id),
         "contribution_units": int(summary["contribution_units"]),
     }
+
+
+def _node_heartbeat_messages(registry: NodeRegistry) -> list[dict[str, int | str]]:
+    """Return deterministic local heartbeat payloads for available nodes only."""
+
+    return [
+        {
+            "node_id": str(entry["node_id"]),
+            "status": str(entry["status"]),
+            "heartbeat_sequence": int(entry["heartbeat_sequence"]),
+            "heartbeat_count": int(entry["heartbeat_count"]),
+        }
+        for entry in registry.to_roster()
+        if entry["status"] == NodeStatus.AVAILABLE.value
+    ]
 
 
 def _send_simulation_message(
