@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-06-29)
 
 ## Corpus Check
-- 21 files · ~5,921 words
+- 24 files · ~6,982 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 200 nodes · 442 edges · 12 communities (10 shown, 2 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 45 edges (avg confidence: 0.57)
+- 231 nodes · 514 edges · 14 communities (11 shown, 3 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 48 edges (avg confidence: 0.57)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9cbc47d4`
+- Built from commit: `101cbf30`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,20 +26,24 @@
 - [[_COMMUNITY_Community 8|Community 8]]
 - [[_COMMUNITY_Community 9|Community 9]]
 - [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Job` - 37 edges
+1. `Job` - 41 edges
 2. `JobResult` - 34 edges
-3. `ContributionLedger` - 21 edges
-4. `run_local_simulation()` - 21 edges
+3. `run_local_simulation()` - 22 edges
+4. `ContributionLedger` - 21 edges
 5. `validate_job_result()` - 20 edges
 6. `LocalRunner` - 16 edges
-7. `NodeIdentity` - 14 edges
-8. `ContributionLedgerTests` - 14 edges
-9. `ValidationTests` - 14 edges
-10. `LocalSimulationResult` - 13 edges
+7. `JobManifestTests` - 15 edges
+8. `NodeIdentity` - 14 edges
+9. `ContributionLedgerTests` - 14 edges
+10. `ValidationTests` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `JobManifestTests` --uses--> `ManifestError`  [INFERRED]
+  tests/test_job_manifest.py → src/aethermesh_core/job_manifest.py
 - `LocalRunnerTests` --uses--> `Job`  [INFERRED]
   tests/test_runner.py → src/aethermesh_core/models.py
 - `LocalSimulationTests` --uses--> `Job`  [INFERRED]
@@ -48,13 +52,11 @@
   tests/test_ledger.py → src/aethermesh_core/models.py
 - `LocalSimulationTests` --uses--> `JobAssignment`  [INFERRED]
   tests/test_simulation.py → src/aethermesh_core/scheduler.py
-- `ContributionLedgerTests` --uses--> `ContributionRecord`  [INFERRED]
-  tests/test_ledger.py → src/aethermesh_core/ledger.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (12 total, 2 thin omitted)
+## Communities (14 total, 3 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.27
@@ -65,8 +67,8 @@ Cohesion: 0.12
 Nodes (17): _coerce_node(), JobAssignment, LocalScheduler, NoAvailableNodesError, NodeStatus, Deterministic local scheduler for the AetherMesh prototype., Raised when local job assignment has jobs but no available nodes., Availability states needed by the local scheduler. (+9 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.08
-Nodes (30): _accounted_units(), ContributionLedger, ContributionRecord, ContributionSummary, LedgerPersistenceError, load_ledger_document(), Contribution ledger helpers for local job results., Serialize the ledger into the small local JSON file shape. (+22 more)
+Cohesion: 0.09
+Nodes (26): _accounted_units(), ContributionLedger, ContributionRecord, ContributionSummary, LedgerPersistenceError, load_ledger_document(), Contribution ledger helpers for local job results., Serialize the ledger into the small local JSON file shape. (+18 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.22
@@ -89,28 +91,32 @@ Cohesion: 0.22
 Nodes (7): Local multi-node simulation for the AetherMesh prototype., Run local jobs across local node identities using scheduler assignment.      Thi, run_local_simulation(), _simulation_message(), _summary_to_simulation_dict(), _validation_summary(), LocalSimulationTests
 
 ### Community 8 - "Community 8"
-Cohesion: 0.22
+Cohesion: 0.19
 Nodes (7): build_parser(), main(), Command-line interface for the local AetherMesh prototype., Run the fixed local simulation demo used by the CLI command., run_default_local_simulation(), ArgumentParser, CliTests
+
+### Community 12 - "Community 12"
+Cohesion: 0.16
+Nodes (16): Run a local simulation from a validated JSON manifest., run_local_batch(), load_job_manifest(), LocalJobBatch, ManifestError, _parse_job_entry(), _parse_jobs(), _parse_node_ids() (+8 more)
 
 ## Knowledge Gaps
 - **15 isolated node(s):** `aethermesh-core`, `AetherMesh Core Agent Notes`, `North star`, `Development approach`, `Current status` (+10 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `Job` connect `Community 3` to `Community 0`, `Community 6`, `Community 7`, `Community 8`, `Community 12`?**
+  _High betweenness centrality (0.151) - this node is a cross-community bridge._
 - **Why does `LocalSimulationResult` connect `Community 6` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 7`?**
-  _High betweenness centrality (0.146) - this node is a cross-community bridge._
-- **Why does `JobResult` connect `Community 3` to `Community 0`, `Community 2`, `Community 6`?**
-  _High betweenness centrality (0.146) - this node is a cross-community bridge._
-- **Why does `run_local_simulation()` connect `Community 7` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 8`?**
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+- **Why does `JobResult` connect `Community 3` to `Community 0`, `Community 2`, `Community 12`, `Community 6`?**
   _High betweenness centrality (0.114) - this node is a cross-community bridge._
-- **Are the 6 inferred relationships involving `Job` (e.g. with `LocalRunner` and `LocalSimulationResult`) actually correct?**
-  _`Job` has 6 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 8 inferred relationships involving `Job` (e.g. with `LocalJobBatch` and `ManifestError`) actually correct?**
+  _`Job` has 8 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 9 inferred relationships involving `JobResult` (e.g. with `ContributionLedger` and `ContributionRecord`) actually correct?**
   _`JobResult` has 9 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `ContributionLedger` (e.g. with `JobResult` and `LocalSimulationResult`) actually correct?**
   _`ContributionLedger` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `aethermesh-core`, `AetherMesh Core local prototype package.`, `Command-line interface for the local AetherMesh prototype.` to the rest of the system?**
-  _61 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _66 weakly-connected nodes found - possible documentation gaps or missing edges._
