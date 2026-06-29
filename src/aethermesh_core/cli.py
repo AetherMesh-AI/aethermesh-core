@@ -21,9 +21,11 @@ from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_message_log_document,
+    build_replayed_message_log_document,
     load_message_log_messages,
     write_message_log,
 )
+from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.node_service import InboxProcessResult, LocalNodeService
 from aethermesh_core.runner import LocalRunner
@@ -117,6 +119,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         default=None,
         help="Opt in to persisting validation-gated contribution records.",
+    )
+    inbox.add_argument(
+        "--output-message-log-path",
+        default=None,
+        help="Opt in to writing replayed plus emitted worker messages as a local message log.",
     )
 
     return parser
@@ -256,6 +263,7 @@ def process_local_inbox(
     node_id: str,
     message_log_path: str,
     ledger_path: str | None = None,
+    output_message_log_path: str | None = None,
 ) -> dict[str, object]:
     """Replay a saved local message log and process one node inbox."""
 
@@ -280,11 +288,36 @@ def process_local_inbox(
     inbox_result = service.process_inbox()
     if ledger_path is not None:
         save_ledger_document(ledger_path, ledger, extra_fields)
-    return _inbox_process_result_to_dict(inbox_result, ledger, ledger_path)
+    payload = _inbox_process_result_to_dict(inbox_result, ledger, ledger_path)
+    if output_message_log_path is not None:
+        emitted_messages = _emitted_messages_from_inbox_result(inbox_result)
+        output_document = build_replayed_message_log_document(
+            replayed_messages=messages,
+            emitted_messages=emitted_messages,
+            node_id=node_id,
+            source_message_log_path=message_log_path,
+            ledger_path=ledger_path,
+            processed_assignment_count=len(inbox_result.processed),
+            ignored_message_ids=list(inbox_result.ignored_message_ids),
+        )
+        write_message_log(output_message_log_path, output_document)
+        payload["output_message_log_path"] = output_message_log_path
+        payload["final_message_count"] = len(messages) + len(emitted_messages)
+    return payload
+
+
+def _emitted_messages_from_inbox_result(
+    inbox_result: InboxProcessResult,
+) -> list[MeshMessage]:
+    return [
+        message
+        for assignment in inbox_result.processed
+        for message in assignment.emitted_messages
+    ]
 
 
 def _node_ids_from_replayed_messages(messages: Sequence[object], node_id: str) -> list[str]:
-    node_ids = {node_id}
+    node_ids = {node_id, "local-ledger"}
     for message in messages:
         sender = getattr(message, "sender_node_id")
         recipient = getattr(message, "recipient_node_id")
@@ -398,6 +431,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 node_id=args.node_id,
                 message_log_path=args.message_log_path,
                 ledger_path=args.ledger_path,
+                output_message_log_path=args.output_message_log_path,
             )
         except (MessageLogPersistenceError, LedgerPersistenceError, ValueError) as exc:
             print(f"error: {exc}", file=sys.stderr)

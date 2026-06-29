@@ -6,9 +6,11 @@ from pathlib import Path
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_message_log_document,
+    build_replayed_message_log_document,
     load_message_log_messages,
     write_message_log,
 )
+from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job
 from aethermesh_core.simulation import run_local_simulation
 
@@ -79,6 +81,52 @@ class MessageLogTests(unittest.TestCase):
             persisted = log_path.read_text(encoding="utf-8")
 
         self.assertEqual(persisted, json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+    def test_build_replayed_message_log_document_appends_emitted_messages(self) -> None:
+        replayed = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_assigned",
+                sender_node_id="local-scheduler",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "job_type": "echo"},
+                correlation_id="echo-1",
+            )
+        ]
+        emitted = [
+            MeshMessage(
+                message_id="msg-0002",
+                message_type="job_result_reported",
+                sender_node_id="local-node-a",
+                recipient_node_id="local-ledger",
+                payload={"job_id": "echo-1", "status": "completed"},
+                correlation_id="echo-1",
+            )
+        ]
+
+        document = build_replayed_message_log_document(
+            replayed_messages=replayed,
+            emitted_messages=emitted,
+            node_id="local-node-a",
+            source_message_log_path="./local-messages.json",
+            ledger_path="./local-ledger.json",
+            processed_assignment_count=1,
+            ignored_message_ids=["msg-0003"],
+        )
+
+        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["metadata"]["source"], "process-local-inbox")
+        self.assertEqual(document["metadata"]["node_id"], "local-node-a")
+        self.assertEqual(document["metadata"]["message_count"], 2)
+        self.assertEqual(document["metadata"]["replayed_message_count"], 1)
+        self.assertEqual(document["metadata"]["emitted_message_count"], 1)
+        self.assertEqual(document["metadata"]["processed_assignment_count"], 1)
+        self.assertEqual(document["metadata"]["ignored_message_ids"], ["msg-0003"])
+        self.assertEqual(document["metadata"]["ledger_path"], "./local-ledger.json")
+        self.assertEqual(
+            [message["message_id"] for message in document["messages"]],
+            ["msg-0001", "msg-0002"],
+        )
 
     def test_write_message_log_failure_preserves_existing_path(self) -> None:
         document = {
