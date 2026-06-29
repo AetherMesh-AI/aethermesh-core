@@ -28,7 +28,7 @@ class LocalSimulationResult:
     validations: list[ValidationResult]
     messages: list[MeshMessage]
     summaries: list[dict[str, Any]]
-    node_roster: list[dict[str, int | str]]
+    node_roster: list[dict[str, Any]]
     validation_summary: dict[str, int]
     totals: dict[str, int]
     accounted_results: list[JobResult]
@@ -78,7 +78,7 @@ def run_local_simulation(
         node.node_id: LocalRunner(NodeIdentity(node_id=node.node_id)) for node in nodes
     }
     scheduler = LocalScheduler(nodes)
-    assignments = scheduler.assign_jobs(job.job_id for job in jobs)
+    assignments = scheduler.assign_jobs(jobs)
     results: list[JobResult] = []
     accounted_results: list[JobResult] = []
     validations: list[ValidationResult] = []
@@ -181,10 +181,11 @@ def _node_roster_entry(
     node: ScheduledNode,
     assignments: list[JobAssignment],
     summary: dict[str, Any],
-) -> dict[str, int | str]:
+) -> dict[str, Any]:
     return {
         "node_id": node.node_id,
         "status": node.status.value,
+        "capabilities": list(node.capabilities),
         "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node.node_id),
         "contribution_units": int(summary["contribution_units"]),
     }

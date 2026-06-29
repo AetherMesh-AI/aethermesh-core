@@ -162,18 +162,21 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 2,
                     "contribution_units": 2,
                 },
                 {
                     "node_id": "node-b",
                     "status": "offline",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 0,
                     "contribution_units": 0,
                 },
                 {
                     "node_id": "node-c",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 1,
                     "contribution_units": 1,
                 },
@@ -252,31 +255,16 @@ class LocalSimulationTests(unittest.TestCase):
             },
         )
 
-    def test_unsupported_jobs_are_recorded_as_failures_with_zero_units(self) -> None:
+    def test_unsupported_jobs_fail_at_scheduling_when_no_node_advertises_capability(self) -> None:
         jobs = [
             Job(job_id="echo-1", job_type="echo", payload={"message": "one"}),
             Job(job_id="bad-1", job_type="unsupported", payload={}),
         ]
 
-        result = run_local_simulation(["node-a", "node-b"], jobs).to_dict()
-
-        self.assertEqual(result["results"][1]["job_id"], "bad-1")
-        self.assertEqual(result["results"][1]["node_id"], "node-b")
-        self.assertEqual(result["results"][1]["status"], "failed")
-        self.assertEqual(result["results"][1]["contribution_units"], 0)
-        self.assertEqual(result["summaries"][1]["failed_jobs"], 1)
-        self.assertEqual(result["summaries"][1]["contribution_units"], 0)
-        self.assertEqual(result["validations"][1]["valid"], False)
-        self.assertEqual(result["validations"][1]["reason"], "unsupported_job_type")
-        self.assertEqual(
-            result["validation_summary"], {"valid": 1, "invalid": 1, "unsupported": 1}
-        )
-        self.assertEqual(result["totals"]["completed_jobs"], 1)
-        self.assertEqual(result["totals"]["failed_jobs"], 1)
-        self.assertEqual(result["totals"]["valid_results"], 1)
-        self.assertEqual(result["totals"]["invalid_results"], 1)
-        self.assertEqual(result["totals"]["unsupported_results"], 1)
-        self.assertEqual(result["totals"]["contribution_units"], 1)
+        with self.assertRaisesRegex(
+            ValueError, "no available node supports job 'bad-1' of type 'unsupported'"
+        ):
+            run_local_simulation(["node-a", "node-b"], jobs)
 
     def test_invalid_completed_echo_result_is_visible_but_earns_zero_units(self) -> None:
         jobs = [Job(job_id="echo-missing-message", job_type="echo", payload={})]
@@ -310,6 +298,45 @@ class LocalSimulationTests(unittest.TestCase):
     def test_empty_node_list_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "node_ids must contain at least one node"):
             run_local_simulation([], [Job(job_id="echo-1", job_type="echo")])
+
+    def test_capability_aware_assignment_and_roster_output(self) -> None:
+        jobs = [
+            Job(job_id="echo-1", job_type="echo", payload={"message": "one"}),
+            Job(
+                job_id="text-stats-1",
+                job_type="text_stats",
+                payload={"text": "hello mesh"},
+            ),
+            Job(job_id="echo-2", job_type="echo", payload={"message": "two"}),
+        ]
+
+        result = run_local_simulation(
+            [
+                ScheduledNode("echo-node", capabilities=("echo",)),
+                ScheduledNode("stats-node", capabilities=("text_stats",)),
+            ],
+            jobs,
+        ).to_dict()
+
+        self.assertEqual(
+            result["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "echo-node"},
+                {"job_id": "text-stats-1", "node_id": "stats-node"},
+                {"job_id": "echo-2", "node_id": "echo-node"},
+            ],
+        )
+        self.assertEqual(result["node_roster"][0]["capabilities"], ["echo"])
+        self.assertEqual(result["node_roster"][1]["capabilities"], ["text_stats"])
+
+    def test_simulation_fails_before_execution_when_no_node_supports_job_type(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError, "no available node supports job 'stats-1' of type 'text_stats'"
+        ):
+            run_local_simulation(
+                [ScheduledNode("echo-node", capabilities=("echo",))],
+                [Job(job_id="stats-1", job_type="text_stats")],
+            )
 
     def test_text_stats_contribution_is_gated_by_validation(self) -> None:
         jobs = [

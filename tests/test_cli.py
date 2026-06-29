@@ -22,9 +22,9 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-b"},
-                {"job_id": "echo-2", "node_id": "local-node-a"},
-                {"job_id": "echo-3", "node_id": "local-node-b"},
+                {"job_id": "text-stats-1", "node_id": "local-node-a"},
+                {"job_id": "echo-2", "node_id": "local-node-b"},
+                {"job_id": "echo-3", "node_id": "local-node-a"},
             ],
         )
         self.assertEqual(len(payload["results"]), 4)
@@ -98,7 +98,7 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-b"},
+                {"job_id": "text-stats-1", "node_id": "local-node-a"},
             ],
         )
         self.assertEqual(payload["results"][0]["output"], "hello mesh")
@@ -164,18 +164,21 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 2,
                     "contribution_units": 2,
                 },
                 {
                     "node_id": "local-node-b",
                     "status": "offline",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 0,
                     "contribution_units": 0,
                 },
                 {
                     "node_id": "local-node-c",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "assigned_jobs": 1,
                     "contribution_units": 1,
                 },
@@ -219,9 +222,48 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("no available nodes for local job assignment", stderr.getvalue())
+        self.assertIn("no available nodes for job 'echo-1' of type 'echo'", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertFalse(ledger_exists)
+
+    def test_run_local_batch_scheduling_failure_does_not_modify_existing_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            original_ledger = json.dumps({"version": 1, "records": [], "owner": "local-dev"})
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [{"node_id": "echo-node", "capabilities": ["echo"]}],
+                        "jobs": [
+                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger_path.write_text(original_ledger, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            ledger_contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("no available node supports job 'stats-1' of type 'text_stats'", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(ledger_contents, original_ledger)
 
     def test_run_local_batch_manifest_error_returns_nonzero_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -261,7 +303,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
+        self.assertIn("no available node supports job 'bad-1' of type 'unknown'", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_run_local_batch_does_not_write_ledger_by_default(self) -> None:
@@ -352,21 +394,21 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first_payload["ledger_path"], str(ledger_path))
         self.assertEqual(len(first_payload["results"]), 2)
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 1
+            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
         )
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 1
+            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
+            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 4
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 2
+            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
         )
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
         self.assertEqual(persisted["records"][0]["node_id"], "local-node-a")
-        self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
+        self.assertEqual(persisted["records"][1]["node_id"], "local-node-a")
 
     def test_run_local_batch_preserves_existing_ledger_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -479,7 +521,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
+        self.assertIn("no available node supports job 'bad-1' of type 'unknown'", stderr.getvalue())
         self.assertFalse(ledger_exists)
 
     def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:

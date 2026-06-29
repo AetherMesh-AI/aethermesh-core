@@ -1,7 +1,7 @@
 {
   "version": 1,
   "nodes": [
-    {"node_id": "local-node-a", "status": "available"},
+    {"node_id": "local-node-a", "status": "available", "capabilities": ["echo"]},
     {"node_id": "local-node-b", "status": "offline"},
     "local-node-c"
   ],
