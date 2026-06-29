@@ -119,6 +119,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 When enabled, the batch overwrites the requested version 1 local-only message log with a deterministic audit document. The document preserves ordered mesh message entries (`message_id`, `message_type`, sender, recipient, payload, and correlation id) plus run metadata such as message count, job count, completion/failure totals, validation summary, node ids, job ids, and total contribution units. Writes use a temp file and atomic replace; without `--message-log-path`, no message log file is written.
 
+Dispatch a manifest batch into an assignment-only local message log without running workers or writing contribution records:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-local-batch --manifest examples/local-batch.json --message-log-path ./local-dispatch.json
+```
+
+The dispatch log contains deterministic `node_heartbeat` messages for available nodes and `job_assigned` messages for scheduled jobs. Use `process-local-inbox` to consume the dispatch log later for one node and record validation-gated contribution.
+
 Replay a saved local message log into an in-memory bus and process exactly one node's assigned inbox work:
 
 ```bash

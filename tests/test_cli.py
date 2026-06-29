@@ -1082,6 +1082,190 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(contents, original)
 
+    def test_dispatch_local_batch_writes_assignment_only_message_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-dispatch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [
+                            {"node_id": "local-node-a", "capabilities": ["echo", "text_stats"]},
+                            {"node_id": "local-node-b", "status": "offline", "capabilities": ["echo"]},
+                            {"node_id": "local-node-c", "capabilities": ["echo"]},
+                        ],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}},
+                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh"}},
+                            {"job_id": "echo-2", "job_type": "echo", "payload": {"message": "two"}},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "dispatch-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            persisted = json.loads(message_log_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(ledger_path.exists())
+        self.assertEqual(payload["command"], "dispatch-local-batch")
+        self.assertEqual(payload["manifest_path"], str(manifest_path))
+        self.assertEqual(payload["message_log_path"], str(message_log_path))
+        self.assertEqual(payload["job_count"], 3)
+        self.assertEqual(payload["assignment_count"], 3)
+        self.assertEqual(payload["message_count"], 5)
+        self.assertEqual(payload["assigned_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            payload["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "local-node-a"},
+                {"job_id": "stats-1", "node_id": "local-node-a"},
+                {"job_id": "echo-2", "node_id": "local-node-c"},
+            ],
+        )
+        self.assertEqual(payload["nodes"][1]["status"], "offline")
+        self.assertEqual(persisted["version"], 1)
+        self.assertEqual(persisted["metadata"]["source"], "dispatch-local-batch")
+        self.assertEqual(persisted["metadata"]["assignment_count"], 3)
+        self.assertEqual(
+            [message["message_type"] for message in persisted["messages"]],
+            ["node_heartbeat", "node_heartbeat", "job_assigned", "job_assigned", "job_assigned"],
+        )
+        self.assertEqual(
+            [message["sender_node_id"] for message in persisted["messages"][:2]],
+            ["local-node-a", "local-node-c"],
+        )
+        self.assertNotIn("job_result_reported", json.dumps(persisted))
+        self.assertNotIn("contribution_recorded", json.dumps(persisted))
+
+    def test_dispatch_local_batch_failure_does_not_overwrite_existing_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-dispatch.json"
+            original = json.dumps({"version": 1, "messages": [], "keep": True})
+            message_log_path.write_text(original, encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [{"node_id": "local-node-a", "capabilities": ["echo"]}],
+                        "jobs": [{"job_id": "stats-1", "job_type": "text_stats", "payload": {}}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "dispatch-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+            contents = message_log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("job_id=stats-1 job_type=text_stats", stderr.getvalue())
+        self.assertEqual(contents, original)
+
+    def test_dispatch_local_batch_malformed_manifest_does_not_create_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-dispatch.json"
+            manifest_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "dispatch-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("manifest JSON is malformed", stderr.getvalue())
+        self.assertFalse(message_log_path.exists())
+
+    def test_process_local_inbox_consumes_dispatch_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-dispatch.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "dispatch-local-batch",
+                            "--manifest",
+                            str(manifest_path),
+                            "--message-log-path",
+                            str(message_log_path),
+                        ]
+                    ),
+                    0,
+                )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            persisted_ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["processed_assignment_count"], 1)
+        self.assertEqual(payload["validation_outcomes"][0]["valid"], True)
+        self.assertEqual(payload["ledger_summary"]["total_units"], 1)
+        self.assertEqual(len(persisted_ledger["records"]), 1)
+        self.assertEqual(persisted_ledger["records"][0]["job_id"], "echo-1")
+
     def test_process_local_inbox_replays_message_log_for_requested_node(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
