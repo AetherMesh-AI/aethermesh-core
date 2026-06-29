@@ -7,7 +7,12 @@ import json
 from collections.abc import Sequence
 from dataclasses import replace
 
-from aethermesh_core.ledger import ContributionLedger
+from aethermesh_core.ledger import (
+    ContributionLedger,
+    LedgerPersistenceError,
+    load_ledger_document,
+    save_ledger_document,
+)
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
@@ -36,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include an in-memory contribution summary for the demo result.",
     )
+    demo.add_argument(
+        "--ledger-path",
+        default=None,
+        help="Opt in to JSON-file-backed local contribution ledger persistence.",
+    )
 
     subcommands.add_parser(
         "simulate-local",
@@ -46,23 +56,37 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run_demo(
-    node_id: str | None, message: str, include_ledger: bool = False
+    node_id: str | None,
+    message: str,
+    include_ledger: bool = False,
+    ledger_path: str | None = None,
 ) -> dict[str, object]:
     identity = NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
     result_dict = result.to_dict()
-    if not include_ledger:
+    if not include_ledger and ledger_path is None:
         return result_dict
 
     validation = validate_job_result(job, result)
     record_result = result if validation.valid else replace(result, contribution_units=0)
-    ledger = ContributionLedger()
+    if ledger_path is None:
+        ledger = ContributionLedger()
+        ledger.record(record_result)
+        return {
+            "result": result_dict,
+            "validation": validation.to_dict(),
+            "ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
+        }
+
+    ledger, extra_fields = load_ledger_document(ledger_path)
     ledger.record(record_result)
+    save_ledger_document(ledger_path, ledger, extra_fields)
     return {
         "result": result_dict,
         "validation": validation.to_dict(),
-        "ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
+        "ledger_path": ledger_path,
+        "persisted_ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
     }
 
 
@@ -84,11 +108,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "run-demo":
-        print(
-            json.dumps(
-                run_demo(args.node_id, args.message, args.include_ledger), sort_keys=True
+        try:
+            payload = run_demo(
+                args.node_id, args.message, args.include_ledger, args.ledger_path
             )
-        )
+        except LedgerPersistenceError as exc:
+            parser.error(str(exc))
+        print(json.dumps(payload, sort_keys=True))
         return 0
 
     if args.command == "simulate-local":
