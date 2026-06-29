@@ -119,8 +119,8 @@ def dispatch_local_batch(
     )
 
 
-def _node_heartbeat_payloads(registry: NodeRegistry) -> list[dict[str, int | str]]:
-    payloads: list[dict[str, int | str]] = []
+def _node_heartbeat_payloads(registry: NodeRegistry) -> list[dict[str, int | str | list[str]]]:
+    payloads: list[dict[str, int | str | list[str]]] = []
     for entry in registry.to_roster():
         if entry["status"] != NodeStatus.AVAILABLE.value:
             continue
@@ -128,12 +128,18 @@ def _node_heartbeat_payloads(registry: NodeRegistry) -> list[dict[str, int | str
         heartbeat_count = entry["heartbeat_count"]
         if not isinstance(heartbeat_sequence, int) or not isinstance(heartbeat_count, int):
             raise ValueError("registry heartbeat fields must be integers")
+        capabilities = entry["capabilities"]
+        if not isinstance(capabilities, list) or not all(
+            isinstance(capability, str) for capability in capabilities
+        ):
+            raise ValueError("registry capabilities field must be a list of strings")
         payloads.append(
             {
                 "node_id": str(entry["node_id"]),
                 "status": str(entry["status"]),
                 "heartbeat_sequence": heartbeat_sequence,
                 "heartbeat_count": heartbeat_count,
+                "capabilities": list(capabilities),
             }
         )
     return payloads

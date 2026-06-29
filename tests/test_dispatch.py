@@ -47,8 +47,27 @@ class DispatchTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            [message.sender_node_id for message in result.messages if message.message_type == "node_heartbeat"],
-            ["node-a", "node-c"],
+            [
+                message.payload
+                for message in result.messages
+                if message.message_type == "node_heartbeat"
+            ],
+            [
+                {
+                    "node_id": "node-a",
+                    "status": "available",
+                    "heartbeat_sequence": 1,
+                    "heartbeat_count": 1,
+                    "capabilities": ["echo", "text_stats"],
+                },
+                {
+                    "node_id": "node-c",
+                    "status": "available",
+                    "heartbeat_sequence": 2,
+                    "heartbeat_count": 1,
+                    "capabilities": ["echo"],
+                },
+            ],
         )
         self.assertNotIn("job_result_reported", [message.message_type for message in result.messages])
         self.assertNotIn("contribution_recorded", [message.message_type for message in result.messages])
