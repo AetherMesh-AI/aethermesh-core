@@ -1816,6 +1816,179 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertFalse(ledger_path.exists())
 
+    def test_collect_local_results_end_to_end_from_dispatch_and_worker_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            dispatch_path = Path(temp_dir) / "local-dispatch.json"
+            worker_a_path = Path(temp_dir) / "local-node-a-output.json"
+            worker_b_path = Path(temp_dir) / "local-node-b-output.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [
+                            "local-node-a",
+                            {"node_id": "local-node-b", "status": "offline"},
+                        ],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "dispatch-local-batch",
+                            "--manifest",
+                            str(manifest_path),
+                            "--message-log-path",
+                            str(dispatch_path),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    main(
+                        [
+                            "process-local-inbox",
+                            "--node-id",
+                            "local-node-a",
+                            "--message-log-path",
+                            str(dispatch_path),
+                            "--output-message-log-path",
+                            str(worker_a_path),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    main(
+                        [
+                            "process-local-inbox",
+                            "--node-id",
+                            "local-node-b",
+                            "--message-log-path",
+                            str(dispatch_path),
+                            "--output-message-log-path",
+                            str(worker_b_path),
+                        ]
+                    ),
+                    0,
+                )
+            before_dispatch = dispatch_path.read_text(encoding="utf-8")
+            before_worker_a = worker_a_path.read_text(encoding="utf-8")
+            before_worker_b = worker_b_path.read_text(encoding="utf-8")
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "collect-local-results",
+                        "--dispatch-message-log-path",
+                        str(dispatch_path),
+                        "--worker-message-log-path",
+                        str(worker_a_path),
+                        "--worker-message-log-path",
+                        str(worker_b_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            after_dispatch = dispatch_path.read_text(encoding="utf-8")
+            after_worker_a = worker_a_path.read_text(encoding="utf-8")
+            after_worker_b = worker_b_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["command"], "collect-local-results")
+        self.assertEqual(payload["dispatch_message_log_path"], str(dispatch_path))
+        self.assertEqual(
+            payload["worker_message_log_paths"], [str(worker_a_path), str(worker_b_path)]
+        )
+        self.assertEqual(payload["known_assignment_count"], 1)
+        self.assertEqual(payload["reported_result_count"], 1)
+        self.assertEqual(payload["contribution_recorded_count"], 1)
+        self.assertEqual(payload["missing_assignment_ids"], [])
+        self.assertEqual(payload["duplicate_message_ids"], [])
+        self.assertEqual(payload["conflicting_message_ids"], [])
+        self.assertEqual(
+            payload["per_node_contribution_units"],
+            {"local-node-a": 1},
+        )
+        self.assertEqual(payload["total_contribution_units"], 1)
+        self.assertEqual(
+            payload["collected_message_ids"],
+            ["msg-0003", "msg-0004"],
+        )
+        self.assertEqual(after_dispatch, before_dispatch)
+        self.assertEqual(after_worker_a, before_worker_a)
+        self.assertEqual(after_worker_b, before_worker_b)
+
+    def test_collect_local_results_errors_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dispatch_path = Path(temp_dir) / "dispatch.json"
+            worker_path = Path(temp_dir) / "worker.json"
+            dispatch_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "job_assigned",
+                                "sender_node_id": "local-scheduler",
+                                "recipient_node_id": "local-node-a",
+                                "payload": {"job_id": "echo-1"},
+                                "correlation_id": "echo-1",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            worker_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "job_result_reported",
+                                "sender_node_id": "local-node-a",
+                                "recipient_node_id": "local-ledger",
+                                "payload": {"job_id": "missing"},
+                                "correlation_id": "missing",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "collect-local-results",
+                        "--dispatch-message-log-path",
+                        str(dispatch_path),
+                        "--worker-message-log-path",
+                        str(worker_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("unknown assignment", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

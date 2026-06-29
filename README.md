@@ -151,6 +151,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-l
 
 When enabled, the output log contains the validated input messages in their original order followed by the messages emitted while the requested node processed its assignments. Writes use the same temp-file and atomic replace path as batch message logs. Without `--output-message-log-path`, no output message log file is written and the default JSON response shape is unchanged.
 
+Collect one dispatch log and one or more worker output logs into a read-only validated result summary:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli collect-local-results --dispatch-message-log-path ./local-dispatch.json --worker-message-log-path ./local-node-a-output-messages.json --worker-message-log-path ./local-node-b-output-messages.json
+```
+
+The collector loads existing version 1 message logs without modifying them, matches `job_result_reported` and `contribution_recorded` messages back to dispatch-log `job_assigned` messages by correlation/job id, reports missing assignment results in the JSON summary, deduplicates exact duplicate message ids, and fails with a concise error for malformed logs, unknown assignments, mismatched correlation/job ids, or conflicting duplicate message ids.
+
 Inspect an existing local contribution ledger without writing to it:
 
 ```bash

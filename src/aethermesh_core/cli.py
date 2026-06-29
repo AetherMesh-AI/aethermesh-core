@@ -36,6 +36,10 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
+from aethermesh_core.result_collection import (
+    ResultCollectionError,
+    collect_local_results,
+)
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
@@ -152,6 +156,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--node-state-path",
         default=None,
         help="Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
+    )
+
+    collect = subcommands.add_parser(
+        "collect-local-results",
+        help="Validate and summarize worker output logs for one local dispatch log.",
+    )
+    collect.add_argument(
+        "--dispatch-message-log-path",
+        required=True,
+        help="Path to a version 1 assignment-only dispatch message log.",
+    )
+    collect.add_argument(
+        "--worker-message-log-path",
+        action="append",
+        required=True,
+        help="Path to a version 1 worker output message log. Repeat for multiple workers.",
     )
 
     return parser
@@ -528,6 +548,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             NodeStatePersistenceError,
             ValueError,
         ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "collect-local-results":
+        try:
+            payload = collect_local_results(
+                dispatch_message_log_path=args.dispatch_message_log_path,
+                worker_message_log_paths=args.worker_message_log_path,
+            )
+        except (MessageLogPersistenceError, ResultCollectionError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
