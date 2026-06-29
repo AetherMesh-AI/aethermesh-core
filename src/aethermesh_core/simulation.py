@@ -124,7 +124,12 @@ def run_local_simulation(
         validations.append(validation)
         record_result = result if validation.valid else replace(result, contribution_units=0)
         accounted_results.append(record_result)
-        record = ledger.record(record_result)
+        record = ledger.record(
+            record_result,
+            validation_valid=validation.valid,
+            validation_reason=validation.reason,
+            job_type=job.job_type,
+        )
         _send_simulation_message(
             message_bus,
             message_type="contribution_recorded",

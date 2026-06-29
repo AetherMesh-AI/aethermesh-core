@@ -393,7 +393,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
         self.assertEqual(persisted["records"][0]["node_id"], "local-node-a")
+        self.assertEqual(persisted["records"][0]["validation_valid"], True)
+        self.assertEqual(persisted["records"][0]["validation_reason"], "ok")
+        self.assertEqual(persisted["records"][0]["job_type"], "echo")
         self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
+        self.assertEqual(persisted["records"][1]["validation_valid"], True)
+        self.assertEqual(persisted["records"][1]["validation_reason"], "ok")
+        self.assertEqual(persisted["records"][1]["job_type"], "text_stats")
 
     def test_run_local_batch_preserves_existing_ledger_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -472,8 +478,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["validation_summary"], {"valid": 0, "invalid": 1, "unsupported": 0})
         self.assertEqual(persisted["records"][0]["status"], "completed")
         self.assertEqual(persisted["records"][0]["contribution_units"], 0)
+        self.assertEqual(persisted["records"][0]["validation_valid"], False)
+        self.assertEqual(
+            persisted["records"][0]["validation_reason"], "missing_payload_message"
+        )
+        self.assertEqual(persisted["records"][0]["job_type"], "echo")
 
-    def test_run_local_batch_unsupported_job_type_does_not_write_ledger(self) -> None:
+    def test_run_local_batch_unsupported_job_type_persists_invalid_audit_record(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -502,12 +513,17 @@ class CliTests(unittest.TestCase):
                         str(ledger_path),
                     ]
                 )
-            ledger_exists = ledger_path.exists()
+            persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("Unsupported job type: unknown", stderr.getvalue())
-        self.assertFalse(ledger_exists)
+        self.assertEqual(len(persisted["records"]), 1)
+        self.assertEqual(persisted["records"][0]["status"], "failed")
+        self.assertEqual(persisted["records"][0]["contribution_units"], 0)
+        self.assertEqual(persisted["records"][0]["validation_valid"], False)
+        self.assertEqual(persisted["records"][0]["validation_reason"], "unsupported_job_type")
+        self.assertEqual(persisted["records"][0]["job_type"], "unknown")
 
     def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -732,6 +748,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(len(persisted["records"]), 2)
         self.assertEqual(persisted["records"][0]["node_id"], "local-demo-node")
         self.assertEqual(persisted["records"][0]["contribution_units"], 1)
+        self.assertEqual(persisted["records"][0]["validation_valid"], True)
+        self.assertEqual(persisted["records"][0]["validation_reason"], "ok")
+        self.assertEqual(persisted["records"][0]["job_type"], "echo")
 
     def test_run_demo_malformed_ledger_path_returns_cli_error(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

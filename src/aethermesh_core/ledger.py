@@ -21,6 +21,9 @@ class ContributionRecord:
     status: str
     contribution_units: int
     message: str | None = None
+    validation_valid: bool | None = None
+    validation_reason: str | None = None
+    job_type: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the record into a JSON-compatible dictionary."""
@@ -40,12 +43,30 @@ class ContributionRecord:
             raise LedgerPersistenceError(
                 "ledger record field 'message' must be a string or null"
             )
+        validation_valid = payload.get("validation_valid")
+        if validation_valid is not None and not isinstance(validation_valid, bool):
+            raise LedgerPersistenceError(
+                "ledger record field 'validation_valid' must be a boolean or null"
+            )
+        validation_reason = payload.get("validation_reason")
+        if validation_reason is not None and not isinstance(validation_reason, str):
+            raise LedgerPersistenceError(
+                "ledger record field 'validation_reason' must be a string or null"
+            )
+        job_type = payload.get("job_type")
+        if job_type is not None and not isinstance(job_type, str):
+            raise LedgerPersistenceError(
+                "ledger record field 'job_type' must be a string or null"
+            )
         return cls(
             node_id=payload["node_id"],
             job_id=payload["job_id"],
             status=payload["status"],
             contribution_units=payload["contribution_units"],
             message=message,
+            validation_valid=validation_valid,
+            validation_reason=validation_reason,
+            job_type=job_type,
         )
 
 
@@ -71,7 +92,14 @@ class ContributionLedger:
     def __init__(self, records: list[ContributionRecord] | None = None) -> None:
         self._records = list(records) if records is not None else []
 
-    def record(self, result: JobResult) -> ContributionRecord:
+    def record(
+        self,
+        result: JobResult,
+        *,
+        validation_valid: bool | None = None,
+        validation_reason: str | None = None,
+        job_type: str | None = None,
+    ) -> ContributionRecord:
         """Record one result and return its local contribution record.
 
         Only completed results with positive integer contribution units add to
@@ -87,6 +115,9 @@ class ContributionLedger:
             status=result.status,
             contribution_units=units,
             message=message,
+            validation_valid=validation_valid,
+            validation_reason=validation_reason,
+            job_type=job_type,
         )
         self._records.append(record)
         return record

@@ -109,7 +109,7 @@ To opt in to local JSON-backed contribution persistence for a manifest batch, pa
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-batch --manifest examples/local-batch.json --ledger-path ./local-ledger.json
 ```
 
-When enabled, batch runs append validation-gated contribution records to the same version 1 local ledger JSON shape used by `run-demo` and print per-node persisted ledger summaries. Without `--ledger-path`, batch output and file writes are unchanged.
+When enabled, batch runs append validation-gated contribution records to the same version 1 local ledger JSON shape used by `run-demo` and print per-node persisted ledger summaries. New records include the validation outcome (`validation_valid`, `validation_reason`) and lightweight `job_type` metadata for local auditability; older ledger records that lack those fields still load. Without `--ledger-path`, batch output and file writes are unchanged.
 
 Inspect an existing local contribution ledger without writing to it:
 
