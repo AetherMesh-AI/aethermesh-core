@@ -5,18 +5,18 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/__init__.py": {
-    "mtime": 1782742408.6850815,
+    "mtime": 1782742503.8291152,
     "ast_hash": "fe2774bb92ddd020d6b256370ac049e9",
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1782741796.0894241,
-    "ast_hash": "0c8a6c043003a2ff122032e2c9ac3b2d",
+    "mtime": 1782742504.2941802,
+    "ast_hash": "08ebcd83050dab636c9b46aabf56f5db",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
-    "mtime": 1782741796.0902414,
-    "ast_hash": "fad526dcf8eb438dfb8cf7c1edd2ab7b",
+    "mtime": 1782742504.2949634,
+    "ast_hash": "b41afe0f9e02bbb673aec3929c581307",
     "semantic_hash": ""
   },
   "src/aethermesh_core/messages.py": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
-    "mtime": 1782741796.091362,
-    "ast_hash": "2cf827d05a7a8c24e5fb90a48c57fa47",
+    "mtime": 1782742504.296083,
+    "ast_hash": "b8ccd75ac44e001c0bb27b7f43eed19f",
     "semantic_hash": ""
   },
   "src/aethermesh_core/validation.py": {
@@ -55,13 +55,13 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1782741796.0916812,
-    "ast_hash": "33b0da523682aebf2bdf313d3de0b1e3",
+    "mtime": 1782742504.296752,
+    "ast_hash": "fe77461741e8e658f5c09391e96460f2",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
-    "mtime": 1782741796.0926332,
-    "ast_hash": "c9a0983e4b72b04031ef763d50a9db1e",
+    "mtime": 1782742504.297277,
+    "ast_hash": "06d7c41934671a20232fd34d9b7687ba",
     "semantic_hash": ""
   },
   "tests/test_messages.py": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782741796.08404,
-    "ast_hash": "7ab38200bbaa89b4782aefc839d4b96f",
+    "mtime": 1782742504.2934978,
+    "ast_hash": "2c90d1c066640730a1905829339ea201",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -150,12 +150,12 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_service.py": {
-    "mtime": 1782742408.6855528,
+    "mtime": 1782742503.8301349,
     "ast_hash": "454ca95a06407c4e3fb160308b0554f0",
     "semantic_hash": ""
   },
   "tests/test_node_service.py": {
-    "mtime": 1782742408.6859746,
+    "mtime": 1782742503.831175,
     "ast_hash": "db8f2c5e07b21a6a14cd7089031d868a",
     "semantic_hash": ""
   }
