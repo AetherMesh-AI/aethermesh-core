@@ -34,6 +34,9 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertEqual(record.status, "completed")
         self.assertEqual(record.contribution_units, 3)
         self.assertEqual(record.message, "hello mesh")
+        self.assertIsNone(record.validation_valid)
+        self.assertIsNone(record.validation_reason)
+        self.assertIsNone(record.job_type)
         self.assertEqual(summary.node_id, "node-a")
         self.assertEqual(summary.completed_job_count, 1)
         self.assertEqual(summary.failed_job_count, 0)
@@ -152,11 +155,65 @@ class ContributionLedgerTests(unittest.TestCase):
             status="completed",
             contribution_units=1,
             message="hello mesh",
+            validation_valid=True,
+            validation_reason="ok",
+            job_type="echo",
         )
 
         decoded = ContributionRecord.from_dict(json.loads(json.dumps(record.to_dict())))
 
         self.assertEqual(decoded, record)
+
+    def test_legacy_contribution_record_without_validation_metadata_loads(self) -> None:
+        payload = {
+            "node_id": "node-a",
+            "job_id": "job-legacy",
+            "status": "completed",
+            "contribution_units": 1,
+            "message": "legacy ok",
+        }
+
+        record = ContributionRecord.from_dict(payload)
+
+        self.assertEqual(record.node_id, "node-a")
+        self.assertEqual(record.job_id, "job-legacy")
+        self.assertEqual(record.status, "completed")
+        self.assertEqual(record.contribution_units, 1)
+        self.assertEqual(record.message, "legacy ok")
+        self.assertIsNone(record.validation_valid)
+        self.assertIsNone(record.validation_reason)
+        self.assertIsNone(record.job_type)
+
+    def test_record_persists_validation_metadata_when_supplied(self) -> None:
+        ledger = ContributionLedger()
+
+        ledger.record(
+            JobResult(
+                job_id="job-invalid",
+                node_id="node-a",
+                status="completed",
+                output="unexpected",
+                error=None,
+                contribution_units=0,
+            ),
+            validation_valid=False,
+            validation_reason="output_mismatch",
+            job_type="echo",
+        )
+
+        self.assertEqual(
+            ledger.to_document()["records"][0],
+            {
+                "node_id": "node-a",
+                "job_id": "job-invalid",
+                "status": "completed",
+                "contribution_units": 0,
+                "message": "unexpected",
+                "validation_valid": False,
+                "validation_reason": "output_mismatch",
+                "job_type": "echo",
+            },
+        )
 
     def test_missing_json_ledger_loads_as_empty(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
