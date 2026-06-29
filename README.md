@@ -119,6 +119,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 When enabled, the batch overwrites the requested version 1 local-only message log with a deterministic audit document. The document preserves ordered mesh message entries (`message_id`, `message_type`, sender, recipient, payload, and correlation id) plus run metadata such as message count, job count, completion/failure totals, validation summary, node ids, job ids, and total contribution units. Writes use a temp file and atomic replace; without `--message-log-path`, no message log file is written.
 
+Replay a saved local message log into an in-memory bus and process exactly one node's assigned inbox work:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --message-log-path ./local-messages.json --ledger-path ./local-ledger.json
+```
+
+This command is a local development replay path: it reads the version 1 message log without rewriting it, registers senders and recipients from the log, processes only the requested node's `job_assigned` inbox messages, optionally persists validation-gated contribution records to the existing version 1 ledger format, and prints deterministic JSON with processed counts, ignored message ids, emitted result/contribution messages, validation outcomes, and ledger totals.
+
 Inspect an existing local contribution ledger without writing to it:
 
 ```bash

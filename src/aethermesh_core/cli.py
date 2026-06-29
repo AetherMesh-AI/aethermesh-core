@@ -17,12 +17,15 @@ from aethermesh_core.ledger import (
     load_ledger_document,
     save_ledger_document,
 )
+from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_message_log_document,
+    load_message_log_messages,
     write_message_log,
 )
 from aethermesh_core.models import Job, NodeIdentity
+from aethermesh_core.node_service import InboxProcessResult, LocalNodeService
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
@@ -94,6 +97,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         required=True,
         help="Path to an existing version 1 local contribution ledger JSON file.",
+    )
+
+    inbox = subcommands.add_parser(
+        "process-local-inbox",
+        help="Replay a local message log and process one node's assigned inbox work.",
+    )
+    inbox.add_argument(
+        "--node-id",
+        required=True,
+        help="Local node id whose replayed inbox should be processed.",
+    )
+    inbox.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to a version 1 local message log produced by run-local-batch.",
+    )
+    inbox.add_argument(
+        "--ledger-path",
+        default=None,
+        help="Opt in to persisting validation-gated contribution records.",
     )
 
     return parser
@@ -228,6 +251,99 @@ def summarize_ledger(ledger_path: str) -> dict[str, object]:
     return ledger.summary_document(ledger_path)
 
 
+def process_local_inbox(
+    *,
+    node_id: str,
+    message_log_path: str,
+    ledger_path: str | None = None,
+) -> dict[str, object]:
+    """Replay a saved local message log and process one node inbox."""
+
+    messages = load_message_log_messages(message_log_path)
+    ledger, extra_fields = (
+        load_ledger_document(ledger_path)
+        if ledger_path is not None
+        else (ContributionLedger(), {})
+    )
+    message_bus = LocalMessageBus()
+    for registered_node_id in _node_ids_from_replayed_messages(messages, node_id):
+        message_bus.register_node(registered_node_id)
+    for message in messages:
+        message_bus.send(message)
+
+    service = LocalNodeService(
+        identity=NodeIdentity(node_id=node_id),
+        message_bus=message_bus,
+        runner=LocalRunner(NodeIdentity(node_id=node_id)),
+        ledger=ledger,
+    )
+    inbox_result = service.process_inbox()
+    if ledger_path is not None:
+        save_ledger_document(ledger_path, ledger, extra_fields)
+    return _inbox_process_result_to_dict(inbox_result, ledger, ledger_path)
+
+
+def _node_ids_from_replayed_messages(messages: Sequence[object], node_id: str) -> list[str]:
+    node_ids = {node_id}
+    for message in messages:
+        sender = getattr(message, "sender_node_id")
+        recipient = getattr(message, "recipient_node_id")
+        node_ids.add(sender)
+        if recipient is not None:
+            node_ids.add(recipient)
+    return sorted(node_ids)
+
+
+def _inbox_process_result_to_dict(
+    inbox_result: InboxProcessResult,
+    ledger: ContributionLedger,
+    ledger_path: str | None,
+) -> dict[str, object]:
+    emitted_messages = [
+        {
+            "id": message.message_id,
+            "type": message.message_type,
+            "sender": message.sender_node_id,
+            "recipient": message.recipient_node_id,
+        }
+        for assignment in inbox_result.processed
+        for message in assignment.emitted_messages
+    ]
+    validation_outcomes = [
+        {
+            "job_id": assignment.job.job_id,
+            "valid": assignment.validation.valid,
+            "credited_units": assignment.contribution_record.contribution_units,
+            "reason": assignment.validation.reason,
+        }
+        for assignment in inbox_result.processed
+    ]
+    payload: dict[str, object] = {
+        "command": "process-local-inbox",
+        "node_id": inbox_result.node_id,
+        "processed_assignment_count": len(inbox_result.processed),
+        "ignored_message_ids": list(inbox_result.ignored_message_ids),
+        "emitted_messages": emitted_messages,
+        "validation_outcomes": validation_outcomes,
+    }
+    if ledger_path is not None:
+        node_summary = ledger.summary_for_node(inbox_result.node_id)
+        node_ids = ledger.node_ids()
+        payload["ledger_summary"] = {
+            "path": ledger_path,
+            "total_units": sum(
+                ledger.summary_for_node(summary_node_id).total_contribution_units
+                for summary_node_id in node_ids
+            ),
+            "node_units": node_summary.total_contribution_units,
+            "record_count": sum(
+                ledger.summary_for_node(summary_node_id).total_result_count
+                for summary_node_id in node_ids
+            ),
+        }
+    return payload
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -271,6 +387,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             payload = summarize_ledger(args.ledger_path)
         except LedgerPersistenceError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "process-local-inbox":
+        try:
+            payload = process_local_inbox(
+                node_id=args.node_id,
+                message_log_path=args.message_log_path,
+                ledger_path=args.ledger_path,
+            )
+        except (MessageLogPersistenceError, LedgerPersistenceError, ValueError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))

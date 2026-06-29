@@ -6,6 +6,7 @@ from pathlib import Path
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
     build_message_log_document,
+    load_message_log_messages,
     write_message_log,
 )
 from aethermesh_core.models import Job
@@ -96,6 +97,111 @@ class MessageLogTests(unittest.TestCase):
             self.assertEqual(list(Path(temp_dir).glob(".messages.json.*.tmp")), [])
 
         self.assertIn("could not write message log file", str(cm.exception))
+
+    def test_load_message_log_messages_returns_validated_messages_without_writing(self) -> None:
+        document = {
+            "version": 1,
+            "metadata": {"message_count": 1},
+            "messages": [
+                {
+                    "message_id": "msg-0001",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "local-scheduler",
+                    "recipient_node_id": "local-node-a",
+                    "payload": {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "hello mesh"},
+                    },
+                    "correlation_id": "echo-1",
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            original = json.dumps(document, indent=2, sort_keys=True) + "\n"
+            log_path.write_text(original, encoding="utf-8")
+            before_mtime = log_path.stat().st_mtime_ns
+
+            messages = load_message_log_messages(log_path)
+
+            after_mtime = log_path.stat().st_mtime_ns
+            after_contents = log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0].message_id, "msg-0001")
+        self.assertEqual(messages[0].message_type, "job_assigned")
+        self.assertEqual(messages[0].sender_node_id, "local-scheduler")
+        self.assertEqual(messages[0].recipient_node_id, "local-node-a")
+        self.assertEqual(after_mtime, before_mtime)
+        self.assertEqual(after_contents, original)
+
+    def test_load_message_log_messages_rejects_missing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "missing.json"
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log file does not exist", str(cm.exception))
+
+    def test_load_message_log_messages_rejects_malformed_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text("not-json", encoding="utf-8")
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log JSON is malformed", str(cm.exception))
+
+    def test_load_message_log_messages_rejects_non_object_document(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text("[]", encoding="utf-8")
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log JSON must be an object", str(cm.exception))
+
+    def test_load_message_log_messages_rejects_unsupported_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps({"version": 2, "messages": []}), encoding="utf-8"
+            )
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log JSON must contain version 1", str(cm.exception))
+
+    def test_load_message_log_messages_rejects_missing_or_non_list_messages(self) -> None:
+        for document in ({"version": 1}, {"version": 1, "messages": {}}):
+            with self.subTest(document=document), tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "messages.json"
+                log_path.write_text(json.dumps(document), encoding="utf-8")
+
+                with self.assertRaises(MessageLogPersistenceError) as cm:
+                    load_message_log_messages(log_path)
+
+                self.assertIn(
+                    "message log JSON field 'messages' must be a list", str(cm.exception)
+                )
+
+    def test_load_message_log_messages_rejects_invalid_message_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps({"version": 1, "messages": [{"message_id": "msg-0001"}]}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log entry 0 is invalid", str(cm.exception))
 
 
 if __name__ == "__main__":
