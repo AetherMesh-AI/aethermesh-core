@@ -14,7 +14,7 @@ from aethermesh_core.simulation import LocalSimulationResult
 
 
 class MessageLogPersistenceError(ValueError):
-    """Raised when a local message log JSON file cannot be safely saved."""
+    """Raised when a local message log JSON file cannot be safely loaded or saved."""
 
 
 def build_message_log_document(
@@ -42,6 +42,39 @@ def build_message_log_document(
         },
         "messages": [_message_to_document_entry(message) for message in simulation.messages],
     }
+
+
+def load_message_log_messages(path: str | Path) -> list[MeshMessage]:
+    """Load validated MeshMessage entries from a version 1 local message log.
+
+    The source file is read-only: this helper never rewrites, appends, truncates,
+    or normalizes the message log document it loads.
+    """
+
+    log_path = Path(path)
+    if not log_path.exists():
+        raise MessageLogPersistenceError(f"message log file does not exist: {log_path}")
+
+    try:
+        with log_path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise MessageLogPersistenceError(f"message log JSON is malformed: {exc.msg}") from exc
+    except OSError as exc:
+        raise MessageLogPersistenceError(f"could not read message log file: {exc}") from exc
+
+    if not isinstance(document, dict):
+        raise MessageLogPersistenceError("message log JSON must be an object")
+    if document.get("version") != 1:
+        raise MessageLogPersistenceError("message log JSON must contain version 1")
+    entries = document.get("messages")
+    if not isinstance(entries, list):
+        raise MessageLogPersistenceError("message log JSON field 'messages' must be a list")
+
+    messages: list[MeshMessage] = []
+    for index, entry in enumerate(entries):
+        messages.append(_message_from_document_entry(entry, index))
+    return messages
 
 
 def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
@@ -79,6 +112,38 @@ def _message_to_document_entry(message: MeshMessage) -> dict[str, Any]:
         "payload": dict(message.payload),
         "correlation_id": message.correlation_id,
     }
+
+
+def _message_from_document_entry(entry: Any, index: int) -> MeshMessage:
+    if not isinstance(entry, dict):
+        raise MessageLogPersistenceError(
+            f"message log entry {index} must be an object"
+        )
+    message_id = entry.get("message_id")
+    message_type = entry.get("message_type")
+    sender_node_id = entry.get("sender_node_id")
+    recipient_node_id = entry.get("recipient_node_id")
+    payload = entry.get("payload", {})
+    correlation_id = entry.get("correlation_id")
+    try:
+        if not isinstance(message_id, str):
+            raise ValueError("message_id must be a non-empty string")
+        if not isinstance(message_type, str):
+            raise ValueError("message_type must be a non-empty string")
+        if not isinstance(sender_node_id, str):
+            raise ValueError("sender_node_id must be a non-empty string")
+        return MeshMessage(
+            message_id=message_id,
+            message_type=message_type,
+            sender_node_id=sender_node_id,
+            recipient_node_id=recipient_node_id,
+            payload=payload,
+            correlation_id=correlation_id,
+        )
+    except ValueError as exc:
+        raise MessageLogPersistenceError(
+            f"message log entry {index} is invalid: {exc}"
+        ) from exc
 
 
 def _remove_temp_file(path: str) -> None:

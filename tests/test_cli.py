@@ -1082,6 +1082,203 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(contents, original)
 
+    def test_process_local_inbox_replays_message_log_for_requested_node(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
+                            {
+                                "job_id": "text-stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "run-local-batch",
+                            "--manifest",
+                            str(manifest_path),
+                            "--message-log-path",
+                            str(message_log_path),
+                        ]
+                    ),
+                    0,
+                )
+            before_message_log = message_log_path.read_text(encoding="utf-8")
+            before_mtime = message_log_path.stat().st_mtime_ns
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+
+            after_message_log = message_log_path.read_text(encoding="utf-8")
+            after_mtime = message_log_path.stat().st_mtime_ns
+            persisted_ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["command"], "process-local-inbox")
+        self.assertEqual(payload["node_id"], "local-node-a")
+        self.assertEqual(payload["processed_assignment_count"], 2)
+        self.assertEqual(payload["ignored_message_ids"], ["msg-0005", "msg-0011"])
+        self.assertEqual(
+            payload["emitted_messages"],
+            [
+                {
+                    "id": "msg-0012",
+                    "type": "job_result_reported",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0013",
+                    "type": "contribution_recorded",
+                    "sender": "local-ledger",
+                    "recipient": "local-node-a",
+                },
+                {
+                    "id": "msg-0014",
+                    "type": "job_result_reported",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0015",
+                    "type": "contribution_recorded",
+                    "sender": "local-ledger",
+                    "recipient": "local-node-a",
+                },
+            ],
+        )
+        self.assertEqual(
+            payload["validation_outcomes"],
+            [
+                {"job_id": "echo-1", "valid": True, "credited_units": 1, "reason": "ok"},
+                {
+                    "job_id": "text-stats-1",
+                    "valid": True,
+                    "credited_units": 1,
+                    "reason": "ok",
+                },
+            ],
+        )
+        self.assertEqual(
+            payload["ledger_summary"],
+            {
+                "path": str(ledger_path),
+                "total_units": 2,
+                "node_units": 2,
+                "record_count": 2,
+            },
+        )
+        self.assertEqual(len(persisted_ledger["records"]), 2)
+        self.assertEqual([record["node_id"] for record in persisted_ledger["records"]], ["local-node-a", "local-node-a"])
+        self.assertEqual(after_message_log, before_message_log)
+        self.assertEqual(after_mtime, before_mtime)
+
+    def test_process_local_inbox_unknown_node_returns_zero_without_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "local-node-a",
+                                "recipient_node_id": None,
+                                "payload": {"node_id": "local-node-a"},
+                                "correlation_id": None,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "unknown-node",
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["processed_assignment_count"], 0)
+        self.assertEqual(payload["ignored_message_ids"], [])
+        self.assertEqual(payload["emitted_messages"], [])
+        self.assertEqual(payload["validation_outcomes"], [])
+        self.assertFalse(ledger_path.exists())
+        self.assertNotIn("ledger_summary", payload)
+
+    def test_process_local_inbox_invalid_message_log_returns_nonzero_without_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            message_log_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("message log JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertFalse(ledger_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
