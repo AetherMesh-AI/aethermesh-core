@@ -126,6 +126,81 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "output_mismatch")
 
+    def test_completed_text_stats_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="text-stats-1",
+                job_type="text_stats",
+                payload={"text": "hello mesh\nhello node"},
+            ),
+            JobResult(
+                job_id="text-stats-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "character_count": len("hello mesh\nhello node"),
+                    "word_count": 4,
+                    "line_count": 2,
+                    "normalized_preview": "hello mesh hello node",
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_text_stats_recomputes_expected_output(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="text-stats-1", job_type="text_stats", payload={"text": "hello"}),
+            JobResult(
+                job_id="text-stats-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "character_count": 999,
+                    "word_count": 1,
+                    "line_count": 1,
+                    "normalized_preview": "hello",
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_text_stats_malformed_payload_is_invalid(self) -> None:
+        missing = validate_job_result(
+            Job(job_id="text-stats-missing", job_type="text_stats", payload={}),
+            JobResult(
+                job_id="text-stats-missing",
+                node_id="node-a",
+                status="completed",
+                output=None,
+                error=None,
+                contribution_units=1,
+            ),
+        )
+        non_string = validate_job_result(
+            Job(job_id="text-stats-non-string", job_type="text_stats", payload={"text": 123}),
+            JobResult(
+                job_id="text-stats-non-string",
+                node_id="node-a",
+                status="completed",
+                output=None,
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(missing.valid)
+        self.assertEqual(missing.reason, "missing_payload_text")
+        self.assertFalse(non_string.valid)
+        self.assertEqual(non_string.reason, "missing_payload_text")
+
 
 if __name__ == "__main__":
     unittest.main()

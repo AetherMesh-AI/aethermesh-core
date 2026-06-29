@@ -95,6 +95,11 @@ def run_default_local_simulation() -> dict[str, object]:
 
     jobs = [
         Job(job_id="echo-1", job_type="echo", payload={"message": "hello mesh one"}),
+        Job(
+            job_id="text-stats-1",
+            job_type="text_stats",
+            payload={"text": "hello mesh\nhello node"},
+        ),
         Job(job_id="echo-2", job_type="echo", payload={"message": "hello mesh two"}),
         Job(job_id="echo-3", job_type="echo", payload={"message": "hello mesh three"}),
     ]

@@ -239,6 +239,37 @@ class LocalSimulationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "node_ids must contain at least one node"):
             run_local_simulation([], [Job(job_id="echo-1", job_type="echo")])
 
+    def test_text_stats_contribution_is_gated_by_validation(self) -> None:
+        jobs = [
+            Job(
+                job_id="text-stats-1",
+                job_type="text_stats",
+                payload={"text": "hello mesh\nhello node"},
+            ),
+            Job(job_id="text-stats-bad", job_type="text_stats", payload={"text": 123}),
+        ]
+
+        result = run_local_simulation(["node-a"], jobs).to_dict()
+
+        self.assertEqual(result["results"][0]["status"], "completed")
+        self.assertEqual(
+            result["results"][0]["output"],
+            {
+                "character_count": len("hello mesh\nhello node"),
+                "word_count": 4,
+                "line_count": 2,
+                "normalized_preview": "hello mesh hello node",
+            },
+        )
+        self.assertEqual(result["results"][1]["status"], "failed")
+        self.assertEqual(result["validations"][0]["valid"], True)
+        self.assertEqual(result["validations"][1]["valid"], False)
+        self.assertEqual(result["validations"][1]["reason"], "result_not_completed")
+        self.assertEqual(result["summaries"][0]["completed_jobs"], 1)
+        self.assertEqual(result["summaries"][0]["failed_jobs"], 1)
+        self.assertEqual(result["summaries"][0]["contribution_units"], 1)
+        self.assertEqual(result["totals"]["contribution_units"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

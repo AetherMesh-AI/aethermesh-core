@@ -76,7 +76,7 @@ Run the deterministic local multi-node simulation:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli simulate-local
 ```
 
-The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
 Run the unit tests without installing anything:
 

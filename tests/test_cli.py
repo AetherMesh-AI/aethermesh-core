@@ -22,13 +22,20 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "echo-2", "node_id": "local-node-b"},
-                {"job_id": "echo-3", "node_id": "local-node-a"},
+                {"job_id": "text-stats-1", "node_id": "local-node-b"},
+                {"job_id": "echo-2", "node_id": "local-node-a"},
+                {"job_id": "echo-3", "node_id": "local-node-b"},
             ],
         )
-        self.assertEqual(len(payload["results"]), 3)
+        self.assertEqual(len(payload["results"]), 4)
         self.assertEqual(payload["results"][0]["status"], "completed")
-        self.assertEqual(len(payload["messages"]), 9)
+        self.assertEqual(payload["results"][1]["output"]["word_count"], 4)
+        self.assertEqual(payload["results"][1]["output"]["line_count"], 2)
+        self.assertEqual(
+            payload["results"][1]["output"]["normalized_preview"],
+            "hello mesh hello node",
+        )
+        self.assertEqual(len(payload["messages"]), 12)
         self.assertEqual(payload["messages"][0]["message_id"], "msg-0001")
         self.assertEqual(payload["messages"][0]["message_type"], "job_assigned")
         self.assertEqual(payload["messages"][0]["correlation_id"], "echo-1")
@@ -36,20 +43,22 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["messages"][1]["message_type"], "job_result_reported")
         self.assertEqual(payload["messages"][2]["message_type"], "contribution_recorded")
         self.assertEqual(payload["validations"][0]["valid"], True)
-        self.assertEqual(payload["validation_summary"], {"valid": 3, "invalid": 0, "unsupported": 0})
+        self.assertEqual(
+            payload["validation_summary"], {"valid": 4, "invalid": 0, "unsupported": 0}
+        )
         self.assertEqual(payload["summaries"][0]["node_id"], "local-node-a")
         self.assertEqual(
             payload["totals"],
             {
                 "nodes": 2,
-                "jobs": 3,
-                "results": 3,
-                "completed_jobs": 3,
+                "jobs": 4,
+                "results": 4,
+                "completed_jobs": 4,
                 "failed_jobs": 0,
-                "valid_results": 3,
+                "valid_results": 4,
                 "invalid_results": 0,
                 "unsupported_results": 0,
-                "contribution_units": 3,
+                "contribution_units": 4,
             },
         )
 
