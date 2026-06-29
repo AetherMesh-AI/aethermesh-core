@@ -33,6 +33,8 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["messages"][0]["recipient_node_id"], "local-node-a")
         self.assertEqual(payload["messages"][1]["message_type"], "job_result_reported")
         self.assertEqual(payload["messages"][2]["message_type"], "contribution_recorded")
+        self.assertEqual(payload["validations"][0]["valid"], True)
+        self.assertEqual(payload["validation_summary"], {"valid": 3, "invalid": 0, "unsupported": 0})
         self.assertEqual(payload["summaries"][0]["node_id"], "local-node-a")
         self.assertEqual(
             payload["totals"],
@@ -42,6 +44,9 @@ class CliTests(unittest.TestCase):
                 "results": 3,
                 "completed_jobs": 3,
                 "failed_jobs": 0,
+                "valid_results": 3,
+                "invalid_results": 0,
+                "unsupported_results": 0,
                 "contribution_units": 3,
             },
         )
@@ -65,6 +70,8 @@ class CliTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["result"]["node_id"], "local-demo-node")
         self.assertEqual(payload["result"]["output"], "hello mesh")
+        self.assertEqual(payload["validation"]["valid"], True)
+        self.assertEqual(payload["validation"]["reason"], "ok")
         self.assertEqual(payload["ledger_summary"]["total_contribution_units"], 1)
 
 

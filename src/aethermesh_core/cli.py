@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Sequence
+from dataclasses import replace
 
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
+from aethermesh_core.validation import validate_job_result
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -53,10 +55,13 @@ def run_demo(
     if not include_ledger:
         return result_dict
 
+    validation = validate_job_result(job, result)
+    record_result = result if validation.valid else replace(result, contribution_units=0)
     ledger = ContributionLedger()
-    ledger.record(result)
+    ledger.record(record_result)
     return {
         "result": result_dict,
+        "validation": validation.to_dict(),
         "ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
     }
 

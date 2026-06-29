@@ -84,6 +84,8 @@ class LocalSimulationTests(unittest.TestCase):
                     "job_id": "echo-1",
                     "node_id": "node-a",
                     "status": "completed",
+                    "validation": "ok",
+                    "valid": True,
                     "contribution_units": 1,
                 },
             ],
@@ -118,6 +120,32 @@ class LocalSimulationTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
+            result["validation_summary"], {"valid": 3, "invalid": 0, "unsupported": 0}
+        )
+        self.assertEqual(
+            result["validations"],
+            [
+                {
+                    "job_id": "echo-1",
+                    "result_job_id": "echo-1",
+                    "valid": True,
+                    "reason": "ok",
+                },
+                {
+                    "job_id": "echo-2",
+                    "result_job_id": "echo-2",
+                    "valid": True,
+                    "reason": "ok",
+                },
+                {
+                    "job_id": "echo-3",
+                    "result_job_id": "echo-3",
+                    "valid": True,
+                    "reason": "ok",
+                },
+            ],
+        )
+        self.assertEqual(
             result["totals"],
             {
                 "nodes": 2,
@@ -125,6 +153,9 @@ class LocalSimulationTests(unittest.TestCase):
                 "results": 3,
                 "completed_jobs": 3,
                 "failed_jobs": 0,
+                "valid_results": 3,
+                "invalid_results": 0,
+                "unsupported_results": 0,
                 "contribution_units": 3,
             },
         )
@@ -143,9 +174,46 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["results"][1]["contribution_units"], 0)
         self.assertEqual(result["summaries"][1]["failed_jobs"], 1)
         self.assertEqual(result["summaries"][1]["contribution_units"], 0)
+        self.assertEqual(result["validations"][1]["valid"], False)
+        self.assertEqual(result["validations"][1]["reason"], "unsupported_job_type")
+        self.assertEqual(
+            result["validation_summary"], {"valid": 1, "invalid": 1, "unsupported": 1}
+        )
         self.assertEqual(result["totals"]["completed_jobs"], 1)
         self.assertEqual(result["totals"]["failed_jobs"], 1)
+        self.assertEqual(result["totals"]["valid_results"], 1)
+        self.assertEqual(result["totals"]["invalid_results"], 1)
+        self.assertEqual(result["totals"]["unsupported_results"], 1)
         self.assertEqual(result["totals"]["contribution_units"], 1)
+
+    def test_invalid_completed_echo_result_is_visible_but_earns_zero_units(self) -> None:
+        jobs = [Job(job_id="echo-missing-message", job_type="echo", payload={})]
+
+        result = run_local_simulation(["node-a"], jobs).to_dict()
+
+        self.assertEqual(result["results"][0]["status"], "completed")
+        self.assertEqual(result["results"][0]["contribution_units"], 1)
+        self.assertEqual(
+            result["validations"][0],
+            {
+                "job_id": "echo-missing-message",
+                "result_job_id": "echo-missing-message",
+                "valid": False,
+                "reason": "missing_payload_message",
+            },
+        )
+        self.assertEqual(
+            result["validation_summary"], {"valid": 0, "invalid": 1, "unsupported": 0}
+        )
+        self.assertEqual(result["summaries"][0]["completed_jobs"], 1)
+        self.assertEqual(result["summaries"][0]["contribution_units"], 0)
+        self.assertEqual(result["messages"][2]["payload"]["valid"], False)
+        self.assertEqual(result["messages"][2]["payload"]["validation"], "missing_payload_message")
+        self.assertEqual(result["messages"][2]["payload"]["contribution_units"], 0)
+        self.assertEqual(result["totals"]["completed_jobs"], 1)
+        self.assertEqual(result["totals"]["valid_results"], 0)
+        self.assertEqual(result["totals"]["invalid_results"], 1)
+        self.assertEqual(result["totals"]["contribution_units"], 0)
 
     def test_empty_node_list_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "node_ids must contain at least one node"):

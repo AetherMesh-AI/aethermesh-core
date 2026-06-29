@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
+from aethermesh_core.validation import ValidationResult, validate_job_result
 
 
 @dataclass(frozen=True)
@@ -31,8 +32,10 @@ class LocalSimulationResult:
     nodes: list[str]
     assignments: list[SimulationJobAssignment]
     results: list[JobResult]
+    validations: list[ValidationResult]
     messages: list[MeshMessage]
     summaries: list[dict[str, Any]]
+    validation_summary: dict[str, int]
     totals: dict[str, int]
 
     def to_dict(self) -> dict[str, Any]:
@@ -42,8 +45,10 @@ class LocalSimulationResult:
             "nodes": self.nodes,
             "assignments": [assignment.to_dict() for assignment in self.assignments],
             "results": [result.to_dict() for result in self.results],
+            "validations": [validation.to_dict() for validation in self.validations],
             "messages": [message.to_dict() for message in self.messages],
             "summaries": self.summaries,
+            "validation_summary": self.validation_summary,
             "totals": self.totals,
         }
 
@@ -64,6 +69,7 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
     }
     assignments: list[SimulationJobAssignment] = []
     results: list[JobResult] = []
+    validations: list[ValidationResult] = []
     messages: list[MeshMessage] = []
 
     for index, job in enumerate(jobs):
@@ -103,7 +109,10 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
 
         assignments.append(assignment)
         results.append(result)
-        record = ledger.record(result)
+        validation = validate_job_result(job, result)
+        validations.append(validation)
+        record_result = result if validation.valid else replace(result, contribution_units=0)
+        record = ledger.record(record_result)
         messages.append(
             _simulation_message(
                 messages,
@@ -114,6 +123,8 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
                     "job_id": record.job_id,
                     "node_id": record.node_id,
                     "status": record.status,
+                    "validation": validation.reason,
+                    "valid": validation.valid,
                     "contribution_units": record.contribution_units,
                 },
                 correlation_id=job.job_id,
@@ -123,20 +134,26 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
     summaries = [_summary_to_simulation_dict(ledger, node_id) for node_id in node_ids]
     completed_jobs = sum(1 for result in results if result.status == "completed")
     failed_jobs = sum(1 for result in results if result.status == "failed")
+    validation_summary = _validation_summary(validations)
     contribution_units = sum(int(summary["contribution_units"]) for summary in summaries)
 
     return LocalSimulationResult(
         nodes=list(node_ids),
         assignments=assignments,
         results=results,
+        validations=validations,
         messages=messages,
         summaries=summaries,
+        validation_summary=validation_summary,
         totals={
             "nodes": len(node_ids),
             "jobs": len(jobs),
             "results": len(results),
             "completed_jobs": completed_jobs,
             "failed_jobs": failed_jobs,
+            "valid_results": validation_summary["valid"],
+            "invalid_results": validation_summary["invalid"],
+            "unsupported_results": validation_summary["unsupported"],
             "contribution_units": contribution_units,
         },
     )
@@ -171,4 +188,16 @@ def _summary_to_simulation_dict(
         "failed_jobs": summary.failed_job_count,
         "results": summary.total_result_count,
         "contribution_units": summary.total_contribution_units,
+    }
+
+
+def _validation_summary(validations: list[ValidationResult]) -> dict[str, int]:
+    invalid = sum(1 for validation in validations if not validation.valid)
+    unsupported = sum(
+        1 for validation in validations if validation.reason == "unsupported_job_type"
+    )
+    return {
+        "valid": sum(1 for validation in validations if validation.valid),
+        "invalid": invalid,
+        "unsupported": unsupported,
     }

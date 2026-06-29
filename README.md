@@ -41,7 +41,7 @@ Avoid:
 
 ## Current status
 
-The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes a package manifest, a simple node identity model, an in-memory echo job runner, a CLI demo command, and unit tests.
+The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes a package manifest, a simple node identity model, an in-memory echo job runner, a local echo result validation gate, a CLI demo command, deterministic local simulation, and unit tests.
 
 The next meaningful step is to strengthen the local node model and validation path without trying to solve networking, distributed coordination, rewards, or production security all at once.
 
@@ -76,6 +76,8 @@ Run the deterministic local multi-node simulation:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli simulate-local
 ```
 
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+
 Run the unit tests without installing anything:
 
 ```bash
@@ -84,7 +86,7 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 
 The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. Contribution units are fixed demo accounting only; rewards and token economics are out of scope.
 
-To also print a local in-memory contribution summary for the demo result, add `--include-ledger`. This preserves the default single-result JSON output unless the ledger summary is explicitly requested.
+To also print a local in-memory contribution summary for the demo result, add `--include-ledger`. This preserves the default single-result JSON output unless the ledger summary is explicitly requested. Ledger credit is recorded through the same local validation gate and the extended output includes the validation outcome.
 
 ## Architecture
 
