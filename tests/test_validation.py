@@ -436,6 +436,109 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
 
+    def test_completed_text_embed_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="embed-1",
+                job_type="text_embed",
+                payload={"text": "AetherMesh nodes process useful local work for the mesh.", "dimensions": 8},
+            ),
+            JobResult(
+                job_id="embed-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "dimensions": 8,
+                    "token_count": 9,
+                    "unique_terms": 9,
+                    "vector": [4, 1, 1, 1, 0, 0, 1, 1],
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_text_embed_rejects_changed_output(self) -> None:
+        job = Job(
+            job_id="embed-1",
+            job_type="text_embed",
+            payload={"text": "alpha beta beta", "dimensions": 4},
+        )
+        valid_output = {
+            "dimensions": 4,
+            "token_count": 3,
+            "unique_terms": 2,
+            "vector": [0, 2, 1, 0],
+        }
+        cases = [
+            ("changed_dimensions", {**valid_output, "dimensions": 8}),
+            ("changed_token_count", {**valid_output, "token_count": 99}),
+            ("changed_unique_terms", {**valid_output, "unique_terms": 99}),
+            ("changed_vector", {**valid_output, "vector": [3, 0, 0, 0]}),
+            ("malformed_output", [0, 2, 1, 0]),
+        ]
+
+        for name, output in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="embed-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_text_embed_malformed_payload_is_invalid(self) -> None:
+        cases = [
+            Job(job_id="embed-missing", job_type="text_embed", payload={}),
+            Job(job_id="embed-blank", job_type="text_embed", payload={"text": "  "}),
+            Job(job_id="embed-non-string", job_type="text_embed", payload={"text": 123}),
+            Job(job_id="embed-bool-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": True}),
+            Job(job_id="embed-small-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 1}),
+            Job(job_id="embed-large-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 65}),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id=job.job_id,
+                        node_id="node-a",
+                        status="completed",
+                        output=None,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "malformed_text_embed_payload")
+
+    def test_failed_text_embed_result_earns_zero_credit(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="embed-1", job_type="text_embed", payload={"text": "alpha"}),
+            JobResult(
+                job_id="embed-1",
+                node_id="node-a",
+                status="failed",
+                output=None,
+                error="text_embed payload requires non-empty string field: text",
+                contribution_units=0,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_not_completed")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -276,6 +276,65 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertIsInstance(error, str)
                 self.assertTrue(str(error).startswith("text_chunk payload requires"))
 
+    def test_text_embed_completes_with_deterministic_output(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="embed-1",
+                job_type="text_embed",
+                payload={"text": "AetherMesh nodes process useful local work for the mesh.", "dimensions": 8},
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "dimensions": 8,
+                "token_count": 9,
+                "unique_terms": 9,
+                "vector": [4, 1, 1, 1, 0, 0, 1, 1],
+            },
+        )
+        self.assertEqual(result.contribution_units, 1)
+
+    def test_text_embed_uses_default_dimensions(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(Job(job_id="embed-default", job_type="text_embed", payload={"text": "one two three"}))
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "dimensions": 8,
+                "token_count": 3,
+                "unique_terms": 3,
+                "vector": [1, 0, 2, 0, 0, 0, 0, 0],
+            },
+        )
+
+    def test_text_embed_malformed_payload_fails_predictably(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+
+        cases = [
+            Job(job_id="missing", job_type="text_embed", payload={}),
+            Job(job_id="blank", job_type="text_embed", payload={"text": "  "}),
+            Job(job_id="non-string", job_type="text_embed", payload={"text": 123}),
+            Job(job_id="non-int-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": "8"}),
+            Job(job_id="bool-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": True}),
+            Job(job_id="small-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 1}),
+            Job(job_id="large-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 65}),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                result = runner.run(job)
+                self.assertEqual(result.status, "failed")
+                self.assertIsNone(result.output)
+                self.assertEqual(result.contribution_units, 0)
+                self.assertIsInstance(result.error, str)
+                self.assertTrue(str(result.error).startswith("text_embed payload requires"))
+
 
 if __name__ == "__main__":
     unittest.main()
