@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
-    "mtime": 1782736574.6673412,
-    "ast_hash": "4a617b953c1e695ed2165992c1cc6309",
+    "mtime": 1782737884.498399,
+    "ast_hash": "376ab4daf02b838284b74327a7ac5a36",
     "semantic_hash": ""
   },
   "src/aethermesh_core/validation.py": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "tests/test_simulation.py": {
-    "mtime": 1782736574.6686845,
-    "ast_hash": "bd4cbec7b95593bb08c209faf5ae1a3a",
+    "mtime": 1782737884.4994135,
+    "ast_hash": "b389c8dd0d917544153785076a6841d4",
     "semantic_hash": ""
   },
   "tests/test_validation.py": {
@@ -127,6 +127,16 @@
   "tests/test_identity.py": {
     "mtime": 1782737241.407474,
     "ast_hash": "3bc9364a73b3c034d38c2c244c846d2e",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/message_bus.py": {
+    "mtime": 1782737884.4978895,
+    "ast_hash": "5ddc536dc32d003ffdcb32b19e25224f",
+    "semantic_hash": ""
+  },
+  "tests/test_message_bus.py": {
+    "mtime": 1782737884.498974,
+    "ast_hash": "f12aa93f34e8a64c49520030f7ad3853",
     "semantic_hash": ""
   }
 }
