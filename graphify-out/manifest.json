@@ -5,22 +5,22 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/__init__.py": {
-    "mtime": 1782744239.187426,
+    "mtime": 1782745451.9650416,
     "ast_hash": "fe2774bb92ddd020d6b256370ac049e9",
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1782744239.1879091,
-    "ast_hash": "08ebcd83050dab636c9b46aabf56f5db",
+    "mtime": 1782751447.3828473,
+    "ast_hash": "9c1ffe145b48906a1d2c793c6b870201",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
-    "mtime": 1782744239.1889145,
+    "mtime": 1782745451.9664845,
     "ast_hash": "b41afe0f9e02bbb673aec3929c581307",
     "semantic_hash": ""
   },
   "src/aethermesh_core/messages.py": {
-    "mtime": 1782744239.1893106,
+    "mtime": 1782745451.9668753,
     "ast_hash": "60b64342a0440ec3b28ad35594d0d2b5",
     "semantic_hash": ""
   },
@@ -35,12 +35,12 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/scheduler.py": {
-    "mtime": 1782745206.5884595,
+    "mtime": 1782745451.9681985,
     "ast_hash": "1866bea62fd69184324fb0b6f9bfd350",
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
-    "mtime": 1782745206.5886977,
+    "mtime": 1782745451.9687524,
     "ast_hash": "a4297c2cd61aabd333d8bda86364bbd6",
     "semantic_hash": ""
   },
@@ -55,17 +55,17 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1782745206.5889196,
-    "ast_hash": "de9dae0a64bbabf5099b8a64ed1c3455",
+    "mtime": 1782751447.383465,
+    "ast_hash": "79d4fc838eddc0162e8e5f0156189167",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
-    "mtime": 1782744239.1923347,
+    "mtime": 1782745451.9700794,
     "ast_hash": "06d7c41934671a20232fd34d9b7687ba",
     "semantic_hash": ""
   },
   "tests/test_messages.py": {
-    "mtime": 1782744239.1927018,
+    "mtime": 1782745451.9705713,
     "ast_hash": "d844fe7072c13e56ca3de3bc2477ff95",
     "semantic_hash": ""
   },
@@ -75,12 +75,12 @@
     "semantic_hash": ""
   },
   "tests/test_scheduler.py": {
-    "mtime": 1782745206.5897455,
+    "mtime": 1782745451.9718022,
     "ast_hash": "c6dee3b26a9dd92ab877189e951588b5",
     "semantic_hash": ""
   },
   "tests/test_simulation.py": {
-    "mtime": 1782745206.5899518,
+    "mtime": 1782745451.9722295,
     "ast_hash": "56041255a2370f82aab35f5fa33966d2",
     "semantic_hash": ""
   },
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782744239.182029,
-    "ast_hash": "2c90d1c066640730a1905829339ea201",
+    "mtime": 1782751447.382371,
+    "ast_hash": "fc69d37c370ff1985148ae43f137eb45",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -105,17 +105,17 @@
     "semantic_hash": ""
   },
   "examples/local-batch.json": {
-    "mtime": 1782744239.1825993,
+    "mtime": 1782745451.9578846,
     "ast_hash": "ca49776a789645d444eefff71d7d7c54",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1782745206.5880752,
+    "mtime": 1782745451.966021,
     "ast_hash": "d7ffbde14ba7b141557a2c29b896d5c0",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1782745206.5891702,
+    "mtime": 1782745451.969655,
     "ast_hash": "7fed12d5bb5d4e84857e6091a5f05623",
     "semantic_hash": ""
   },
@@ -140,23 +140,33 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_registry.py": {
-    "mtime": 1782745206.5882788,
+    "mtime": 1782745451.967194,
     "ast_hash": "7d2435be4fe94c6a547a31623e6d9b43",
     "semantic_hash": ""
   },
   "tests/test_node_registry.py": {
-    "mtime": 1782745206.5894427,
+    "mtime": 1782745451.9710143,
     "ast_hash": "611fa8d667844148e58b95b490180b54",
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_service.py": {
-    "mtime": 1782744239.1900907,
+    "mtime": 1782745451.967797,
     "ast_hash": "19a669b16f18d69dc30906465040c328",
     "semantic_hash": ""
   },
   "tests/test_node_service.py": {
-    "mtime": 1782744239.1935136,
+    "mtime": 1782745451.9714022,
     "ast_hash": "20b2333b24946a9fae5cd291f6dfa2c8",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/message_log.py": {
+    "mtime": 1782751447.383084,
+    "ast_hash": "1ebeafbaf1573b6d9ca1aff28830668a",
+    "semantic_hash": ""
+  },
+  "tests/test_message_log.py": {
+    "mtime": 1782751447.3838828,
+    "ast_hash": "60794d6d88cd86a3bf1630fb8d6c4dfe",
     "semantic_hash": ""
   }
 }
