@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from aethermesh_core.dispatch import dispatch_local_batch
+from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
 from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
@@ -42,6 +43,7 @@ from aethermesh_core.node_state import (
 )
 from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
 from aethermesh_core.receipts import (
+    ReceiptPersistenceError,
     build_receipt_document,
     load_receipt_document_if_exists,
     write_receipt_document,
@@ -137,6 +139,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         required=True,
         help="Directory for deterministic local flow artifacts.",
+    )
+
+    audit_local = subcommands.add_parser(
+        "audit-local-flow",
+        help="Read and verify a completed run-local-flow artifact directory.",
+    )
+    audit_local.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory containing deterministic local flow artifacts to audit.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -724,6 +736,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             MessageLogPersistenceError,
             LedgerPersistenceError,
             NodeStatePersistenceError,
+            ValueError,
+        ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "audit-local-flow":
+        try:
+            payload = audit_local_flow(args.output_dir)
+        except (
+            FlowAuditError,
+            MessageLogPersistenceError,
+            LedgerPersistenceError,
+            ReceiptPersistenceError,
             ValueError,
         ) as exc:
             print(f"error: {exc}", file=sys.stderr)

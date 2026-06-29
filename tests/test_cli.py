@@ -2215,6 +2215,73 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log_contents, flow_log_original)
         self.assertEqual(ledger_contents, "not-json")
 
+    def test_audit_local_flow_prints_success_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run_stdout = io.StringIO()
+            with contextlib.redirect_stdout(run_stdout):
+                run_exit = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["audit-local-flow", "--output-dir", str(output_dir)])
+
+        self.assertEqual(run_exit, 0)
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["ok"], True)
+        self.assertEqual(payload["output_dir"], str(output_dir))
+        self.assertEqual(
+            payload["artifacts"],
+            {
+                "dispatch_message_log": str(output_dir / "dispatch-message-log.json"),
+                "flow_message_log": str(output_dir / "flow-message-log.json"),
+                "ledger": str(output_dir / "ledger.json"),
+                "receipts": str(output_dir / "receipts.json"),
+            },
+        )
+        self.assertEqual(
+            payload["counts"],
+            {
+                "dispatch_messages": 2,
+                "flow_messages": 4,
+                "receipts": 1,
+                "ledger_records": 1,
+                "total_contribution_units": 1,
+                "credited_receipt_units": 1,
+            },
+        )
+
+    def test_audit_local_flow_missing_receipts_returns_nonzero_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["audit-local-flow", "--output-dir", str(output_dir)])
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("error:", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

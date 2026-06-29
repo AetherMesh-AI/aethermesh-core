@@ -152,6 +152,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 The flow writes `dispatch-message-log.json`, a merged run-level `flow-message-log.json`, one shared `ledger.json`, deterministic per-job `receipts.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. The flow log is a deterministic local audit transcript: dispatch messages appear once, followed by worker-emitted result/contribution messages in stable available-node order. Receipts compactly tie each processed assignment to its result, validation decision, contribution record, credited units, and output summary. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
 
+Audit an existing local flow artifact directory without modifying it:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli audit-local-flow --output-dir /tmp/aethermesh-local-flow
+```
+
+The audit command reads the dispatch log, flow log, ledger, and receipts, verifies that receipts reference assignment/result/contribution messages and that credited receipt units match ledger totals, then prints deterministic JSON counts. Missing, malformed, unsupported-version, or inconsistent artifacts return a concise nonzero CLI error without rewriting the artifact directory.
+
 To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
 
 ```bash
