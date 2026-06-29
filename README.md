@@ -1,29 +1,67 @@
 # AetherMesh Core
 
-AetherMesh Core is the early-stage home for the implementation-neutral core of AetherMesh: the shared concepts, validation rules, and minimal domain behavior needed to describe mesh nodes and their peer relationships before any transport, runtime, or deployment model is chosen.
+AetherMesh Core is the foundation for a decentralized AI network where people can run nodes, contribute useful compute or work, improve the system, and eventually receive access or usage benefits from the network they support.
 
-This repository is intentionally small right now. It should establish the project boundary first, then add runnable code only after the core model and validation seam are agreed on.
+The project is early-stage. The immediate goal is not to design the perfect decentralized AI platform. The goal is to build the smallest real, runnable, open-source prototype that proves the concept one layer at a time.
 
-## What belongs here
+## North star
 
-- Core mesh identity concepts, such as nodes and peer endpoints.
-- Validation rules that make those concepts predictable and testable.
-- Small library/module behavior that can be reused by future adapters, CLIs, daemons, or services.
-- Architecture notes that clarify what the core owns and what remains outside it.
+AetherMesh should grow into a decentralized AI mesh where:
 
-## What does not belong here yet
+- Anyone can run a node.
+- Nodes connect into a shared network.
+- The network assigns useful AI-related work.
+- Nodes complete work and report results.
+- The system measures meaningful contributions.
+- Contributors can eventually earn usage, access, or credits.
+- The project remains understandable, testable, and open.
 
-- Runtime networking, peer discovery, transport protocols, or daemon behavior.
-- Persistence, configuration formats, deployment manifests, or service scaffolding.
-- Package manager, framework, CI, or language-specific setup before those decisions are documented.
-- Application-specific integrations that should depend on the core rather than live inside it.
+## Development approach
+
+Build in layers. Each change should make the project more real, runnable, testable, or easier to understand.
+
+Prefer:
+
+- Small working systems over large unfinished ones
+- Simple protocols before complex ones
+- Local development before distributed deployment
+- Testable code over clever code
+- Practical contribution tracking before tokenomics
+- Security-minded design before public exposure
+
+Avoid:
+
+- Empty boilerplate
+- Placeholder-only systems
+- Unused abstractions
+- Marketing-heavy documentation without technical value
+- Token or reward logic before useful work exists
+- Dashboard polish before core functionality
+- Unsupported technical claims
 
 ## Current status
 
-AetherMesh Core is at the documentation foundation stage. There is no runnable implementation, package manifest, test runner, or public API yet.
+The repository currently contains project direction and architecture notes. It does not yet contain a runnable node, package manifest, test runner, or network implementation.
 
-The initial project charter is in [docs/architecture.md](docs/architecture.md). The first core module seam is defined in [docs/decisions/0001-first-core-module-seam.md](docs/decisions/0001-first-core-module-seam.md).
+The next meaningful step is to make the project runnable with a minimal local node model or validation path. That first runnable slice should demonstrate real behavior without trying to solve networking, distributed coordination, rewards, or production security all at once.
 
-## Next implementation target
+## Near-term build direction
 
-The next small implementation step should add the minimal TypeScript/Node.js core module and validation tests described by [decision 0001](docs/decisions/0001-first-core-module-seam.md). That module should model one mesh node identity, one parsed/validated peer endpoint, and deterministic validation success/failure results without adding networking, discovery, persistence, daemon behavior, or cryptographic key management.
+AetherMesh Core should grow toward:
+
+1. A runnable local node
+2. Basic local communication or message modeling
+3. Simple job execution
+4. Result reporting
+5. Contribution tracking
+6. Work validation
+7. Easy local deployment
+8. System visibility
+9. Gradual introduction of AI workloads
+10. Expansion beyond local environments
+
+Each addition should be small, validated, and useful on its own.
+
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md) for the current architecture direction.

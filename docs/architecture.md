@@ -2,83 +2,86 @@
 
 ## Purpose
 
-AetherMesh Core defines the smallest shared model needed to reason about an AetherMesh network independent of any specific language, runtime, transport, or deployment environment.
+AetherMesh Core is the foundation for a decentralized AI mesh. It should provide the smallest set of concepts and behavior needed to run nodes, assign useful work, report results, and measure contribution over time.
 
-The core should make foundational mesh concepts explicit and testable so later adapters and applications can build on the same rules instead of duplicating assumptions.
+The architecture should grow from working local behavior toward distributed behavior. Early code should be simple, testable, and runnable before the project adds networking, rewards, dashboards, or production deployment complexity.
 
-## Scope
+## Design principles
 
-AetherMesh Core is responsible for:
+- Build small working layers.
+- Keep local development useful before distributed deployment.
+- Make behavior testable before making it scalable.
+- Prefer clear data models and validation over broad abstractions.
+- Treat contribution tracking as practical accounting first, not tokenomics.
+- Keep security in mind before exposing public network behavior.
+- Avoid adding components that do not connect to the current runnable path.
 
-- Defining mesh node identity at the domain level.
-- Defining peer endpoint concepts at the domain level.
-- Validating core inputs so invalid identities or endpoints fail predictably.
-- Providing minimal reusable behavior that other AetherMesh components can call.
-- Recording architecture decisions that shape the core boundary.
+## Core responsibilities
 
-The core should be usable by future command-line tools, daemons, services, tests, and integrations, but it should not assume any one of those consumers exists yet.
+AetherMesh Core should eventually own the shared foundation for:
 
-## Non-goals
+- Node identity and basic node metadata
+- Node lifecycle states
+- Peer or neighbor descriptions
+- Job definitions
+- Job assignment and execution records
+- Result reporting
+- Contribution accounting
+- Validation of core data and state transitions
+- Local-first execution paths that can later expand into networked behavior
 
-AetherMesh Core does not currently own:
+The first implementation does not need all of these pieces. It should introduce the smallest useful subset that can run locally and be tested.
 
-- Peer discovery behavior.
-- Network transport protocols or wire formats.
-- Routing, gossip, consensus, or synchronization algorithms.
-- Persistence, configuration file formats, secrets handling, or key storage.
-- CLI, daemon, service, UI, or deployment scaffolding.
-- Package manager, CI provider, hosting, or release automation choices.
+## Non-goals for the first prototype
 
-These may become separate modules or consumers later, but they should not be added to the core until the boundary is validated.
+The first prototype should not try to solve:
 
-## Core concepts
+- Production peer discovery
+- Distributed consensus
+- Public network security
+- Token or reward economics
+- Complex scheduling
+- Cloud orchestration
+- Dashboard polish
+- Marketplace behavior
+- Persistent identity or key management beyond simple local placeholders
 
-### Mesh node
+These may become important later, but they should not block the first runnable proof.
 
-A mesh node is one participant in an AetherMesh network. At the core layer, a node should be represented by a stable identity and any minimal metadata required to validate that identity. The core should not decide how a node is hosted, discovered, persisted, or authenticated until those responsibilities are explicitly designed.
+## Suggested first runnable slice
 
-### Peer endpoint
+A good first implementation target is a local-only node prototype that can:
 
-A peer endpoint is a validated way to refer to another node as a possible connection target. At the core layer, an endpoint should capture only the information needed to identify and validate a peer address conceptually. It should not imply a specific transport, socket implementation, discovery process, or connection lifecycle.
+1. Create or load a simple node identity.
+2. Define a small job type.
+3. Execute a local mock job.
+4. Record the result.
+5. Track a simple contribution value for completed work.
+6. Expose one validation or test command proving the behavior works.
 
-### Validation result
+This slice does not need networking. It only needs to prove the project can model a node doing useful work and recording the result in a way that future networking can build on.
 
-A validation result is the predictable outcome of checking domain input. The first implementation should make valid and invalid node identities or peer endpoints easy to distinguish without requiring networking or persistence.
+## Growth path
 
-### Core boundary
+After the first runnable local slice exists, the project can grow by adding one capability at a time:
 
-The core boundary separates domain rules from runtime behavior. Code inside the core should remain small, deterministic, and easy to test. Runtime components should depend on the core rather than forcing the core to depend on runtime infrastructure.
+1. Stronger node model
+2. Job schema and validation
+3. Result validation
+4. Contribution ledger
+5. Local CLI
+6. Basic peer message format
+7. Local multi-node simulation
+8. Real transport
+9. Deployment packaging
+10. AI workload adapters
 
-## Expected future repository layout
-
-The repository may grow toward a layout like this once implementation choices are made:
-
-```text
-README.md
-docs/
-  architecture.md
-src/ or packages/
-  core-domain-module
-tests/ or equivalent validation suite
-```
-
-This is a proposal only. Do not create empty directories, package manifests, source folders, or test scaffolding until the language, runtime, and test approach are chosen for a real implementation PR.
-
-## First implementation seam
-
-The first core module seam is defined in [0001: First Core Module Seam](decisions/0001-first-core-module-seam.md). The next implementation PR should be small and testable:
-
-- Add a minimal core library/module.
-- Model one mesh node identity.
-- Model one validated peer endpoint.
-- Provide one executable validation path or unit test suite.
-- Prove valid and invalid inputs are handled predictably.
-
-The seam should follow the decision record's TypeScript/Node.js first-module target and validation-result style. It should avoid networking, persistence, discovery, transport behavior, daemon scaffolding, and configuration formats. It should also avoid committing to a broader architecture than the first model and validation path require.
+Each step should include tests or validation and should keep the system understandable to new contributors.
 
 ## Open questions
 
-- What TypeScript package and test runner should be introduced for the first implementation PR?
-- Which URI schemes should the first endpoint validator accept without implying runtime transport support?
-- Which test runner or validation command should become the first standard project check?
-- What external consumers are expected to depend on AetherMesh Core first?
+- What runtime should the first runnable prototype use?
+- What is the smallest useful job type that proves contribution without requiring real AI workloads?
+- What contribution record is useful before rewards or tokenomics exist?
+- What should be stored locally, and what should remain in memory for the first prototype?
+- How should local simulation prepare for eventual networked nodes without overengineering the first version?
