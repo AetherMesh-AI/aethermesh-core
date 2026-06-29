@@ -14,7 +14,6 @@ class ContributionRecord:
 
     node_id: str
     job_id: str
-    job_type: str | None
     status: str
     contribution_units: int
     message: str | None = None
@@ -60,7 +59,6 @@ class ContributionLedger:
         record = ContributionRecord(
             node_id=result.node_id,
             job_id=result.job_id,
-            job_type=getattr(result, "job_type", None),
             status=result.status,
             contribution_units=units,
             message=message,
