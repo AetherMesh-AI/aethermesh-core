@@ -7,6 +7,11 @@ from aethermesh_core.ledger import (
 )
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
+from aethermesh_core.simulation import (
+    LocalSimulationResult,
+    SimulationJobAssignment,
+    run_local_simulation,
+)
 
 __version__ = "0.1.0"
 
@@ -17,6 +22,9 @@ __all__ = [
     "Job",
     "JobResult",
     "LocalRunner",
+    "LocalSimulationResult",
     "NodeIdentity",
+    "SimulationJobAssignment",
     "__version__",
+    "run_local_simulation",
 ]

@@ -70,6 +70,12 @@ Run one local demo node job from the repository root without installing anything
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh"
 ```
 
+Run the deterministic local multi-node simulation:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli simulate-local
+```
+
 Run the unit tests without installing anything:
 
 ```bash
