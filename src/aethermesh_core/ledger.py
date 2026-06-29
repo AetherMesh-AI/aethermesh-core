@@ -107,6 +107,39 @@ class ContributionLedger:
             ),
         )
 
+    def node_ids(self) -> list[str]:
+        """Return node ids present in the ledger in deterministic order."""
+
+        return sorted({record.node_id for record in self._records})
+
+    def summary_document(self, ledger_path: str | Path) -> dict[str, Any]:
+        """Return a deterministic JSON-compatible summary of all records."""
+
+        node_summaries = [self.summary_for_node(node_id) for node_id in self.node_ids()]
+        return {
+            "ledger_path": str(ledger_path),
+            "record_count": len(self._records),
+            "completed_result_count": sum(
+                summary.completed_job_count for summary in node_summaries
+            ),
+            "failed_result_count": sum(
+                summary.failed_job_count for summary in node_summaries
+            ),
+            "total_contribution_units": sum(
+                summary.total_contribution_units for summary in node_summaries
+            ),
+            "nodes": [
+                {
+                    "node_id": summary.node_id,
+                    "record_count": summary.total_result_count,
+                    "completed_result_count": summary.completed_job_count,
+                    "failed_result_count": summary.failed_job_count,
+                    "total_contribution_units": summary.total_contribution_units,
+                }
+                for summary in node_summaries
+            ],
+        }
+
     def to_document(self, extra_fields: dict[str, Any] | None = None) -> dict[str, Any]:
         """Serialize the ledger into the small local JSON file shape."""
 
@@ -158,6 +191,17 @@ def load_ledger_document(path: str | Path) -> tuple[ContributionLedger, dict[str
         key: value for key, value in document.items() if key not in {"version", "records"}
     }
     return ledger, extras
+
+
+def load_existing_ledger_document(
+    path: str | Path,
+) -> tuple[ContributionLedger, dict[str, Any]]:
+    """Load an existing JSON-backed local ledger without creating defaults."""
+
+    ledger_path = Path(path)
+    if not ledger_path.exists():
+        raise LedgerPersistenceError(f"ledger file does not exist: {ledger_path}")
+    return load_ledger_document(ledger_path)
 
 
 def save_ledger_document(
