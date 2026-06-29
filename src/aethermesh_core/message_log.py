@@ -10,6 +10,7 @@ from typing import Any
 
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job
+from aethermesh_core.scheduler import JobAssignment, ScheduledNode
 from aethermesh_core.simulation import LocalSimulationResult
 
 
@@ -75,6 +76,33 @@ def build_replayed_message_log_document(
     return {
         "version": 1,
         "metadata": metadata,
+        "messages": [_message_to_document_entry(message) for message in messages],
+    }
+
+
+def build_dispatch_message_log_document(
+    *,
+    messages: list[MeshMessage],
+    jobs: list[Job],
+    nodes: list[ScheduledNode],
+    assignments: list[JobAssignment],
+    manifest_path: str | Path,
+) -> dict[str, Any]:
+    """Build a deterministic version 1 assignment-only dispatch document."""
+
+    return {
+        "version": 1,
+        "metadata": {
+            "source": "dispatch-local-batch",
+            "manifest_path": str(manifest_path),
+            "message_count": len(messages),
+            "node_count": len(nodes),
+            "job_count": len(jobs),
+            "assignment_count": len(assignments),
+            "node_ids": [node.node_id for node in nodes],
+            "job_ids": [job.job_id for job in jobs],
+            "assigned_node_ids": sorted({assignment.node_id for assignment in assignments}),
+        },
         "messages": [_message_to_document_entry(message) for message in messages],
     }
 

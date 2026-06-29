@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
+    build_dispatch_message_log_document,
     build_message_log_document,
     build_replayed_message_log_document,
     load_message_log_messages,
@@ -12,6 +13,7 @@ from aethermesh_core.message_log import (
 )
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job
+from aethermesh_core.scheduler import JobAssignment, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 
 
@@ -126,6 +128,45 @@ class MessageLogTests(unittest.TestCase):
         self.assertEqual(
             [message["message_id"] for message in document["messages"]],
             ["msg-0001", "msg-0002"],
+        )
+
+    def test_build_dispatch_message_log_document_contains_only_dispatch_metadata(self) -> None:
+        messages = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="node_heartbeat",
+                sender_node_id="local-node-a",
+                recipient_node_id=None,
+                payload={"node_id": "local-node-a"},
+            ),
+            MeshMessage(
+                message_id="msg-0002",
+                message_type="job_assigned",
+                sender_node_id="local-scheduler",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                correlation_id="echo-1",
+            ),
+        ]
+
+        document = build_dispatch_message_log_document(
+            messages=messages,
+            jobs=[Job(job_id="echo-1", job_type="echo", payload={})],
+            nodes=[ScheduledNode("local-node-a")],
+            assignments=[JobAssignment(job_id="echo-1", node_id="local-node-a")],
+            manifest_path="examples/local-batch.json",
+        )
+
+        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["metadata"]["source"], "dispatch-local-batch")
+        self.assertEqual(document["metadata"]["message_count"], 2)
+        self.assertEqual(document["metadata"]["assignment_count"], 1)
+        self.assertEqual(document["metadata"]["assigned_node_ids"], ["local-node-a"])
+        self.assertNotIn("completed_count", document["metadata"])
+        self.assertNotIn("total_contribution_units", document["metadata"])
+        self.assertEqual(
+            [message["message_type"] for message in document["messages"]],
+            ["node_heartbeat", "job_assigned"],
         )
 
     def test_write_message_log_failure_preserves_existing_path(self) -> None:

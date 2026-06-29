@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import replace
 
+from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
 from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
@@ -20,6 +21,7 @@ from aethermesh_core.ledger import (
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
+    build_dispatch_message_log_document,
     build_message_log_document,
     build_replayed_message_log_document,
     load_message_log_messages,
@@ -95,6 +97,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--message-log-path",
         default=None,
         help="Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
+    )
+
+    dispatch = subcommands.add_parser(
+        "dispatch-local-batch",
+        help="Write assignment-only local dispatch messages for a manifest batch.",
+    )
+    dispatch.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job-batch JSON manifest.",
+    )
+    dispatch.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to write the version 1 assignment-only local message log.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -260,6 +277,30 @@ def run_local_batch(
         raise ManifestError(f"local batch execution failed: {details}")
 
     return result
+
+
+def dispatch_local_batch_command(
+    manifest_path: str,
+    message_log_path: str,
+) -> dict[str, object]:
+    """Dispatch a manifest batch to a local message log without execution."""
+
+    batch = load_job_manifest(manifest_path)
+    dispatch = dispatch_local_batch(
+        manifest_path=manifest_path,
+        message_log_path=message_log_path,
+        nodes=batch.nodes,
+        jobs=batch.jobs,
+    )
+    message_log_document = build_dispatch_message_log_document(
+        messages=dispatch.messages,
+        jobs=dispatch.jobs,
+        nodes=dispatch.nodes,
+        assignments=dispatch.assignments,
+        manifest_path=manifest_path,
+    )
+    write_message_log(message_log_path, message_log_document)
+    return dispatch.to_dict()
 
 
 def summarize_ledger(ledger_path: str) -> dict[str, object]:
@@ -444,6 +485,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"error: local batch execution failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "dispatch-local-batch":
+        try:
+            payload = dispatch_local_batch_command(args.manifest, args.message_log_path)
+        except ManifestError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except MessageLogPersistenceError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            print(f"error: local batch dispatch failed: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0
