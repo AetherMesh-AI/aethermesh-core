@@ -170,6 +170,20 @@ def load_message_log_messages(path: str | Path) -> list[MeshMessage]:
     return messages
 
 
+def load_message_log_document(path: str | Path) -> dict[str, Any]:
+    """Load a validated version 1 local message-log document without writing it."""
+
+    document = _load_message_log_document(path)
+    metadata = document.get("metadata", {})
+    if not isinstance(metadata, dict):
+        raise MessageLogPersistenceError("message log JSON field 'metadata' must be an object")
+    return {
+        "version": document["version"],
+        "metadata": dict(metadata),
+        "messages": list(document["messages"]),
+    }
+
+
 def load_worker_emitted_messages(path: str | Path) -> list[MeshMessage]:
     """Load only post-replay worker-emitted messages from a worker message log."""
 

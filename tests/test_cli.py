@@ -2253,19 +2253,25 @@ class CliTests(unittest.TestCase):
                 "flow_message_log": str(output_dir / "flow-message-log.json"),
                 "ledger": str(output_dir / "ledger.json"),
                 "receipts": str(output_dir / "receipts.json"),
+                "worker_message_logs": [
+                    str(output_dir / "worker-message-logs" / "local-node-a.json")
+                ],
+                "node_state_files": [
+                    str(output_dir / "node-state" / "local-node-a.json")
+                ],
             },
         )
-        self.assertEqual(
-            payload["counts"],
-            {
-                "dispatch_messages": 2,
-                "flow_messages": 4,
-                "receipts": 1,
-                "ledger_records": 1,
-                "total_contribution_units": 1,
-                "credited_receipt_units": 1,
-            },
-        )
+        self.assertEqual(payload["dispatch_message_count"], 2)
+        self.assertEqual(payload["flow_message_count"], 4)
+        self.assertEqual(payload["emitted_worker_message_count"], 2)
+        self.assertEqual(payload["receipt_count"], 1)
+        self.assertEqual(payload["ledger_record_count"], 1)
+        self.assertEqual(payload["processed_assignment_count"], 1)
+        self.assertEqual(payload["skipped_processed_assignment_count"], 0)
+        self.assertEqual(payload["total_contribution_units"], 1)
+        self.assertEqual(payload["credited_receipt_units"], 1)
+        self.assertEqual(payload["audited_node_ids"], ["local-node-a"])
+        self.assertEqual(payload["processed_node_ids"], ["local-node-a"])
 
     def test_audit_local_flow_missing_receipts_returns_nonzero_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
