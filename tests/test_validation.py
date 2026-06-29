@@ -126,6 +126,22 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "output_mismatch")
 
+    def test_completed_result_with_unexpected_contribution_units_is_invalid(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
+            JobResult(
+                job_id="echo-1",
+                node_id="node-a",
+                status="completed",
+                output="hello",
+                error=None,
+                contribution_units=999,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "unexpected_contribution_units")
+
     def test_completed_text_stats_result_with_matching_output_is_valid(self) -> None:
         validation = validate_job_result(
             Job(

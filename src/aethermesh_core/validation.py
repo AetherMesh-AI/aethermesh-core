@@ -39,6 +39,8 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
         return _invalid(job, result, "result_not_completed")
     if result.job_id != job.job_id:
         return _invalid(job, result, "job_id_mismatch")
+    if result.contribution_units != 1:
+        return _invalid(job, result, "unexpected_contribution_units")
 
     if job.job_type == "echo":
         if "message" not in job.payload or not isinstance(job.payload["message"], str):
