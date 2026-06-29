@@ -2215,6 +2215,43 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log_contents, flow_log_original)
         self.assertEqual(ledger_contents, "not-json")
 
+    def test_verify_local_flow_cli_prints_pretty_json_success(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        manifest_path = repo_root / "examples" / "local-batch.json"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            run_stdout = io.StringIO()
+            with contextlib.redirect_stdout(run_stdout):
+                run_exit = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            verify_stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(verify_stdout):
+                verify_exit = main(["verify-local-flow", "--output-dir", str(output_dir)])
+
+        self.assertEqual(run_exit, 0)
+        self.assertEqual(verify_exit, 0)
+        self.assertTrue(verify_stdout.getvalue().startswith("{\n"))
+        payload = json.loads(verify_stdout.getvalue())
+        self.assertEqual(payload["command"], "verify-local-flow")
+        self.assertTrue(payload["valid"])
+        self.assertEqual(payload["receipt_count"], 3)
+        self.assertEqual(payload["errors"], [])
+
+    def test_verify_local_flow_cli_returns_nonzero_for_invalid_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "missing-flow"
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["verify-local-flow", "--output-dir", str(output_dir)])
+
+        self.assertEqual(exit_code, 1)
+        payload = json.loads(stdout.getvalue())
+        self.assertFalse(payload["valid"])
+        self.assertIn("missing required artifact: receipts.json", payload["errors"])
+
 
 if __name__ == "__main__":
     unittest.main()

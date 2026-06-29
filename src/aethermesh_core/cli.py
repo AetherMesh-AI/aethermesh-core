@@ -20,6 +20,7 @@ from aethermesh_core.ledger import (
     load_ledger_document,
     save_ledger_document,
 )
+from aethermesh_core.local_flow_verifier import verify_local_flow
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
@@ -137,6 +138,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         required=True,
         help="Directory for deterministic local flow artifacts.",
+    )
+
+    verify_flow = subcommands.add_parser(
+        "verify-local-flow",
+        help="Read and validate an existing run-local-flow artifact directory.",
+    )
+    verify_flow.add_argument(
+        "--output-dir",
+        required=True,
+        help="Existing run-local-flow artifact directory to validate without mutation.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -730,6 +741,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0
+
+    if args.command == "verify-local-flow":
+        payload = verify_local_flow(args.output_dir)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload.get("valid") is True else 1
 
     if args.command == "ledger-summary":
         try:
