@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from aethermesh_core.ledger import ContributionLedger
+from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
@@ -68,6 +69,11 @@ def run_local_simulation(
     nodes = [_coerce_simulation_node(node) for node in node_ids]
     ordered_node_ids = [node.node_id for node in nodes]
     ledger = ContributionLedger()
+    message_bus = LocalMessageBus()
+    for node_id in ordered_node_ids:
+        message_bus.register_node(node_id)
+    message_bus.register_node("local-scheduler")
+    message_bus.register_node("local-ledger")
     runners = {
         node.node_id: LocalRunner(NodeIdentity(node_id=node.node_id)) for node in nodes
     }
@@ -76,40 +82,35 @@ def run_local_simulation(
     results: list[JobResult] = []
     accounted_results: list[JobResult] = []
     validations: list[ValidationResult] = []
-    messages: list[MeshMessage] = []
 
     for job, assignment in zip(jobs, assignments):
         node_id = assignment.node_id
-        messages.append(
-            _simulation_message(
-                messages,
-                message_type="job_assigned",
-                sender_node_id="local-scheduler",
-                recipient_node_id=node_id,
-                payload={
-                    "job_id": job.job_id,
-                    "job_type": job.job_type,
-                    "node_id": node_id,
-                },
-                correlation_id=job.job_id,
-            )
+        _send_simulation_message(
+            message_bus,
+            message_type="job_assigned",
+            sender_node_id="local-scheduler",
+            recipient_node_id=node_id,
+            payload={
+                "job_id": job.job_id,
+                "job_type": job.job_type,
+                "node_id": node_id,
+            },
+            correlation_id=job.job_id,
         )
         result = runners[node_id].run(job)
-        messages.append(
-            _simulation_message(
-                messages,
-                message_type="job_result_reported",
-                sender_node_id=node_id,
-                recipient_node_id="local-ledger",
-                payload={
-                    "job_id": result.job_id,
-                    "status": result.status,
-                    "success": result.status == "completed",
-                    "output": result.output,
-                    "error": result.error,
-                },
-                correlation_id=job.job_id,
-            )
+        _send_simulation_message(
+            message_bus,
+            message_type="job_result_reported",
+            sender_node_id=node_id,
+            recipient_node_id="local-ledger",
+            payload={
+                "job_id": result.job_id,
+                "status": result.status,
+                "success": result.status == "completed",
+                "output": result.output,
+                "error": result.error,
+            },
+            correlation_id=job.job_id,
         )
 
         results.append(result)
@@ -118,22 +119,20 @@ def run_local_simulation(
         record_result = result if validation.valid else replace(result, contribution_units=0)
         accounted_results.append(record_result)
         record = ledger.record(record_result)
-        messages.append(
-            _simulation_message(
-                messages,
-                message_type="contribution_recorded",
-                sender_node_id="local-ledger",
-                recipient_node_id=node_id,
-                payload={
-                    "job_id": record.job_id,
-                    "node_id": record.node_id,
-                    "status": record.status,
-                    "validation": validation.reason,
-                    "valid": validation.valid,
-                    "contribution_units": record.contribution_units,
-                },
-                correlation_id=job.job_id,
-            )
+        _send_simulation_message(
+            message_bus,
+            message_type="contribution_recorded",
+            sender_node_id="local-ledger",
+            recipient_node_id=node_id,
+            payload={
+                "job_id": record.job_id,
+                "node_id": record.node_id,
+                "status": record.status,
+                "validation": validation.reason,
+                "valid": validation.valid,
+                "contribution_units": record.contribution_units,
+            },
+            correlation_id=job.job_id,
         )
 
     summaries = [
@@ -153,7 +152,7 @@ def run_local_simulation(
         assignments=assignments,
         results=results,
         validations=validations,
-        messages=messages,
+        messages=message_bus.log(),
         summaries=summaries,
         node_roster=node_roster,
         validation_summary=validation_summary,
@@ -191,8 +190,8 @@ def _node_roster_entry(
     }
 
 
-def _simulation_message(
-    existing_messages: list[MeshMessage],
+def _send_simulation_message(
+    message_bus: LocalMessageBus,
     *,
     message_type: str,
     sender_node_id: str,
@@ -200,14 +199,15 @@ def _simulation_message(
     payload: dict[str, Any],
     correlation_id: str | None,
 ) -> MeshMessage:
-    return MeshMessage(
-        message_id=f"msg-{len(existing_messages) + 1:04d}",
+    message = MeshMessage(
+        message_id=f"msg-{len(message_bus.log()) + 1:04d}",
         message_type=message_type,
         sender_node_id=sender_node_id,
         recipient_node_id=recipient_node_id,
         payload=payload,
         correlation_id=correlation_id,
     )
+    return message_bus.send(message)
 
 
 def _summary_to_simulation_dict(
