@@ -1150,6 +1150,10 @@ class CliTests(unittest.TestCase):
             [message["sender_node_id"] for message in persisted["messages"][:2]],
             ["local-node-a", "local-node-c"],
         )
+        self.assertEqual(
+            [message["payload"]["capabilities"] for message in persisted["messages"][:2]],
+            [["echo", "keyword_extract", "text_stats"], ["echo"]],
+        )
         self.assertNotIn("job_result_reported", json.dumps(persisted))
         self.assertNotIn("contribution_recorded", json.dumps(persisted))
 
@@ -1212,6 +1216,111 @@ class CliTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("manifest JSON is malformed", stderr.getvalue())
         self.assertFalse(message_log_path.exists())
+
+    def test_peer_summary_prints_heartbeat_derived_peers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "messages.json"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "available",
+                                    "heartbeat_sequence": 2,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "heartbeat_count": 1,
+                                },
+                                "correlation_id": None,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["peer-summary", "--message-log-path", str(message_log_path)])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "peers": [
+                    {
+                        "node_id": "node-a",
+                        "status": "available",
+                        "heartbeat_count": 1,
+                        "last_heartbeat_sequence": 1,
+                        "capabilities": [],
+                    },
+                    {
+                        "node_id": "node-b",
+                        "status": "available",
+                        "heartbeat_count": 1,
+                        "last_heartbeat_sequence": 2,
+                        "capabilities": ["echo"],
+                    },
+                ]
+            },
+        )
+
+    def test_peer_summary_malformed_heartbeat_returns_nonzero_without_rewrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "messages.json"
+            original = json.dumps(
+                {
+                    "version": 1,
+                    "messages": [
+                        {
+                            "message_id": "msg-0001",
+                            "message_type": "node_heartbeat",
+                            "sender_node_id": "node-a",
+                            "recipient_node_id": None,
+                            "payload": {
+                                "node_id": "node-a",
+                                "status": "available",
+                                "heartbeat_sequence": "1",
+                            },
+                            "correlation_id": None,
+                        }
+                    ],
+                },
+                sort_keys=True,
+            )
+            message_log_path.write_text(original, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["peer-summary", "--message-log-path", str(message_log_path)])
+            contents = message_log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("heartbeat_sequence", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(contents, original)
 
     def test_process_local_inbox_consumes_dispatch_log(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

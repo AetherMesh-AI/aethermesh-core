@@ -40,6 +40,7 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
+from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
 from aethermesh_core.receipts import (
     build_receipt_document,
     load_receipt_document_if_exists,
@@ -146,6 +147,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         required=True,
         help="Path to an existing version 1 local contribution ledger JSON file.",
+    )
+
+    peer_summary = subcommands.add_parser(
+        "peer-summary",
+        help="Inspect heartbeat-derived peers from an existing local message log.",
+    )
+    peer_summary.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to an existing version 1 local message log.",
     )
 
     inbox = subcommands.add_parser(
@@ -340,6 +351,12 @@ def summarize_ledger(ledger_path: str) -> dict[str, object]:
 
     ledger, _extra_fields = load_existing_ledger_document(ledger_path)
     return ledger.summary_document(ledger_path)
+
+
+def summarize_peers(message_log_path: str) -> dict[str, object]:
+    """Load an existing message log and return a read-only peer roster."""
+
+    return peer_summary_document(message_log_path)
 
 
 def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
@@ -718,6 +735,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             payload = summarize_ledger(args.ledger_path)
         except LedgerPersistenceError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "peer-summary":
+        try:
+            payload = summarize_peers(args.message_log_path)
+        except PeerRegistryError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
