@@ -199,6 +199,45 @@ class LocalNodeServiceTests(unittest.TestCase):
             ["msg-0001", "msg-0002", "msg-0003"],
         )
 
+    def test_seeded_processed_message_ids_skip_assignment_without_contribution(self) -> None:
+        service, bus, ledger = _service(
+            "node-a", processed_message_ids=["msg-0001"]
+        )
+        bus.send(
+            _assignment(
+                message_id="msg-0001",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={
+                    "job_id": "echo-1",
+                    "job_type": "echo",
+                    "payload": {"message": "already done"},
+                },
+            )
+        )
+        bus.send(
+            _assignment(
+                message_id="msg-0002",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={
+                    "job_id": "echo-2",
+                    "job_type": "echo",
+                    "payload": {"message": "new work"},
+                },
+            )
+        )
+
+        result = service.process_inbox()
+
+        self.assertEqual([assignment.message_id for assignment in result.processed], ["msg-0002"])
+        self.assertEqual(result.ignored_message_ids, ["msg-0001"])
+        self.assertEqual(result.skipped_processed_message_ids, ["msg-0001"])
+        self.assertEqual(result.processed_message_ids, ["msg-0001", "msg-0002"])
+        summary = ledger.summary_for_node("node-a")
+        self.assertEqual(summary.total_result_count, 1)
+        self.assertEqual(summary.total_contribution_units, 1)
+
     def test_contribution_is_recorded_only_after_validation(self) -> None:
         service, bus, ledger = _service("node-a")
         bus.send(
@@ -236,6 +275,7 @@ def _service(
     node_id: str,
     *,
     extra_node_ids: list[str] | None = None,
+    processed_message_ids: list[str] | None = None,
 ) -> tuple[LocalNodeService, LocalMessageBus, ContributionLedger]:
     identity = NodeIdentity(node_id=node_id)
     bus = LocalMessageBus()
@@ -250,6 +290,7 @@ def _service(
         message_bus=bus,
         runner=LocalRunner(identity),
         ledger=ledger,
+        processed_message_ids=processed_message_ids,
     )
     return service, bus, ledger
 

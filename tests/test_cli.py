@@ -1412,6 +1412,171 @@ class CliTests(unittest.TestCase):
         self.assertFalse(ledger_path.exists())
         self.assertNotIn("ledger_summary", payload)
 
+    def test_process_local_inbox_invalid_node_state_returns_nonzero_without_writes(self) -> None:
+        cases = [
+            ("malformed", "not-json", "node state JSON is malformed"),
+            (
+                "wrong-node",
+                json.dumps(
+                    {
+                        "version": 1,
+                        "node_id": "other-node",
+                        "processed_message_ids": [],
+                        "processed_assignment_count": 0,
+                    }
+                ),
+                "belongs to node 'other-node'",
+            ),
+            (
+                "unsupported-version",
+                json.dumps(
+                    {
+                        "version": 2,
+                        "node_id": "local-node-a",
+                        "processed_message_ids": [],
+                        "processed_assignment_count": 0,
+                    }
+                ),
+                "must contain version 1",
+            ),
+        ]
+        for name, state_contents, expected_error in cases:
+            with self.subTest(name=name):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    message_log_path = Path(temp_dir) / "local-messages.json"
+                    ledger_path = Path(temp_dir) / "local-ledger.json"
+                    output_message_log_path = Path(temp_dir) / "output-messages.json"
+                    state_path = Path(temp_dir) / "node-state.json"
+                    message_log_path.write_text(
+                        json.dumps(
+                            {
+                                "version": 1,
+                                "messages": [
+                                    {
+                                        "message_id": "msg-0001",
+                                        "message_type": "job_assigned",
+                                        "sender_node_id": "local-scheduler",
+                                        "recipient_node_id": "local-node-a",
+                                        "payload": {
+                                            "job_id": "echo-1",
+                                            "job_type": "echo",
+                                            "payload": {"message": "hello mesh"},
+                                        },
+                                        "correlation_id": "echo-1",
+                                    }
+                                ],
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    output_message_log_path.write_text("keep output", encoding="utf-8")
+                    state_path.write_text(state_contents, encoding="utf-8")
+                    original_state = state_path.read_text(encoding="utf-8")
+                    stdout = io.StringIO()
+                    stderr = io.StringIO()
+
+                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                        exit_code = main(
+                            [
+                                "process-local-inbox",
+                                "--node-id",
+                                "local-node-a",
+                                "--message-log-path",
+                                str(message_log_path),
+                                "--ledger-path",
+                                str(ledger_path),
+                                "--output-message-log-path",
+                                str(output_message_log_path),
+                                "--node-state-path",
+                                str(state_path),
+                            ]
+                        )
+
+                    self.assertEqual(exit_code, 1)
+                    self.assertEqual(stdout.getvalue(), "")
+                    self.assertIn(expected_error, stderr.getvalue())
+                    self.assertFalse(ledger_path.exists())
+                    self.assertEqual(output_message_log_path.read_text(encoding="utf-8"), "keep output")
+                    self.assertEqual(state_path.read_text(encoding="utf-8"), original_state)
+
+    def test_process_local_inbox_with_node_state_resumes_without_duplicate_ledger_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            state_path = Path(temp_dir) / "node-state.json"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "job_assigned",
+                                "sender_node_id": "local-scheduler",
+                                "recipient_node_id": "local-node-a",
+                                "payload": {
+                                    "job_id": "echo-1",
+                                    "job_type": "echo",
+                                    "payload": {"message": "hello mesh"},
+                                },
+                                "correlation_id": "echo-1",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            first_stdout = io.StringIO()
+            with contextlib.redirect_stdout(first_stdout):
+                first_exit = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                        "--node-state-path",
+                        str(state_path),
+                    ]
+                )
+            first_payload = json.loads(first_stdout.getvalue())
+            first_state = json.loads(state_path.read_text(encoding="utf-8"))
+
+            second_stdout = io.StringIO()
+            with contextlib.redirect_stdout(second_stdout):
+                second_exit = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                        "--node-state-path",
+                        str(state_path),
+                    ]
+                )
+            second_payload = json.loads(second_stdout.getvalue())
+            second_state = json.loads(state_path.read_text(encoding="utf-8"))
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(first_payload["processed_assignment_count"], 1)
+        self.assertEqual(first_payload["skipped_processed_message_ids"], [])
+        self.assertEqual(first_state["node_id"], "local-node-a")
+        self.assertEqual(first_state["processed_message_ids"], ["msg-0001"])
+        self.assertEqual(first_state["processed_assignment_count"], 1)
+        self.assertEqual(second_exit, 0)
+        self.assertEqual(second_payload["processed_assignment_count"], 0)
+        self.assertEqual(second_payload["ignored_message_ids"], ["msg-0001"])
+        self.assertEqual(second_payload["skipped_processed_message_ids"], ["msg-0001"])
+        self.assertEqual(second_payload["processed_message_ids"], ["msg-0001"])
+        self.assertEqual(second_state, first_state)
+        self.assertEqual(len(ledger["records"]), 1)
+
     def test_process_local_inbox_invalid_message_log_does_not_write_output_log(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "local-messages.json"

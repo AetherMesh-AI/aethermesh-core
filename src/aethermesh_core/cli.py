@@ -28,6 +28,12 @@ from aethermesh_core.message_log import (
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.node_service import InboxProcessResult, LocalNodeService
+from aethermesh_core.node_state import (
+    LocalNodeProcessingState,
+    NodeStatePersistenceError,
+    load_node_processing_state,
+    save_node_processing_state,
+)
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
@@ -124,6 +130,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-message-log-path",
         default=None,
         help="Opt in to writing replayed plus emitted worker messages as a local message log.",
+    )
+    inbox.add_argument(
+        "--node-state-path",
+        default=None,
+        help="Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
     )
 
     return parser
@@ -264,9 +275,15 @@ def process_local_inbox(
     message_log_path: str,
     ledger_path: str | None = None,
     output_message_log_path: str | None = None,
+    node_state_path: str | None = None,
 ) -> dict[str, object]:
     """Replay a saved local message log and process one node inbox."""
 
+    node_state = (
+        load_node_processing_state(node_state_path, expected_node_id=node_id)
+        if node_state_path is not None
+        else None
+    )
     messages = load_message_log_messages(message_log_path)
     ledger, extra_fields = (
         load_ledger_document(ledger_path)
@@ -284,6 +301,9 @@ def process_local_inbox(
         message_bus=message_bus,
         runner=LocalRunner(NodeIdentity(node_id=node_id)),
         ledger=ledger,
+        processed_message_ids=(
+            list(node_state.processed_message_ids) if node_state is not None else None
+        ),
     )
     inbox_result = service.process_inbox()
     if ledger_path is not None:
@@ -303,6 +323,18 @@ def process_local_inbox(
         write_message_log(output_message_log_path, output_document)
         payload["output_message_log_path"] = output_message_log_path
         payload["final_message_count"] = len(messages) + len(emitted_messages)
+    if node_state_path is not None and node_state is not None:
+        updated_state = LocalNodeProcessingState(
+            node_id=node_id,
+            processed_message_ids=list(inbox_result.processed_message_ids),
+            extra_fields=node_state.extra_fields,
+        )
+        save_node_processing_state(node_state_path, updated_state)
+        payload["node_state_path"] = node_state_path
+        payload["processed_message_ids"] = list(updated_state.processed_message_ids)
+        payload["skipped_processed_message_ids"] = list(
+            inbox_result.skipped_processed_message_ids
+        )
     return payload
 
 
@@ -432,8 +464,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 message_log_path=args.message_log_path,
                 ledger_path=args.ledger_path,
                 output_message_log_path=args.output_message_log_path,
+                node_state_path=args.node_state_path,
             )
-        except (MessageLogPersistenceError, LedgerPersistenceError, ValueError) as exc:
+        except (
+            MessageLogPersistenceError,
+            LedgerPersistenceError,
+            NodeStatePersistenceError,
+            ValueError,
+        ) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))

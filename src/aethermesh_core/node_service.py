@@ -32,6 +32,8 @@ class InboxProcessResult:
     node_id: str
     processed: list[ProcessedAssignment]
     ignored_message_ids: list[str]
+    skipped_processed_message_ids: list[str]
+    processed_message_ids: list[str]
 
 
 class LocalNodeService:
@@ -45,13 +47,15 @@ class LocalNodeService:
         runner: LocalRunner,
         ledger: ContributionLedger,
         ledger_node_id: str = "local-ledger",
+        processed_message_ids: list[str] | None = None,
     ) -> None:
         self.identity = identity
         self.message_bus = message_bus
         self.runner = runner
         self.ledger = ledger
         self.ledger_node_id = ledger_node_id
-        self._processed_message_ids: set[str] = set()
+        self._processed_message_ids_in_order = list(processed_message_ids or [])
+        self._processed_message_ids: set[str] = set(self._processed_message_ids_in_order)
 
     def process_inbox(self) -> InboxProcessResult:
         """Process unhandled ``job_assigned`` messages addressed to this node.
@@ -62,10 +66,12 @@ class LocalNodeService:
 
         processed: list[ProcessedAssignment] = []
         ignored_message_ids: list[str] = []
+        skipped_processed_message_ids: list[str] = []
 
         for message in self.message_bus.inbox_for(self.identity.node_id):
             if message.message_id in self._processed_message_ids:
                 ignored_message_ids.append(message.message_id)
+                skipped_processed_message_ids.append(message.message_id)
                 continue
             if message.message_type != "job_assigned":
                 ignored_message_ids.append(message.message_id)
@@ -77,11 +83,14 @@ class LocalNodeService:
             assignment = self._process_assignment(message)
             processed.append(assignment)
             self._processed_message_ids.add(message.message_id)
+            self._processed_message_ids_in_order.append(message.message_id)
 
         return InboxProcessResult(
             node_id=self.identity.node_id,
             processed=processed,
             ignored_message_ids=ignored_message_ids,
+            skipped_processed_message_ids=skipped_processed_message_ids,
+            processed_message_ids=list(self._processed_message_ids_in_order),
         )
 
     def _process_assignment(self, message: MeshMessage) -> ProcessedAssignment:
