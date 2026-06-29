@@ -71,6 +71,14 @@ class LocalSimulationTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
+            [message["sender_node_id"] for message in result["messages"][:3]],
+            ["local-scheduler", "node-a", "local-ledger"],
+        )
+        self.assertEqual(
+            [message["recipient_node_id"] for message in result["messages"][:3]],
+            ["node-a", "local-ledger", "node-a"],
+        )
+        self.assertEqual(
             [message["payload"] for message in result["messages"][:3]],
             [
                 {"job_id": "echo-1", "job_type": "echo", "node_id": "node-a"},
