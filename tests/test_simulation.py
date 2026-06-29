@@ -99,17 +99,29 @@ class LocalSimulationTests(unittest.TestCase):
         ]
 
         result = run_local_simulation(["node-a", "node-b"], jobs)
+        result_dict = result.to_dict()
 
         self.assertTrue(
             all(isinstance(assignment, JobAssignment) for assignment in result.assignments)
         )
         self.assertEqual(
-            result.to_dict()["assignments"],
+            result_dict["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "node-a"},
                 {"job_id": "echo-2", "node_id": "node-b"},
             ],
         )
+        self.assertNotIn("accounted_results", result_dict)
+
+    def test_simulation_exposes_validation_gated_accounted_results(self) -> None:
+        jobs = [Job(job_id="echo-missing-message", job_type="echo", payload={})]
+
+        result = run_local_simulation(["node-a"], jobs)
+
+        self.assertEqual(len(result.accounted_results), 1)
+        self.assertEqual(result.results[0].contribution_units, 1)
+        self.assertEqual(result.accounted_results[0].status, "completed")
+        self.assertEqual(result.accounted_results[0].contribution_units, 0)
 
     def test_successful_echo_jobs_contribute_units_and_totals(self) -> None:
         jobs = [

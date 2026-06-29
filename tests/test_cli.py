@@ -150,6 +150,266 @@ class CliTests(unittest.TestCase):
         self.assertIn("Unsupported job type: unknown", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
+    def test_run_local_batch_does_not_write_ledger_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+            payload = json.loads(stdout.getvalue())
+            ledger_exists = ledger_path.exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(ledger_exists)
+        self.assertNotIn("ledger_path", payload)
+        self.assertNotIn("persisted_ledger_summaries", payload)
+
+    def test_run_local_batch_persists_json_ledger_and_accumulates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            },
+                            {
+                                "job_id": "text-stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh\nhello node"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            first_stdout = io.StringIO()
+            with contextlib.redirect_stdout(first_stdout):
+                first_exit = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            second_stdout = io.StringIO()
+            with contextlib.redirect_stdout(second_stdout):
+                second_exit = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        first_payload = json.loads(first_stdout.getvalue())
+        second_payload = json.loads(second_stdout.getvalue())
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(second_exit, 0)
+        self.assertEqual(first_payload["ledger_path"], str(ledger_path))
+        self.assertEqual(len(first_payload["results"]), 2)
+        self.assertEqual(
+            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 1
+        )
+        self.assertEqual(
+            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 1
+        )
+        self.assertEqual(
+            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
+        )
+        self.assertEqual(
+            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 2
+        )
+        self.assertEqual(persisted["version"], 1)
+        self.assertEqual(len(persisted["records"]), 4)
+        self.assertEqual(persisted["records"][0]["node_id"], "local-node-a")
+        self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
+
+    def test_run_local_batch_preserves_existing_ledger_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger_path.write_text(
+                json.dumps({"version": 1, "records": [], "owner": "local-dev"}),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(persisted["owner"], "local-dev")
+        self.assertEqual(len(persisted["records"]), 1)
+
+    def test_run_local_batch_persists_invalid_completed_result_with_zero_units(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["validation_summary"], {"valid": 0, "invalid": 1, "unsupported": 0})
+        self.assertEqual(persisted["records"][0]["status"], "completed")
+        self.assertEqual(persisted["records"][0]["contribution_units"], 0)
+
+    def test_run_local_batch_unsupported_job_type_does_not_write_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "bad-1", "job_type": "unknown", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            ledger_exists = ledger_path.exists()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
+        self.assertFalse(ledger_exists)
+
+    def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ledger_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            ledger_contents = ledger_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(ledger_contents, "not-json")
+
     def test_run_demo_command_still_prints_parseable_result(self) -> None:
         stdout = io.StringIO()
 

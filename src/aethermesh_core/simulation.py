@@ -28,9 +28,15 @@ class LocalSimulationResult:
     summaries: list[dict[str, Any]]
     validation_summary: dict[str, int]
     totals: dict[str, int]
+    accounted_results: list[JobResult]
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialize the simulation result into a JSON-compatible dictionary."""
+        """Serialize the simulation result into a JSON-compatible dictionary.
+
+        Validation-gated ``accounted_results`` are kept as structured data for
+        callers that need to persist contribution accounting, but are omitted
+        here to preserve the existing default simulation JSON shape.
+        """
 
         return {
             "nodes": self.nodes,
@@ -61,6 +67,7 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
     scheduler = LocalScheduler(node_ids)
     assignments = scheduler.assign_jobs(job.job_id for job in jobs)
     results: list[JobResult] = []
+    accounted_results: list[JobResult] = []
     validations: list[ValidationResult] = []
     messages: list[MeshMessage] = []
 
@@ -102,6 +109,7 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
         validation = validate_job_result(job, result)
         validations.append(validation)
         record_result = result if validation.valid else replace(result, contribution_units=0)
+        accounted_results.append(record_result)
         record = ledger.record(record_result)
         messages.append(
             _simulation_message(
@@ -146,6 +154,7 @@ def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulatio
             "unsupported_results": validation_summary["unsupported"],
             "contribution_units": contribution_units,
         },
+        accounted_results=accounted_results,
     )
 
 
