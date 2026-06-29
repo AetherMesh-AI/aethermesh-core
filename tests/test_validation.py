@@ -339,6 +339,102 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
+    def test_completed_text_chunk_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="chunk-1",
+                job_type="text_chunk",
+                payload={"text": "alpha beta gamma", "max_chars": 10},
+            ),
+            JobResult(
+                job_id="chunk-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "chunks": [
+                        {"index": 0, "text": "alpha beta", "character_count": 10},
+                        {"index": 1, "text": " gamma", "character_count": 6},
+                    ],
+                    "chunk_count": 2,
+                    "character_count": 16,
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_text_chunk_rejects_changed_output(self) -> None:
+        job = Job(
+            job_id="chunk-1",
+            job_type="text_chunk",
+            payload={"text": "alpha beta gamma", "max_chars": 10},
+        )
+        valid_output = {
+            "chunks": [
+                {"index": 0, "text": "alpha beta", "character_count": 10},
+                {"index": 1, "text": " gamma", "character_count": 6},
+            ],
+            "chunk_count": 2,
+            "character_count": 16,
+        }
+        cases = [
+            ("changed_text", {**valid_output, "chunks": [{"index": 0, "text": "alpha", "character_count": 5}]}),
+            ("changed_order", {**valid_output, "chunks": list(reversed(valid_output["chunks"]))}),
+            ("changed_chunk_count", {**valid_output, "chunk_count": 99}),
+            ("changed_total", {**valid_output, "character_count": 99}),
+            ("malformed_output", ["alpha beta", " gamma"]),
+        ]
+
+        for name, output in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="chunk-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_text_chunk_malformed_payload_is_invalid(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="chunk-bad", job_type="text_chunk", payload={"text": "hello", "max_chars": 0}),
+            JobResult(
+                job_id="chunk-bad",
+                node_id="node-a",
+                status="completed",
+                output={"chunks": [], "chunk_count": 0, "character_count": 0},
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "malformed_text_chunk_payload")
+
+    def test_failed_text_chunk_result_earns_zero_credit(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="chunk-1", job_type="text_chunk", payload={"text": "alpha"}),
+            JobResult(
+                job_id="chunk-1",
+                node_id="node-a",
+                status="failed",
+                output=None,
+                error="text_chunk payload requires string field: text",
+                contribution_units=0,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_not_completed")
 
 
 if __name__ == "__main__":

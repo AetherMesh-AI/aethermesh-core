@@ -67,7 +67,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 4,
@@ -76,7 +76,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -201,7 +201,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -210,7 +210,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-b",
                     "status": "offline",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -219,7 +219,7 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-c",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -1093,7 +1093,7 @@ class CliTests(unittest.TestCase):
                     {
                         "version": 1,
                         "nodes": [
-                            {"node_id": "local-node-a", "capabilities": ["echo", "keyword_extract", "text_stats"]},
+                            {"node_id": "local-node-a", "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"]},
                             {"node_id": "local-node-b", "status": "offline", "capabilities": ["echo"]},
                             {"node_id": "local-node-c", "capabilities": ["echo"]},
                         ],
@@ -1152,7 +1152,7 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(
             [message["payload"]["capabilities"] for message in persisted["messages"][:2]],
-            [["echo", "keyword_extract", "text_stats"], ["echo"]],
+            [["echo", "keyword_extract", "text_chunk", "text_stats"], ["echo"]],
         )
         self.assertNotIn("job_result_reported", json.dumps(persisted))
         self.assertNotIn("contribution_recorded", json.dumps(persisted))
@@ -1964,15 +1964,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["available_node_ids"], ["local-node-a", "local-node-c"])
         self.assertEqual(payload["offline_node_ids"], ["local-node-b"])
         self.assertEqual(payload["processed_node_ids"], ["local-node-a", "local-node-c"])
-        self.assertEqual(payload["processed_assignment_count"], 3)
+        self.assertEqual(payload["processed_assignment_count"], 4)
         self.assertEqual(payload["skipped_processed_assignment_count"], 0)
-        self.assertEqual(payload["total_contribution_units"], 3)
+        self.assertEqual(payload["total_contribution_units"], 4)
         self.assertEqual(payload["flow_message_log_path"], str(output_dir / "flow-message-log.json"))
         self.assertEqual(payload["receipts_path"], str(output_dir / "receipts.json"))
-        self.assertEqual(payload["receipt_count"], 3)
-        self.assertEqual(payload["flow_message_count"], 11)
-        self.assertEqual(payload["flow_emitted_message_count"], 6)
-        self.assertEqual(payload["ledger_summary"]["record_count"], 3)
+        self.assertEqual(payload["receipt_count"], 4)
+        self.assertEqual(payload["flow_message_count"], 14)
+        self.assertEqual(payload["flow_emitted_message_count"], 8)
+        self.assertEqual(payload["ledger_summary"]["record_count"], 4)
         self.assertEqual(len(payload["node_results"]), 2)
         self.assertTrue(dispatch_exists)
         self.assertTrue(flow_log_exists)
@@ -1982,13 +1982,13 @@ class CliTests(unittest.TestCase):
         self.assertTrue(node_c_log_exists)
         self.assertFalse(offline_state_exists)
         self.assertFalse(offline_log_exists)
-        self.assertEqual(len(ledger["records"]), 3)
+        self.assertEqual(len(ledger["records"]), 4)
         self.assertEqual(receipts["version"], 1)
         self.assertEqual(receipts["run_source"], "run-local-flow")
-        self.assertEqual(len(receipts["receipts"]), 3)
+        self.assertEqual(len(receipts["receipts"]), 4)
         self.assertEqual(
             [receipt["assignment_message_id"] for receipt in receipts["receipts"]],
-            ["msg-0003", "msg-0005", "msg-0004"],
+            ["msg-0003", "msg-0005", "msg-0006", "msg-0004"],
         )
         self.assertEqual(
             receipts["receipts"][0],
@@ -1998,22 +1998,34 @@ class CliTests(unittest.TestCase):
                 "node_id": "local-node-a",
                 "assignment_message_id": "msg-0003",
                 "correlation_id": "echo-1",
-                "result_message_id": "msg-0006",
-                "contribution_message_id": "msg-0007",
+                "result_message_id": "msg-0007",
+                "contribution_message_id": "msg-0008",
                 "result_status": "completed",
                 "validation": {"valid": True, "reason": "ok"},
                 "credited_units": 1,
                 "output_summary": {"value": "hello mesh"},
             },
         )
+        self.assertEqual(
+            receipts["receipts"][2]["output_summary"],
+            {
+                "character_count": 63,
+                "chunk_count": 3,
+                "chunks": [
+                    {"character_count": 20, "index": 0, "text": "AetherMesh prepares "},
+                    {"character_count": 22, "index": 1, "text": "local text chunks for "},
+                    {"character_count": 21, "index": 2, "text": "future AI processing."},
+                ],
+            },
+        )
         self.assertEqual(flow_log["metadata"]["source"], "run-local-flow")
         self.assertEqual(flow_log["metadata"]["manifest_path"], str(manifest_path))
-        self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 5)
-        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 6)
-        self.assertEqual(flow_log["metadata"]["message_count"], 11)
+        self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 6)
+        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 8)
+        self.assertEqual(flow_log["metadata"]["message_count"], 14)
         self.assertEqual(flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"])
         self.assertEqual(flow_log["metadata"]["offline_node_ids"], ["local-node-b"])
-        self.assertEqual(flow_log["metadata"]["processed_assignment_count"], 3)
+        self.assertEqual(flow_log["metadata"]["processed_assignment_count"], 4)
         self.assertEqual(flow_log["metadata"]["skipped_processed_assignment_count"], 0)
         self.assertEqual(
             [message["message_type"] for message in flow_log["messages"]],
@@ -2023,6 +2035,9 @@ class CliTests(unittest.TestCase):
                 "job_assigned",
                 "job_assigned",
                 "job_assigned",
+                "job_assigned",
+                "job_result_reported",
+                "contribution_recorded",
                 "job_result_reported",
                 "contribution_recorded",
                 "job_result_reported",
