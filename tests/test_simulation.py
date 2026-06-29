@@ -1,6 +1,8 @@
 import unittest
+from unittest.mock import patch
 
 from aethermesh_core.models import Job
+from aethermesh_core.node_service import LocalNodeService
 from aethermesh_core.scheduler import JobAssignment, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 
@@ -81,7 +83,12 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(
             [message["payload"] for message in result["messages"][:3]],
             [
-                {"job_id": "echo-1", "job_type": "echo", "node_id": "node-a"},
+                {
+                    "job_id": "echo-1",
+                    "job_type": "echo",
+                    "payload": {"message": "one"},
+                    "node_id": "node-a",
+                },
                 {
                     "job_id": "echo-1",
                     "status": "completed",
@@ -97,6 +104,42 @@ class LocalSimulationTests(unittest.TestCase):
                     "valid": True,
                     "contribution_units": 1,
                 },
+            ],
+        )
+
+    def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
+        calls: list[str] = []
+        original_process_inbox = LocalNodeService.process_inbox
+
+        def wrapped_process_inbox(self: LocalNodeService):
+            calls.append(self.identity.node_id)
+            return original_process_inbox(self)
+
+        jobs = [
+            Job(job_id="echo-1", job_type="echo", payload={"message": "one"}),
+            Job(job_id="echo-2", job_type="echo", payload={"message": "two"}),
+        ]
+
+        with patch.object(
+            LocalNodeService,
+            "process_inbox",
+            autospec=True,
+            side_effect=wrapped_process_inbox,
+        ):
+            result = run_local_simulation(["node-a", "node-b"], jobs).to_dict()
+
+        self.assertEqual(calls, ["node-a", "node-b"])
+        self.assertEqual(result["results"][0]["output"], "one")
+        self.assertEqual(result["results"][1]["output"], "two")
+        self.assertEqual(
+            [message["sender_node_id"] for message in result["messages"][:6]],
+            [
+                "local-scheduler",
+                "node-a",
+                "local-ledger",
+                "local-scheduler",
+                "node-b",
+                "local-ledger",
             ],
         )
 
