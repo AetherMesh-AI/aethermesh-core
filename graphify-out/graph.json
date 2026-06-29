@@ -23,7 +23,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_init",
-      "community": 12,
+      "community": 0,
       "norm_label": "__init__.py"
     },
     {
@@ -33,7 +33,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_init_rationale_1",
-      "community": 12,
+      "community": 0,
       "norm_label": "aethermesh core local prototype package."
     },
     {
@@ -43,7 +43,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli",
-      "community": 8,
+      "community": 0,
       "norm_label": "cli.py"
     },
     {
@@ -83,7 +83,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_default_local_simulation",
-      "community": 8,
+      "community": 3,
       "norm_label": "run_default_local_simulation()"
     },
     {
@@ -113,7 +113,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1",
-      "community": 8,
+      "community": 0,
       "norm_label": "command-line interface for the local aethermesh prototype."
     },
     {
@@ -123,7 +123,7 @@
       "source_location": "L123",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_123",
-      "community": 8,
+      "community": 3,
       "norm_label": "run the fixed local simulation demo used by the cli command."
     },
     {
@@ -223,7 +223,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "any",
-      "community": 7,
+      "community": 2,
       "norm_label": "any"
     },
     {
@@ -433,7 +433,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionrecord_to_dict",
-      "community": 7,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -633,7 +633,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_26",
-      "community": 7,
+      "community": 2,
       "norm_label": "serialize the record into a json-compatible dictionary."
     },
     {
@@ -1003,7 +1003,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_models",
-      "community": 12,
+      "community": 0,
       "norm_label": "models.py"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "aethermesh_core_models_jobresult_to_dict",
-      "community": 7,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -1063,7 +1063,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_1",
-      "community": 12,
+      "community": 0,
       "norm_label": "core data models for the local aethermesh prototype."
     },
     {
@@ -1113,8 +1113,218 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_44",
-      "community": 7,
+      "community": 2,
       "norm_label": "serialize the result into a json-compatible dictionary."
+    },
+    {
+      "label": "node_registry.py",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry",
+      "community": 1,
+      "norm_label": "node_registry.py"
+    },
+    {
+      "label": "_RegistryNode",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_registrynode",
+      "community": 1,
+      "norm_label": "_registrynode"
+    },
+    {
+      "label": "NodeRegistry",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry",
+      "community": 1,
+      "norm_label": "noderegistry"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_init",
+      "community": 1,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".register()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_register",
+      "community": 1,
+      "norm_label": ".register()"
+    },
+    {
+      "label": ".mark_available()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_mark_available",
+      "community": 1,
+      "norm_label": ".mark_available()"
+    },
+    {
+      "label": ".mark_offline()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_mark_offline",
+      "community": 1,
+      "norm_label": ".mark_offline()"
+    },
+    {
+      "label": ".record_heartbeat()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_record_heartbeat",
+      "community": 1,
+      "norm_label": ".record_heartbeat()"
+    },
+    {
+      "label": ".scheduled_nodes()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L65",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_scheduled_nodes",
+      "community": 1,
+      "norm_label": ".scheduled_nodes()"
+    },
+    {
+      "label": ".to_roster()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L73",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_to_roster",
+      "community": 1,
+      "norm_label": ".to_roster()"
+    },
+    {
+      "label": "._node_for_update()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L86",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "community": 1,
+      "norm_label": "._node_for_update()"
+    },
+    {
+      "label": "._coerce_node()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L94",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "community": 1,
+      "norm_label": "._coerce_node()"
+    },
+    {
+      "label": "._validate_node_id()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L104",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_noderegistry_validate_node_id",
+      "community": 1,
+      "norm_label": "._validate_node_id()"
+    },
+    {
+      "label": "Deterministic local node registry for simulation roster state.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_1",
+      "community": 1,
+      "norm_label": "deterministic local node registry for simulation roster state."
+    },
+    {
+      "label": "In-memory source of truth for local simulation node state.      The registry is",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_19",
+      "community": 1,
+      "norm_label": "in-memory source of truth for local simulation node state.      the registry is"
+    },
+    {
+      "label": "Register a node ID or ScheduledNode in deterministic insertion order.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_35",
+      "community": 1,
+      "norm_label": "register a node id or schedulednode in deterministic insertion order."
+    },
+    {
+      "label": "Mark a known node available for future scheduler exports.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_47",
+      "community": 1,
+      "norm_label": "mark a known node available for future scheduler exports."
+    },
+    {
+      "label": "Mark a known node offline for future scheduler exports.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_52",
+      "community": 1,
+      "norm_label": "mark a known node offline for future scheduler exports."
+    },
+    {
+      "label": "Record one deterministic local heartbeat for a known node.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L57",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_57",
+      "community": 1,
+      "norm_label": "record one deterministic local heartbeat for a known node."
+    },
+    {
+      "label": "Return scheduler-compatible nodes in registration order.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L66",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_66",
+      "community": 1,
+      "norm_label": "return scheduler-compatible nodes in registration order."
+    },
+    {
+      "label": "Return JSON-compatible roster entries in registration order.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L74",
+      "_origin": "ast",
+      "id": "aethermesh_core_node_registry_rationale_74",
+      "community": 1,
+      "norm_label": "return json-compatible roster entries in registration order."
     },
     {
       "label": "runner.py",
@@ -1123,7 +1333,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_runner",
-      "community": 12,
+      "community": 0,
       "norm_label": "runner.py"
     },
     {
@@ -1173,7 +1383,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_1",
-      "community": 12,
+      "community": 0,
       "norm_label": "local in-memory runner for the first aethermesh executable slice."
     },
     {
@@ -1413,14 +1623,14 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_simulation",
-      "community": 1,
+      "community": 0,
       "norm_label": "simulation.py"
     },
     {
       "label": "LocalSimulationResult",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L22",
+      "source_location": "L23",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult",
       "community": 1,
@@ -1430,31 +1640,21 @@
       "label": ".to_dict()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult_to_dict",
-      "community": 7,
+      "community": 1,
       "norm_label": ".to_dict()"
     },
     {
       "label": "run_local_simulation()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L57",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_run_local_simulation",
-      "community": 1,
+      "community": 3,
       "norm_label": "run_local_simulation()"
-    },
-    {
-      "label": "_coerce_simulation_node()",
-      "file_type": "code",
-      "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L174",
-      "_origin": "ast",
-      "id": "aethermesh_core_simulation_coerce_simulation_node",
-      "community": 1,
-      "norm_label": "_coerce_simulation_node()"
     },
     {
       "label": "_node_roster_entry()",
@@ -1470,30 +1670,30 @@
       "label": "_send_simulation_message()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L193",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_send_simulation_message",
-      "community": 1,
+      "community": 0,
       "norm_label": "_send_simulation_message()"
     },
     {
       "label": "_summary_to_simulation_dict()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L213",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_summary_to_simulation_dict",
-      "community": 1,
+      "community": 0,
       "norm_label": "_summary_to_simulation_dict()"
     },
     {
       "label": "_validation_summary()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L226",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_validation_summary",
-      "community": 1,
+      "community": 0,
       "norm_label": "_validation_summary()"
     },
     {
@@ -1503,16 +1703,16 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_1",
-      "community": 1,
+      "community": 0,
       "norm_label": "local multi-node simulation for the aethermesh prototype."
     },
     {
       "label": "Structured, deterministic output from a local multi-node simulation.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L23",
+      "source_location": "L24",
       "_origin": "ast",
-      "id": "aethermesh_core_simulation_rationale_23",
+      "id": "aethermesh_core_simulation_rationale_24",
       "community": 1,
       "norm_label": "structured, deterministic output from a local multi-node simulation."
     },
@@ -1520,20 +1720,20 @@
       "label": "Serialize the simulation result into a JSON-compatible dictionary.          Vali",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L37",
+      "source_location": "L38",
       "_origin": "ast",
-      "id": "aethermesh_core_simulation_rationale_37",
-      "community": 7,
+      "id": "aethermesh_core_simulation_rationale_38",
+      "community": 1,
       "norm_label": "serialize the simulation result into a json-compatible dictionary.          vali"
     },
     {
       "label": "Run local jobs across local node identities using scheduler assignment.      Thi",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L60",
+      "source_location": "L61",
       "_origin": "ast",
-      "id": "aethermesh_core_simulation_rationale_60",
-      "community": 1,
+      "id": "aethermesh_core_simulation_rationale_61",
+      "community": 3,
       "norm_label": "run local jobs across local node identities using scheduler assignment.      thi"
     },
     {
@@ -1543,7 +1743,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_validation",
-      "community": 3,
+      "community": 0,
       "norm_label": "validation.py"
     },
     {
@@ -1563,7 +1763,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "aethermesh_core_validation_validationresult_to_dict",
-      "community": 7,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -1593,7 +1793,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_1",
-      "community": 3,
+      "community": 0,
       "norm_label": "local validation gate for reported aethermesh job results."
     },
     {
@@ -1613,7 +1813,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_22",
-      "community": 7,
+      "community": 2,
       "norm_label": "serialize the validation result into a json-compatible dictionary."
     },
     {
@@ -1643,7 +1843,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_cli",
-      "community": 8,
+      "community": 0,
       "norm_label": "test_cli.py"
     },
     {
@@ -1670,7 +1870,7 @@
       "label": ".test_run_local_batch_prints_manifest_backed_simulation_json()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L65",
+      "source_location": "L86",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_prints_manifest_backed_simulation_json",
       "community": 8,
@@ -1680,7 +1880,7 @@
       "label": ".test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L112",
+      "source_location": "L133",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster",
       "community": 8,
@@ -1690,7 +1890,7 @@
       "label": ".test_run_local_batch_all_offline_returns_nonzero_without_writing_ledger()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L185",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_all_offline_returns_nonzero_without_writing_ledger",
       "community": 8,
@@ -1700,7 +1900,7 @@
       "label": ".test_run_local_batch_manifest_error_returns_nonzero_without_traceback()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L226",
+      "source_location": "L253",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_manifest_error_returns_nonzero_without_traceback",
       "community": 8,
@@ -1710,7 +1910,7 @@
       "label": ".test_run_local_batch_unsupported_job_type_returns_nonzero()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L241",
+      "source_location": "L268",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_returns_nonzero",
       "community": 8,
@@ -1720,7 +1920,7 @@
       "label": ".test_run_local_batch_does_not_write_ledger_by_default()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L267",
+      "source_location": "L294",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_does_not_write_ledger_by_default",
       "community": 8,
@@ -1730,7 +1930,7 @@
       "label": ".test_run_local_batch_persists_json_ledger_and_accumulates()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L299",
+      "source_location": "L326",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_persists_json_ledger_and_accumulates",
       "community": 8,
@@ -1740,7 +1940,7 @@
       "label": ".test_run_local_batch_preserves_existing_ledger_metadata()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L371",
+      "source_location": "L398",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_preserves_existing_ledger_metadata",
       "community": 8,
@@ -1750,7 +1950,7 @@
       "label": ".test_run_local_batch_persists_invalid_completed_result_with_zero_units()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L413",
+      "source_location": "L440",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_persists_invalid_completed_result_with_zero_units",
       "community": 8,
@@ -1760,7 +1960,7 @@
       "label": ".test_run_local_batch_unsupported_job_type_does_not_write_ledger()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L449",
+      "source_location": "L476",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_does_not_write_ledger",
       "community": 8,
@@ -1770,7 +1970,7 @@
       "label": ".test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L485",
+      "source_location": "L512",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite",
       "community": 8,
@@ -1780,7 +1980,7 @@
       "label": ".test_run_demo_command_still_prints_parseable_result()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L527",
+      "source_location": "L554",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_command_still_prints_parseable_result",
       "community": 8,
@@ -1790,7 +1990,7 @@
       "label": ".test_run_demo_default_output_shape_stays_single_result()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L550",
+      "source_location": "L577",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_default_output_shape_stays_single_result",
       "community": 8,
@@ -1800,7 +2000,7 @@
       "label": ".test_run_demo_identity_path_creates_and_reuses_node_id()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L565",
+      "source_location": "L592",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_identity_path_creates_and_reuses_node_id",
       "community": 8,
@@ -1810,7 +2010,7 @@
       "label": ".test_run_demo_node_id_and_identity_path_conflict_returns_cli_error()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L603",
+      "source_location": "L630",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_node_id_and_identity_path_conflict_returns_cli_error",
       "community": 8,
@@ -1820,7 +2020,7 @@
       "label": ".test_run_demo_malformed_identity_path_returns_cli_error_without_overwrite()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L625",
+      "source_location": "L652",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_malformed_identity_path_returns_cli_error_without_overwrite",
       "community": 8,
@@ -1830,7 +2030,7 @@
       "label": ".test_run_demo_unsupported_identity_version_returns_cli_error_without_overwrite()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L641",
+      "source_location": "L668",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_unsupported_identity_version_returns_cli_error_without_overwrite",
       "community": 8,
@@ -1840,7 +2040,7 @@
       "label": ".test_run_demo_persists_json_ledger_and_accumulates_summary()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L658",
+      "source_location": "L685",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_persists_json_ledger_and_accumulates_summary",
       "community": 8,
@@ -1850,7 +2050,7 @@
       "label": ".test_run_demo_malformed_ledger_path_returns_cli_error()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L709",
+      "source_location": "L736",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_malformed_ledger_path_returns_cli_error",
       "community": 8,
@@ -1983,7 +2183,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "tests_test_job_manifest_jobmanifesttests_test_malformed_json_is_rejected",
-      "community": 13,
+      "community": 7,
       "norm_label": ".test_malformed_json_is_rejected()"
     },
     {
@@ -2103,7 +2303,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "tests_test_job_manifest_jobmanifesttests_test_non_object_top_level_is_rejected",
-      "community": 13,
+      "community": 7,
       "norm_label": ".test_non_object_top_level_is_rejected()"
     },
     {
@@ -2133,7 +2333,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_ledger",
-      "community": 2,
+      "community": 0,
       "norm_label": "test_ledger.py"
     },
     {
@@ -2417,13 +2617,103 @@
       "norm_label": ".test_payload_must_be_a_dictionary()"
     },
     {
+      "label": "test_node_registry.py",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_node_registry",
+      "community": 1,
+      "norm_label": "test_node_registry.py"
+    },
+    {
+      "label": "NodeRegistryTests",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests",
+      "community": 1,
+      "norm_label": "noderegistrytests"
+    },
+    {
+      "label": ".test_registers_string_node_ids_in_order()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_registers_string_node_ids_in_order",
+      "community": 1,
+      "norm_label": ".test_registers_string_node_ids_in_order()"
+    },
+    {
+      "label": ".test_registers_scheduled_nodes_preserving_status()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_registers_scheduled_nodes_preserving_status",
+      "community": 1,
+      "norm_label": ".test_registers_scheduled_nodes_preserving_status()"
+    },
+    {
+      "label": ".test_rejects_empty_or_whitespace_node_ids()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L57",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_rejects_empty_or_whitespace_node_ids",
+      "community": 1,
+      "norm_label": ".test_rejects_empty_or_whitespace_node_ids()"
+    },
+    {
+      "label": ".test_rejects_duplicate_node_ids()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L65",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_rejects_duplicate_node_ids",
+      "community": 1,
+      "norm_label": ".test_rejects_duplicate_node_ids()"
+    },
+    {
+      "label": ".test_marks_known_nodes_available_and_offline()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L72",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_marks_known_nodes_available_and_offline",
+      "community": 1,
+      "norm_label": ".test_marks_known_nodes_available_and_offline()"
+    },
+    {
+      "label": ".test_rejects_status_or_heartbeat_updates_for_unknown_nodes()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L84",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_rejects_status_or_heartbeat_updates_for_unknown_nodes",
+      "community": 1,
+      "norm_label": ".test_rejects_status_or_heartbeat_updates_for_unknown_nodes()"
+    },
+    {
+      "label": ".test_records_deterministic_heartbeat_sequence_and_count()",
+      "file_type": "code",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L94",
+      "_origin": "ast",
+      "id": "tests_test_node_registry_noderegistrytests_test_records_deterministic_heartbeat_sequence_and_count",
+      "community": 1,
+      "norm_label": ".test_records_deterministic_heartbeat_sequence_and_count()"
+    },
+    {
       "label": "test_runner.py",
       "file_type": "code",
       "source_file": "tests/test_runner.py",
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_runner",
-      "community": 12,
+      "community": 0,
       "norm_label": "test_runner.py"
     },
     {
@@ -2563,7 +2853,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_simulation",
-      "community": 1,
+      "community": 0,
       "norm_label": "test_simulation.py"
     },
     {
@@ -2573,7 +2863,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests",
-      "community": 1,
+      "community": 3,
       "norm_label": "localsimulationtests"
     },
     {
@@ -2583,7 +2873,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_jobs_are_assigned_round_robin_by_input_order",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_jobs_are_assigned_round_robin_by_input_order()"
     },
     {
@@ -2593,7 +2883,7 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_simulation_preserves_default_output_with_scheduler",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_simulation_preserves_default_output_with_scheduler()"
     },
     {
@@ -2603,7 +2893,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_simulation_exposes_validation_gated_accounted_results()"
     },
     {
@@ -2613,57 +2903,57 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_node_roster_includes_offline_nodes_without_assignments",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_node_roster_includes_offline_nodes_without_assignments()"
     },
     {
       "label": ".test_successful_echo_jobs_contribute_units_and_totals()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L186",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_successful_echo_jobs_contribute_units_and_totals",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_successful_echo_jobs_contribute_units_and_totals()"
     },
     {
       "label": ".test_unsupported_jobs_are_recorded_as_failures_with_zero_units()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L255",
+      "source_location": "L261",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_unsupported_jobs_are_recorded_as_failures_with_zero_units",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_unsupported_jobs_are_recorded_as_failures_with_zero_units()"
     },
     {
       "label": ".test_invalid_completed_echo_result_is_visible_but_earns_zero_units()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L281",
+      "source_location": "L287",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_invalid_completed_echo_result_is_visible_but_earns_zero_units",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_invalid_completed_echo_result_is_visible_but_earns_zero_units()"
     },
     {
       "label": ".test_empty_node_list_is_rejected()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L310",
+      "source_location": "L316",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_empty_node_list_is_rejected",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_empty_node_list_is_rejected()"
     },
     {
       "label": ".test_text_stats_contribution_is_gated_by_validation()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L314",
+      "source_location": "L320",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_text_stats_contribution_is_gated_by_validation",
-      "community": 1,
+      "community": 3,
       "norm_label": ".test_text_stats_contribution_is_gated_by_validation()"
     },
     {
@@ -2673,7 +2963,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_validation",
-      "community": 3,
+      "community": 0,
       "norm_label": "test_validation.py"
     },
     {
@@ -2890,7 +3180,7 @@
       "label": "Architecture",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L138",
+      "source_location": "L140",
       "_origin": "ast",
       "id": "readme_architecture",
       "community": 4,
@@ -4445,9 +4735,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_send_simulation_message",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -5747,9 +6037,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "contains",
@@ -5757,9 +6047,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus",
-      "target": "aethermesh_core_message_bus_messagedelivery",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_messagedelivery"
     },
     {
       "relation": "imports_from",
@@ -5768,9 +6058,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus",
-      "target": "aethermesh_core_messages",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages"
     },
     {
       "relation": "rationale_for",
@@ -5778,9 +6068,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_1",
-      "target": "aethermesh_core_message_bus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus"
     },
     {
       "relation": "imports_from",
@@ -5789,9 +6079,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation",
-      "target": "aethermesh_core_message_bus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus"
     },
     {
       "relation": "imports_from",
@@ -5800,9 +6090,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus",
-      "target": "aethermesh_core_message_bus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus"
     },
     {
       "relation": "uses",
@@ -5810,9 +6100,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "aethermesh_core_message_bus_messagedelivery",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "rationale_for",
@@ -5820,9 +6110,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_12",
-      "target": "aethermesh_core_message_bus_messagedelivery",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_messagedelivery"
     },
     {
       "relation": "method",
@@ -5830,9 +6120,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_message_bus_localmessagebus_inbox_for",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_inbox_for"
     },
     {
       "relation": "method",
@@ -5840,9 +6130,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_message_bus_localmessagebus_init",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_init"
     },
     {
       "relation": "method",
@@ -5850,9 +6140,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_message_bus_localmessagebus_log",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_log"
     },
     {
       "relation": "method",
@@ -5860,9 +6150,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_message_bus_localmessagebus_register_node",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_register_node"
     },
     {
       "relation": "method",
@@ -5870,9 +6160,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_message_bus_localmessagebus_send",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_send"
     },
     {
       "relation": "uses",
@@ -5880,9 +6170,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L7",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "aethermesh_core_message_bus_localmessagebus",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "rationale_for",
@@ -5890,9 +6180,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_19",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "uses",
@@ -5900,9 +6190,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "aethermesh_core_simulation_localsimulationresult",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "calls",
@@ -5911,9 +6201,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_run_local_simulation",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "references",
@@ -5922,9 +6212,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_send_simulation_message",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "uses",
@@ -5932,9 +6222,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L3",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "aethermesh_core_message_bus_localmessagebus",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_message_bus_localmessagebus"
     },
     {
       "relation": "calls",
@@ -6030,9 +6320,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_27",
-      "target": "aethermesh_core_message_bus_localmessagebus_register_node",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_register_node"
     },
     {
       "relation": "references",
@@ -6041,9 +6331,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus_send",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "rationale_for",
@@ -6051,9 +6341,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_37",
-      "target": "aethermesh_core_message_bus_localmessagebus_send",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_send"
     },
     {
       "relation": "references",
@@ -6062,9 +6352,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus_log",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "rationale_for",
@@ -6072,9 +6362,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_55",
-      "target": "aethermesh_core_message_bus_localmessagebus_log",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_log"
     },
     {
       "relation": "references",
@@ -6083,9 +6373,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_localmessagebus_inbox_for",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "rationale_for",
@@ -6093,9 +6383,9 @@
       "source_file": "src/aethermesh_core/message_bus.py",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_message_bus_rationale_60",
-      "target": "aethermesh_core_message_bus_localmessagebus_inbox_for",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_message_bus_localmessagebus_inbox_for"
     },
     {
       "relation": "contains",
@@ -6165,9 +6455,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus",
-      "target": "aethermesh_core_messages",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages"
     },
     {
       "relation": "imports_from",
@@ -6227,9 +6517,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_send_simulation_message",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "uses",
@@ -6237,9 +6527,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L4",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "references",
@@ -6248,9 +6538,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_message",
-      "target": "aethermesh_core_messages_meshmessage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_messages_meshmessage"
     },
     {
       "relation": "uses",
@@ -7306,6 +7596,530 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry",
+      "target": "aethermesh_core_node_registry_noderegistry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry",
+      "target": "aethermesh_core_node_registry_registrynode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry",
+      "target": "aethermesh_core_scheduler",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_1",
+      "target": "aethermesh_core_node_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/simulation.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "aethermesh_core_simulation",
+      "target": "aethermesh_core_node_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "tests_test_node_registry",
+      "target": "aethermesh_core_node_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "target": "aethermesh_core_node_registry_registrynode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_register",
+      "target": "aethermesh_core_node_registry_registrynode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "aethermesh_core_node_registry_registrynode",
+      "target": "aethermesh_core_scheduler_nodestatus",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "aethermesh_core_node_registry_registrynode",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_mark_available",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_mark_offline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_record_heartbeat",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_register",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_scheduled_nodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_to_roster",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_node_registry_noderegistry_validate_node_id",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_scheduler_nodestatus",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L7",
+      "weight": 0.8,
+      "source": "aethermesh_core_node_registry_noderegistry",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_19",
+      "target": "aethermesh_core_node_registry_noderegistry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "src/aethermesh_core/simulation.py",
+      "source_location": "L13",
+      "weight": 0.8,
+      "source": "aethermesh_core_simulation_localsimulationresult",
+      "target": "aethermesh_core_node_registry_noderegistry",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/simulation.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "aethermesh_core_simulation_run_local_simulation",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L3",
+      "weight": 0.8,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "aethermesh_core_node_registry_noderegistry",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_marks_known_nodes_available_and_offline",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_records_deterministic_heartbeat_sequence_and_count",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_registers_scheduled_nodes_preserving_status",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_registers_string_node_ids_in_order",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_rejects_duplicate_node_ids",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_rejects_empty_or_whitespace_node_ids",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_rejects_status_or_heartbeat_updates_for_unknown_nodes",
+      "target": "aethermesh_core_node_registry_noderegistry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_register",
+      "target": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_register",
+      "target": "aethermesh_core_scheduler_nodestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_register",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_35",
+      "target": "aethermesh_core_node_registry_noderegistry_register",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L49",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_mark_available",
+      "target": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_47",
+      "target": "aethermesh_core_node_registry_noderegistry_mark_available",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_mark_offline",
+      "target": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_52",
+      "target": "aethermesh_core_node_registry_noderegistry_mark_offline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_record_heartbeat",
+      "target": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_57",
+      "target": "aethermesh_core_node_registry_noderegistry_record_heartbeat",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_scheduled_nodes",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_66",
+      "target": "aethermesh_core_node_registry_noderegistry_scheduled_nodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_rationale_74",
+      "target": "aethermesh_core_node_registry_noderegistry_to_roster",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_node_for_update",
+      "target": "aethermesh_core_node_registry_noderegistry_validate_node_id",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "target": "aethermesh_core_node_registry_noderegistry_validate_node_id",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "target": "aethermesh_core_scheduler_nodestatus",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "return_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/node_registry.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "aethermesh_core_node_registry_noderegistry_coerce_node",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runner.py",
       "source_location": "L60",
       "weight": 1.0,
@@ -7631,6 +8445,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "tests_test_node_registry",
+      "target": "aethermesh_core_scheduler",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_scheduler.py",
       "source_location": "L3",
       "weight": 1.0,
@@ -7733,6 +8558,16 @@
     {
       "relation": "uses",
       "confidence": "INFERRED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L4",
+      "weight": 0.8,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "aethermesh_core_scheduler_nodestatus",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
       "source_file": "tests/test_scheduler.py",
       "source_location": "L3",
       "weight": 0.8,
@@ -7783,17 +8618,6 @@
       "target": "aethermesh_core_scheduler_schedulednode"
     },
     {
-      "relation": "references",
-      "context": "return_type",
-      "confidence": "EXTRACTED",
-      "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L175",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_simulation_coerce_simulation_node",
-      "target": "aethermesh_core_scheduler_schedulednode"
-    },
-    {
       "relation": "uses",
       "confidence": "INFERRED",
       "source_file": "src/aethermesh_core/simulation.py",
@@ -7823,6 +8647,38 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_run_local_simulation",
+      "target": "aethermesh_core_scheduler_schedulednode"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L4",
+      "weight": 0.8,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "aethermesh_core_scheduler_schedulednode",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_registers_scheduled_nodes_preserving_status",
+      "target": "aethermesh_core_scheduler_schedulednode"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests_test_registers_string_node_ids_in_order",
       "target": "aethermesh_core_scheduler_schedulednode"
     },
     {
@@ -8091,16 +8947,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L175",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_simulation",
-      "target": "aethermesh_core_simulation_coerce_simulation_node"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L20",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -8133,9 +8979,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation",
-      "target": "aethermesh_core_simulation_send_simulation_message",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_simulation_send_simulation_message"
     },
     {
       "relation": "contains",
@@ -8213,9 +9059,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
-      "source": "aethermesh_core_simulation_rationale_23",
+      "source": "aethermesh_core_simulation_rationale_24",
       "target": "aethermesh_core_simulation_localsimulationresult",
       "confidence_score": 1.0
     },
@@ -8234,9 +9080,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L37",
+      "source_location": "L38",
       "weight": 1.0,
-      "source": "aethermesh_core_simulation_rationale_37",
+      "source": "aethermesh_core_simulation_rationale_38",
       "target": "aethermesh_core_simulation_localsimulationresult_to_dict",
       "confidence_score": 1.0
     },
@@ -8244,22 +9090,11 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L60",
+      "source_location": "L61",
       "weight": 1.0,
-      "source": "aethermesh_core_simulation_rationale_60",
+      "source": "aethermesh_core_simulation_rationale_61",
       "target": "aethermesh_core_simulation_run_local_simulation",
       "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L68",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_simulation_run_local_simulation",
-      "target": "aethermesh_core_simulation_coerce_simulation_node"
     },
     {
       "relation": "calls",
@@ -8279,9 +9114,9 @@
       "source_file": "src/aethermesh_core/simulation.py",
       "source_location": "L88",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_simulation_run_local_simulation",
-      "target": "aethermesh_core_simulation_send_simulation_message",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_simulation_send_simulation_message"
     },
     {
       "relation": "calls",
@@ -9479,9 +10314,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus",
-      "target": "tests_test_message_bus_localmessagebustests",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests"
     },
     {
       "relation": "contains",
@@ -9489,9 +10324,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "method",
@@ -9499,9 +10334,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_inbox_filters_by_recipient_deterministically",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_inbox_filters_by_recipient_deterministically"
     },
     {
       "relation": "method",
@@ -9509,9 +10344,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L136",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_inbox_rejects_unregistered_node",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_inbox_rejects_unregistered_node"
     },
     {
       "relation": "method",
@@ -9519,9 +10354,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L119",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_log_and_inbox_return_copies",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_log_and_inbox_return_copies"
     },
     {
       "relation": "method",
@@ -9529,9 +10364,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_log_preserves_send_order_over_multiple_messages",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_log_preserves_send_order_over_multiple_messages"
     },
     {
       "relation": "method",
@@ -9539,9 +10374,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_register_node_rejects_empty_non_string_and_duplicate_ids",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_register_node_rejects_empty_non_string_and_duplicate_ids"
     },
     {
       "relation": "method",
@@ -9549,9 +10384,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_recipient",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_recipient"
     },
     {
       "relation": "method",
@@ -9559,9 +10394,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_sender",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_sender"
     },
     {
       "relation": "method",
@@ -9569,9 +10404,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests",
-      "target": "tests_test_message_bus_localmessagebustests_test_successful_send_to_registered_recipient_preserves_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_localmessagebustests_test_successful_send_to_registered_recipient_preserves_message"
     },
     {
       "relation": "calls",
@@ -9580,9 +10415,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_successful_send_to_registered_recipient_preserves_message",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "calls",
@@ -9591,9 +10426,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_log_preserves_send_order_over_multiple_messages",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "calls",
@@ -9602,9 +10437,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_inbox_filters_by_recipient_deterministically",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "calls",
@@ -9613,9 +10448,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_sender",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "calls",
@@ -9624,9 +10459,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L112",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_send_rejects_unregistered_recipient",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "calls",
@@ -9635,9 +10470,9 @@
       "source_file": "tests/test_message_bus.py",
       "source_location": "L123",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_message_bus_localmessagebustests_test_log_and_inbox_return_copies",
-      "target": "tests_test_message_bus_message",
-      "confidence_score": 1.0
+      "target": "tests_test_message_bus_message"
     },
     {
       "relation": "contains",
@@ -9698,6 +10533,86 @@
       "confidence_score": 1.0,
       "source": "tests_test_messages_meshmessagetests",
       "target": "tests_test_messages_meshmessagetests_test_unsupported_message_type_is_rejected"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "tests_test_node_registry",
+      "target": "tests_test_node_registry_noderegistrytests",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_marks_known_nodes_available_and_offline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_records_deterministic_heartbeat_sequence_and_count",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_registers_scheduled_nodes_preserving_status",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_registers_string_node_ids_in_order",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_rejects_duplicate_node_ids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_rejects_empty_or_whitespace_node_ids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_node_registry.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "tests_test_node_registry_noderegistrytests",
+      "target": "tests_test_node_registry_noderegistrytests_test_rejects_status_or_heartbeat_updates_for_unknown_nodes",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10211,5 +11126,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b9328e685efb6ffdde5758289a678926e356ffa8"
+  "built_at_commit": "4cd41c98fcad52bee94aa336d08867b108882b61"
 }
