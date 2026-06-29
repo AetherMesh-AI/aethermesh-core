@@ -27,6 +27,67 @@ class LocalSimulationTests(unittest.TestCase):
             [(item["job_id"], item["node_id"]) for item in result["results"]],
             [("echo-1", "node-a"), ("echo-2", "node-b"), ("echo-3", "node-a")],
         )
+        self.assertEqual(
+            [message["message_id"] for message in result["messages"]],
+            [
+                "msg-0001",
+                "msg-0002",
+                "msg-0003",
+                "msg-0004",
+                "msg-0005",
+                "msg-0006",
+                "msg-0007",
+                "msg-0008",
+                "msg-0009",
+            ],
+        )
+        self.assertEqual(
+            [message["message_type"] for message in result["messages"]],
+            [
+                "job_assigned",
+                "job_result_reported",
+                "contribution_recorded",
+                "job_assigned",
+                "job_result_reported",
+                "contribution_recorded",
+                "job_assigned",
+                "job_result_reported",
+                "contribution_recorded",
+            ],
+        )
+        self.assertEqual(
+            [message["correlation_id"] for message in result["messages"]],
+            [
+                "echo-1",
+                "echo-1",
+                "echo-1",
+                "echo-2",
+                "echo-2",
+                "echo-2",
+                "echo-3",
+                "echo-3",
+                "echo-3",
+            ],
+        )
+        self.assertEqual(
+            [message["payload"] for message in result["messages"][:3]],
+            [
+                {"job_id": "echo-1", "job_type": "echo", "node_id": "node-a"},
+                {
+                    "job_id": "echo-1",
+                    "status": "completed",
+                    "success": True,
+                    "output": "one",
+                    "error": None,
+                },
+                {
+                    "job_id": "echo-1",
+                    "node_id": "node-a",
+                    "status": "completed",
+                    "contribution_units": 1,
+                },
+            ],
+        )
 
     def test_successful_echo_jobs_contribute_units_and_totals(self) -> None:
         jobs = [

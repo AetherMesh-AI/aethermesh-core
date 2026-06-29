@@ -1,0 +1,91 @@
+import unittest
+
+from aethermesh_core.messages import MeshMessage, SUPPORTED_MESSAGE_TYPES
+
+
+class MeshMessageTests(unittest.TestCase):
+    def test_message_serializes_to_deterministic_json_compatible_dict(self) -> None:
+        message = MeshMessage(
+            message_id="msg-0001",
+            message_type="job_assigned",
+            sender_node_id="local-scheduler",
+            recipient_node_id="node-a",
+            payload={"job_id": "echo-1", "job_type": "echo"},
+            correlation_id="echo-1",
+        )
+
+        self.assertEqual(
+            message.to_dict(),
+            {
+                "message_id": "msg-0001",
+                "message_type": "job_assigned",
+                "sender_node_id": "local-scheduler",
+                "recipient_node_id": "node-a",
+                "payload": {"job_id": "echo-1", "job_type": "echo"},
+                "correlation_id": "echo-1",
+            },
+        )
+
+    def test_supported_message_types_are_limited_to_initial_local_mesh_types(self) -> None:
+        self.assertEqual(
+            SUPPORTED_MESSAGE_TYPES,
+            frozenset(
+                {"job_assigned", "job_result_reported", "contribution_recorded"}
+            ),
+        )
+
+    def test_unsupported_message_type_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "message_type must be one of"):
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="peer_discovered",
+                sender_node_id="node-a",
+                recipient_node_id=None,
+                payload={},
+                correlation_id=None,
+            )
+
+    def test_required_string_fields_must_be_non_empty(self) -> None:
+        invalid_messages = [
+            {"message_id": "", "message_type": "job_assigned", "sender_node_id": "node-a"},
+            {"message_id": "msg-0001", "message_type": "", "sender_node_id": "node-a"},
+            {"message_id": "msg-0001", "message_type": "job_assigned", "sender_node_id": ""},
+            {
+                "message_id": "msg-0001",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "recipient_node_id": "",
+            },
+            {
+                "message_id": "msg-0001",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "correlation_id": "",
+            },
+        ]
+
+        for invalid_kwargs in invalid_messages:
+            with self.subTest(kwargs=invalid_kwargs):
+                kwargs = dict(invalid_kwargs)
+                with self.assertRaises(ValueError):
+                    MeshMessage(
+                        recipient_node_id=kwargs.pop("recipient_node_id", None),
+                        payload={},
+                        correlation_id=kwargs.pop("correlation_id", None),
+                        **kwargs,
+                    )
+
+    def test_payload_must_be_a_dictionary(self) -> None:
+        with self.assertRaisesRegex(ValueError, "payload must be a dictionary"):
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_assigned",
+                sender_node_id="node-a",
+                recipient_node_id=None,
+                payload=[],  # type: ignore[arg-type]
+                correlation_id=None,
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

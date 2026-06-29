@@ -5,6 +5,7 @@ from aethermesh_core.ledger import (
     ContributionRecord,
     ContributionSummary,
 )
+from aethermesh_core.messages import MeshMessage, SUPPORTED_MESSAGE_TYPES
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import (
@@ -23,7 +24,9 @@ __all__ = [
     "JobResult",
     "LocalRunner",
     "LocalSimulationResult",
+    "MeshMessage",
     "NodeIdentity",
+    "SUPPORTED_MESSAGE_TYPES",
     "SimulationJobAssignment",
     "__version__",
     "run_local_simulation",

@@ -26,6 +26,13 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(len(payload["results"]), 3)
         self.assertEqual(payload["results"][0]["status"], "completed")
+        self.assertEqual(len(payload["messages"]), 9)
+        self.assertEqual(payload["messages"][0]["message_id"], "msg-0001")
+        self.assertEqual(payload["messages"][0]["message_type"], "job_assigned")
+        self.assertEqual(payload["messages"][0]["correlation_id"], "echo-1")
+        self.assertEqual(payload["messages"][0]["recipient_node_id"], "local-node-a")
+        self.assertEqual(payload["messages"][1]["message_type"], "job_result_reported")
+        self.assertEqual(payload["messages"][2]["message_type"], "contribution_recorded")
         self.assertEqual(payload["summaries"][0]["node_id"], "local-node-a")
         self.assertEqual(
             payload["totals"],
