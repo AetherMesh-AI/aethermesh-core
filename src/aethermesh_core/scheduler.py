@@ -11,7 +11,7 @@ class NoAvailableNodesError(ValueError):
     """Raised when local job assignment has jobs but no available nodes."""
 
 
-DEFAULT_LOCAL_CAPABILITIES = ("echo", "keyword_extract", "text_stats")
+DEFAULT_LOCAL_CAPABILITIES = ("echo", "keyword_extract", "text_chunk", "text_stats")
 
 
 class NodeStatus(str, Enum):

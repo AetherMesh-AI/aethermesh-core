@@ -24,14 +24,14 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
@@ -112,14 +112,14 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 3,
                     "heartbeat_count": 2,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                 },

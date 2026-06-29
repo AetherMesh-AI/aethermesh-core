@@ -35,7 +35,10 @@ class JobManifestTests(unittest.TestCase):
         )
         self.assertEqual(
             [node.capabilities for node in batch.nodes],
-            [("echo", "keyword_extract", "text_stats"), ("echo", "keyword_extract", "text_stats")],
+            [
+                ("echo", "keyword_extract", "text_chunk", "text_stats"),
+                ("echo", "keyword_extract", "text_chunk", "text_stats"),
+            ],
         )
         self.assertEqual(batch.jobs[0].job_id, "echo-1")
         self.assertEqual(batch.jobs[0].job_type, "echo")
@@ -73,7 +76,11 @@ class JobManifestTests(unittest.TestCase):
         )
         self.assertEqual(
             [node.capabilities for node in batch.nodes],
-            [("echo", "keyword_extract", "text_stats"), ("echo", "keyword_extract", "text_stats"), ("echo", "keyword_extract", "text_stats")],
+            [
+                ("echo", "keyword_extract", "text_chunk", "text_stats"),
+                ("echo", "keyword_extract", "text_chunk", "text_stats"),
+                ("echo", "keyword_extract", "text_chunk", "text_stats"),
+            ],
         )
 
     def test_object_nodes_can_declare_sorted_capabilities(self) -> None:

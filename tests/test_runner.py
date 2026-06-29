@@ -186,6 +186,95 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertEqual(result.contribution_units, 0)
                 self.assertIsInstance(result.error, str)
                 self.assertTrue(result.error.startswith("keyword_extract payload requires"))
+    def test_text_chunk_completes_with_deterministic_output(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="chunk-1",
+                job_type="text_chunk",
+                payload={"text": "alpha beta gamma", "max_chars": 10},
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "chunks": [
+                    {"index": 0, "text": "alpha beta", "character_count": 10},
+                    {"index": 1, "text": " gamma", "character_count": 6},
+                ],
+                "chunk_count": 2,
+                "character_count": 16,
+            },
+        )
+        self.assertEqual(result.contribution_units, 1)
+
+    def test_text_chunk_empty_text_returns_zero_chunks(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(Job(job_id="chunk-empty", job_type="text_chunk", payload={"text": ""}))
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output, {"chunks": [], "chunk_count": 0, "character_count": 0})
+        self.assertEqual(result.contribution_units, 1)
+
+    def test_text_chunk_preserves_whitespace_and_long_words(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="chunk-whitespace",
+                job_type="text_chunk",
+                payload={"text": "  alpha  superlongword", "max_chars": 8},
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "chunks": [
+                    {"index": 0, "text": "  alpha ", "character_count": 8},
+                    {"index": 1, "text": " ", "character_count": 1},
+                    {"index": 2, "text": "superlon", "character_count": 8},
+                    {"index": 3, "text": "gword", "character_count": 5},
+                ],
+                "chunk_count": 4,
+                "character_count": 22,
+            },
+        )
+
+    def test_text_chunk_uses_default_max_chars(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        text = "x" * 121
+        result = runner.run(Job(job_id="chunk-default", job_type="text_chunk", payload={"text": text}))
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output["chunk_count"], 2)
+        self.assertEqual(result.output["chunks"][0]["character_count"], 120)
+        self.assertEqual(result.output["character_count"], 121)
+
+    def test_text_chunk_malformed_payload_fails_predictably(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+
+        cases = [
+            Job(job_id="missing", job_type="text_chunk", payload={}),
+            Job(job_id="non-string", job_type="text_chunk", payload={"text": 123}),
+            Job(job_id="non-int-max", job_type="text_chunk", payload={"text": "hello", "max_chars": "5"}),
+            Job(job_id="bool-max", job_type="text_chunk", payload={"text": "hello", "max_chars": True}),
+            Job(job_id="zero-max", job_type="text_chunk", payload={"text": "hello", "max_chars": 0}),
+            Job(job_id="large-max", job_type="text_chunk", payload={"text": "hello", "max_chars": 1001}),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                result = runner.run(job)
+                self.assertEqual(result.status, "failed")
+                self.assertIsNone(result.output)
+                self.assertEqual(result.contribution_units, 0)
+                self.assertIsInstance(result.error, str)
+                error = result.error
+                self.assertIsInstance(error, str)
+                self.assertTrue(str(error).startswith("text_chunk payload requires"))
 
 
 if __name__ == "__main__":

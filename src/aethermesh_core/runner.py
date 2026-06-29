@@ -15,6 +15,7 @@ class LocalRunner:
     SUPPORTED_ECHO_JOB_TYPE = "echo"
     SUPPORTED_TEXT_STATS_JOB_TYPE = "text_stats"
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"
+    SUPPORTED_TEXT_CHUNK_JOB_TYPE = "text_chunk"
 
     def __init__(self, identity: NodeIdentity) -> None:
         self.identity = identity
@@ -55,6 +56,27 @@ class LocalRunner:
         if job.job_type == self.SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE:
             try:
                 output = build_keyword_extract_output(job.payload)
+            except ValueError as exc:
+                return JobResult(
+                    job_id=job.job_id,
+                    node_id=self.identity.node_id,
+                    status="failed",
+                    output=None,
+                    error=str(exc),
+                    contribution_units=0,
+                )
+            return JobResult(
+                job_id=job.job_id,
+                node_id=self.identity.node_id,
+                status="completed",
+                output=output,
+                error=None,
+                contribution_units=1,
+            )
+
+        if job.job_type == self.SUPPORTED_TEXT_CHUNK_JOB_TYPE:
+            try:
+                output = build_text_chunk_output(job.payload)
             except ValueError as exc:
                 return JobResult(
                     job_id=job.job_id,
@@ -136,3 +158,60 @@ def build_keyword_extract_output(payload: dict[str, Any]) -> dict[str, object]:
         "unique_terms": len(counts),
         "total_terms": len(tokens),
     }
+
+
+TEXT_CHUNK_DEFAULT_MAX_CHARS = 120
+TEXT_CHUNK_MIN_MAX_CHARS = 1
+TEXT_CHUNK_MAX_MAX_CHARS = 1000
+
+
+def build_text_chunk_output(payload: dict[str, Any]) -> dict[str, object]:
+    """Build stable character chunks for a local ``text_chunk`` job."""
+
+    text = payload.get("text")
+    if not isinstance(text, str):
+        raise ValueError("text_chunk payload requires string field: text")
+
+    max_chars = payload.get("max_chars", TEXT_CHUNK_DEFAULT_MAX_CHARS)
+    if (
+        not isinstance(max_chars, int)
+        or isinstance(max_chars, bool)
+        or max_chars < TEXT_CHUNK_MIN_MAX_CHARS
+        or max_chars > TEXT_CHUNK_MAX_MAX_CHARS
+    ):
+        raise ValueError(
+            "text_chunk payload requires integer field: "
+            f"max_chars between {TEXT_CHUNK_MIN_MAX_CHARS} and {TEXT_CHUNK_MAX_MAX_CHARS}"
+        )
+
+    chunks: list[dict[str, int | str]] = []
+    start = 0
+    while start < len(text):
+        end = min(start + max_chars, len(text))
+        split_at = end if end == len(text) else _preferred_text_chunk_split(text, start, end)
+        chunk_text = text[start:split_at]
+        chunks.append(
+            {
+                "index": len(chunks),
+                "text": chunk_text,
+                "character_count": len(chunk_text),
+            }
+        )
+        start = split_at
+
+    return {
+        "chunks": chunks,
+        "chunk_count": len(chunks),
+        "character_count": len(text),
+    }
+
+
+def _preferred_text_chunk_split(text: str, start: int, hard_end: int) -> int:
+    """Return a deterministic split point no later than ``hard_end``."""
+
+    if text[hard_end].isspace():
+        return hard_end
+    for index in range(hard_end - 1, start - 1, -1):
+        if text[index].isspace():
+            return index + 1
+    return hard_end

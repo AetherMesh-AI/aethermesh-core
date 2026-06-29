@@ -23,6 +23,14 @@
         "text": "AetherMesh nodes process useful local work for the mesh.",
         "limit": 5
       }
+    },
+    {
+      "job_id": "text-chunk-1",
+      "job_type": "text_chunk",
+      "payload": {
+        "text": "AetherMesh prepares local text chunks for future AI processing.",
+        "max_chars": 24
+      }
     }
   ]
 }
