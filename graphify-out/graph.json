@@ -43,7 +43,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli",
-      "community": 8,
+      "community": 0,
       "norm_label": "cli.py"
     },
     {
@@ -70,7 +70,7 @@
       "label": "run_demo()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L70",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_demo",
       "community": 6,
@@ -80,27 +80,27 @@
       "label": "run_default_local_simulation()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L105",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_default_local_simulation",
-      "community": 8,
+      "community": 3,
       "norm_label": "run_default_local_simulation()"
     },
     {
       "label": "run_local_batch()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L123",
+      "source_location": "L128",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_local_batch",
-      "community": 12,
+      "community": 13,
       "norm_label": "run_local_batch()"
     },
     {
       "label": "main()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L144",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "aethermesh_core_cli_main",
       "community": 8,
@@ -113,27 +113,27 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1",
-      "community": 8,
+      "community": 0,
       "norm_label": "command-line interface for the local aethermesh prototype."
     },
     {
       "label": "Run the fixed local simulation demo used by the CLI command.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L106",
+      "source_location": "L111",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_106",
-      "community": 8,
+      "id": "aethermesh_core_cli_rationale_111",
+      "community": 3,
       "norm_label": "run the fixed local simulation demo used by the cli command."
     },
     {
       "label": "Run a local simulation from a validated JSON manifest.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L124",
+      "source_location": "L131",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_124",
-      "community": 12,
+      "id": "aethermesh_core_cli_rationale_131",
+      "community": 13,
       "norm_label": "run a local simulation from a validated json manifest."
     },
     {
@@ -143,7 +143,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest",
-      "community": 12,
+      "community": 13,
       "norm_label": "job_manifest.py"
     },
     {
@@ -153,7 +153,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_manifesterror",
-      "community": 12,
+      "community": 13,
       "norm_label": "manifesterror"
     },
     {
@@ -173,7 +173,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_localjobbatch",
-      "community": 12,
+      "community": 13,
       "norm_label": "localjobbatch"
     },
     {
@@ -183,7 +183,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_load_job_manifest",
-      "community": 12,
+      "community": 13,
       "norm_label": "load_job_manifest()"
     },
     {
@@ -203,7 +203,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_parse_node_ids",
-      "community": 12,
+      "community": 13,
       "norm_label": "_parse_node_ids()"
     },
     {
@@ -213,7 +213,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "any",
-      "community": 12,
+      "community": 2,
       "norm_label": "any"
     },
     {
@@ -223,7 +223,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_parse_jobs",
-      "community": 12,
+      "community": 13,
       "norm_label": "_parse_jobs()"
     },
     {
@@ -233,7 +233,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_parse_job_entry",
-      "community": 12,
+      "community": 13,
       "norm_label": "_parse_job_entry()"
     },
     {
@@ -243,7 +243,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_1",
-      "community": 12,
+      "community": 13,
       "norm_label": "versioned json manifest loading for local batch simulation."
     },
     {
@@ -253,7 +253,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_14",
-      "community": 12,
+      "community": 13,
       "norm_label": "raised when a local job manifest cannot be loaded or validated."
     },
     {
@@ -263,7 +263,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_19",
-      "community": 12,
+      "community": 13,
       "norm_label": "validated local batch inputs for the local simulation path."
     },
     {
@@ -273,7 +273,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_26",
-      "community": 12,
+      "community": 13,
       "norm_label": "load and validate a version 1 local job-batch manifest."
     },
     {
@@ -303,7 +303,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionrecord_to_dict",
-      "community": 12,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -503,7 +503,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_26",
-      "community": 12,
+      "community": 2,
       "norm_label": "serialize the record into a json-compatible dictionary."
     },
     {
@@ -773,7 +773,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "aethermesh_core_models_jobresult_to_dict",
-      "community": 12,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -833,7 +833,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_44",
-      "community": 12,
+      "community": 2,
       "norm_label": "serialize the result into a json-compatible dictionary."
     },
     {
@@ -1133,7 +1133,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_simulation",
-      "community": 7,
+      "community": 0,
       "norm_label": "simulation.py"
     },
     {
@@ -1150,7 +1150,7 @@
       "label": ".to_dict()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L32",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult_to_dict",
       "community": 6,
@@ -1160,40 +1160,40 @@
       "label": "run_local_simulation()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L47",
+      "source_location": "L53",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_run_local_simulation",
-      "community": 7,
+      "community": 3,
       "norm_label": "run_local_simulation()"
     },
     {
       "label": "_simulation_message()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L152",
+      "source_location": "L161",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_simulation_message",
-      "community": 7,
+      "community": 0,
       "norm_label": "_simulation_message()"
     },
     {
       "label": "_summary_to_simulation_dict()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L171",
+      "source_location": "L180",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_summary_to_simulation_dict",
-      "community": 7,
+      "community": 0,
       "norm_label": "_summary_to_simulation_dict()"
     },
     {
       "label": "_validation_summary()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L184",
+      "source_location": "L193",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_validation_summary",
-      "community": 7,
+      "community": 0,
       "norm_label": "_validation_summary()"
     },
     {
@@ -1203,7 +1203,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_1",
-      "community": 7,
+      "community": 0,
       "norm_label": "local multi-node simulation for the aethermesh prototype."
     },
     {
@@ -1217,23 +1217,23 @@
       "norm_label": "structured, deterministic output from a local multi-node simulation."
     },
     {
-      "label": "Serialize the simulation result into a JSON-compatible dictionary.",
+      "label": "Serialize the simulation result into a JSON-compatible dictionary.          Vali",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast",
-      "id": "aethermesh_core_simulation_rationale_33",
+      "id": "aethermesh_core_simulation_rationale_34",
       "community": 6,
-      "norm_label": "serialize the simulation result into a json-compatible dictionary."
+      "norm_label": "serialize the simulation result into a json-compatible dictionary.          vali"
     },
     {
       "label": "Run local jobs across local node identities using scheduler assignment.      Thi",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L48",
+      "source_location": "L54",
       "_origin": "ast",
-      "id": "aethermesh_core_simulation_rationale_48",
-      "community": 7,
+      "id": "aethermesh_core_simulation_rationale_54",
+      "community": 3,
       "norm_label": "run local jobs across local node identities using scheduler assignment.      thi"
     },
     {
@@ -1263,7 +1263,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "aethermesh_core_validation_validationresult_to_dict",
-      "community": 12,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -1313,7 +1313,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_22",
-      "community": 12,
+      "community": 2,
       "norm_label": "serialize the validation result into a json-compatible dictionary."
     },
     {
@@ -1343,7 +1343,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_cli",
-      "community": 8,
+      "community": 0,
       "norm_label": "test_cli.py"
     },
     {
@@ -1397,10 +1397,70 @@
       "norm_label": ".test_run_local_batch_unsupported_job_type_returns_nonzero()"
     },
     {
-      "label": ".test_run_demo_command_still_prints_parseable_result()",
+      "label": ".test_run_local_batch_does_not_write_ledger_by_default()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
       "source_location": "L153",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_does_not_write_ledger_by_default",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_does_not_write_ledger_by_default()"
+    },
+    {
+      "label": ".test_run_local_batch_persists_json_ledger_and_accumulates()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L185",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_persists_json_ledger_and_accumulates",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_persists_json_ledger_and_accumulates()"
+    },
+    {
+      "label": ".test_run_local_batch_preserves_existing_ledger_metadata()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L257",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_preserves_existing_ledger_metadata",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_preserves_existing_ledger_metadata()"
+    },
+    {
+      "label": ".test_run_local_batch_persists_invalid_completed_result_with_zero_units()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L299",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_persists_invalid_completed_result_with_zero_units",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_persists_invalid_completed_result_with_zero_units()"
+    },
+    {
+      "label": ".test_run_local_batch_unsupported_job_type_does_not_write_ledger()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L335",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_does_not_write_ledger",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_unsupported_job_type_does_not_write_ledger()"
+    },
+    {
+      "label": ".test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L371",
+      "_origin": "ast",
+      "id": "tests_test_cli_clitests_test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite",
+      "community": 8,
+      "norm_label": ".test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite()"
+    },
+    {
+      "label": ".test_run_demo_command_still_prints_parseable_result()",
+      "file_type": "code",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L413",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_command_still_prints_parseable_result",
       "community": 8,
@@ -1410,7 +1470,7 @@
       "label": ".test_run_demo_default_output_shape_stays_single_result()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L176",
+      "source_location": "L436",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_default_output_shape_stays_single_result",
       "community": 8,
@@ -1420,7 +1480,7 @@
       "label": ".test_run_demo_persists_json_ledger_and_accumulates_summary()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L191",
+      "source_location": "L451",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_persists_json_ledger_and_accumulates_summary",
       "community": 8,
@@ -1430,7 +1490,7 @@
       "label": ".test_run_demo_malformed_ledger_path_returns_cli_error()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L242",
+      "source_location": "L502",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_demo_malformed_ledger_path_returns_cli_error",
       "community": 8,
@@ -1923,7 +1983,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests",
-      "community": 7,
+      "community": 3,
       "norm_label": "localsimulationtests"
     },
     {
@@ -1933,7 +1993,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_jobs_are_assigned_round_robin_by_input_order",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_jobs_are_assigned_round_robin_by_input_order()"
     },
     {
@@ -1943,57 +2003,67 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_simulation_preserves_default_output_with_scheduler",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_simulation_preserves_default_output_with_scheduler()"
+    },
+    {
+      "label": ".test_simulation_exposes_validation_gated_accounted_results()",
+      "file_type": "code",
+      "source_file": "tests/test_simulation.py",
+      "source_location": "L116",
+      "_origin": "ast",
+      "id": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
+      "community": 3,
+      "norm_label": ".test_simulation_exposes_validation_gated_accounted_results()"
     },
     {
       "label": ".test_successful_echo_jobs_contribute_units_and_totals()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L114",
+      "source_location": "L126",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_successful_echo_jobs_contribute_units_and_totals",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_successful_echo_jobs_contribute_units_and_totals()"
     },
     {
       "label": ".test_unsupported_jobs_are_recorded_as_failures_with_zero_units()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L183",
+      "source_location": "L195",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_unsupported_jobs_are_recorded_as_failures_with_zero_units",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_unsupported_jobs_are_recorded_as_failures_with_zero_units()"
     },
     {
       "label": ".test_invalid_completed_echo_result_is_visible_but_earns_zero_units()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L209",
+      "source_location": "L221",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_invalid_completed_echo_result_is_visible_but_earns_zero_units",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_invalid_completed_echo_result_is_visible_but_earns_zero_units()"
     },
     {
       "label": ".test_empty_node_list_is_rejected()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L238",
+      "source_location": "L250",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_empty_node_list_is_rejected",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_empty_node_list_is_rejected()"
     },
     {
       "label": ".test_text_stats_contribution_is_gated_by_validation()",
       "file_type": "code",
       "source_file": "tests/test_simulation.py",
-      "source_location": "L242",
+      "source_location": "L254",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_text_stats_contribution_is_gated_by_validation",
-      "community": 7,
+      "community": 3,
       "norm_label": ".test_text_stats_contribution_is_gated_by_validation()"
     },
     {
@@ -2220,7 +2290,7 @@
       "label": "Architecture",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L118",
+      "source_location": "L126",
       "_origin": "ast",
       "id": "readme_architecture",
       "community": 4,
@@ -2451,9 +2521,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L123",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli",
-      "target": "aethermesh_core_cli_run_local_batch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_run_local_batch"
     },
     {
       "relation": "imports_from",
@@ -2462,9 +2532,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli",
-      "target": "aethermesh_core_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest"
     },
     {
       "relation": "imports_from",
@@ -2678,9 +2748,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L106",
+      "source_location": "L111",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_106",
+      "source": "aethermesh_core_cli_rationale_111",
       "target": "aethermesh_core_cli_run_default_local_simulation",
       "confidence_score": 1.0
     },
@@ -2713,17 +2783,17 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L164",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_main",
-      "target": "aethermesh_core_cli_run_local_batch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_run_local_batch"
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L124",
+      "source_location": "L131",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_124",
+      "source": "aethermesh_core_cli_rationale_131",
       "target": "aethermesh_core_cli_run_local_batch",
       "confidence_score": 1.0
     },
@@ -2748,6 +2818,28 @@
       "weight": 1.0,
       "source": "aethermesh_core_cli_run_local_batch",
       "target": "aethermesh_core_job_manifest_manifesterror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L152",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_batch",
+      "target": "aethermesh_core_ledger_load_ledger_document"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L155",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_batch",
+      "target": "aethermesh_core_ledger_save_ledger_document"
     },
     {
       "relation": "calls",
@@ -2810,6 +2902,28 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/test_cli.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_does_not_write_ledger_by_default",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
+      "source_location": "L396",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
       "source_location": "L120",
       "weight": 1.0,
       "source": "tests_test_cli_clitests_test_run_local_batch_manifest_error_returns_nonzero_without_traceback",
@@ -2821,9 +2935,53 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/test_cli.py",
+      "source_location": "L318",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_persists_invalid_completed_result_with_zero_units",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
+      "source_location": "L212",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_persists_json_ledger_and_accumulates",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
+      "source_location": "L284",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_preserves_existing_ledger_metadata",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
       "source_location": "L92",
       "weight": 1.0,
       "source": "tests_test_cli_clitests_test_run_local_batch_prints_manifest_backed_simulation_json",
+      "target": "aethermesh_core_cli_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_cli.py",
+      "source_location": "L355",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_does_not_write_ledger",
       "target": "aethermesh_core_cli_main"
     },
     {
@@ -2854,9 +3012,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_load_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_load_job_manifest"
     },
     {
       "relation": "contains",
@@ -2864,9 +3022,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_localjobbatch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_localjobbatch"
     },
     {
       "relation": "contains",
@@ -2874,9 +3032,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "contains",
@@ -2884,9 +3042,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_parse_job_entry",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_job_entry"
     },
     {
       "relation": "contains",
@@ -2894,9 +3052,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_parse_jobs",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_jobs"
     },
     {
       "relation": "contains",
@@ -2904,9 +3062,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_parse_node_ids",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_node_ids"
     },
     {
       "relation": "imports_from",
@@ -2915,9 +3073,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_models",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_models"
     },
     {
       "relation": "rationale_for",
@@ -2925,9 +3083,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_1",
-      "target": "aethermesh_core_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest"
     },
     {
       "relation": "imports_from",
@@ -2936,9 +3094,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest",
-      "target": "aethermesh_core_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest"
     },
     {
       "relation": "calls",
@@ -2947,9 +3105,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_load_job_manifest",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "uses",
@@ -2957,9 +3115,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "aethermesh_core_job_manifest_manifesterror",
-      "target": "aethermesh_core_models_job",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_models_job"
     },
     {
       "relation": "inherits",
@@ -2967,9 +3125,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_manifesterror",
-      "target": "valueerror",
-      "confidence_score": 1.0
+      "target": "valueerror"
     },
     {
       "relation": "calls",
@@ -2978,9 +3136,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_job_entry",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "calls",
@@ -2989,9 +3147,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_jobs",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "calls",
@@ -3000,9 +3158,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_node_ids",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "rationale_for",
@@ -3010,9 +3168,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_14",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "uses",
@@ -3020,9 +3178,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "calls",
@@ -3117,9 +3275,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_load_job_manifest",
-      "target": "aethermesh_core_job_manifest_localjobbatch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_localjobbatch"
     },
     {
       "relation": "uses",
@@ -3127,9 +3285,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L10",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "aethermesh_core_job_manifest_localjobbatch",
-      "target": "aethermesh_core_models_job",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_models_job"
     },
     {
       "relation": "rationale_for",
@@ -3137,9 +3295,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_19",
-      "target": "aethermesh_core_job_manifest_localjobbatch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_localjobbatch"
     },
     {
       "relation": "calls",
@@ -3148,9 +3306,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_load_job_manifest",
-      "target": "aethermesh_core_job_manifest_parse_jobs",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_jobs"
     },
     {
       "relation": "calls",
@@ -3159,9 +3317,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_load_job_manifest",
-      "target": "aethermesh_core_job_manifest_parse_node_ids",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_node_ids"
     },
     {
       "relation": "references",
@@ -3170,9 +3328,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_load_job_manifest",
-      "target": "path",
-      "confidence_score": 1.0
+      "target": "path"
     },
     {
       "relation": "rationale_for",
@@ -3180,9 +3338,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_26",
-      "target": "aethermesh_core_job_manifest_load_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_load_job_manifest"
     },
     {
       "relation": "calls",
@@ -3301,9 +3459,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_node_ids",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -3312,9 +3470,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_job_entry",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -3323,9 +3481,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_jobs",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -3499,9 +3657,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L74",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_jobs",
-      "target": "aethermesh_core_job_manifest_parse_job_entry",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_parse_job_entry"
     },
     {
       "relation": "references",
@@ -3510,9 +3668,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_jobs",
-      "target": "aethermesh_core_models_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_models_job"
     },
     {
       "relation": "references",
@@ -3521,9 +3679,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_job_entry",
-      "target": "aethermesh_core_models_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_models_job"
     },
     {
       "relation": "contains",
@@ -5058,6 +5216,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/test_simulation.py",
+      "source_location": "L117",
+      "weight": 1.0,
+      "source": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
+      "target": "aethermesh_core_models_job"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_simulation.py",
       "source_location": "L97",
       "weight": 1.0,
       "source": "tests_test_simulation_localsimulationtests_test_simulation_preserves_default_output_with_scheduler",
@@ -6322,21 +6491,21 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L33",
+      "source_location": "L34",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_simulation_rationale_33",
-      "target": "aethermesh_core_simulation_localsimulationresult_to_dict"
+      "source": "aethermesh_core_simulation_rationale_34",
+      "target": "aethermesh_core_simulation_localsimulationresult_to_dict",
+      "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/simulation.py",
-      "source_location": "L48",
+      "source_location": "L54",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_simulation_rationale_48",
-      "target": "aethermesh_core_simulation_run_local_simulation"
+      "source": "aethermesh_core_simulation_rationale_54",
+      "target": "aethermesh_core_simulation_run_local_simulation",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -6413,6 +6582,17 @@
       "source_location": "L16",
       "weight": 1.0,
       "source": "tests_test_simulation_localsimulationtests_test_jobs_are_assigned_round_robin_by_input_order",
+      "target": "aethermesh_core_simulation_run_local_simulation"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_simulation.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "source": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
       "target": "aethermesh_core_simulation_run_local_simulation"
     },
     {
@@ -6769,10 +6949,60 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_cli.py",
-      "source_location": "L112",
+      "source_location": "L153",
       "weight": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_batch_manifest_error_returns_nonzero_without_traceback",
+      "target": "tests_test_cli_clitests_test_run_local_batch_does_not_write_ledger_by_default",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L371",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L112",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_manifest_error_returns_nonzero_without_traceback"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L299",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_persists_invalid_completed_result_with_zero_units",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L185",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_persists_json_ledger_and_accumulates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L257",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_preserves_existing_ledger_metadata",
       "confidence_score": 1.0
     },
     {
@@ -6781,8 +7011,18 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L65",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_batch_prints_manifest_backed_simulation_json",
+      "target": "tests_test_cli_clitests_test_run_local_batch_prints_manifest_backed_simulation_json"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_cli.py",
+      "source_location": "L335",
+      "weight": 1.0,
+      "source": "tests_test_cli_clitests",
+      "target": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_does_not_write_ledger",
       "confidence_score": 1.0
     },
     {
@@ -6791,9 +7031,9 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L127",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_returns_nonzero",
-      "confidence_score": 1.0
+      "target": "tests_test_cli_clitests_test_run_local_batch_unsupported_job_type_returns_nonzero"
     },
     {
       "relation": "method",
@@ -6811,9 +7051,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest",
-      "target": "tests_test_job_manifest_jobmanifesttests",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests"
     },
     {
       "relation": "method",
@@ -6821,9 +7061,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L117",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_job",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_job"
     },
     {
       "relation": "method",
@@ -6831,9 +7071,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "method",
@@ -6841,9 +7081,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_duplicate_nodes_are_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_duplicate_nodes_are_rejected"
     },
     {
       "relation": "method",
@@ -6851,9 +7091,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L73",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_empty_jobs_are_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_empty_jobs_are_rejected"
     },
     {
       "relation": "method",
@@ -6861,9 +7101,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_empty_nodes_are_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_empty_nodes_are_rejected"
     },
     {
       "relation": "method",
@@ -6871,9 +7111,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_entry_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_entry_is_rejected"
     },
     {
       "relation": "method",
@@ -6881,9 +7121,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_id_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_id_is_rejected"
     },
     {
       "relation": "method",
@@ -6891,9 +7131,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_payload_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_invalid_payload_is_rejected"
     },
     {
       "relation": "method",
@@ -6901,9 +7141,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_loads_manifest_with_nodes_and_jobs",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_loads_manifest_with_nodes_and_jobs"
     },
     {
       "relation": "method",
@@ -6911,9 +7151,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L47",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_malformed_json_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_malformed_json_is_rejected"
     },
     {
       "relation": "method",
@@ -6921,9 +7161,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_missing_payload_defaults_to_empty_object",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_missing_payload_defaults_to_empty_object"
     },
     {
       "relation": "method",
@@ -6931,9 +7171,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_non_object_top_level_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_non_object_top_level_is_rejected"
     },
     {
       "relation": "method",
@@ -6941,9 +7181,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_unsupported_version_is_rejected",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_unsupported_version_is_rejected"
     },
     {
       "relation": "calls",
@@ -6952,9 +7192,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_loads_manifest_with_nodes_and_jobs",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -6963,9 +7203,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_missing_payload_defaults_to_empty_object",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -6974,9 +7214,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_unsupported_version_is_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_job",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_job"
     },
     {
       "relation": "calls",
@@ -6985,9 +7225,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_unsupported_version_is_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -6996,9 +7236,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_empty_nodes_are_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_job",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_job"
     },
     {
       "relation": "calls",
@@ -7007,9 +7247,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_empty_nodes_are_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -7018,9 +7258,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_duplicate_nodes_are_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_job",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_job"
     },
     {
       "relation": "calls",
@@ -7029,9 +7269,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L65",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_duplicate_nodes_are_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -7040,9 +7280,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_empty_jobs_are_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -7051,9 +7291,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_invalid_payload_is_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -7062,9 +7302,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_entry_is_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -7073,9 +7313,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_invalid_job_id_is_rejected",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "contains",
@@ -7396,6 +7636,16 @@
       "confidence_score": 1.0,
       "source": "tests_test_simulation_localsimulationtests",
       "target": "tests_test_simulation_localsimulationtests_test_jobs_are_assigned_round_robin_by_input_order"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_simulation.py",
+      "source_location": "L116",
+      "weight": 1.0,
+      "source": "tests_test_simulation_localsimulationtests",
+      "target": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
+      "confidence_score": 1.0
     },
     {
       "relation": "method",
@@ -7729,5 +7979,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "101cbf30404f5738f1cc2be85dfd6fd22202caed"
+  "built_at_commit": "bc19321fb04ce847eb487713aebc2995db6c91a0"
 }
