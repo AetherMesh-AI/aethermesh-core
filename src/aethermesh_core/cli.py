@@ -358,6 +358,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
 
     # Validate existing resumable inputs before overwriting any flow artifacts.
     load_ledger_document(ledger_path)
+    existing_receipt_document = load_receipt_document_if_exists(receipts_path)
     for node_id in available_node_ids:
         load_node_processing_state(
             _node_artifact_path(node_state_dir, node_id), expected_node_id=node_id
@@ -431,7 +432,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     write_message_log(flow_message_log_path, flow_message_log_document)
     receipt_document = build_receipt_document(
         processed_assignments,
-        existing_document=load_receipt_document_if_exists(receipts_path),
+        existing_document=existing_receipt_document,
     )
     write_receipt_document(receipts_path, receipt_document)
     return {

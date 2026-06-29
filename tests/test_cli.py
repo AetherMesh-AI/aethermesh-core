@@ -2014,6 +2014,50 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log["metadata"]["emitted_message_count"], 0)
         self.assertEqual(flow_log["metadata"]["message_count"], 2)
 
+    def test_run_local_flow_malformed_existing_receipts_do_not_overwrite_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            dispatch_path = output_dir / "dispatch-message-log.json"
+            flow_log_path = output_dir / "flow-message-log.json"
+            receipts_path = output_dir / "receipts.json"
+            dispatch_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            flow_log_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            dispatch_path.write_text(dispatch_original, encoding="utf-8")
+            flow_log_path.write_text(flow_log_original, encoding="utf-8")
+            receipts_path.write_text("not-json", encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                )
+            dispatch_contents = dispatch_path.read_text(encoding="utf-8")
+            flow_log_contents = flow_log_path.read_text(encoding="utf-8")
+            receipts_contents = receipts_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("receipt JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(dispatch_contents, dispatch_original)
+        self.assertEqual(flow_log_contents, flow_log_original)
+        self.assertEqual(receipts_contents, "not-json")
+
     def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
