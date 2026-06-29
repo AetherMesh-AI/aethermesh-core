@@ -1207,6 +1207,166 @@ class CliTests(unittest.TestCase):
         self.assertEqual([record["node_id"] for record in persisted_ledger["records"]], ["local-node-a", "local-node-a"])
         self.assertEqual(after_message_log, before_message_log)
         self.assertEqual(after_mtime, before_mtime)
+        self.assertNotIn("output_message_log_path", payload)
+        self.assertNotIn("final_message_count", payload)
+
+    def test_process_local_inbox_writes_output_message_log_when_requested(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            output_message_log_path = Path(temp_dir) / "local-node-a-output-messages.json"
+            ledger_path = Path(temp_dir) / "local-ledger.json"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "metadata": {"message_count": 3},
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "local-node-a",
+                                "recipient_node_id": None,
+                                "payload": {"node_id": "local-node-a"},
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "job_assigned",
+                                "sender_node_id": "local-scheduler",
+                                "recipient_node_id": "local-node-a",
+                                "payload": {
+                                    "job_id": "echo-1",
+                                    "job_type": "echo",
+                                    "payload": {"message": "hello mesh"},
+                                },
+                                "correlation_id": "echo-1",
+                            },
+                            {
+                                "message_id": "msg-0003",
+                                "message_type": "contribution_recorded",
+                                "sender_node_id": "local-ledger",
+                                "recipient_node_id": "local-node-a",
+                                "payload": {"job_id": "older-job", "contribution_units": 1},
+                                "correlation_id": "older-job",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                        "--output-message-log-path",
+                        str(output_message_log_path),
+                    ]
+                )
+            persisted = json.loads(output_message_log_path.read_text(encoding="utf-8"))
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["output_message_log_path"], str(output_message_log_path))
+        self.assertEqual(payload["final_message_count"], 5)
+        self.assertEqual(payload["processed_assignment_count"], 1)
+        self.assertEqual(payload["ignored_message_ids"], ["msg-0003"])
+        self.assertEqual(persisted["version"], 1)
+        self.assertEqual(persisted["metadata"]["source"], "process-local-inbox")
+        self.assertEqual(persisted["metadata"]["node_id"], "local-node-a")
+        self.assertEqual(persisted["metadata"]["source_message_log_path"], str(message_log_path))
+        self.assertEqual(persisted["metadata"]["ledger_path"], str(ledger_path))
+        self.assertEqual(persisted["metadata"]["message_count"], 5)
+        self.assertEqual(persisted["metadata"]["replayed_message_count"], 3)
+        self.assertEqual(persisted["metadata"]["emitted_message_count"], 2)
+        self.assertEqual(
+            [message["message_id"] for message in persisted["messages"]],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
+        )
+        self.assertEqual(persisted["messages"][3]["message_type"], "job_result_reported")
+        self.assertEqual(persisted["messages"][4]["message_type"], "contribution_recorded")
+
+    def test_process_local_inbox_output_message_log_ordering_is_deterministic(self) -> None:
+        document = {
+            "version": 1,
+            "messages": [
+                {
+                    "message_id": "msg-0001",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "local-scheduler",
+                    "recipient_node_id": "local-node-a",
+                    "payload": {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "one"},
+                    },
+                    "correlation_id": "echo-1",
+                },
+                {
+                    "message_id": "msg-0002",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "local-scheduler",
+                    "recipient_node_id": "local-node-a",
+                    "payload": {
+                        "job_id": "echo-2",
+                        "job_type": "echo",
+                        "payload": {"message": "two"},
+                    },
+                    "correlation_id": "echo-2",
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            first_output_path = Path(temp_dir) / "first-output.json"
+            second_output_path = Path(temp_dir) / "second-output.json"
+            message_log_path.write_text(json.dumps(document), encoding="utf-8")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "process-local-inbox",
+                            "--node-id",
+                            "local-node-a",
+                            "--message-log-path",
+                            str(message_log_path),
+                            "--output-message-log-path",
+                            str(first_output_path),
+                        ]
+                    ),
+                    0,
+                )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "process-local-inbox",
+                            "--node-id",
+                            "local-node-a",
+                            "--message-log-path",
+                            str(message_log_path),
+                            "--output-message-log-path",
+                            str(second_output_path),
+                        ]
+                    ),
+                    0,
+                )
+            first = json.loads(first_output_path.read_text(encoding="utf-8"))
+            second = json.loads(second_output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(first["messages"], second["messages"])
+        self.assertEqual(
+            [message["message_id"] for message in first["messages"]],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005", "msg-0006"],
+        )
 
     def test_process_local_inbox_unknown_node_returns_zero_without_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1251,6 +1411,34 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["validation_outcomes"], [])
         self.assertFalse(ledger_path.exists())
         self.assertNotIn("ledger_summary", payload)
+
+    def test_process_local_inbox_invalid_message_log_does_not_write_output_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "local-messages.json"
+            output_message_log_path = Path(temp_dir) / "output-messages.json"
+            output_message_log_path.write_text("keep me", encoding="utf-8")
+            message_log_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--message-log-path",
+                        str(message_log_path),
+                        "--output-message-log-path",
+                        str(output_message_log_path),
+                    ]
+                )
+            output_contents = output_message_log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("message log JSON is malformed", stderr.getvalue())
+        self.assertEqual(output_contents, "keep me")
 
     def test_process_local_inbox_invalid_message_log_returns_nonzero_without_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

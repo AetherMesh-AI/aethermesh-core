@@ -44,6 +44,41 @@ def build_message_log_document(
     }
 
 
+def build_replayed_message_log_document(
+    *,
+    replayed_messages: list[MeshMessage],
+    emitted_messages: list[MeshMessage],
+    node_id: str,
+    source_message_log_path: str | Path,
+    ledger_path: str | Path | None = None,
+    processed_assignment_count: int = 0,
+    ignored_message_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build a version 1 local message log for replayed plus emitted messages."""
+
+    ignored_ids = list(ignored_message_ids or [])
+    messages = [*replayed_messages, *emitted_messages]
+    metadata: dict[str, Any] = {
+        "source": "process-local-inbox",
+        "node_id": node_id,
+        "source_message_log_path": str(source_message_log_path),
+        "message_count": len(messages),
+        "replayed_message_count": len(replayed_messages),
+        "emitted_message_count": len(emitted_messages),
+        "processed_assignment_count": processed_assignment_count,
+        "ignored_message_count": len(ignored_ids),
+        "ignored_message_ids": ignored_ids,
+    }
+    if ledger_path is not None:
+        metadata["ledger_path"] = str(ledger_path)
+
+    return {
+        "version": 1,
+        "metadata": metadata,
+        "messages": [_message_to_document_entry(message) for message in messages],
+    }
+
+
 def load_message_log_messages(path: str | Path) -> list[MeshMessage]:
     """Load validated MeshMessage entries from a version 1 local message log.
 
