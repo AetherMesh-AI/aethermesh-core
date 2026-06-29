@@ -7,6 +7,11 @@ from aethermesh_core.ledger import (
 )
 from aethermesh_core.messages import MeshMessage, SUPPORTED_MESSAGE_TYPES
 from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.node_service import (
+    InboxProcessResult,
+    LocalNodeService,
+    ProcessedAssignment,
+)
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import (
     JobAssignment,
@@ -28,9 +33,11 @@ __all__ = [
     "ContributionLedger",
     "ContributionRecord",
     "ContributionSummary",
+    "InboxProcessResult",
     "Job",
     "JobAssignment",
     "JobResult",
+    "LocalNodeService",
     "LocalRunner",
     "LocalScheduler",
     "LocalSimulationResult",
@@ -38,6 +45,7 @@ __all__ = [
     "NoAvailableNodesError",
     "NodeIdentity",
     "NodeStatus",
+    "ProcessedAssignment",
     "SUPPORTED_MESSAGE_TYPES",
     "ScheduledNode",
     "SimulationJobAssignment",
