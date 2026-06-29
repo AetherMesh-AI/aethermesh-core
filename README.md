@@ -135,6 +135,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-l
 
 This command is a local development replay path: it reads the version 1 message log without rewriting it, registers senders and recipients from the log, processes only the requested node's `job_assigned` inbox messages, optionally persists validation-gated contribution records to the existing version 1 ledger format, and prints deterministic JSON with processed counts, ignored message ids, emitted result/contribution messages, validation outcomes, and ledger totals.
 
+Run the full local dispatch-plus-workers prototype flow into one deterministic artifact directory:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-flow --manifest examples/local-batch.json --output-dir /tmp/aethermesh-local-flow
+```
+
+The flow writes `dispatch-message-log.json`, one shared `ledger.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
+
 To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
 
 ```bash
