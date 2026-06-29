@@ -76,6 +76,25 @@ Run the deterministic local multi-node simulation:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli simulate-local
 ```
 
+Run a custom local job batch from a versioned JSON manifest:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-batch --manifest examples/local-batch.json
+```
+
+A minimal manifest lists ordered local node IDs and ordered jobs:
+
+```json
+{
+  "version": 1,
+  "nodes": ["local-node-a", "local-node-b"],
+  "jobs": [
+    {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}},
+    {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}}
+  ]
+}
+```
+
 The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
 Run the unit tests without installing anything:

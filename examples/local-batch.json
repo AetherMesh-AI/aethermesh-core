@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nodes": ["local-node-a", "local-node-b"],
+  "jobs": [
+    {
+      "job_id": "echo-1",
+      "job_type": "echo",
+      "payload": {"message": "hello mesh"}
+    },
+    {
+      "job_id": "text-stats-1",
+      "job_type": "text_stats",
+      "payload": {"text": "hello mesh\nhello node"}
+    }
+  ]
+}

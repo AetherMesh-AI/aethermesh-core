@@ -62,6 +62,94 @@ class CliTests(unittest.TestCase):
             },
         )
 
+    def test_run_local_batch_prints_manifest_backed_simulation_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            },
+                            {
+                                "job_id": "text-stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh\nhello node"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["nodes"], ["local-node-a", "local-node-b"])
+        self.assertEqual(
+            payload["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "local-node-a"},
+                {"job_id": "text-stats-1", "node_id": "local-node-b"},
+            ],
+        )
+        self.assertEqual(payload["results"][0]["output"], "hello mesh")
+        self.assertEqual(payload["results"][1]["output"]["word_count"], 4)
+        self.assertEqual(
+            payload["validation_summary"], {"valid": 2, "invalid": 0, "unsupported": 0}
+        )
+        self.assertEqual(payload["totals"]["jobs"], 2)
+        self.assertEqual(payload["totals"]["contribution_units"], 2)
+
+    def test_run_local_batch_manifest_error_returns_nonzero_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            manifest_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("error: manifest JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_run_local_batch_unsupported_job_type_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {"job_id": "bad-1", "job_type": "unknown", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_run_demo_command_still_prints_parseable_result(self) -> None:
         stdout = io.StringIO()
 
