@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from dataclasses import replace
 
+from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
     ContributionLedger,
     LedgerPersistenceError,
@@ -50,6 +52,16 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands.add_parser(
         "simulate-local",
         help="Run a deterministic local multi-node simulation and print JSON.",
+    )
+
+    batch = subcommands.add_parser(
+        "run-local-batch",
+        help="Run a manifest-backed local multi-node job batch and print JSON.",
+    )
+    batch.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job-batch JSON manifest.",
     )
 
     return parser
@@ -108,6 +120,27 @@ def run_default_local_simulation() -> dict[str, object]:
     ).to_dict()
 
 
+def run_local_batch(manifest_path: str) -> dict[str, object]:
+    """Run a local simulation from a validated JSON manifest."""
+
+    batch = load_job_manifest(manifest_path)
+    result = run_local_simulation(node_ids=batch.node_ids, jobs=batch.jobs).to_dict()
+    unsupported_count = int(result["validation_summary"]["unsupported"])
+    if unsupported_count:
+        unsupported_errors = sorted(
+            {
+                str(item["error"])
+                for item in result["results"]
+                if item.get("status") == "failed"
+                and isinstance(item.get("error"), str)
+                and item["error"].startswith("Unsupported job type:")
+            }
+        )
+        details = "; ".join(unsupported_errors) or "unsupported job type"
+        raise ManifestError(f"local batch execution failed: {details}")
+    return result
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -124,6 +157,18 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "simulate-local":
         print(json.dumps(run_default_local_simulation(), sort_keys=True))
+        return 0
+
+    if args.command == "run-local-batch":
+        try:
+            payload = run_local_batch(args.manifest)
+        except ManifestError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            print(f"error: local batch execution failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
         return 0
 
     parser.error(f"Unsupported command: {args.command}")
