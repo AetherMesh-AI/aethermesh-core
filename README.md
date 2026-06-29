@@ -41,9 +41,9 @@ Avoid:
 
 ## Current status
 
-The repository currently contains project direction and architecture notes. It does not yet contain a runnable node, package manifest, test runner, or network implementation.
+The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes a package manifest, a simple node identity model, an in-memory echo job runner, a CLI demo command, and unit tests.
 
-The next meaningful step is to make the project runnable with a minimal local node model or validation path. That first runnable slice should demonstrate real behavior without trying to solve networking, distributed coordination, rewards, or production security all at once.
+The next meaningful step is to strengthen the local node model and validation path without trying to solve networking, distributed coordination, rewards, or production security all at once.
 
 ## Near-term build direction
 
@@ -61,6 +61,22 @@ AetherMesh Core should grow toward:
 10. Expansion beyond local environments
 
 Each addition should be small, validated, and useful on its own.
+
+## Run locally
+
+Run one local demo node job from the repository root without installing anything:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh"
+```
+
+Run the unit tests without installing anything:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
+```
+
+The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. Contribution units are fixed demo accounting only; rewards and token economics are out of scope.
 
 ## Architecture
 
