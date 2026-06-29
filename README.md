@@ -94,12 +94,13 @@ A minimal manifest lists ordered local node IDs and ordered jobs. Node entries m
   ],
   "jobs": [
     {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}},
-    {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}}
+    {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}},
+    {"job_id": "keyword-extract-1", "job_type": "keyword_extract", "payload": {"text": "AetherMesh nodes process useful local work for the mesh.", "limit": 5}}
   ]
 }
 ```
 
-The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo`, deterministic `text_stats`, and deterministic `keyword_extract` text-preprocessing results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
 The local-only `node_roster` includes each node's `node_id`, `status`, assignment count, contribution units, and deterministic heartbeat metadata. `heartbeat_sequence` and `heartbeat_count` are in-memory simulation counters recorded when available nodes start a local run; they are not real network heartbeats or wall-clock liveness timestamps.
 

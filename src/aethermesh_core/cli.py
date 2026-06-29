@@ -242,6 +242,14 @@ def run_default_local_simulation() -> dict[str, object]:
             job_type="text_stats",
             payload={"text": "hello mesh\nhello node"},
         ),
+        Job(
+            job_id="keyword-extract-1",
+            job_type="keyword_extract",
+            payload={
+                "text": "AetherMesh nodes process useful local work for the mesh.",
+                "limit": 5,
+            },
+        ),
         Job(job_id="echo-2", job_type="echo", payload={"message": "hello mesh two"}),
         Job(job_id="echo-3", job_type="echo", payload={"message": "hello mesh three"}),
     ]

@@ -244,7 +244,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -253,7 +253,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-b",
                     "status": "offline",
-                    "capabilities": ["echo", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -262,7 +262,7 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-c",
                     "status": "available",
-                    "capabilities": ["echo", "text_stats"],
+                    "capabilities": ["echo", "keyword_extract", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,

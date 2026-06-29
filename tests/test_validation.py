@@ -217,6 +217,129 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(non_string.valid)
         self.assertEqual(non_string.reason, "missing_payload_text")
 
+    def test_completed_keyword_extract_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="keyword-1",
+                job_type="keyword_extract",
+                payload={
+                    "text": "AetherMesh nodes process useful local work for the mesh.",
+                    "limit": 5,
+                },
+            ),
+            JobResult(
+                job_id="keyword-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "keywords": [
+                        {"term": "aethermesh", "count": 1},
+                        {"term": "local", "count": 1},
+                        {"term": "mesh", "count": 1},
+                        {"term": "nodes", "count": 1},
+                        {"term": "process", "count": 1},
+                    ],
+                    "unique_terms": 7,
+                    "total_terms": 7,
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_keyword_extract_rejects_changed_output(self) -> None:
+        job = Job(
+            job_id="keyword-1",
+            job_type="keyword_extract",
+            payload={"text": "alpha beta beta", "limit": 2},
+        )
+        valid_output = {
+            "keywords": [
+                {"term": "beta", "count": 2},
+                {"term": "alpha", "count": 1},
+            ],
+            "unique_terms": 2,
+            "total_terms": 3,
+        }
+        cases = [
+            ("changed_order", {"keywords": list(reversed(valid_output["keywords"])), "unique_terms": 2, "total_terms": 3}),
+            ("missing_terms", {"keywords": [valid_output["keywords"][0]], "unique_terms": 2, "total_terms": 3}),
+            ("changed_count", {"keywords": [{"term": "beta", "count": 1}, {"term": "alpha", "count": 1}], "unique_terms": 2, "total_terms": 3}),
+            ("incorrect_totals", {"keywords": valid_output["keywords"], "unique_terms": 99, "total_terms": 3}),
+            ("malformed_output", ["beta", "alpha"]),
+        ]
+
+        for name, output in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="keyword-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_keyword_extract_rejects_output_from_different_payload(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="keyword-1", job_type="keyword_extract", payload={"text": "alpha beta"}),
+            JobResult(
+                job_id="keyword-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "keywords": [{"term": "gamma", "count": 1}],
+                    "unique_terms": 1,
+                    "total_terms": 1,
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_keyword_extract_malformed_payload_is_invalid(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="keyword-blank", job_type="keyword_extract", payload={"text": ""}),
+            JobResult(
+                job_id="keyword-blank",
+                node_id="node-a",
+                status="completed",
+                output={"keywords": [], "unique_terms": 0, "total_terms": 0},
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "malformed_keyword_extract_payload")
+
+    def test_failed_keyword_extract_result_earns_zero_credit(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="keyword-1", job_type="keyword_extract", payload={"text": "alpha"}),
+            JobResult(
+                job_id="keyword-1",
+                node_id="node-a",
+                status="failed",
+                output=None,
+                error="keyword_extract payload requires non-empty string field: text",
+                contribution_units=0,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_not_completed")
+
 
 if __name__ == "__main__":
     unittest.main()
