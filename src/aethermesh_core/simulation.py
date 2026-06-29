@@ -1,0 +1,105 @@
+"""Local multi-node simulation for the AetherMesh prototype."""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from typing import Any
+
+from aethermesh_core.ledger import ContributionLedger
+from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.runner import LocalRunner
+
+
+@dataclass(frozen=True)
+class SimulationJobAssignment:
+    """Deterministic local assignment of one job to one node."""
+
+    job_id: str
+    node_id: str
+
+    def to_dict(self) -> dict[str, str]:
+        """Serialize the assignment into a JSON-compatible dictionary."""
+
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class LocalSimulationResult:
+    """Structured, deterministic output from a local multi-node simulation."""
+
+    nodes: list[str]
+    assignments: list[SimulationJobAssignment]
+    results: list[JobResult]
+    summaries: list[dict[str, Any]]
+    totals: dict[str, int]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the simulation result into a JSON-compatible dictionary."""
+
+        return {
+            "nodes": self.nodes,
+            "assignments": [assignment.to_dict() for assignment in self.assignments],
+            "results": [result.to_dict() for result in self.results],
+            "summaries": self.summaries,
+            "totals": self.totals,
+        }
+
+
+def run_local_simulation(node_ids: list[str], jobs: list[Job]) -> LocalSimulationResult:
+    """Run local jobs across local node identities using round-robin assignment.
+
+    This is intentionally local-only and in-memory: no networking, persistence,
+    retries, async scheduling, or separate contribution accounting path.
+    """
+
+    if not node_ids:
+        raise ValueError("node_ids must contain at least one node")
+
+    ledger = ContributionLedger()
+    runners = {
+        node_id: LocalRunner(NodeIdentity(node_id=node_id)) for node_id in node_ids
+    }
+    assignments: list[SimulationJobAssignment] = []
+    results: list[JobResult] = []
+
+    for index, job in enumerate(jobs):
+        node_id = node_ids[index % len(node_ids)]
+        assignment = SimulationJobAssignment(job_id=job.job_id, node_id=node_id)
+        result = runners[node_id].run(job)
+
+        assignments.append(assignment)
+        results.append(result)
+        ledger.record(result)
+
+    summaries = [_summary_to_simulation_dict(ledger, node_id) for node_id in node_ids]
+    completed_jobs = sum(1 for result in results if result.status == "completed")
+    failed_jobs = sum(1 for result in results if result.status == "failed")
+    contribution_units = sum(int(summary["contribution_units"]) for summary in summaries)
+
+    return LocalSimulationResult(
+        nodes=list(node_ids),
+        assignments=assignments,
+        results=results,
+        summaries=summaries,
+        totals={
+            "nodes": len(node_ids),
+            "jobs": len(jobs),
+            "results": len(results),
+            "completed_jobs": completed_jobs,
+            "failed_jobs": failed_jobs,
+            "contribution_units": contribution_units,
+        },
+    )
+
+
+def _summary_to_simulation_dict(
+    ledger: ContributionLedger, node_id: str
+) -> dict[str, int | str]:
+    summary = ledger.summary_for_node(node_id)
+    return {
+        "node_id": summary.node_id,
+        "completed_jobs": summary.completed_job_count,
+        "failed_jobs": summary.failed_job_count,
+        "results": summary.total_result_count,
+        "contribution_units": summary.total_contribution_units,
+    }

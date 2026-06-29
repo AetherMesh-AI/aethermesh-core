@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner
+from aethermesh_core.simulation import run_local_simulation
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include an in-memory contribution summary for the demo result.",
     )
 
+    subcommands.add_parser(
+        "simulate-local",
+        help="Run a deterministic local multi-node simulation and print JSON.",
+    )
+
     return parser
 
 
@@ -55,6 +61,19 @@ def run_demo(
     }
 
 
+def run_default_local_simulation() -> dict[str, object]:
+    """Run the fixed local simulation demo used by the CLI command."""
+
+    jobs = [
+        Job(job_id="echo-1", job_type="echo", payload={"message": "hello mesh one"}),
+        Job(job_id="echo-2", job_type="echo", payload={"message": "hello mesh two"}),
+        Job(job_id="echo-3", job_type="echo", payload={"message": "hello mesh three"}),
+    ]
+    return run_local_simulation(
+        node_ids=["local-node-a", "local-node-b"], jobs=jobs
+    ).to_dict()
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -65,6 +84,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 run_demo(args.node_id, args.message, args.include_ledger), sort_keys=True
             )
         )
+        return 0
+
+    if args.command == "simulate-local":
+        print(json.dumps(run_default_local_simulation(), sort_keys=True))
         return 0
 
     parser.error(f"Unsupported command: {args.command}")
