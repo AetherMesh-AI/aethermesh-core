@@ -99,7 +99,7 @@ A minimal manifest lists ordered local node IDs and ordered jobs. Node entries m
 }
 ```
 
-The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid completed results remain visible in the output for local audit/debugging and earn zero contribution units. Unsupported job types must be explicitly advertised by a local node capability to reach execution; otherwise the batch fails safely at scheduling before ledger writes.
 
 To opt in to local JSON-backed contribution persistence for a manifest batch, pass `--ledger-path`:
 
