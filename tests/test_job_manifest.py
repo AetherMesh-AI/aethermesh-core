@@ -33,6 +33,10 @@ class JobManifestTests(unittest.TestCase):
             [node.status for node in batch.nodes],
             [NodeStatus.AVAILABLE, NodeStatus.AVAILABLE],
         )
+        self.assertEqual(
+            [node.capabilities for node in batch.nodes],
+            [("echo", "text_stats"), ("echo", "text_stats")],
+        )
         self.assertEqual(batch.jobs[0].job_id, "echo-1")
         self.assertEqual(batch.jobs[0].job_type, "echo")
         self.assertEqual(batch.jobs[0].payload, {"message": "hello mesh"})
@@ -67,6 +71,50 @@ class JobManifestTests(unittest.TestCase):
             [node.status for node in batch.nodes],
             [NodeStatus.AVAILABLE, NodeStatus.OFFLINE, NodeStatus.AVAILABLE],
         )
+        self.assertEqual(
+            [node.capabilities for node in batch.nodes],
+            [("echo", "text_stats"), ("echo", "text_stats"), ("echo", "text_stats")],
+        )
+
+    def test_object_nodes_can_declare_sorted_capabilities(self) -> None:
+        batch = self._load(
+            {
+                "version": 1,
+                "nodes": [
+                    {
+                        "node_id": "local-node-a",
+                        "capabilities": ["text_stats", "echo"],
+                    },
+                    {
+                        "node_id": "local-node-b",
+                        "capabilities": ["future_job"],
+                    },
+                ],
+                "jobs": [self._job()],
+            }
+        )
+
+        self.assertEqual(
+            [node.capabilities for node in batch.nodes],
+            [("echo", "text_stats"), ("future_job",)],
+        )
+
+    def test_invalid_capabilities_are_rejected(self) -> None:
+        cases = [
+            ({"capabilities": []}, "capabilities must be a non-empty list"),
+            ({"capabilities": "echo"}, "capabilities must be a non-empty list"),
+            ({"capabilities": [""]}, "capabilities\\[0\\] must be a non-empty string"),
+            ({"capabilities": ["   "]}, "capabilities\\[0\\] must be a non-empty string"),
+            ({"capabilities": [123]}, "capabilities\\[0\\] must be a non-empty string"),
+            ({"capabilities": ["echo", "echo"]}, "capabilities contains duplicate: echo"),
+        ]
+        for patch, message in cases:
+            node = {"node_id": "local-node-a"} | patch
+            with self.subTest(patch=patch):
+                with self.assertRaisesRegex(ManifestError, message):
+                    self._load(
+                        {"version": 1, "nodes": [node], "jobs": [self._job()]}
+                    )
 
     def test_malformed_json_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

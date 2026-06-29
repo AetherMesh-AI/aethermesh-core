@@ -24,12 +24,14 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
@@ -39,19 +41,23 @@ class NodeRegistryTests(unittest.TestCase):
     def test_registers_scheduled_nodes_preserving_status(self) -> None:
         registry = NodeRegistry()
 
-        registry.register(ScheduledNode("node-a", NodeStatus.OFFLINE))
-        registry.register(ScheduledNode("node-b", NodeStatus.AVAILABLE))
+        registry.register(ScheduledNode("node-a", NodeStatus.OFFLINE, ("echo",)))
+        registry.register(ScheduledNode("node-b", NodeStatus.AVAILABLE, ("text_stats",)))
 
         self.assertEqual(
             registry.scheduled_nodes(),
             [
-                ScheduledNode("node-a", NodeStatus.OFFLINE),
-                ScheduledNode("node-b", NodeStatus.AVAILABLE),
+                ScheduledNode("node-a", NodeStatus.OFFLINE, ("echo",)),
+                ScheduledNode("node-b", NodeStatus.AVAILABLE, ("text_stats",)),
             ],
         )
         self.assertEqual(
             [entry["status"] for entry in registry.to_roster()],
             ["offline", "available"],
+        )
+        self.assertEqual(
+            [entry["capabilities"] for entry in registry.to_roster()],
+            [["echo"], ["text_stats"]],
         )
 
     def test_rejects_empty_or_whitespace_node_ids(self) -> None:
@@ -106,12 +112,14 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 3,
                     "heartbeat_count": 2,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
+                    "capabilities": ["echo", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                 },

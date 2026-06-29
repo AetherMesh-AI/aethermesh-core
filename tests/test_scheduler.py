@@ -1,6 +1,8 @@
 import unittest
 
+from aethermesh_core.models import Job
 from aethermesh_core.scheduler import (
+    DEFAULT_LOCAL_CAPABILITIES,
     LocalScheduler,
     NoAvailableNodesError,
     NodeStatus,
@@ -23,19 +25,83 @@ class LocalSchedulerTests(unittest.TestCase):
             ],
         )
 
-    def test_skips_offline_nodes(self) -> None:
+    def test_routes_assignments_by_job_type_capability(self) -> None:
         scheduler = LocalScheduler(
             [
-                ScheduledNode("node-a", status=NodeStatus.OFFLINE),
-                ScheduledNode("node-b", status=NodeStatus.AVAILABLE),
+                ScheduledNode("node-a", capabilities=("echo",)),
+                ScheduledNode("node-b", capabilities=("text_stats",)),
             ]
         )
 
-        assignments = scheduler.assign_jobs(["job-1", "job-2", "job-3"])
+        assignments = scheduler.assign_jobs(
+            [
+                Job(job_id="stats-1", job_type="text_stats"),
+                Job(job_id="echo-1", job_type="echo"),
+            ]
+        )
+
+        self.assertEqual(
+            [assignment.to_dict() for assignment in assignments],
+            [
+                {"job_id": "stats-1", "node_id": "node-b"},
+                {"job_id": "echo-1", "node_id": "node-a"},
+            ],
+        )
+
+    def test_default_capabilities_support_current_local_job_types(self) -> None:
+        node = ScheduledNode("node-a")
+
+        self.assertEqual(node.capabilities, DEFAULT_LOCAL_CAPABILITIES)
+        assignments = LocalScheduler([node]).assign_jobs(
+            [
+                Job(job_id="echo-1", job_type="echo"),
+                Job(job_id="stats-1", job_type="text_stats"),
+            ]
+        )
+        self.assertEqual([assignment.node_id for assignment in assignments], ["node-a", "node-a"])
+
+    def test_skips_offline_nodes_even_when_capable(self) -> None:
+        scheduler = LocalScheduler(
+            [
+                ScheduledNode("node-a", status=NodeStatus.OFFLINE, capabilities=("echo",)),
+                ScheduledNode("node-b", status=NodeStatus.AVAILABLE, capabilities=("echo",)),
+            ]
+        )
+
+        assignments = scheduler.assign_jobs(
+            [
+                Job(job_id="job-1", job_type="echo"),
+                Job(job_id="job-2", job_type="echo"),
+                Job(job_id="job-3", job_type="echo"),
+            ]
+        )
 
         self.assertEqual(
             [assignment.node_id for assignment in assignments],
             ["node-b", "node-b", "node-b"],
+        )
+
+    def test_round_robin_is_per_capable_available_subset(self) -> None:
+        scheduler = LocalScheduler(
+            [
+                ScheduledNode("node-a", capabilities=("echo",)),
+                ScheduledNode("node-b", capabilities=("echo", "text_stats")),
+                ScheduledNode("node-c", capabilities=("text_stats",)),
+            ]
+        )
+
+        assignments = scheduler.assign_jobs(
+            [
+                Job(job_id="echo-1", job_type="echo"),
+                Job(job_id="stats-1", job_type="text_stats"),
+                Job(job_id="echo-2", job_type="echo"),
+                Job(job_id="stats-2", job_type="text_stats"),
+            ]
+        )
+
+        self.assertEqual(
+            [assignment.node_id for assignment in assignments],
+            ["node-a", "node-b", "node-b", "node-c"],
         )
 
     def test_returns_empty_assignments_when_no_jobs(self) -> None:
@@ -49,7 +115,17 @@ class LocalSchedulerTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(NoAvailableNodesError, "no available nodes"):
-            scheduler.assign_jobs(["job-1"])
+            scheduler.assign_jobs([Job(job_id="job-1", job_type="echo")])
+
+    def test_raises_when_no_available_node_is_capable(self) -> None:
+        scheduler = LocalScheduler(
+            [ScheduledNode("node-a", capabilities=("echo",))]
+        )
+
+        with self.assertRaisesRegex(
+            NoAvailableNodesError, "job_id=stats-1 job_type=text_stats"
+        ):
+            scheduler.assign_jobs([Job(job_id="stats-1", job_type="text_stats")])
 
     def test_accepts_plain_node_ids_as_available_nodes(self) -> None:
         scheduler = LocalScheduler(["node-a"])

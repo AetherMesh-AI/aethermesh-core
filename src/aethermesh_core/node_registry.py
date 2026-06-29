@@ -11,6 +11,7 @@ from aethermesh_core.scheduler import NodeStatus, ScheduledNode
 class _RegistryNode:
     node_id: str
     status: NodeStatus
+    capabilities: tuple[str, ...]
     heartbeat_sequence: int = 0
     heartbeat_count: int = 0
 
@@ -40,6 +41,7 @@ class NodeRegistry:
         self._nodes[scheduled_node.node_id] = _RegistryNode(
             node_id=scheduled_node.node_id,
             status=scheduled_node.status,
+            capabilities=scheduled_node.capabilities,
         )
         return scheduled_node
 
@@ -66,17 +68,22 @@ class NodeRegistry:
         """Return scheduler-compatible nodes in registration order."""
 
         return [
-            ScheduledNode(node_id=node.node_id, status=node.status)
+            ScheduledNode(
+                node_id=node.node_id,
+                status=node.status,
+                capabilities=node.capabilities,
+            )
             for node in self._nodes.values()
         ]
 
-    def to_roster(self) -> list[dict[str, int | str]]:
+    def to_roster(self) -> list[dict[str, int | str | list[str]]]:
         """Return JSON-compatible roster entries in registration order."""
 
         return [
             {
                 "node_id": node.node_id,
                 "status": node.status.value,
+                "capabilities": list(node.capabilities),
                 "heartbeat_sequence": node.heartbeat_sequence,
                 "heartbeat_count": node.heartbeat_count,
             }
