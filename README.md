@@ -62,6 +62,28 @@ AetherMesh Core should grow toward:
 
 Each addition should be small, validated, and useful on its own.
 
+## Run locally
+
+Install the package in editable mode from the repository root:
+
+```bash
+python -m pip install -e .
+```
+
+Run one local demo node job:
+
+```bash
+python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh"
+```
+
+Run the unit tests:
+
+```bash
+python -m unittest
+```
+
+The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. Contribution units are fixed demo accounting only; rewards and token economics are out of scope.
+
 ## Architecture
 
 See [docs/architecture.md](docs/architecture.md) for the current architecture direction.
