@@ -97,6 +97,14 @@ A minimal manifest lists ordered local node IDs and ordered jobs:
 
 The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
+To opt in to local JSON-backed contribution persistence for a manifest batch, pass `--ledger-path`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-batch --manifest examples/local-batch.json --ledger-path ./local-ledger.json
+```
+
+When enabled, batch runs append validation-gated contribution records to the same version 1 local ledger JSON shape used by `run-demo` and print per-node persisted ledger summaries. Without `--ledger-path`, batch output and file writes are unchanged.
+
 Run the unit tests without installing anything:
 
 ```bash

@@ -63,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Path to a version 1 local job-batch JSON manifest.",
     )
+    batch.add_argument(
+        "--ledger-path",
+        default=None,
+        help="Opt in to JSON-file-backed local contribution ledger persistence.",
+    )
 
     return parser
 
@@ -120,11 +125,14 @@ def run_default_local_simulation() -> dict[str, object]:
     ).to_dict()
 
 
-def run_local_batch(manifest_path: str) -> dict[str, object]:
+def run_local_batch(
+    manifest_path: str, ledger_path: str | None = None
+) -> dict[str, object]:
     """Run a local simulation from a validated JSON manifest."""
 
     batch = load_job_manifest(manifest_path)
-    result = run_local_simulation(node_ids=batch.node_ids, jobs=batch.jobs).to_dict()
+    simulation = run_local_simulation(node_ids=batch.node_ids, jobs=batch.jobs)
+    result = simulation.to_dict()
     unsupported_count = int(result["validation_summary"]["unsupported"])
     if unsupported_count:
         unsupported_errors = sorted(
@@ -138,6 +146,17 @@ def run_local_batch(manifest_path: str) -> dict[str, object]:
         )
         details = "; ".join(unsupported_errors) or "unsupported job type"
         raise ManifestError(f"local batch execution failed: {details}")
+    if ledger_path is None:
+        return result
+
+    ledger, extra_fields = load_ledger_document(ledger_path)
+    for accounted_result in simulation.accounted_results:
+        ledger.record(accounted_result)
+    save_ledger_document(ledger_path, ledger, extra_fields)
+    result["ledger_path"] = ledger_path
+    result["persisted_ledger_summaries"] = [
+        ledger.summary_for_node(node_id).to_dict() for node_id in batch.node_ids
+    ]
     return result
 
 
@@ -161,8 +180,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run-local-batch":
         try:
-            payload = run_local_batch(args.manifest)
+            payload = run_local_batch(args.manifest, args.ledger_path)
         except ManifestError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except LedgerPersistenceError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         except ValueError as exc:
