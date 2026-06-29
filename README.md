@@ -127,6 +127,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-l
 
 This command is a local development replay path: it reads the version 1 message log without rewriting it, registers senders and recipients from the log, processes only the requested node's `job_assigned` inbox messages, optionally persists validation-gated contribution records to the existing version 1 ledger format, and prints deterministic JSON with processed counts, ignored message ids, emitted result/contribution messages, validation outcomes, and ledger totals.
 
+To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --message-log-path ./local-messages.json --ledger-path ./local-ledger.json --node-state-path ./local-node-a-state.json
+```
+
+When enabled, the CLI loads a version 1 local node-state JSON file before processing, skips assignment messages already recorded for that same node, and saves the updated processed-message list only after ledger/output-message persistence succeeds. If the state file is missing it is created after a successful pass; malformed, wrong-node, duplicate-id, or unsupported-version state fails before ledger, output-log, or state writes. The default output shape is unchanged when `--node-state-path` is omitted.
+
 To also persist the node's replay output as a new version 1 local-only message log, pass `--output-message-log-path`:
 
 ```bash
