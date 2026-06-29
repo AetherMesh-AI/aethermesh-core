@@ -64,22 +64,16 @@ Each addition should be small, validated, and useful on its own.
 
 ## Run locally
 
-Install the package in editable mode from the repository root:
+Run one local demo node job from the repository root without installing anything:
 
 ```bash
-python -m pip install -e .
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh"
 ```
 
-Run one local demo node job:
+Run the unit tests without installing anything:
 
 ```bash
-python -m aethermesh_core.cli run-demo --node-id local-demo-node --message "hello mesh"
-```
-
-Run the unit tests:
-
-```bash
-python -m unittest
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
 The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. Contribution units are fixed demo accounting only; rewards and token economics are out of scope.
