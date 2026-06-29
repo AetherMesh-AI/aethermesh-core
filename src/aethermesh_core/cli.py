@@ -40,6 +40,11 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
+from aethermesh_core.receipts import (
+    build_receipt_document,
+    load_receipt_document_if_exists,
+    write_receipt_document,
+)
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
@@ -342,6 +347,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     dispatch_message_log_path = output_path / "dispatch-message-log.json"
     flow_message_log_path = output_path / "flow-message-log.json"
     ledger_path = output_path / "ledger.json"
+    receipts_path = output_path / "receipts.json"
     node_state_dir = output_path / "node-state"
     worker_log_dir = output_path / "worker-message-logs"
 
@@ -362,19 +368,21 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     )
 
     per_node_results: list[dict[str, object]] = []
+    processed_assignments = []
     emitted_messages_by_node: dict[str, list[MeshMessage]] = {}
     worker_message_log_paths: dict[str, str | Path] = {}
     for node_id in available_node_ids:
         node_state_path = _node_artifact_path(node_state_dir, node_id)
         worker_message_log_path = _node_artifact_path(worker_log_dir, node_id)
         worker_message_log_paths[node_id] = worker_message_log_path
-        node_payload = process_local_inbox(
+        node_payload, inbox_result = _process_local_inbox(
             node_id=node_id,
             message_log_path=str(dispatch_message_log_path),
             ledger_path=str(ledger_path),
             output_message_log_path=str(worker_message_log_path),
             node_state_path=str(node_state_path),
         )
+        processed_assignments.extend(inbox_result.processed)
         raw_processed_count = node_payload["processed_assignment_count"]
         if not isinstance(raw_processed_count, int):
             raise ValueError("process-local-inbox returned invalid processed count")
@@ -421,12 +429,19 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         total_contribution_units=int(str(ledger_summary["total_contribution_units"])),
     )
     write_message_log(flow_message_log_path, flow_message_log_document)
+    receipt_document = build_receipt_document(
+        processed_assignments,
+        existing_document=load_receipt_document_if_exists(receipts_path),
+    )
+    write_receipt_document(receipts_path, receipt_document)
     return {
         "command": "run-local-flow",
         "manifest_path": manifest_path,
         "output_dir": output_dir,
         "dispatch_message_log_path": str(dispatch_message_log_path),
         "flow_message_log_path": str(flow_message_log_path),
+        "receipts_path": str(receipts_path),
+        "receipt_count": len(receipt_document["receipts"]),
         "flow_message_count": flow_message_log_document["metadata"]["message_count"],
         "flow_emitted_message_count": flow_message_log_document["metadata"][
             "emitted_message_count"
@@ -468,6 +483,26 @@ def process_local_inbox(
     node_state_path: str | None = None,
 ) -> dict[str, object]:
     """Replay a saved local message log and process one node inbox."""
+
+    payload, _inbox_result = _process_local_inbox(
+        node_id=node_id,
+        message_log_path=message_log_path,
+        ledger_path=ledger_path,
+        output_message_log_path=output_message_log_path,
+        node_state_path=node_state_path,
+    )
+    return payload
+
+
+def _process_local_inbox(
+    *,
+    node_id: str,
+    message_log_path: str,
+    ledger_path: str | None = None,
+    output_message_log_path: str | None = None,
+    node_state_path: str | None = None,
+) -> tuple[dict[str, object], InboxProcessResult]:
+    """Replay a saved local message log and return payload plus structured result."""
 
     node_state = (
         load_node_processing_state(node_state_path, expected_node_id=node_id)
@@ -525,7 +560,7 @@ def process_local_inbox(
         payload["skipped_processed_message_ids"] = list(
             inbox_result.skipped_processed_message_ids
         )
-    return payload
+    return payload, inbox_result
 
 
 def _emitted_messages_from_inbox_result(
