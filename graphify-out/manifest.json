@@ -5,17 +5,17 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/__init__.py": {
-    "mtime": 1782724291.3762026,
-    "ast_hash": "4152888a825cb3dd3a64e37f18c6dac1",
+    "mtime": 1782742408.6850815,
+    "ast_hash": "fe2774bb92ddd020d6b256370ac049e9",
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1782740563.2068682,
+    "mtime": 1782741796.0894241,
     "ast_hash": "0c8a6c043003a2ff122032e2c9ac3b2d",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
-    "mtime": 1782740563.207299,
+    "mtime": 1782741796.0902414,
     "ast_hash": "fad526dcf8eb438dfb8cf7c1edd2ab7b",
     "semantic_hash": ""
   },
@@ -35,12 +35,12 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/scheduler.py": {
-    "mtime": 1782739859.327615,
+    "mtime": 1782741796.09082,
     "ast_hash": "a0c1ce9603abcf0077b05010a77e25e6",
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
-    "mtime": 1782739859.3281896,
+    "mtime": 1782741796.091362,
     "ast_hash": "2cf827d05a7a8c24e5fb90a48c57fa47",
     "semantic_hash": ""
   },
@@ -55,12 +55,12 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1782740563.2077177,
+    "mtime": 1782741796.0916812,
     "ast_hash": "33b0da523682aebf2bdf313d3de0b1e3",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
-    "mtime": 1782740563.2081726,
+    "mtime": 1782741796.0926332,
     "ast_hash": "c9a0983e4b72b04031ef763d50a9db1e",
     "semantic_hash": ""
   },
@@ -75,12 +75,12 @@
     "semantic_hash": ""
   },
   "tests/test_scheduler.py": {
-    "mtime": 1782739859.3310766,
+    "mtime": 1782741796.0933158,
     "ast_hash": "e6357acab1a74863500a74dffc9aec33",
     "semantic_hash": ""
   },
   "tests/test_simulation.py": {
-    "mtime": 1782739859.3315747,
+    "mtime": 1782741796.0936048,
     "ast_hash": "86bd7ffa2d03ec00e14c61a6a6a70cd2",
     "semantic_hash": ""
   },
@@ -95,7 +95,7 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782740563.2063608,
+    "mtime": 1782741796.08404,
     "ast_hash": "7ab38200bbaa89b4782aefc839d4b96f",
     "semantic_hash": ""
   },
@@ -105,17 +105,17 @@
     "semantic_hash": ""
   },
   "examples/local-batch.json": {
-    "mtime": 1782739859.3213782,
+    "mtime": 1782741796.084324,
     "ast_hash": "ca49776a789645d444eefff71d7d7c54",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1782739859.326377,
+    "mtime": 1782741796.0898373,
     "ast_hash": "0beef077c261db8a24683ea6d5c112f5",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1782739859.3298292,
+    "mtime": 1782741796.0920646,
     "ast_hash": "0d7f1084334c2e7bfb006da83f5380b6",
     "semantic_hash": ""
   },
@@ -140,13 +140,23 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_registry.py": {
-    "mtime": 1782739859.3271885,
+    "mtime": 1782741796.0905635,
     "ast_hash": "cb502bbd14273b8395bacd463b4b9bfd",
     "semantic_hash": ""
   },
   "tests/test_node_registry.py": {
-    "mtime": 1782739859.330277,
+    "mtime": 1782741796.0930407,
     "ast_hash": "b5b4b536731059881881df2ddbbaa1c6",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/node_service.py": {
+    "mtime": 1782742408.6855528,
+    "ast_hash": "454ca95a06407c4e3fb160308b0554f0",
+    "semantic_hash": ""
+  },
+  "tests/test_node_service.py": {
+    "mtime": 1782742408.6859746,
+    "ast_hash": "db8f2c5e07b21a6a14cd7089031d868a",
     "semantic_hash": ""
   }
 }
