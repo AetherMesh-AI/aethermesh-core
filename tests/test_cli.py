@@ -109,6 +109,120 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["totals"]["jobs"], 2)
         self.assertEqual(payload["totals"]["contribution_units"], 2)
 
+    def test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [
+                            {"node_id": "local-node-a", "status": "available"},
+                            {"node_id": "local-node-b", "status": "offline"},
+                            "local-node-c",
+                        ],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
+                            {
+                                "job_id": "echo-3",
+                                "job_type": "echo",
+                                "payload": {"message": "three"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["run-local-batch", "--manifest", str(manifest_path)])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["nodes"], ["local-node-a", "local-node-b", "local-node-c"])
+        self.assertEqual(
+            payload["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "local-node-a"},
+                {"job_id": "echo-2", "node_id": "local-node-c"},
+                {"job_id": "echo-3", "node_id": "local-node-a"},
+            ],
+        )
+        self.assertEqual(
+            payload["node_roster"],
+            [
+                {
+                    "node_id": "local-node-a",
+                    "status": "available",
+                    "assigned_jobs": 2,
+                    "contribution_units": 2,
+                },
+                {
+                    "node_id": "local-node-b",
+                    "status": "offline",
+                    "assigned_jobs": 0,
+                    "contribution_units": 0,
+                },
+                {
+                    "node_id": "local-node-c",
+                    "status": "available",
+                    "assigned_jobs": 1,
+                    "contribution_units": 1,
+                },
+            ],
+        )
+
+    def test_run_local_batch_all_offline_returns_nonzero_without_writing_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [{"node_id": "local-node-a", "status": "offline"}],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-batch",
+                        "--manifest",
+                        str(manifest_path),
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            ledger_exists = ledger_path.exists()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("no available nodes for local job assignment", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertFalse(ledger_exists)
+
     def test_run_local_batch_manifest_error_returns_nonzero_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"

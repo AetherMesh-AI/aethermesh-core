@@ -1,7 +1,7 @@
 import unittest
 
 from aethermesh_core.models import Job
-from aethermesh_core.scheduler import JobAssignment
+from aethermesh_core.scheduler import JobAssignment, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 
 
@@ -122,6 +122,58 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result.results[0].contribution_units, 1)
         self.assertEqual(result.accounted_results[0].status, "completed")
         self.assertEqual(result.accounted_results[0].contribution_units, 0)
+
+    def test_node_roster_includes_offline_nodes_without_assignments(self) -> None:
+        jobs = [
+            Job(job_id="echo-1", job_type="echo", payload={"message": "one"}),
+            Job(job_id="echo-2", job_type="echo", payload={"message": "two"}),
+            Job(job_id="echo-3", job_type="echo", payload={"message": "three"}),
+        ]
+
+        result = run_local_simulation(
+            [
+                ScheduledNode("node-a", NodeStatus.AVAILABLE),
+                ScheduledNode("node-b", NodeStatus.OFFLINE),
+                ScheduledNode("node-c", NodeStatus.AVAILABLE),
+            ],
+            jobs,
+        ).to_dict()
+
+        self.assertEqual(result["nodes"], ["node-a", "node-b", "node-c"])
+        self.assertEqual(
+            result["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "node-a"},
+                {"job_id": "echo-2", "node_id": "node-c"},
+                {"job_id": "echo-3", "node_id": "node-a"},
+            ],
+        )
+        self.assertEqual(
+            result["node_roster"],
+            [
+                {
+                    "node_id": "node-a",
+                    "status": "available",
+                    "assigned_jobs": 2,
+                    "contribution_units": 2,
+                },
+                {
+                    "node_id": "node-b",
+                    "status": "offline",
+                    "assigned_jobs": 0,
+                    "contribution_units": 0,
+                },
+                {
+                    "node_id": "node-c",
+                    "status": "available",
+                    "assigned_jobs": 1,
+                    "contribution_units": 1,
+                },
+            ],
+        )
+        self.assertEqual(result["summaries"][1]["node_id"], "node-b")
+        self.assertEqual(result["summaries"][1]["results"], 0)
+        self.assertEqual(result["totals"]["contribution_units"], 3)
 
     def test_successful_echo_jobs_contribute_units_and_totals(self) -> None:
         jobs = [

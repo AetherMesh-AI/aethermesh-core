@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.models import Job
+from aethermesh_core.scheduler import NodeStatus, ScheduledNode
 
 
 class ManifestError(ValueError):
@@ -18,8 +19,14 @@ class ManifestError(ValueError):
 class LocalJobBatch:
     """Validated local batch inputs for the local simulation path."""
 
-    node_ids: list[str]
+    nodes: list[ScheduledNode]
     jobs: list[Job]
+
+    @property
+    def node_ids(self) -> list[str]:
+        """Return manifest node IDs in deterministic manifest order."""
+
+        return [node.node_id for node in self.nodes]
 
 
 def load_job_manifest(path: str | Path) -> LocalJobBatch:
@@ -46,25 +53,54 @@ def load_job_manifest(path: str | Path) -> LocalJobBatch:
         raise ManifestError(f"unsupported manifest version: {version}")
 
     return LocalJobBatch(
-        node_ids=_parse_node_ids(document.get("nodes")),
+        nodes=_parse_nodes(document.get("nodes")),
         jobs=_parse_jobs(document.get("jobs")),
     )
 
 
-def _parse_node_ids(value: Any) -> list[str]:
+def _parse_nodes(value: Any) -> list[ScheduledNode]:
     if not isinstance(value, list) or not value:
         raise ManifestError("manifest nodes must be a non-empty list")
 
-    node_ids: list[str] = []
+    nodes: list[ScheduledNode] = []
     seen_node_ids: set[str] = set()
-    for index, node_id in enumerate(value):
-        if not isinstance(node_id, str) or not node_id.strip():
-            raise ManifestError(f"manifest nodes[{index}] must be a non-empty string")
+    for index, entry in enumerate(value):
+        node = _parse_node_entry(entry, index)
+        node_id = node.node_id
         if node_id in seen_node_ids:
             raise ManifestError(f"manifest contains duplicate node id: {node_id}")
         seen_node_ids.add(node_id)
-        node_ids.append(node_id)
-    return node_ids
+        nodes.append(node)
+    return nodes
+
+
+def _parse_node_entry(entry: Any, index: int) -> ScheduledNode:
+    if isinstance(entry, str):
+        if not entry.strip():
+            raise ManifestError(f"manifest nodes[{index}] must be a non-empty string")
+        return ScheduledNode(node_id=entry, status=NodeStatus.AVAILABLE)
+
+    if not isinstance(entry, dict):
+        raise ManifestError(
+            f"manifest nodes[{index}] must be a non-empty string or JSON object"
+        )
+
+    node_id = entry.get("node_id")
+    if not isinstance(node_id, str) or not node_id.strip():
+        raise ManifestError(f"manifest nodes[{index}].node_id must be a non-empty string")
+
+    raw_status = entry.get("status", NodeStatus.AVAILABLE.value)
+    if not isinstance(raw_status, str):
+        raise ManifestError(f"manifest nodes[{index}].status must be a string")
+    try:
+        status = NodeStatus(raw_status)
+    except ValueError as exc:
+        supported_statuses = ", ".join(status.value for status in NodeStatus)
+        raise ManifestError(
+            f"manifest nodes[{index}].status must be one of: {supported_statuses}"
+        ) from exc
+
+    return ScheduledNode(node_id=node_id, status=status)
 
 
 def _parse_jobs(value: Any) -> list[Job]:

@@ -1,6 +1,10 @@
 {
   "version": 1,
-  "nodes": ["local-node-a", "local-node-b"],
+  "nodes": [
+    {"node_id": "local-node-a", "status": "available"},
+    {"node_id": "local-node-b", "status": "offline"},
+    "local-node-c"
+  ],
   "jobs": [
     {
       "job_id": "echo-1",
