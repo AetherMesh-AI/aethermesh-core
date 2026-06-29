@@ -16,7 +16,7 @@ def _message(
     payload: dict[str, object] | None = None,
     correlation_id: str | None = None,
     sender_node_id: str = "local-node-a",
-    recipient_node_id: str | None = "local-ledger",
+    recipient_node_id: str | None = "local-node-a",
 ) -> dict[str, object]:
     return {
         "message_id": message_id,
@@ -207,8 +207,7 @@ class ResultCollectionTests(unittest.TestCase):
     def test_conflicting_duplicate_message_id_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dispatch_path = Path(temp_dir) / "dispatch.json"
-            worker_a_path = Path(temp_dir) / "worker-a.json"
-            worker_b_path = Path(temp_dir) / "worker-b.json"
+            worker_path = Path(temp_dir) / "worker.json"
             _write_log(
                 dispatch_path,
                 [
@@ -217,21 +216,75 @@ class ResultCollectionTests(unittest.TestCase):
                 ],
             )
             _write_log(
-                worker_a_path,
-                [_message("msg-0003", "job_result_reported", payload={"job_id": "echo-1"})],
-            )
-            _write_log(
-                worker_b_path,
-                [_message("msg-0003", "job_result_reported", payload={"job_id": "echo-2"})],
+                worker_path,
+                [
+                    _message("msg-0003", "job_result_reported", payload={"job_id": "echo-1"}),
+                    _message("msg-0003", "job_result_reported", payload={"job_id": "echo-2"}),
+                ],
             )
 
             with self.assertRaises(ResultCollectionError) as cm:
                 collect_local_results(
                     dispatch_message_log_path=dispatch_path,
-                    worker_message_log_paths=[worker_a_path, worker_b_path],
+                    worker_message_log_paths=[worker_path],
                 )
 
         self.assertIn("conflicting duplicate message_id", str(cm.exception))
+
+    def test_allows_different_workers_to_emit_same_local_message_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dispatch_path = Path(temp_dir) / "dispatch.json"
+            worker_a_path = Path(temp_dir) / "worker-a.json"
+            worker_b_path = Path(temp_dir) / "worker-b.json"
+            _write_log(
+                dispatch_path,
+                [
+                    _message(
+                        "msg-0001",
+                        "job_assigned",
+                        payload={"job_id": "echo-1"},
+                        recipient_node_id="local-node-a",
+                    ),
+                    _message(
+                        "msg-0002",
+                        "job_assigned",
+                        payload={"job_id": "echo-2"},
+                        recipient_node_id="local-node-b",
+                    ),
+                ],
+            )
+            _write_log(
+                worker_a_path,
+                [
+                    _message(
+                        "msg-0003",
+                        "job_result_reported",
+                        payload={"job_id": "echo-1"},
+                        sender_node_id="local-node-a",
+                    )
+                ],
+            )
+            _write_log(
+                worker_b_path,
+                [
+                    _message(
+                        "msg-0003",
+                        "job_result_reported",
+                        payload={"job_id": "echo-2"},
+                        sender_node_id="local-node-b",
+                    )
+                ],
+            )
+
+            summary = collect_local_results(
+                dispatch_message_log_path=dispatch_path,
+                worker_message_log_paths=[worker_a_path, worker_b_path],
+            )
+
+        self.assertEqual(summary["reported_result_count"], 2)
+        self.assertEqual(summary["duplicate_message_ids"], [])
+        self.assertEqual(summary["conflicting_message_ids"], [])
+        self.assertEqual(summary["collected_message_ids"], ["msg-0003", "msg-0003"])
 
     def test_unknown_assignment_and_correlation_mismatch_fail(self) -> None:
         cases = [
@@ -268,6 +321,82 @@ class ResultCollectionTests(unittest.TestCase):
                     )
 
                 self.assertIn(expected, str(cm.exception))
+
+    def test_result_sender_must_match_assigned_node(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dispatch_path = Path(temp_dir) / "dispatch.json"
+            worker_path = Path(temp_dir) / "worker.json"
+            _write_log(
+                dispatch_path,
+                [
+                    _message(
+                        "msg-0001",
+                        "job_assigned",
+                        payload={"job_id": "echo-1"},
+                        recipient_node_id="local-node-a",
+                    )
+                ],
+            )
+            _write_log(
+                worker_path,
+                [
+                    _message(
+                        "msg-0002",
+                        "job_result_reported",
+                        payload={"job_id": "echo-1"},
+                        sender_node_id="local-node-b",
+                        recipient_node_id="local-ledger",
+                    )
+                ],
+            )
+
+            with self.assertRaises(ResultCollectionError) as cm:
+                collect_local_results(
+                    dispatch_message_log_path=dispatch_path,
+                    worker_message_log_paths=[worker_path],
+                )
+
+        self.assertIn("does not match assigned node_id", str(cm.exception))
+
+    def test_contribution_node_must_match_assigned_node(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dispatch_path = Path(temp_dir) / "dispatch.json"
+            worker_path = Path(temp_dir) / "worker.json"
+            _write_log(
+                dispatch_path,
+                [
+                    _message(
+                        "msg-0001",
+                        "job_assigned",
+                        payload={"job_id": "echo-1"},
+                        recipient_node_id="local-node-a",
+                    )
+                ],
+            )
+            _write_log(
+                worker_path,
+                [
+                    _message(
+                        "msg-0002",
+                        "contribution_recorded",
+                        payload={
+                            "job_id": "echo-1",
+                            "node_id": "local-node-b",
+                            "contribution_units": 1,
+                        },
+                        sender_node_id="local-ledger",
+                        recipient_node_id="local-node-b",
+                    )
+                ],
+            )
+
+            with self.assertRaises(ResultCollectionError) as cm:
+                collect_local_results(
+                    dispatch_message_log_path=dispatch_path,
+                    worker_message_log_paths=[worker_path],
+                )
+
+        self.assertIn("does not match assigned node_id", str(cm.exception))
 
 
 if __name__ == "__main__":

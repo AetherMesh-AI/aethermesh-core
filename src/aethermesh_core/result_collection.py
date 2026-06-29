@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,13 @@ from aethermesh_core.messages import MeshMessage
 
 class ResultCollectionError(ValueError):
     """Raised when local worker result logs cannot be reconciled safely."""
+
+
+@dataclass(frozen=True)
+class _KnownAssignment:
+    key: str
+    job_id: str
+    node_id: str
 
 
 def collect_local_results(
@@ -36,11 +44,13 @@ def collect_local_results(
     duplicate_message_ids: list[str] = []
     conflicting_message_ids: list[str] = []
     seen_by_message_id: dict[str, dict[str, Any]] = {}
+    seen_by_worker_message_id: dict[tuple[str, str], dict[str, Any]] = {}
     result_keys: set[str] = set()
     contribution_count = 0
     per_node_units: dict[str, int] = defaultdict(int)
 
     for worker_path in worker_message_log_paths:
+        worker_path_key = str(worker_path)
         for message in load_message_log_messages(worker_path):
             if message.message_type not in {
                 "job_result_reported",
@@ -49,26 +59,36 @@ def collect_local_results(
                 continue
 
             message_dict = message.to_dict()
-            existing = seen_by_message_id.get(message.message_id)
-            if existing is not None:
-                if existing != message_dict:
+            worker_message_key = (worker_path_key, message.message_id)
+            existing_worker_message = seen_by_worker_message_id.get(worker_message_key)
+            if existing_worker_message is not None:
+                if existing_worker_message != message_dict:
                     _append_once(conflicting_message_ids, message.message_id)
                     continue
                 _append_once(duplicate_message_ids, message.message_id)
                 continue
-            seen_by_message_id[message.message_id] = message_dict
+            seen_by_worker_message_id[worker_message_key] = message_dict
+
+            existing_message = seen_by_message_id.get(message.message_id)
+            if existing_message == message_dict:
+                _append_once(duplicate_message_ids, message.message_id)
+                continue
+            if existing_message is None:
+                seen_by_message_id[message.message_id] = message_dict
 
             key = _result_or_contribution_key(message)
-            assignment_job_id = assignments.get(key)
-            if assignment_job_id is None:
+            assignment = assignments.get(key)
+            if assignment is None:
                 raise ResultCollectionError(
                     f"{message.message_type} message {message.message_id} references unknown assignment: {key}"
                 )
             payload_job_id = message.payload.get("job_id")
-            if payload_job_id != assignment_job_id:
+            if payload_job_id != assignment.job_id:
                 raise ResultCollectionError(
-                    f"{message.message_type} message {message.message_id} job_id {payload_job_id!r} does not match assignment job_id {assignment_job_id!r}"
+                    f"{message.message_type} message {message.message_id} job_id {payload_job_id!r} does not match assignment job_id {assignment.job_id!r}"
                 )
+            if message.message_type == "job_result_reported":
+                _validate_result_reporter(message, assignment)
 
             collected_messages.append(message)
             if message.message_type == "job_result_reported":
@@ -87,6 +107,7 @@ def collect_local_results(
                     raise ResultCollectionError(
                         f"contribution_recorded message {message.message_id} payload.contribution_units must be an integer"
                     )
+                _validate_contribution_recipient(message, assignment, node_id)
                 per_node_units[node_id] += contribution_units
 
     if conflicting_message_ids:
@@ -112,8 +133,8 @@ def collect_local_results(
     }
 
 
-def _known_assignments(messages: list[MeshMessage]) -> dict[str, str]:
-    assignments: dict[str, str] = {}
+def _known_assignments(messages: list[MeshMessage]) -> dict[str, _KnownAssignment]:
+    assignments: dict[str, _KnownAssignment] = {}
     for message in messages:
         if message.message_type != "job_assigned":
             continue
@@ -123,13 +144,44 @@ def _known_assignments(messages: list[MeshMessage]) -> dict[str, str]:
             raise ResultCollectionError(
                 f"job_assigned message {message.message_id} payload.job_id must be a non-empty string"
             )
-        existing = assignments.get(key)
-        if existing is not None and existing != job_id:
+        if not isinstance(message.recipient_node_id, str) or message.recipient_node_id == "":
             raise ResultCollectionError(
-                f"assignment key {key!r} maps to multiple job_id values"
+                f"job_assigned message {message.message_id} recipient_node_id must be a non-empty string"
             )
-        assignments[key] = job_id
+        existing = assignments.get(key)
+        assignment = _KnownAssignment(
+            key=key,
+            job_id=job_id,
+            node_id=message.recipient_node_id,
+        )
+        if existing is not None and existing != assignment:
+            raise ResultCollectionError(
+                f"assignment key {key!r} maps to multiple assignment values"
+            )
+        assignments[key] = assignment
     return assignments
+
+
+def _validate_result_reporter(
+    message: MeshMessage, assignment: _KnownAssignment
+) -> None:
+    if message.sender_node_id != assignment.node_id:
+        raise ResultCollectionError(
+            f"job_result_reported message {message.message_id} sender_node_id {message.sender_node_id!r} does not match assigned node_id {assignment.node_id!r}"
+        )
+
+
+def _validate_contribution_recipient(
+    message: MeshMessage, assignment: _KnownAssignment, node_id: str
+) -> None:
+    if node_id != assignment.node_id:
+        raise ResultCollectionError(
+            f"contribution_recorded message {message.message_id} payload.node_id {node_id!r} does not match assigned node_id {assignment.node_id!r}"
+        )
+    if message.recipient_node_id != assignment.node_id:
+        raise ResultCollectionError(
+            f"contribution_recorded message {message.message_id} recipient_node_id {message.recipient_node_id!r} does not match assigned node_id {assignment.node_id!r}"
+        )
 
 
 def _assignment_key(message: MeshMessage) -> str:
