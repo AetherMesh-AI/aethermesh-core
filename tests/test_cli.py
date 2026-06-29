@@ -35,13 +35,26 @@ class CliTests(unittest.TestCase):
             payload["results"][1]["output"]["normalized_preview"],
             "hello mesh hello node",
         )
-        self.assertEqual(len(payload["messages"]), 12)
+        self.assertEqual(len(payload["messages"]), 14)
         self.assertEqual(payload["messages"][0]["message_id"], "msg-0001")
-        self.assertEqual(payload["messages"][0]["message_type"], "job_assigned")
-        self.assertEqual(payload["messages"][0]["correlation_id"], "echo-1")
-        self.assertEqual(payload["messages"][0]["recipient_node_id"], "local-node-a")
-        self.assertEqual(payload["messages"][1]["message_type"], "job_result_reported")
-        self.assertEqual(payload["messages"][2]["message_type"], "contribution_recorded")
+        self.assertEqual(payload["messages"][0]["message_type"], "node_heartbeat")
+        self.assertEqual(payload["messages"][0]["correlation_id"], None)
+        self.assertEqual(payload["messages"][0]["recipient_node_id"], None)
+        self.assertEqual(
+            payload["messages"][0]["payload"],
+            {
+                "node_id": "local-node-a",
+                "status": "available",
+                "heartbeat_sequence": 1,
+                "heartbeat_count": 1,
+            },
+        )
+        self.assertEqual(payload["messages"][1]["message_type"], "node_heartbeat")
+        self.assertEqual(payload["messages"][2]["message_type"], "job_assigned")
+        self.assertEqual(payload["messages"][2]["correlation_id"], "echo-1")
+        self.assertEqual(payload["messages"][2]["recipient_node_id"], "local-node-a")
+        self.assertEqual(payload["messages"][3]["message_type"], "job_result_reported")
+        self.assertEqual(payload["messages"][4]["message_type"], "contribution_recorded")
         self.assertEqual(payload["validations"][0]["valid"], True)
         self.assertEqual(
             payload["validation_summary"], {"valid": 4, "invalid": 0, "unsupported": 0}

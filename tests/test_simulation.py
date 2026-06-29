@@ -32,21 +32,13 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(
             [message["message_id"] for message in result["messages"]],
-            [
-                "msg-0001",
-                "msg-0002",
-                "msg-0003",
-                "msg-0004",
-                "msg-0005",
-                "msg-0006",
-                "msg-0007",
-                "msg-0008",
-                "msg-0009",
-            ],
+            [f"msg-{index:04d}" for index in range(1, 12)],
         )
         self.assertEqual(
             [message["message_type"] for message in result["messages"]],
             [
+                "node_heartbeat",
+                "node_heartbeat",
                 "job_assigned",
                 "job_result_reported",
                 "contribution_recorded",
@@ -61,6 +53,8 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(
             [message["correlation_id"] for message in result["messages"]],
             [
+                None,
+                None,
                 "echo-1",
                 "echo-1",
                 "echo-1",
@@ -73,15 +67,32 @@ class LocalSimulationTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            [message["sender_node_id"] for message in result["messages"][:3]],
+            [message["payload"] for message in result["messages"][:2]],
+            [
+                {
+                    "node_id": "node-a",
+                    "status": "available",
+                    "heartbeat_sequence": 1,
+                    "heartbeat_count": 1,
+                },
+                {
+                    "node_id": "node-b",
+                    "status": "available",
+                    "heartbeat_sequence": 2,
+                    "heartbeat_count": 1,
+                },
+            ],
+        )
+        self.assertEqual(
+            [message["sender_node_id"] for message in result["messages"][2:5]],
             ["local-scheduler", "node-a", "local-ledger"],
         )
         self.assertEqual(
-            [message["recipient_node_id"] for message in result["messages"][:3]],
+            [message["recipient_node_id"] for message in result["messages"][2:5]],
             ["node-a", "local-ledger", "node-a"],
         )
         self.assertEqual(
-            [message["payload"] for message in result["messages"][:3]],
+            [message["payload"] for message in result["messages"][2:5]],
             [
                 {
                     "job_id": "echo-1",
@@ -132,8 +143,10 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["results"][0]["output"], "one")
         self.assertEqual(result["results"][1]["output"], "two")
         self.assertEqual(
-            [message["sender_node_id"] for message in result["messages"][:6]],
+            [message["sender_node_id"] for message in result["messages"][:8]],
             [
+                "node-a",
+                "node-b",
                 "local-scheduler",
                 "node-a",
                 "local-ledger",
@@ -231,6 +244,45 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["summaries"][1]["node_id"], "node-b")
         self.assertEqual(result["summaries"][1]["results"], 0)
         self.assertEqual(result["totals"]["contribution_units"], 3)
+        heartbeat_messages = [
+            message
+            for message in result["messages"]
+            if message["message_type"] == "node_heartbeat"
+        ]
+        self.assertEqual(
+            [message["sender_node_id"] for message in heartbeat_messages],
+            ["node-a", "node-c"],
+        )
+        self.assertEqual(
+            [message["payload"] for message in heartbeat_messages],
+            [
+                {
+                    "node_id": "node-a",
+                    "status": "available",
+                    "heartbeat_sequence": 1,
+                    "heartbeat_count": 1,
+                },
+                {
+                    "node_id": "node-c",
+                    "status": "available",
+                    "heartbeat_sequence": 2,
+                    "heartbeat_count": 1,
+                },
+            ],
+        )
+        self.assertNotIn("node-b", [message["sender_node_id"] for message in heartbeat_messages])
+        self.assertEqual(
+            result["messages"][0]["message_type"],
+            "node_heartbeat",
+        )
+        self.assertEqual(
+            result["messages"][1]["message_type"],
+            "node_heartbeat",
+        )
+        self.assertEqual(
+            result["messages"][2]["message_type"],
+            "job_assigned",
+        )
 
     def test_successful_echo_jobs_contribute_units_and_totals(self) -> None:
         jobs = [
@@ -348,9 +400,9 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(result["summaries"][0]["completed_jobs"], 1)
         self.assertEqual(result["summaries"][0]["contribution_units"], 0)
-        self.assertEqual(result["messages"][2]["payload"]["valid"], False)
-        self.assertEqual(result["messages"][2]["payload"]["validation"], "missing_payload_message")
-        self.assertEqual(result["messages"][2]["payload"]["contribution_units"], 0)
+        self.assertEqual(result["messages"][3]["payload"]["valid"], False)
+        self.assertEqual(result["messages"][3]["payload"]["validation"], "missing_payload_message")
+        self.assertEqual(result["messages"][3]["payload"]["contribution_units"], 0)
         self.assertEqual(result["totals"]["completed_jobs"], 1)
         self.assertEqual(result["totals"]["valid_results"], 0)
         self.assertEqual(result["totals"]["invalid_results"], 1)
