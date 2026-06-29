@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1782735796.0216365,
-    "ast_hash": "94e3db5e2c30f47d501f36ff50e6889e",
+    "mtime": 1782736574.666287,
+    "ast_hash": "3a694cb0f7b8640bcfb44482e0bc039b",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
@@ -40,8 +40,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
-    "mtime": 1782735796.0220704,
-    "ast_hash": "ae664690c953e46d168757e7c278bb7b",
+    "mtime": 1782736574.6673412,
+    "ast_hash": "4a617b953c1e695ed2165992c1cc6309",
     "semantic_hash": ""
   },
   "src/aethermesh_core/validation.py": {
@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1782735796.0223897,
-    "ast_hash": "b37a6f7b7ab2ef468c0a32d5f42590f5",
+    "mtime": 1782736574.6677375,
+    "ast_hash": "b1606f09cc6ec6872f9050e74c90a77d",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "tests/test_simulation.py": {
-    "mtime": 1782735796.0227444,
-    "ast_hash": "e60df09a7e5450c9e97d2308e1297c59",
+    "mtime": 1782736574.6686845,
+    "ast_hash": "bd4cbec7b95593bb08c209faf5ae1a3a",
     "semantic_hash": ""
   },
   "tests/test_validation.py": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782735796.0211217,
-    "ast_hash": "edd9b12af5fc81abefe8a9488c9e6ffb",
+    "mtime": 1782736574.6652591,
+    "ast_hash": "e4244ad6acf913c483df611d78ac2dcd",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -105,18 +105,18 @@
     "semantic_hash": ""
   },
   "examples/local-batch.json": {
-    "mtime": 1782735181.6452425,
-    "ast_hash": "d1361b4bded28a6cdef2a8468b49e7dc",
+    "mtime": 1782736574.6655915,
+    "ast_hash": "ca49776a789645d444eefff71d7d7c54",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1782735181.6459827,
-    "ast_hash": "c889343fe616bf2448d0a3bbe79e37ff",
+    "mtime": 1782736574.666924,
+    "ast_hash": "0beef077c261db8a24683ea6d5c112f5",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1782735181.6467395,
-    "ast_hash": "12aeb3e64346002e968f2ca61441a262",
+    "mtime": 1782736574.668295,
+    "ast_hash": "0d7f1084334c2e7bfb006da83f5380b6",
     "semantic_hash": ""
   }
 }
