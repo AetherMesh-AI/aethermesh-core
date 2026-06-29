@@ -10,10 +10,11 @@ from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.node_service import LocalNodeService
 from aethermesh_core.node_registry import NodeRegistry
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import JobAssignment, LocalScheduler, NodeStatus, ScheduledNode
-from aethermesh_core.validation import ValidationResult, validate_job_result
+from aethermesh_core.validation import ValidationResult
 
 
 SimulationJobAssignment = JobAssignment
@@ -80,8 +81,15 @@ def run_local_simulation(
         message_bus.register_node(node_id)
     message_bus.register_node("local-scheduler")
     message_bus.register_node("local-ledger")
-    runners = {
-        node.node_id: LocalRunner(NodeIdentity(node_id=node.node_id)) for node in nodes
+    services = {
+        node.node_id: LocalNodeService(
+            identity=NodeIdentity(node_id=node.node_id),
+            message_bus=message_bus,
+            runner=LocalRunner(NodeIdentity(node_id=node.node_id)),
+            ledger=ledger,
+        )
+        for node in nodes
+        if node.status == NodeStatus.AVAILABLE
     }
     scheduler = LocalScheduler(registry.scheduled_nodes())
     assignments = scheduler.assign_jobs(job.job_id for job in jobs)
@@ -91,7 +99,7 @@ def run_local_simulation(
 
     for job, assignment in zip(jobs, assignments):
         node_id = assignment.node_id
-        _send_simulation_message(
+        assignment_message = _send_simulation_message(
             message_bus,
             message_type="job_assigned",
             sender_node_id="local-scheduler",
@@ -99,51 +107,29 @@ def run_local_simulation(
             payload={
                 "job_id": job.job_id,
                 "job_type": job.job_type,
+                "payload": dict(job.payload),
                 "node_id": node_id,
             },
             correlation_id=job.job_id,
         )
-        result = runners[node_id].run(job)
-        _send_simulation_message(
-            message_bus,
-            message_type="job_result_reported",
-            sender_node_id=node_id,
-            recipient_node_id="local-ledger",
-            payload={
-                "job_id": result.job_id,
-                "status": result.status,
-                "success": result.status == "completed",
-                "output": result.output,
-                "error": result.error,
-            },
-            correlation_id=job.job_id,
-        )
-
-        results.append(result)
-        validation = validate_job_result(job, result)
-        validations.append(validation)
-        record_result = result if validation.valid else replace(result, contribution_units=0)
-        accounted_results.append(record_result)
-        record = ledger.record(
-            record_result,
-            validation_valid=validation.valid,
-            validation_reason=validation.reason,
-            job_type=job.job_type,
-        )
-        _send_simulation_message(
-            message_bus,
-            message_type="contribution_recorded",
-            sender_node_id="local-ledger",
-            recipient_node_id=node_id,
-            payload={
-                "job_id": record.job_id,
-                "node_id": record.node_id,
-                "status": record.status,
-                "validation": validation.reason,
-                "valid": validation.valid,
-                "contribution_units": record.contribution_units,
-            },
-            correlation_id=job.job_id,
+        inbox_result = services[node_id].process_inbox()
+        processed = [
+            processed_assignment
+            for processed_assignment in inbox_result.processed
+            if processed_assignment.message_id == assignment_message.message_id
+        ]
+        if len(processed) != 1:
+            raise RuntimeError(
+                f"expected one processed assignment for {assignment.job_id} on {node_id}"
+            )
+        processed_assignment = processed[0]
+        results.append(processed_assignment.result)
+        validations.append(processed_assignment.validation)
+        accounted_results.append(
+            replace(
+                processed_assignment.result,
+                contribution_units=processed_assignment.contribution_record.contribution_units,
+            )
         )
 
     summaries = [

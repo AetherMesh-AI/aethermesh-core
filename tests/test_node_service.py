@@ -55,11 +55,15 @@ class LocalNodeServiceTests(unittest.TestCase):
             {
                 "job_id": "echo-1",
                 "node_id": "node-a",
+                "status": "completed",
                 "valid": True,
                 "validation": "ok",
                 "contribution_units": 1,
             },
         )
+        self.assertEqual(processed.contribution_record.validation_valid, True)
+        self.assertEqual(processed.contribution_record.validation_reason, "ok")
+        self.assertEqual(processed.contribution_record.job_type, "echo")
 
     def test_successful_text_stats_assignment_is_processed_from_inbox(self) -> None:
         service, bus, ledger = _service("node-a")
@@ -218,6 +222,11 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.validation.reason, "missing_payload_message")
         self.assertEqual(processed.contribution_record.status, "completed")
         self.assertEqual(processed.contribution_record.contribution_units, 0)
+        self.assertEqual(processed.contribution_record.validation_valid, False)
+        self.assertEqual(
+            processed.contribution_record.validation_reason, "missing_payload_message"
+        )
+        self.assertEqual(processed.contribution_record.job_type, "echo")
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
         self.assertEqual(processed.emitted_messages[1].payload["valid"], False)
         self.assertEqual(processed.emitted_messages[1].payload["validation"], "missing_payload_message")

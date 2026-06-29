@@ -89,7 +89,12 @@ class LocalNodeService:
         result = self.runner.run(job)
         validation = validate_job_result(job, result)
         accounted_result = result if validation.valid else replace(result, contribution_units=0)
-        record = self.ledger.record(accounted_result)
+        record = self.ledger.record(
+            accounted_result,
+            validation_valid=validation.valid,
+            validation_reason=validation.reason,
+            job_type=job.job_type,
+        )
 
         result_message = self._send_message(
             message_type="job_result_reported",
@@ -109,6 +114,7 @@ class LocalNodeService:
             payload={
                 "job_id": record.job_id,
                 "node_id": record.node_id,
+                "status": record.status,
                 "valid": validation.valid,
                 "validation": validation.reason,
                 "contribution_units": record.contribution_units,
