@@ -48,6 +48,27 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(payload["summaries"][0]["node_id"], "local-node-a")
         self.assertEqual(
+            payload["node_roster"],
+            [
+                {
+                    "node_id": "local-node-a",
+                    "status": "available",
+                    "heartbeat_sequence": 1,
+                    "heartbeat_count": 1,
+                    "assigned_jobs": 2,
+                    "contribution_units": 2,
+                },
+                {
+                    "node_id": "local-node-b",
+                    "status": "available",
+                    "heartbeat_sequence": 2,
+                    "heartbeat_count": 1,
+                    "assigned_jobs": 2,
+                    "contribution_units": 2,
+                },
+            ],
+        )
+        self.assertEqual(
             payload["totals"],
             {
                 "nodes": 2,
@@ -164,18 +185,24 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
+                    "heartbeat_sequence": 1,
+                    "heartbeat_count": 1,
                     "assigned_jobs": 2,
                     "contribution_units": 2,
                 },
                 {
                     "node_id": "local-node-b",
                     "status": "offline",
+                    "heartbeat_sequence": 0,
+                    "heartbeat_count": 0,
                     "assigned_jobs": 0,
                     "contribution_units": 0,
                 },
                 {
                     "node_id": "local-node-c",
                     "status": "available",
+                    "heartbeat_sequence": 2,
+                    "heartbeat_count": 1,
                     "assigned_jobs": 1,
                     "contribution_units": 1,
                 },

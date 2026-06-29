@@ -101,6 +101,8 @@ A minimal manifest lists ordered local node IDs and ordered jobs. Node entries m
 
 The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo` and deterministic `text_stats` results; invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
+The local-only `node_roster` includes each node's `node_id`, `status`, assignment count, contribution units, and deterministic heartbeat metadata. `heartbeat_sequence` and `heartbeat_count` are in-memory simulation counters recorded when available nodes start a local run; they are not real network heartbeats or wall-clock liveness timestamps.
+
 To opt in to local JSON-backed contribution persistence for a manifest batch, pass `--ledger-path`:
 
 ```bash
