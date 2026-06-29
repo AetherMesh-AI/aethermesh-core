@@ -43,17 +43,17 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli",
-      "community": 12,
+      "community": 2,
       "norm_label": "cli.py"
     },
     {
       "label": "build_parser()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L46",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "aethermesh_core_cli_build_parser",
-      "community": 8,
+      "community": 2,
       "norm_label": "build_parser()"
     },
     {
@@ -63,24 +63,24 @@
       "source_location": "",
       "_origin": "ast",
       "id": "argumentparser",
-      "community": 8,
+      "community": 2,
       "norm_label": "argumentparser"
     },
     {
       "label": "run_demo()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L177",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_demo",
-      "community": 0,
+      "community": 3,
       "norm_label": "run_demo()"
     },
     {
       "label": "run_default_local_simulation()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L228",
+      "source_location": "L230",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_default_local_simulation",
       "community": 3,
@@ -90,7 +90,7 @@
       "label": "run_local_batch()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L246",
+      "source_location": "L248",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_local_batch",
       "community": 6,
@@ -100,17 +100,17 @@
       "label": "dispatch_local_batch_command()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L299",
+      "source_location": "L301",
       "_origin": "ast",
       "id": "aethermesh_core_cli_dispatch_local_batch_command",
-      "community": 7,
+      "community": 19,
       "norm_label": "dispatch_local_batch_command()"
     },
     {
       "label": "summarize_ledger()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L323",
+      "source_location": "L325",
       "_origin": "ast",
       "id": "aethermesh_core_cli_summarize_ledger",
       "community": 2,
@@ -120,20 +120,20 @@
       "label": "run_local_flow()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L330",
+      "source_location": "L332",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_local_flow",
-      "community": 14,
+      "community": 2,
       "norm_label": "run_local_flow()"
     },
     {
       "label": "_node_artifact_path()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L420",
+      "source_location": "L450",
       "_origin": "ast",
       "id": "aethermesh_core_cli_node_artifact_path",
-      "community": 14,
+      "community": 2,
       "norm_label": "_node_artifact_path()"
     },
     {
@@ -143,34 +143,34 @@
       "source_location": "",
       "_origin": "ast",
       "id": "path",
-      "community": 14,
+      "community": 2,
       "norm_label": "path"
     },
     {
       "label": "_node_artifact_filename()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L424",
+      "source_location": "L454",
       "_origin": "ast",
       "id": "aethermesh_core_cli_node_artifact_filename",
-      "community": 14,
+      "community": 2,
       "norm_label": "_node_artifact_filename()"
     },
     {
       "label": "process_local_inbox()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L432",
+      "source_location": "L462",
       "_origin": "ast",
       "id": "aethermesh_core_cli_process_local_inbox",
-      "community": 14,
+      "community": 2,
       "norm_label": "process_local_inbox()"
     },
     {
       "label": "_emitted_messages_from_inbox_result()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L501",
+      "source_location": "L531",
       "_origin": "ast",
       "id": "aethermesh_core_cli_emitted_messages_from_inbox_result",
       "community": 2,
@@ -180,17 +180,17 @@
       "label": "_node_ids_from_replayed_messages()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L511",
+      "source_location": "L541",
       "_origin": "ast",
       "id": "aethermesh_core_cli_node_ids_from_replayed_messages",
-      "community": 14,
+      "community": 2,
       "norm_label": "_node_ids_from_replayed_messages()"
     },
     {
       "label": "_inbox_process_result_to_dict()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L522",
+      "source_location": "L552",
       "_origin": "ast",
       "id": "aethermesh_core_cli_inbox_process_result_to_dict",
       "community": 2,
@@ -200,7 +200,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L572",
+      "source_location": "L602",
       "_origin": "ast",
       "id": "aethermesh_core_cli_main",
       "community": 8,
@@ -213,16 +213,16 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1",
-      "community": 12,
+      "community": 2,
       "norm_label": "command-line interface for the local aethermesh prototype."
     },
     {
       "label": "Run the fixed local simulation demo used by the CLI command.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L229",
+      "source_location": "L231",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_229",
+      "id": "aethermesh_core_cli_rationale_231",
       "community": 3,
       "norm_label": "run the fixed local simulation demo used by the cli command."
     },
@@ -230,9 +230,9 @@
       "label": "Run a local simulation from a validated JSON manifest.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L251",
+      "source_location": "L253",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_251",
+      "id": "aethermesh_core_cli_rationale_253",
       "community": 6,
       "norm_label": "run a local simulation from a validated json manifest."
     },
@@ -240,19 +240,19 @@
       "label": "Dispatch a manifest batch to a local message log without execution.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L303",
+      "source_location": "L305",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_303",
-      "community": 7,
+      "id": "aethermesh_core_cli_rationale_305",
+      "community": 19,
       "norm_label": "dispatch a manifest batch to a local message log without execution."
     },
     {
       "label": "Load an existing ledger and return read-only aggregate totals.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L324",
+      "source_location": "L326",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_324",
+      "id": "aethermesh_core_cli_rationale_326",
       "community": 2,
       "norm_label": "load an existing ledger and return read-only aggregate totals."
     },
@@ -260,30 +260,30 @@
       "label": "Run dispatch and all available local worker inboxes as one local flow.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L331",
+      "source_location": "L333",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_331",
-      "community": 14,
+      "id": "aethermesh_core_cli_rationale_333",
+      "community": 2,
       "norm_label": "run dispatch and all available local worker inboxes as one local flow."
     },
     {
       "label": "Return a deterministic, non-merging filename for one manifest node id.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L425",
+      "source_location": "L455",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_425",
-      "community": 14,
+      "id": "aethermesh_core_cli_rationale_455",
+      "community": 2,
       "norm_label": "return a deterministic, non-merging filename for one manifest node id."
     },
     {
       "label": "Replay a saved local message log and process one node inbox.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L440",
+      "source_location": "L470",
       "_origin": "ast",
-      "id": "aethermesh_core_cli_rationale_440",
-      "community": 14,
+      "id": "aethermesh_core_cli_rationale_470",
+      "community": 2,
       "norm_label": "replay a saved local message log and process one node inbox."
     },
     {
@@ -423,7 +423,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "valueerror",
-      "community": 2,
+      "community": 12,
       "norm_label": "valueerror"
     },
     {
@@ -533,7 +533,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_localjobbatch",
-      "community": 19,
+      "community": 6,
       "norm_label": "localjobbatch"
     },
     {
@@ -543,7 +543,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_localjobbatch_node_ids",
-      "community": 19,
+      "community": 6,
       "norm_label": ".node_ids()"
     },
     {
@@ -633,7 +633,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_20",
-      "community": 19,
+      "community": 6,
       "norm_label": "validated local batch inputs for the local simulation path."
     },
     {
@@ -643,7 +643,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "aethermesh_core_job_manifest_rationale_27",
-      "community": 19,
+      "community": 6,
       "norm_label": "return manifest node ids in deterministic manifest order."
     },
     {
@@ -663,7 +663,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_ledger",
-      "community": 12,
+      "community": 2,
       "norm_label": "ledger.py"
     },
     {
@@ -713,7 +713,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionsummary_to_dict",
-      "community": 6,
+      "community": 2,
       "norm_label": ".to_dict()"
     },
     {
@@ -783,7 +783,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionledger_to_document",
-      "community": 6,
+      "community": 2,
       "norm_label": ".to_document()"
     },
     {
@@ -813,7 +813,7 @@
       "source_location": "L199",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_load_ledger_document",
-      "community": 14,
+      "community": 2,
       "norm_label": "load_ledger_document()"
     },
     {
@@ -833,7 +833,7 @@
       "source_location": "L238",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_save_ledger_document",
-      "community": 14,
+      "community": 2,
       "norm_label": "save_ledger_document()"
     },
     {
@@ -883,7 +883,7 @@
       "source_location": "L303",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_remove_temp_file",
-      "community": 14,
+      "community": 2,
       "norm_label": "_remove_temp_file()"
     },
     {
@@ -893,7 +893,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_1",
-      "community": 12,
+      "community": 2,
       "norm_label": "contribution ledger helpers for local job results."
     },
     {
@@ -943,7 +943,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_84",
-      "community": 6,
+      "community": 2,
       "norm_label": "serialize the summary into a json-compatible dictionary."
     },
     {
@@ -1003,7 +1003,7 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_175",
-      "community": 6,
+      "community": 2,
       "norm_label": "serialize the ledger into the small local json file shape."
     },
     {
@@ -1033,7 +1033,7 @@
       "source_location": "L200",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_200",
-      "community": 14,
+      "community": 2,
       "norm_label": "load a json-backed local ledger, treating a missing file as empty.      the retu"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_location": "L243",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_243",
-      "community": 14,
+      "community": 2,
       "norm_label": "write a json-backed local ledger via temp-file then atomic replace."
     },
     {
@@ -1063,7 +1063,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus",
-      "community": 12,
+      "community": 5,
       "norm_label": "message_bus.py"
     },
     {
@@ -1073,7 +1073,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_messagedelivery",
-      "community": 12,
+      "community": 5,
       "norm_label": "messagedelivery"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_rationale_1",
-      "community": 12,
+      "community": 5,
       "norm_label": "synchronous in-memory message bus for local aethermesh simulation."
     },
     {
@@ -1153,7 +1153,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_rationale_12",
-      "community": 12,
+      "community": 5,
       "norm_label": "a message accepted by the local bus with its deterministic sequence."
     },
     {
@@ -1233,7 +1233,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_build_message_log_document",
-      "community": 7,
+      "community": 6,
       "norm_label": "build_message_log_document()"
     },
     {
@@ -1253,44 +1253,74 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_build_dispatch_message_log_document",
-      "community": 7,
+      "community": 19,
       "norm_label": "build_dispatch_message_log_document()"
+    },
+    {
+      "label": "build_flow_message_log_document()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L110",
+      "_origin": "ast",
+      "id": "aethermesh_core_message_log_build_flow_message_log_document",
+      "community": 7,
+      "norm_label": "build_flow_message_log_document()"
     },
     {
       "label": "load_message_log_messages()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L110",
+      "source_location": "L159",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_load_message_log_messages",
       "community": 7,
       "norm_label": "load_message_log_messages()"
     },
     {
+      "label": "load_worker_emitted_messages()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L173",
+      "_origin": "ast",
+      "id": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "community": 7,
+      "norm_label": "load_worker_emitted_messages()"
+    },
+    {
       "label": "write_message_log()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L143",
+      "source_location": "L202",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_write_message_log",
       "community": 7,
       "norm_label": "write_message_log()"
     },
     {
+      "label": "_load_message_log_document()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L228",
+      "_origin": "ast",
+      "id": "aethermesh_core_message_log_load_message_log_document",
+      "community": 7,
+      "norm_label": "_load_message_log_document()"
+    },
+    {
       "label": "_message_to_document_entry()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L169",
+      "source_location": "L251",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_message_to_document_entry",
-      "community": 7,
+      "community": 6,
       "norm_label": "_message_to_document_entry()"
     },
     {
       "label": "_message_from_document_entry()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L180",
+      "source_location": "L262",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_message_from_document_entry",
       "community": 7,
@@ -1300,7 +1330,7 @@
       "label": "_remove_temp_file()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L212",
+      "source_location": "L294",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_remove_temp_file",
       "community": 7,
@@ -1333,7 +1363,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_27",
-      "community": 7,
+      "community": 6,
       "norm_label": "build a deterministic version 1 audit document for local mesh messages."
     },
     {
@@ -1353,26 +1383,46 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_91",
-      "community": 7,
+      "community": 19,
       "norm_label": "build a deterministic version 1 assignment-only dispatch document."
+    },
+    {
+      "label": "Build a deterministic version 1 run-level local flow message log.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L125",
+      "_origin": "ast",
+      "id": "aethermesh_core_message_log_rationale_125",
+      "community": 7,
+      "norm_label": "build a deterministic version 1 run-level local flow message log."
     },
     {
       "label": "Load validated MeshMessage entries from a version 1 local message log.      The",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L111",
+      "source_location": "L160",
       "_origin": "ast",
-      "id": "aethermesh_core_message_log_rationale_111",
+      "id": "aethermesh_core_message_log_rationale_160",
       "community": 7,
       "norm_label": "load validated meshmessage entries from a version 1 local message log.      the"
+    },
+    {
+      "label": "Load only post-replay worker-emitted messages from a worker message log.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L174",
+      "_origin": "ast",
+      "id": "aethermesh_core_message_log_rationale_174",
+      "community": 7,
+      "norm_label": "load only post-replay worker-emitted messages from a worker message log."
     },
     {
       "label": "Write a local message log via temp-file then atomic replace.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L144",
+      "source_location": "L203",
       "_origin": "ast",
-      "id": "aethermesh_core_message_log_rationale_144",
+      "id": "aethermesh_core_message_log_rationale_203",
       "community": 7,
       "norm_label": "write a local message log via temp-file then atomic replace."
     },
@@ -1393,7 +1443,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_messages_meshmessage",
-      "community": 5,
+      "community": 7,
       "norm_label": "meshmessage"
     },
     {
@@ -1403,7 +1453,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "aethermesh_core_messages_meshmessage_post_init",
-      "community": 2,
+      "community": 12,
       "norm_label": ".__post_init__()"
     },
     {
@@ -1423,7 +1473,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "aethermesh_core_messages_require_supported_message_type",
-      "community": 2,
+      "community": 12,
       "norm_label": "_require_supported_message_type()"
     },
     {
@@ -1433,7 +1483,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "aethermesh_core_messages_require_non_empty_string",
-      "community": 2,
+      "community": 12,
       "norm_label": "_require_non_empty_string()"
     },
     {
@@ -1443,7 +1493,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "aethermesh_core_messages_validate_json_compatible",
-      "community": 2,
+      "community": 12,
       "norm_label": "_validate_json_compatible()"
     },
     {
@@ -1463,7 +1513,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_messages_rationale_20",
-      "community": 5,
+      "community": 7,
       "norm_label": "json-compatible message envelope for local mesh communication records."
     },
     {
@@ -1493,7 +1543,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "aethermesh_core_models_nodeidentity",
-      "community": 0,
+      "community": 3,
       "norm_label": "nodeidentity"
     },
     {
@@ -1503,7 +1553,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "aethermesh_core_models_nodeidentity_ephemeral",
-      "community": 0,
+      "community": 3,
       "norm_label": ".ephemeral()"
     },
     {
@@ -1553,7 +1603,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_12",
-      "community": 0,
+      "community": 3,
       "norm_label": "identity for one local node."
     },
     {
@@ -1563,7 +1613,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_18",
-      "community": 0,
+      "community": 3,
       "norm_label": "create a caller-usable ephemeral identity for local demo runs."
     },
     {
@@ -1613,7 +1663,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_registrynode",
-      "community": 18,
+      "community": 15,
       "norm_label": "_registrynode"
     },
     {
@@ -1643,7 +1693,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_noderegistry_register",
-      "community": 18,
+      "community": 15,
       "norm_label": ".register()"
     },
     {
@@ -1713,7 +1763,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_noderegistry_coerce_node",
-      "community": 18,
+      "community": 1,
       "norm_label": "._coerce_node()"
     },
     {
@@ -1723,7 +1773,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_noderegistry_validate_node_id",
-      "community": 18,
+      "community": 1,
       "norm_label": "._validate_node_id()"
     },
     {
@@ -1753,7 +1803,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_rationale_36",
-      "community": 18,
+      "community": 15,
       "norm_label": "register a node id or schedulednode in deterministic insertion order."
     },
     {
@@ -1823,7 +1873,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_processedassignment",
-      "community": 5,
+      "community": 3,
       "norm_label": "processedassignment"
     },
     {
@@ -1843,7 +1893,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice",
-      "community": 5,
+      "community": 3,
       "norm_label": "localnodeservice"
     },
     {
@@ -1853,7 +1903,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice_init",
-      "community": 0,
+      "community": 3,
       "norm_label": ".__init__()"
     },
     {
@@ -1863,7 +1913,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice_process_inbox",
-      "community": 5,
+      "community": 3,
       "norm_label": ".process_inbox()"
     },
     {
@@ -1873,7 +1923,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice_process_assignment",
-      "community": 5,
+      "community": 3,
       "norm_label": "._process_assignment()"
     },
     {
@@ -1883,7 +1933,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice_send_message",
-      "community": 5,
+      "community": 3,
       "norm_label": "._send_message()"
     },
     {
@@ -1893,7 +1943,7 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_job_from_assignment_payload",
-      "community": 5,
+      "community": 12,
       "norm_label": "_job_from_assignment_payload()"
     },
     {
@@ -1903,7 +1953,7 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_fallback_job_id",
-      "community": 5,
+      "community": 12,
       "norm_label": "_fallback_job_id()"
     },
     {
@@ -1923,7 +1973,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_rationale_18",
-      "community": 5,
+      "community": 3,
       "norm_label": "deterministic audit data for one inbox assignment processed locally."
     },
     {
@@ -1943,7 +1993,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_rationale_40",
-      "community": 5,
+      "community": 3,
       "norm_label": "synchronous local-only handler for one node's assigned-work inbox."
     },
     {
@@ -1953,7 +2003,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_rationale_61",
-      "community": 5,
+      "community": 3,
       "norm_label": "process unhandled ``job_assigned`` messages addressed to this node.          the"
     },
     {
@@ -2123,7 +2173,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "aethermesh_core_runner_localrunner",
-      "community": 0,
+      "community": 3,
       "norm_label": "localrunner"
     },
     {
@@ -2133,7 +2183,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "aethermesh_core_runner_localrunner_init",
-      "community": 0,
+      "community": 3,
       "norm_label": ".__init__()"
     },
     {
@@ -2173,7 +2223,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_9",
-      "community": 0,
+      "community": 3,
       "norm_label": "execute supported local job types for a node."
     },
     {
@@ -2213,7 +2263,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_noavailablenodeserror",
-      "community": 15,
+      "community": 20,
       "norm_label": "noavailablenodeserror"
     },
     {
@@ -2223,7 +2273,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_nodestatus",
-      "community": 18,
+      "community": 15,
       "norm_label": "nodestatus"
     },
     {
@@ -2233,7 +2283,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "str",
-      "community": 18,
+      "community": 15,
       "norm_label": "str"
     },
     {
@@ -2243,7 +2293,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "enum",
-      "community": 18,
+      "community": 15,
       "norm_label": "enum"
     },
     {
@@ -2273,7 +2323,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_scheduledjob",
-      "community": 15,
+      "community": 20,
       "norm_label": "scheduledjob"
     },
     {
@@ -2283,7 +2333,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_jobassignment",
-      "community": 7,
+      "community": 19,
       "norm_label": "jobassignment"
     },
     {
@@ -2293,7 +2343,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_jobassignment_to_dict",
-      "community": 7,
+      "community": 19,
       "norm_label": ".to_dict()"
     },
     {
@@ -2323,7 +2373,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_localscheduler_assign_jobs",
-      "community": 15,
+      "community": 20,
       "norm_label": ".assign_jobs()"
     },
     {
@@ -2343,7 +2393,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_coerce_job",
-      "community": 15,
+      "community": 20,
       "norm_label": "_coerce_job()"
     },
     {
@@ -2373,7 +2423,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_11",
-      "community": 15,
+      "community": 20,
       "norm_label": "raised when local job assignment has jobs but no available nodes."
     },
     {
@@ -2383,7 +2433,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_18",
-      "community": 18,
+      "community": 15,
       "norm_label": "availability states needed by the local scheduler."
     },
     {
@@ -2403,7 +2453,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_38",
-      "community": 15,
+      "community": 20,
       "norm_label": "minimal scheduler view of a job."
     },
     {
@@ -2413,7 +2463,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_46",
-      "community": 7,
+      "community": 19,
       "norm_label": "structured local assignment of one job to one node."
     },
     {
@@ -2423,7 +2473,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_52",
-      "community": 7,
+      "community": 19,
       "norm_label": "serialize the assignment into a json-compatible dictionary."
     },
     {
@@ -2443,7 +2493,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_64",
-      "community": 15,
+      "community": 20,
       "norm_label": "assign jobs round-robin across available capable nodes in input order."
     },
     {
@@ -2463,7 +2513,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult",
-      "community": 18,
+      "community": 3,
       "norm_label": "localsimulationresult"
     },
     {
@@ -2493,7 +2543,7 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_node_roster_entry",
-      "community": 7,
+      "community": 19,
       "norm_label": "_node_roster_entry()"
     },
     {
@@ -2503,7 +2553,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_node_heartbeat_messages",
-      "community": 12,
+      "community": 1,
       "norm_label": "_node_heartbeat_messages()"
     },
     {
@@ -2513,7 +2563,7 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_send_simulation_message",
-      "community": 5,
+      "community": 12,
       "norm_label": "_send_simulation_message()"
     },
     {
@@ -2523,7 +2573,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_summary_to_simulation_dict",
-      "community": 2,
+      "community": 12,
       "norm_label": "_summary_to_simulation_dict()"
     },
     {
@@ -2533,7 +2583,7 @@
       "source_location": "L240",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_validation_summary",
-      "community": 3,
+      "community": 12,
       "norm_label": "_validation_summary()"
     },
     {
@@ -2553,7 +2603,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_25",
-      "community": 18,
+      "community": 3,
       "norm_label": "structured, deterministic output from a local multi-node simulation."
     },
     {
@@ -2583,7 +2633,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_193",
-      "community": 12,
+      "community": 1,
       "norm_label": "return deterministic local heartbeat payloads for available nodes only."
     },
     {
@@ -2593,7 +2643,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_validation",
-      "community": 12,
+      "community": 3,
       "norm_label": "validation.py"
     },
     {
@@ -2643,7 +2693,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_1",
-      "community": 12,
+      "community": 3,
       "norm_label": "local validation gate for reported aethermesh job results."
     },
     {
@@ -2693,7 +2743,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_cli",
-      "community": 8,
+      "community": 2,
       "norm_label": "test_cli.py"
     },
     {
@@ -3130,7 +3180,7 @@
       "label": ".test_run_local_flow_skips_offline_nodes_but_reports_them()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L1868",
+      "source_location": "L1896",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_flow_skips_offline_nodes_but_reports_them",
       "community": 8,
@@ -3140,7 +3190,7 @@
       "label": ".test_run_local_flow_rerun_is_idempotent_with_node_state()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L1914",
+      "source_location": "L1942",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_flow_rerun_is_idempotent_with_node_state",
       "community": 8,
@@ -3150,7 +3200,7 @@
       "label": ".test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch()",
       "file_type": "code",
       "source_file": "tests/test_cli.py",
-      "source_location": "L1953",
+      "source_location": "L1986",
       "_origin": "ast",
       "id": "tests_test_cli_clitests_test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch",
       "community": 8,
@@ -3593,7 +3643,7 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_missing_json_ledger_loads_as_empty",
-      "community": 14,
+      "community": 2,
       "norm_label": ".test_missing_json_ledger_loads_as_empty()"
     },
     {
@@ -3603,7 +3653,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_json_ledger_appends_and_persists_records",
-      "community": 14,
+      "community": 2,
       "norm_label": ".test_json_ledger_appends_and_persists_records()"
     },
     {
@@ -3613,7 +3663,7 @@
       "source_location": "L263",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_malformed_json_ledger_raises_clear_error_without_overwrite",
-      "community": 14,
+      "community": 2,
       "norm_label": ".test_malformed_json_ledger_raises_clear_error_without_overwrite()"
     },
     {
@@ -3760,7 +3810,7 @@
       "label": "MessageLogTests",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L20",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests",
       "community": 7,
@@ -3770,7 +3820,7 @@
       "label": ".test_build_message_log_document_is_deterministic_and_ordered()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L21",
+      "source_location": "L23",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_message_log_document_is_deterministic_and_ordered",
       "community": 3,
@@ -3780,7 +3830,7 @@
       "label": ".test_write_message_log_uses_stable_json_and_creates_parents()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L72",
+      "source_location": "L74",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_write_message_log_uses_stable_json_and_creates_parents",
       "community": 7,
@@ -3790,7 +3840,7 @@
       "label": ".test_build_replayed_message_log_document_appends_emitted_messages()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L87",
+      "source_location": "L89",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_replayed_message_log_document_appends_emitted_messages",
       "community": 7,
@@ -3800,17 +3850,37 @@
       "label": ".test_build_dispatch_message_log_document_contains_only_dispatch_metadata()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L133",
+      "source_location": "L135",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_dispatch_message_log_document_contains_only_dispatch_metadata",
-      "community": 7,
+      "community": 19,
       "norm_label": ".test_build_dispatch_message_log_document_contains_only_dispatch_metadata()"
+    },
+    {
+      "label": ".test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order()",
+      "file_type": "code",
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L174",
+      "_origin": "ast",
+      "id": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order",
+      "community": 7,
+      "norm_label": ".test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order()"
+    },
+    {
+      "label": ".test_load_worker_emitted_messages_skips_replayed_dispatch_messages()",
+      "file_type": "code",
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L246",
+      "_origin": "ast",
+      "id": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
+      "community": 7,
+      "norm_label": ".test_load_worker_emitted_messages_skips_replayed_dispatch_messages()"
     },
     {
       "label": ".test_write_message_log_failure_preserves_existing_path()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L172",
+      "source_location": "L291",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_write_message_log_failure_preserves_existing_path",
       "community": 7,
@@ -3820,7 +3890,7 @@
       "label": ".test_load_message_log_messages_returns_validated_messages_without_writing()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L190",
+      "source_location": "L309",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_returns_validated_messages_without_writing",
       "community": 7,
@@ -3830,7 +3900,7 @@
       "label": ".test_load_message_log_messages_rejects_missing_file()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L228",
+      "source_location": "L347",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_missing_file",
       "community": 7,
@@ -3840,7 +3910,7 @@
       "label": ".test_load_message_log_messages_rejects_malformed_json()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L237",
+      "source_location": "L356",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_malformed_json",
       "community": 7,
@@ -3850,7 +3920,7 @@
       "label": ".test_load_message_log_messages_rejects_non_object_document()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L247",
+      "source_location": "L366",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_non_object_document",
       "community": 7,
@@ -3860,7 +3930,7 @@
       "label": ".test_load_message_log_messages_rejects_unsupported_version()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L257",
+      "source_location": "L376",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_unsupported_version",
       "community": 7,
@@ -3870,7 +3940,7 @@
       "label": ".test_load_message_log_messages_rejects_missing_or_non_list_messages()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L269",
+      "source_location": "L388",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_missing_or_non_list_messages",
       "community": 7,
@@ -3880,7 +3950,7 @@
       "label": ".test_load_message_log_messages_rejects_invalid_message_entry()",
       "file_type": "code",
       "source_file": "tests/test_message_log.py",
-      "source_location": "L282",
+      "source_location": "L401",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_load_message_log_messages_rejects_invalid_message_entry",
       "community": 7,
@@ -3893,7 +3963,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_messages",
-      "community": 5,
+      "community": 12,
       "norm_label": "test_messages.py"
     },
     {
@@ -3903,7 +3973,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests",
-      "community": 5,
+      "community": 7,
       "norm_label": "meshmessagetests"
     },
     {
@@ -3913,7 +3983,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_message_serializes_to_deterministic_json_compatible_dict",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_message_serializes_to_deterministic_json_compatible_dict()"
     },
     {
@@ -3923,7 +3993,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_supported_message_types_are_limited_to_initial_local_mesh_types",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_supported_message_types_are_limited_to_initial_local_mesh_types()"
     },
     {
@@ -3933,7 +4003,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_node_heartbeat_message_type_is_accepted",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_node_heartbeat_message_type_is_accepted()"
     },
     {
@@ -3943,7 +4013,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_unsupported_message_type_is_rejected",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_unsupported_message_type_is_rejected()"
     },
     {
@@ -3953,7 +4023,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_required_string_fields_must_be_non_empty",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_required_string_fields_must_be_non_empty()"
     },
     {
@@ -3963,7 +4033,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "tests_test_messages_meshmessagetests_test_payload_must_be_a_dictionary",
-      "community": 5,
+      "community": 7,
       "norm_label": ".test_payload_must_be_a_dictionary()"
     },
     {
@@ -4063,7 +4133,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_node_service",
-      "community": 12,
+      "community": 18,
       "norm_label": "test_node_service.py"
     },
     {
@@ -4073,7 +4143,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests",
-      "community": 5,
+      "community": 18,
       "norm_label": "localnodeservicetests"
     },
     {
@@ -4083,7 +4153,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_echo_assignment_is_processed_from_inbox",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_successful_echo_assignment_is_processed_from_inbox()"
     },
     {
@@ -4093,7 +4163,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_text_stats_assignment_is_processed_from_inbox",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_successful_text_stats_assignment_is_processed_from_inbox()"
     },
     {
@@ -4103,7 +4173,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_malformed_assignment_is_failed_invalid_and_zero_contribution",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_malformed_assignment_is_failed_invalid_and_zero_contribution()"
     },
     {
@@ -4113,7 +4183,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_unsupported_job_type_is_reported_with_zero_contribution",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_unsupported_job_type_is_reported_with_zero_contribution()"
     },
     {
@@ -4123,7 +4193,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_assignment_for_another_node_is_not_executed_by_this_node",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_assignment_for_another_node_is_not_executed_by_this_node()"
     },
     {
@@ -4133,7 +4203,7 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_repeated_process_inbox_does_not_double_record_contribution",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_repeated_process_inbox_does_not_double_record_contribution()"
     },
     {
@@ -4143,7 +4213,7 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_seeded_processed_message_ids_skip_assignment_without_contribution",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_seeded_processed_message_ids_skip_assignment_without_contribution()"
     },
     {
@@ -4153,7 +4223,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_contribution_is_recorded_only_after_validation",
-      "community": 5,
+      "community": 18,
       "norm_label": ".test_contribution_is_recorded_only_after_validation()"
     },
     {
@@ -4163,7 +4233,7 @@
       "source_location": "L274",
       "_origin": "ast",
       "id": "tests_test_node_service_service",
-      "community": 5,
+      "community": 18,
       "norm_label": "_service()"
     },
     {
@@ -4173,7 +4243,7 @@
       "source_location": "L298",
       "_origin": "ast",
       "id": "tests_test_node_service_assignment",
-      "community": 5,
+      "community": 18,
       "norm_label": "_assignment()"
     },
     {
@@ -4303,7 +4373,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests",
-      "community": 0,
+      "community": 3,
       "norm_label": "localrunnertests"
     },
     {
@@ -4313,7 +4383,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests_test_echo_job_completes_and_serializes_expected_shape",
-      "community": 0,
+      "community": 3,
       "norm_label": ".test_echo_job_completes_and_serializes_expected_shape()"
     },
     {
@@ -4323,7 +4393,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests_test_unsupported_job_type_fails_predictably",
-      "community": 0,
+      "community": 3,
       "norm_label": ".test_unsupported_job_type_fails_predictably()"
     },
     {
@@ -4333,7 +4403,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests_test_text_stats_job_completes_with_deterministic_output",
-      "community": 0,
+      "community": 3,
       "norm_label": ".test_text_stats_job_completes_with_deterministic_output()"
     },
     {
@@ -4343,7 +4413,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests_test_text_stats_empty_text_completes_deterministically",
-      "community": 0,
+      "community": 3,
       "norm_label": ".test_text_stats_empty_text_completes_deterministically()"
     },
     {
@@ -4353,7 +4423,7 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "tests_test_runner_localrunnertests_test_text_stats_malformed_payload_fails_predictably",
-      "community": 0,
+      "community": 3,
       "norm_label": ".test_text_stats_malformed_payload_fails_predictably()"
     },
     {
@@ -4363,7 +4433,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_scheduler",
-      "community": 15,
+      "community": 12,
       "norm_label": "test_scheduler.py"
     },
     {
@@ -4603,7 +4673,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_validation",
-      "community": 12,
+      "community": 3,
       "norm_label": "test_validation.py"
     },
     {
@@ -5072,9 +5142,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L424",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli",
-      "target": "aethermesh_core_cli_node_artifact_filename",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_node_artifact_filename"
     },
     {
       "relation": "contains",
@@ -5082,9 +5152,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L420",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli",
-      "target": "aethermesh_core_cli_node_artifact_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_node_artifact_path"
     },
     {
       "relation": "contains",
@@ -5142,9 +5212,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L330",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli",
-      "target": "aethermesh_core_cli_run_local_flow",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_run_local_flow"
     },
     {
       "relation": "contains",
@@ -5478,9 +5548,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L229",
+      "source_location": "L231",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_229",
+      "source": "aethermesh_core_cli_rationale_231",
       "target": "aethermesh_core_cli_run_default_local_simulation",
       "confidence_score": 1.0
     },
@@ -5521,9 +5591,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L251",
+      "source_location": "L253",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_251",
+      "source": "aethermesh_core_cli_rationale_253",
       "target": "aethermesh_core_cli_run_local_batch",
       "confidence_score": 1.0
     },
@@ -5663,9 +5733,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L303",
+      "source_location": "L305",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_303",
+      "source": "aethermesh_core_cli_rationale_305",
       "target": "aethermesh_core_cli_dispatch_local_batch_command",
       "confidence_score": 1.0
     },
@@ -5676,9 +5746,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L357",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
-      "target": "aethermesh_core_cli_dispatch_local_batch_command",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_dispatch_local_batch_command"
     },
     {
       "relation": "calls",
@@ -5695,9 +5765,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L324",
+      "source_location": "L326",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_324",
+      "source": "aethermesh_core_cli_rationale_326",
       "target": "aethermesh_core_cli_summarize_ledger",
       "confidence_score": 1.0
     },
@@ -5708,9 +5778,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L394",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
-      "target": "aethermesh_core_cli_summarize_ledger",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_summarize_ledger"
     },
     {
       "relation": "calls",
@@ -5730,17 +5800,17 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L628",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_main",
-      "target": "aethermesh_core_cli_run_local_flow",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_run_local_flow"
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L331",
+      "source_location": "L333",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_331",
+      "source": "aethermesh_core_cli_rationale_333",
       "target": "aethermesh_core_cli_run_local_flow",
       "confidence_score": 1.0
     },
@@ -5751,9 +5821,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L354",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
-      "target": "aethermesh_core_cli_node_artifact_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_node_artifact_path"
     },
     {
       "relation": "calls",
@@ -5762,9 +5832,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L365",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
-      "target": "aethermesh_core_cli_process_local_inbox",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_process_local_inbox"
     },
     {
       "relation": "calls",
@@ -5794,6 +5864,50 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L409",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_flow",
+      "target": "aethermesh_core_message_log_build_flow_message_log_document"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L410",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_flow",
+      "target": "aethermesh_core_message_log_load_message_log_messages"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L399",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_flow",
+      "target": "aethermesh_core_message_log_load_worker_emitted_messages"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
+      "source_location": "L423",
+      "weight": 1.0,
+      "source": "aethermesh_core_cli_run_local_flow",
+      "target": "aethermesh_core_message_log_write_message_log"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L353",
       "weight": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
@@ -5806,9 +5920,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L334",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_run_local_flow",
-      "target": "path",
-      "confidence_score": 1.0
+      "target": "path"
     },
     {
       "relation": "calls",
@@ -5817,9 +5931,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L421",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_node_artifact_path",
-      "target": "aethermesh_core_cli_node_artifact_filename",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_cli_node_artifact_filename"
     },
     {
       "relation": "references",
@@ -5828,9 +5942,9 @@
       "source_file": "src/aethermesh_core/cli.py",
       "source_location": "L420",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_cli_node_artifact_path",
-      "target": "path",
-      "confidence_score": 1.0
+      "target": "path"
     },
     {
       "relation": "references",
@@ -5933,6 +6047,17 @@
     },
     {
       "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_build_flow_message_log_document",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
@@ -5958,11 +6083,33 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_message_log_document",
+      "target": "path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L47",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_message_log_load_message_log_messages",
       "target": "path"
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "target": "path",
+      "confidence_score": 1.0
     },
     {
       "relation": "references",
@@ -6067,9 +6214,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L425",
+      "source_location": "L455",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_425",
+      "source": "aethermesh_core_cli_rationale_455",
       "target": "aethermesh_core_cli_node_artifact_filename",
       "confidence_score": 1.0
     },
@@ -6264,9 +6411,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/cli.py",
-      "source_location": "L440",
+      "source_location": "L470",
       "weight": 1.0,
-      "source": "aethermesh_core_cli_rationale_440",
+      "source": "aethermesh_core_cli_rationale_470",
       "target": "aethermesh_core_cli_process_local_inbox",
       "confidence_score": 1.0
     },
@@ -7282,6 +7429,17 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_build_flow_message_log_document",
+      "target": "any",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L20",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -7298,6 +7456,17 @@
       "confidence_score": 1.0,
       "source": "aethermesh_core_message_log_build_replayed_message_log_document",
       "target": "any"
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_message_log_document",
+      "target": "any",
+      "confidence_score": 1.0
     },
     {
       "relation": "references",
@@ -10057,6 +10226,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log",
+      "target": "aethermesh_core_message_log_build_flow_message_log_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L20",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10077,11 +10256,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L228",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log",
+      "target": "aethermesh_core_message_log_load_message_log_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L47",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_message_log",
       "target": "aethermesh_core_message_log_load_message_log_messages"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log",
+      "target": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -10203,11 +10402,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L231",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_message_log_document",
+      "target": "aethermesh_core_message_log_messagelogpersistenceerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L56",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_message_log_load_message_log_messages",
       "target": "aethermesh_core_message_log_messagelogpersistenceerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L179",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "target": "aethermesh_core_message_log_messagelogpersistenceerror",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -10402,6 +10623,17 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L279",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
+      "target": "aethermesh_core_message_log_build_replayed_message_log_document"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L106",
       "weight": 1.0,
@@ -10479,6 +10711,60 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L155",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_build_flow_message_log_document",
+      "target": "aethermesh_core_message_log_message_to_document_entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_build_flow_message_log_document",
+      "target": "aethermesh_core_messages_meshmessage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L125",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_rationale_125",
+      "target": "aethermesh_core_message_log_build_flow_message_log_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order",
+      "target": "aethermesh_core_message_log_build_flow_message_log_document"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_message_log_messages",
+      "target": "aethermesh_core_message_log_load_message_log_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
       "source_location": "L76",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10500,11 +10786,11 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L111",
+      "source_location": "L160",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "aethermesh_core_message_log_rationale_111",
-      "target": "aethermesh_core_message_log_load_message_log_messages"
+      "source": "aethermesh_core_message_log_rationale_160",
+      "target": "aethermesh_core_message_log_load_message_log_messages",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -10584,14 +10870,68 @@
       "target": "aethermesh_core_message_log_load_message_log_messages"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "target": "aethermesh_core_message_log_load_message_log_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L193",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "target": "aethermesh_core_message_log_message_from_document_entry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "generic_arg",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "target": "aethermesh_core_messages_meshmessage",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/message_log.py",
-      "source_location": "L144",
+      "source_location": "L174",
       "weight": 1.0,
+      "source": "aethermesh_core_message_log_rationale_174",
+      "target": "aethermesh_core_message_log_load_worker_emitted_messages",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source": "aethermesh_core_message_log_rationale_144",
-      "target": "aethermesh_core_message_log_write_message_log"
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L287",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
+      "target": "aethermesh_core_message_log_load_worker_emitted_messages"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/message_log.py",
+      "source_location": "L203",
+      "weight": 1.0,
+      "source": "aethermesh_core_message_log_rationale_203",
+      "target": "aethermesh_core_message_log_write_message_log",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -10603,6 +10943,17 @@
       "confidence_score": 1.0,
       "source": "aethermesh_core_message_log_write_message_log",
       "target": "aethermesh_core_message_log_remove_temp_file"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L277",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
+      "target": "aethermesh_core_message_log_write_message_log"
     },
     {
       "relation": "calls",
@@ -10937,9 +11288,31 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/test_message_log.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order",
+      "target": "aethermesh_core_messages_meshmessage"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_message_log.py",
       "source_location": "L87",
       "weight": 1.0,
       "source": "tests_test_message_log_messagelogtests_test_build_replayed_message_log_document_appends_emitted_messages",
+      "target": "aethermesh_core_messages_meshmessage"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L248",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
       "target": "aethermesh_core_messages_meshmessage"
     },
     {
@@ -15918,9 +16291,9 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L1819",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_flow_happy_path_with_example_manifest",
-      "confidence_score": 1.0
+      "target": "tests_test_cli_clitests_test_run_local_flow_happy_path_with_example_manifest"
     },
     {
       "relation": "method",
@@ -15928,9 +16301,9 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L1953",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch",
-      "confidence_score": 1.0
+      "target": "tests_test_cli_clitests_test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch"
     },
     {
       "relation": "method",
@@ -15938,9 +16311,9 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L1914",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_flow_rerun_is_idempotent_with_node_state",
-      "confidence_score": 1.0
+      "target": "tests_test_cli_clitests_test_run_local_flow_rerun_is_idempotent_with_node_state"
     },
     {
       "relation": "method",
@@ -15948,9 +16321,9 @@
       "source_file": "tests/test_cli.py",
       "source_location": "L1868",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_cli_clitests",
-      "target": "tests_test_cli_clitests_test_run_local_flow_skips_offline_nodes_but_reports_them",
-      "confidence_score": 1.0
+      "target": "tests_test_cli_clitests_test_run_local_flow_skips_offline_nodes_but_reports_them"
     },
     {
       "relation": "method",
@@ -16878,6 +17251,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_message_log.py",
+      "source_location": "L174",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests",
+      "target": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_message_log.py",
       "source_location": "L16",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -16963,6 +17346,16 @@
       "confidence_score": 1.0,
       "source": "tests_test_message_log_messagelogtests",
       "target": "tests_test_message_log_messagelogtests_test_load_message_log_messages_returns_validated_messages_without_writing"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_message_log.py",
+      "source_location": "L246",
+      "weight": 1.0,
+      "source": "tests_test_message_log_messagelogtests",
+      "target": "tests_test_message_log_messagelogtests_test_load_worker_emitted_messages_skips_replayed_dispatch_messages",
+      "confidence_score": 1.0
     },
     {
       "relation": "method",
@@ -18092,5 +18485,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "bf25c15bd86eb05abbc9c66d1f09617429be227b"
+  "built_at_commit": "c84991c27ea55b5d5ba2f53c3982848594fb8790"
 }
