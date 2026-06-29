@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from aethermesh_core.models import Job, JobResult
+from aethermesh_core.runner import build_text_stats_output
 
 
 @dataclass(frozen=True)
@@ -26,28 +27,46 @@ class ValidationResult:
 def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
     """Validate a reported result against the assigned local job.
 
-    The current prototype intentionally validates only the local ``echo``
-    workload. Unsupported job types, failed results, mismatched job ids, missing
-    echo messages, and mismatched outputs remain auditable but are invalid for
-    contribution credit.
+    The current prototype intentionally validates only hardcoded local
+    workloads. Unsupported job types, failed results, mismatched job ids,
+    malformed payloads, and mismatched outputs remain auditable but are invalid
+    for contribution credit.
     """
 
-    if job.job_type != "echo":
+    if job.job_type not in {"echo", "text_stats"}:
         return _invalid(job, result, "unsupported_job_type")
     if result.status != "completed":
         return _invalid(job, result, "result_not_completed")
     if result.job_id != job.job_id:
         return _invalid(job, result, "job_id_mismatch")
-    if "message" not in job.payload or not isinstance(job.payload["message"], str):
-        return _invalid(job, result, "missing_payload_message")
-    if result.output != job.payload["message"]:
-        return _invalid(job, result, "output_mismatch")
-    return ValidationResult(
-        job_id=job.job_id,
-        result_job_id=result.job_id,
-        valid=True,
-        reason="ok",
-    )
+    if result.contribution_units != 1:
+        return _invalid(job, result, "unexpected_contribution_units")
+
+    if job.job_type == "echo":
+        if "message" not in job.payload or not isinstance(job.payload["message"], str):
+            return _invalid(job, result, "missing_payload_message")
+        if result.output != job.payload["message"]:
+            return _invalid(job, result, "output_mismatch")
+        return ValidationResult(
+            job_id=job.job_id,
+            result_job_id=result.job_id,
+            valid=True,
+            reason="ok",
+        )
+
+    if job.job_type == "text_stats":
+        if "text" not in job.payload or not isinstance(job.payload["text"], str):
+            return _invalid(job, result, "missing_payload_text")
+        if result.output != build_text_stats_output(job.payload["text"]):
+            return _invalid(job, result, "output_mismatch")
+        return ValidationResult(
+            job_id=job.job_id,
+            result_job_id=result.job_id,
+            valid=True,
+            reason="ok",
+        )
+
+    return _invalid(job, result, "unsupported_job_type")
 
 
 def _invalid(job: Job, result: JobResult, reason: str) -> ValidationResult:
