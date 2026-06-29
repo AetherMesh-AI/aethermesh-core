@@ -107,6 +107,55 @@ def build_dispatch_message_log_document(
     }
 
 
+def build_flow_message_log_document(
+    *,
+    dispatch_messages: list[MeshMessage],
+    emitted_messages_by_node: dict[str, list[MeshMessage]],
+    manifest_path: str | Path,
+    dispatch_message_log_path: str | Path,
+    ledger_path: str | Path,
+    worker_message_log_paths: dict[str, str | Path],
+    available_node_ids: list[str],
+    offline_node_ids: list[str],
+    processed_node_ids: list[str],
+    processed_assignment_count: int,
+    skipped_processed_assignment_count: int,
+    total_contribution_units: int,
+) -> dict[str, Any]:
+    """Build a deterministic version 1 run-level local flow message log."""
+
+    emitted_messages = [
+        message
+        for node_id in available_node_ids
+        for message in emitted_messages_by_node.get(node_id, [])
+    ]
+    messages = [*dispatch_messages, *emitted_messages]
+    return {
+        "version": 1,
+        "metadata": {
+            "source": "run-local-flow",
+            "manifest_path": str(manifest_path),
+            "dispatch_message_log_path": str(dispatch_message_log_path),
+            "ledger_path": str(ledger_path),
+            "worker_message_log_paths": {
+                node_id: str(worker_message_log_paths[node_id])
+                for node_id in available_node_ids
+                if node_id in worker_message_log_paths
+            },
+            "available_node_ids": list(available_node_ids),
+            "offline_node_ids": list(offline_node_ids),
+            "processed_node_ids": list(processed_node_ids),
+            "processed_assignment_count": processed_assignment_count,
+            "skipped_processed_assignment_count": skipped_processed_assignment_count,
+            "total_contribution_units": total_contribution_units,
+            "dispatch_message_count": len(dispatch_messages),
+            "emitted_message_count": len(emitted_messages),
+            "message_count": len(messages),
+        },
+        "messages": [_message_to_document_entry(message) for message in messages],
+    }
+
+
 def load_message_log_messages(path: str | Path) -> list[MeshMessage]:
     """Load validated MeshMessage entries from a version 1 local message log.
 
@@ -114,30 +163,40 @@ def load_message_log_messages(path: str | Path) -> list[MeshMessage]:
     or normalizes the message log document it loads.
     """
 
-    log_path = Path(path)
-    if not log_path.exists():
-        raise MessageLogPersistenceError(f"message log file does not exist: {log_path}")
-
-    try:
-        with log_path.open("r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except json.JSONDecodeError as exc:
-        raise MessageLogPersistenceError(f"message log JSON is malformed: {exc.msg}") from exc
-    except OSError as exc:
-        raise MessageLogPersistenceError(f"could not read message log file: {exc}") from exc
-
-    if not isinstance(document, dict):
-        raise MessageLogPersistenceError("message log JSON must be an object")
-    if document.get("version") != 1:
-        raise MessageLogPersistenceError("message log JSON must contain version 1")
-    entries = document.get("messages")
-    if not isinstance(entries, list):
-        raise MessageLogPersistenceError("message log JSON field 'messages' must be a list")
-
+    document = _load_message_log_document(path)
     messages: list[MeshMessage] = []
-    for index, entry in enumerate(entries):
+    for index, entry in enumerate(document["messages"]):
         messages.append(_message_from_document_entry(entry, index))
     return messages
+
+
+def load_worker_emitted_messages(path: str | Path) -> list[MeshMessage]:
+    """Load only post-replay worker-emitted messages from a worker message log."""
+
+    document = _load_message_log_document(path)
+    metadata = document.get("metadata")
+    if not isinstance(metadata, dict):
+        raise MessageLogPersistenceError("message log JSON field 'metadata' must be an object")
+    replayed_message_count = metadata.get("replayed_message_count")
+    if not isinstance(replayed_message_count, int) or replayed_message_count < 0:
+        raise MessageLogPersistenceError(
+            "message log metadata field 'replayed_message_count' must be a non-negative integer"
+        )
+    entries = document["messages"]
+    if replayed_message_count > len(entries):
+        raise MessageLogPersistenceError(
+            "message log metadata field 'replayed_message_count' exceeds message count"
+        )
+
+    emitted: list[MeshMessage] = []
+    for index, entry in enumerate(entries[replayed_message_count:], replayed_message_count):
+        message = _message_from_document_entry(entry, index)
+        if message.message_type not in {"job_result_reported", "contribution_recorded"}:
+            raise MessageLogPersistenceError(
+                "worker emitted message log entries must be job_result_reported or contribution_recorded"
+            )
+        emitted.append(message)
+    return emitted
 
 
 def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
@@ -164,6 +223,29 @@ def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
         if temp_name is not None:
             _remove_temp_file(temp_name)
         raise MessageLogPersistenceError(f"could not write message log file: {exc}") from exc
+
+
+def _load_message_log_document(path: str | Path) -> dict[str, Any]:
+    log_path = Path(path)
+    if not log_path.exists():
+        raise MessageLogPersistenceError(f"message log file does not exist: {log_path}")
+
+    try:
+        with log_path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise MessageLogPersistenceError(f"message log JSON is malformed: {exc.msg}") from exc
+    except OSError as exc:
+        raise MessageLogPersistenceError(f"could not read message log file: {exc}") from exc
+
+    if not isinstance(document, dict):
+        raise MessageLogPersistenceError("message log JSON must be an object")
+    if document.get("version") != 1:
+        raise MessageLogPersistenceError("message log JSON must contain version 1")
+    entries = document.get("messages")
+    if not isinstance(entries, list):
+        raise MessageLogPersistenceError("message log JSON field 'messages' must be a list")
+    return document
 
 
 def _message_to_document_entry(message: MeshMessage) -> dict[str, Any]:
