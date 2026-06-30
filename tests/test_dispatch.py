@@ -164,6 +164,7 @@ class DispatchTests(unittest.TestCase):
             )
 
         self.assertIn("job_id=stats-1 job_type=text_stats", str(cm.exception))
+
     def test_dispatch_peer_command_metadata_uses_peer_command_name(self) -> None:
         result = dispatch_local_batch(
             manifest_path="jobs.json",
@@ -180,20 +181,30 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(payload["peer_log_path"], "peers.json")
         self.assertEqual(payload["assigned_node_ids"], ["node-a"])
 
-    def test_dispatch_with_peer_derived_offline_node_skips_offline_assignments(self) -> None:
+    def test_dispatch_with_peer_derived_offline_node_skips_offline_assignments(
+        self,
+    ) -> None:
         result = dispatch_local_batch(
             manifest_path="jobs.json",
             message_log_path="dispatch.json",
             nodes=[
-                ScheduledNode("node-a", status=NodeStatus.OFFLINE, capabilities=("echo",)),
+                ScheduledNode(
+                    "node-a", status=NodeStatus.OFFLINE, capabilities=("echo",)
+                ),
                 ScheduledNode("node-b", capabilities=("echo",)),
             ],
             jobs=[Job(job_id="echo-1", job_type="echo", payload={})],
         )
 
-        self.assertEqual([assignment.node_id for assignment in result.assignments], ["node-b"])
         self.assertEqual(
-            [message.sender_node_id for message in result.messages if message.message_type == "node_heartbeat"],
+            [assignment.node_id for assignment in result.assignments], ["node-b"]
+        )
+        self.assertEqual(
+            [
+                message.sender_node_id
+                for message in result.messages
+                if message.message_type == "node_heartbeat"
+            ],
             ["node-b"],
         )
 

@@ -14,7 +14,11 @@ from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
-from aethermesh_core.job_manifest import ManifestError, load_job_manifest, load_manifest_jobs
+from aethermesh_core.job_manifest import (
+    ManifestError,
+    load_job_manifest,
+    load_manifest_jobs,
+)
 from aethermesh_core.ledger import (
     ContributionLedger,
     LedgerPersistenceError,

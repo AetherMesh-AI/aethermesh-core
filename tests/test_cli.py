@@ -1537,7 +1537,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("manifest JSON is malformed", stderr.getvalue())
         self.assertFalse(message_log_path.exists())
 
-    def test_dispatch_peer_batch_uses_peer_log_roster_and_ignores_manifest_nodes(self) -> None:
+    def test_dispatch_peer_batch_uses_peer_log_roster_and_ignores_manifest_nodes(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             peer_log_path = Path(temp_dir) / "peer-heartbeats.json"
@@ -1646,7 +1648,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["manifest-node"],
                         "jobs": [
-                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {}}
+                            {
+                                "job_id": "stats-1",
+                                "job_type": "text_stats",
+                                "payload": {},
+                            }
                         ],
                     }
                 ),
@@ -1714,7 +1720,9 @@ class CliTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            peer_log_path.write_text(json.dumps({"version": 1, "messages": []}), encoding="utf-8")
+            peer_log_path.write_text(
+                json.dumps({"version": 1, "messages": []}), encoding="utf-8"
+            )
             stdout = io.StringIO()
             stderr = io.StringIO()
 

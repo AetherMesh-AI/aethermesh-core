@@ -3,7 +3,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.job_manifest import ManifestError, load_job_manifest, load_manifest_jobs
+from aethermesh_core.job_manifest import (
+    ManifestError,
+    load_job_manifest,
+    load_manifest_jobs,
+)
 from aethermesh_core.scheduler import NodeStatus
 
 

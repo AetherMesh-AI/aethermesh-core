@@ -104,7 +104,9 @@ def scheduled_nodes_from_peer_log(message_log_path: str | Path) -> list[Schedule
                 f"peer summary peers[{index}].node_id must be a non-empty string"
             )
         if not isinstance(status_value, str):
-            raise PeerRegistryError(f"peer summary peers[{index}].status must be a string")
+            raise PeerRegistryError(
+                f"peer summary peers[{index}].status must be a string"
+            )
         try:
             status = NodeStatus(status_value)
         except ValueError as exc:
