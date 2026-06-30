@@ -39,6 +39,7 @@ from aethermesh_core.message_log import (
 )
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, NodeIdentity
+from aethermesh_core.node_announcement import NodeAnnouncementError, announce_local_node
 from aethermesh_core.node_service import InboxProcessResult, LocalNodeService
 from aethermesh_core.node_state import (
     LocalNodeProcessingState,
@@ -54,6 +55,7 @@ from aethermesh_core.receipts import (
     write_receipt_document,
 )
 from aethermesh_core.runner import LocalRunner
+from aethermesh_core.scheduler import NodeStatus
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
 
@@ -184,6 +186,33 @@ def build_parser() -> argparse.ArgumentParser:
         "--message-log-path",
         required=True,
         help="Path to an existing version 1 local message log.",
+    )
+
+    announce = subcommands.add_parser(
+        "announce-local-node",
+        help="Write one local node heartbeat announcement message log.",
+    )
+    announce.add_argument(
+        "--node-id",
+        required=True,
+        help="Local node id to announce.",
+    )
+    announce.add_argument(
+        "--message-log-path",
+        required=True,
+        help="New path to write the version 1 local announcement message log.",
+    )
+    announce.add_argument(
+        "--status",
+        default=NodeStatus.AVAILABLE.value,
+        choices=[status.value for status in NodeStatus],
+        help="Local node status to announce. Defaults to available.",
+    )
+    announce.add_argument(
+        "--capability",
+        action="append",
+        default=None,
+        help="Capability to announce. May be supplied multiple times; defaults to local capabilities.",
     )
 
     materialize = subcommands.add_parser(
@@ -820,6 +849,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             payload = summarize_peers(args.message_log_path)
         except PeerRegistryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "announce-local-node":
+        try:
+            payload = announce_local_node(
+                node_id=args.node_id,
+                message_log_path=args.message_log_path,
+                status=args.status,
+                capabilities=args.capability,
+            )
+        except NodeAnnouncementError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
