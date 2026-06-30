@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,63 @@ def peer_summary_document(message_log_path: str | Path) -> dict[str, object]:
 
     return {
         "peers": [peers[node_id].to_dict() for node_id in sorted(peers)],
+    }
+
+
+def peer_roster_document(message_log_paths: Sequence[str | Path]) -> dict[str, object]:
+    """Build a manifest-compatible node roster from heartbeat message logs.
+
+    The source message logs are read only. Only valid ``node_heartbeat`` messages
+    affect the roster; every other valid message type is ignored. Duplicate
+    heartbeats merge by node id using the highest heartbeat sequence, with later
+    messages winning ties after processing paths in caller-provided order.
+    """
+
+    if len(message_log_paths) == 0:
+        raise PeerRegistryError("at least one message log path is required")
+
+    selected: dict[str, PeerSummary] = {}
+    heartbeat_counts_by_node: dict[str, int] = {}
+    for message_log_path in message_log_paths:
+        try:
+            messages = load_message_log_messages(message_log_path)
+        except MessageLogPersistenceError as exc:
+            raise PeerRegistryError(str(exc)) from exc
+
+        for message in messages:
+            if message.message_type != "node_heartbeat":
+                continue
+            heartbeat = _parse_heartbeat(message)
+            heartbeat_counts_by_node[heartbeat.node_id] = (
+                heartbeat_counts_by_node.get(heartbeat.node_id, 0) + 1
+            )
+            current = selected.get(heartbeat.node_id)
+            if (
+                current is None
+                or heartbeat.last_heartbeat_sequence >= current.last_heartbeat_sequence
+            ):
+                selected[heartbeat.node_id] = heartbeat
+
+    sorted_node_ids = sorted(selected)
+    return {
+        "version": 1,
+        "nodes": [
+            {
+                "node_id": node_id,
+                "status": selected[node_id].status,
+                "capabilities": list(selected[node_id].capabilities),
+            }
+            for node_id in sorted_node_ids
+        ],
+        "metadata": {
+            "source_message_log_paths": [str(path) for path in message_log_paths],
+            "peer_count": len(selected),
+            "heartbeat_count": sum(heartbeat_counts_by_node.values()),
+            "heartbeat_counts_by_node": {
+                node_id: heartbeat_counts_by_node[node_id]
+                for node_id in sorted(heartbeat_counts_by_node)
+            },
+        },
     }
 
 

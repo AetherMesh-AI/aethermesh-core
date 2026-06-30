@@ -23,6 +23,7 @@ class CliTests(unittest.TestCase):
             "audit-local-flow",
             "ledger-summary",
             "peer-summary",
+            "build-peer-roster",
             "announce-local-node",
             "materialize-local-inboxes",
             "process-local-inbox",
@@ -86,6 +87,23 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(peers.command, "peer-summary")
         self.assertEqual(peers.message_log_path, "messages.json")
+
+        roster = parser.parse_args(
+            [
+                "build-peer-roster",
+                "--message-log-path",
+                "announce-a.json",
+                "--message-log-path",
+                "flow-message-log.json",
+                "--output-path",
+                "roster.json",
+            ]
+        )
+        self.assertEqual(roster.command, "build-peer-roster")
+        self.assertEqual(
+            roster.message_log_path, ["announce-a.json", "flow-message-log.json"]
+        )
+        self.assertEqual(roster.output_path, "roster.json")
 
         announcement = parser.parse_args(
             [
@@ -157,7 +175,7 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,build-peer-roster,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,build-peer-roster,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. build-peer-roster Build a local manifest-compatible peer roster from heartbeat message logs. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
@@ -170,6 +188,7 @@ class CliTests(unittest.TestCase):
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
                 "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
                 "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
+                "build-peer-roster": "usage: aethermesh-core build-peer-roster [-h] --message-log-path MESSAGE_LOG_PATH [--output-path OUTPUT_PATH] options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log. May be supplied multiple times. --output-path OUTPUT_PATH Optional path to atomically write the roster JSON after validation.",
                 "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
                 "materialize-local-inboxes": "usage: aethermesh-core materialize-local-inboxes [-h] --message-log-path MESSAGE_LOG_PATH --transport-dir TRANSPORT_DIR options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to a version 1 local dispatch/message log. --transport-dir TRANSPORT_DIR Directory where per-node local transport inboxes should be written.",
                 "process-local-inbox": "usage: aethermesh-core process-local-inbox [-h] --node-id NODE_ID [--message-log-path MESSAGE_LOG_PATH] [--transport-dir TRANSPORT_DIR] [--ledger-path LEDGER_PATH] [--output-message-log-path OUTPUT_MESSAGE_LOG_PATH] [--node-state-path NODE_STATE_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Local node id whose replayed inbox should be processed. --message-log-path MESSAGE_LOG_PATH Path to a version 1 local message log produced by run-local-batch. --transport-dir TRANSPORT_DIR Read this node's file-backed local transport inbox instead of a message log. --ledger-path LEDGER_PATH Opt in to persisting validation-gated contribution records. --output-message-log-path OUTPUT_MESSAGE_LOG_PATH Opt in to writing replayed plus emitted worker messages as a local message log. --node-state-path NODE_STATE_PATH Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
@@ -1629,6 +1648,183 @@ class CliTests(unittest.TestCase):
         self.assertIn("heartbeat_sequence", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(contents, original)
+
+    def test_build_peer_roster_prints_stable_manifest_compatible_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_log = Path(temp_dir) / "announce-a.json"
+            second_log = Path(temp_dir) / "flow-message-log.json"
+            first_log.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "job_assigned",
+                                "sender_node_id": "local-scheduler",
+                                "recipient_node_id": "node-b",
+                                "payload": {"job_id": "echo-1"},
+                                "correlation_id": "echo-1",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            second_log.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0003",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 2,
+                                    "capabilities": ["text_stats", "echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0004",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "offline",
+                                    "heartbeat_sequence": 3,
+                                    "capabilities": ["keyword_extract"],
+                                },
+                                "correlation_id": None,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "build-peer-roster",
+                        "--message-log-path",
+                        str(first_log),
+                        "--message-log-path",
+                        str(second_log),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(stdout.getvalue().startswith("{\n"))
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "version": 1,
+                "nodes": [
+                    {
+                        "node_id": "node-a",
+                        "status": "available",
+                        "capabilities": ["text_stats", "echo"],
+                    },
+                    {
+                        "node_id": "node-b",
+                        "status": "offline",
+                        "capabilities": ["keyword_extract"],
+                    },
+                ],
+                "metadata": {
+                    "source_message_log_paths": [str(first_log), str(second_log)],
+                    "peer_count": 2,
+                    "heartbeat_count": 3,
+                    "heartbeat_counts_by_node": {"node-a": 1, "node-b": 2},
+                },
+            },
+        )
+
+    def test_build_peer_roster_output_path_writes_after_validation_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            valid_log_path = Path(temp_dir) / "valid.json"
+            invalid_log_path = Path(temp_dir) / "invalid.json"
+            roster_path = Path(temp_dir) / "roster.json"
+            valid_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                },
+                                "correlation_id": None,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            invalid_log_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "build-peer-roster",
+                        "--message-log-path",
+                        str(valid_log_path),
+                        "--output-path",
+                        str(roster_path),
+                    ]
+                )
+            written = json.loads(roster_path.read_text(encoding="utf-8"))
+            roster_path.write_text("sentinel", encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+                stderr
+            ):
+                failure_exit_code = main(
+                    [
+                        "build-peer-roster",
+                        "--message-log-path",
+                        str(valid_log_path),
+                        "--message-log-path",
+                        str(invalid_log_path),
+                        "--output-path",
+                        str(roster_path),
+                    ]
+                )
+            preserved = roster_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(json.loads(stdout.getvalue()), written)
+        self.assertEqual(failure_exit_code, 1)
+        self.assertIn("message log JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(preserved, "sentinel")
 
     def test_process_local_inbox_consumes_dispatch_log(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

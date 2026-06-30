@@ -14,6 +14,7 @@ from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
+from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.ledger import (
     ContributionLedger,
@@ -48,7 +49,11 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    peer_roster_document,
+    peer_summary_document,
+)
 from aethermesh_core.receipts import (
     ReceiptPersistenceError,
     build_receipt_document,
@@ -187,6 +192,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--message-log-path",
         required=True,
         help="Path to an existing version 1 local message log.",
+    )
+
+    peer_roster = subcommands.add_parser(
+        "build-peer-roster",
+        help="Build a local manifest-compatible peer roster from heartbeat message logs.",
+    )
+    peer_roster.add_argument(
+        "--message-log-path",
+        action="append",
+        required=True,
+        help="Path to an existing version 1 local message log. May be supplied multiple times.",
+    )
+    peer_roster.add_argument(
+        "--output-path",
+        default=None,
+        help="Optional path to atomically write the roster JSON after validation.",
     )
 
     announce = subcommands.add_parser(
@@ -442,6 +463,17 @@ def summarize_peers(message_log_path: str) -> dict[str, object]:
     """Load an existing message log and return a read-only peer roster."""
 
     return peer_summary_document(message_log_path)
+
+
+def build_peer_roster(
+    message_log_paths: Sequence[str], output_path: str | None = None
+) -> dict[str, object]:
+    """Build a manifest-compatible node roster from local heartbeat logs."""
+
+    payload = peer_roster_document(message_log_paths)
+    if output_path is not None:
+        atomic_write_json(Path(output_path), payload)
+    return payload
 
 
 def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
@@ -885,6 +917,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "build-peer-roster":
+        try:
+            payload = build_peer_roster(args.message_log_path, args.output_path)
+        except (PeerRegistryError, OSError, TypeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
     if args.command == "announce-local-node":
