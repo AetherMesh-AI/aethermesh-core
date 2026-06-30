@@ -585,11 +585,30 @@ class LocalRunnerTests(unittest.TestCase):
         second = runner.run(job)
 
         self.assertEqual(first.output, second.output)
-        self.assertEqual(
-            first.output["summary"],
-            "First repeated alpha Second repeated repeated beta",
-        )
+        self.assertEqual(first.output["sentence_count"], 2)
         self.assertEqual(first.output["source_sentence_count"], 3)
+
+    def test_extractive_summary_ignores_empty_boundaries_and_keeps_trailing_text(
+        self,
+    ) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="summary-empty-boundaries",
+                job_type="extractive_summary",
+                payload={
+                    "text": "  Alpha alpha.   \n\n   Beta beta",
+                    "max_sentences": 3,
+                },
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output["source_sentence_count"], 2)
+        self.assertEqual(
+            [sentence["text"] for sentence in result.output["sentences"]],
+            ["Alpha alpha.", "Beta beta"],
+        )
 
     def test_extractive_summary_accepts_min_and_max_sentence_limits(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))

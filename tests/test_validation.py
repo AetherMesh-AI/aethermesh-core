@@ -1,5 +1,6 @@
 import unittest
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.validation import validate_job_result
 
@@ -671,6 +672,68 @@ class ValidationTests(unittest.TestCase):
 
         self.assertTrue(validation.valid)
         self.assertEqual(validation.reason, "ok")
+
+    def test_extractive_summary_contribution_rejects_malformed_output_shapes(
+        self,
+    ) -> None:
+        job = Job(
+            job_id="summary-1",
+            job_type="extractive_summary",
+            payload={"text": "Alpha beta. Gamma gamma beta.", "max_sentences": 1},
+        )
+        base_output = {
+            "summary": "Gamma gamma beta.",
+            "sentences": [
+                {"index": 1, "text": "Gamma gamma beta.", "score": 6, "token_count": 3}
+            ],
+            "sentence_count": 1,
+            "source_sentence_count": 2,
+            "character_count": 29,
+        }
+        malformed_outputs = [
+            None,
+            {**base_output, "summary": None},
+            {**base_output, "sentences": "not-a-list"},
+            {**base_output, "sentence_count": -1},
+            {**base_output, "source_sentence_count": -1},
+            {**base_output, "character_count": -1},
+            {**base_output, "sentence_count": 2},
+            {**base_output, "source_sentence_count": 0},
+            {**base_output, "sentences": ["not-a-dict"]},
+            {
+                **base_output,
+                "sentences": [{**base_output["sentences"][0], "index": -1}],
+            },
+            {
+                **base_output,
+                "sentences": [{**base_output["sentences"][0], "text": 123}],
+            },
+            {
+                **base_output,
+                "sentences": [{**base_output["sentences"][0], "score": -1}],
+            },
+            {
+                **base_output,
+                "sentences": [{**base_output["sentences"][0], "token_count": -1}],
+            },
+        ]
+
+        for output in malformed_outputs:
+            with self.subTest(output=output):
+                self.assertEqual(
+                    score_validated_contribution(
+                        job,
+                        JobResult(
+                            job_id="summary-1",
+                            node_id="node-a",
+                            status="completed",
+                            output=output,
+                            error=None,
+                            contribution_units=0,
+                        ),
+                    ),
+                    0,
+                )
 
     def test_extractive_summary_rejects_changed_output(self) -> None:
         job = Job(
