@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.ledger import ContributionLedger, ContributionRecord
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
@@ -98,7 +99,10 @@ class LocalNodeService:
         job = _job_from_assignment_payload(message)
         result = self.runner.run(job)
         validation = validate_job_result(job, result)
-        accounted_result = result if validation.valid else replace(result, contribution_units=0)
+        credited_units = (
+            score_validated_contribution(job, result) if validation.valid else 0
+        )
+        accounted_result = replace(result, contribution_units=credited_units)
         record = self.ledger.record(
             accounted_result,
             validation_valid=validation.valid,
@@ -110,11 +114,12 @@ class LocalNodeService:
             message_type="job_result_reported",
             recipient_node_id=self.ledger_node_id,
             payload={
-                "job_id": result.job_id,
-                "status": result.status,
-                "success": result.status == "completed",
-                "output": result.output,
-                "error": result.error,
+                "job_id": accounted_result.job_id,
+                "status": accounted_result.status,
+                "success": accounted_result.status == "completed",
+                "output": accounted_result.output,
+                "error": accounted_result.error,
+                "contribution_units": accounted_result.contribution_units,
             },
             correlation_id=message.correlation_id or job.job_id,
         )
@@ -136,7 +141,7 @@ class LocalNodeService:
             message_id=message.message_id,
             correlation_id=message.correlation_id,
             job=job,
-            result=result,
+            result=accounted_result,
             validation=validation,
             contribution_record=record,
             emitted_messages=[result_message, contribution_message],

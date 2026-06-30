@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
@@ -259,7 +260,9 @@ def run_demo(
         return result_dict
 
     validation = validate_job_result(job, result)
-    record_result = result if validation.valid else replace(result, contribution_units=0)
+    credited_units = score_validated_contribution(job, result) if validation.valid else 0
+    record_result = replace(result, contribution_units=credited_units)
+    result_dict = record_result.to_dict()
     if ledger_path is None:
         ledger = ContributionLedger()
         ledger.record(

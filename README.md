@@ -102,7 +102,11 @@ A minimal manifest lists ordered local node IDs and ordered jobs. Node entries m
 }
 ```
 
-The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo`, deterministic `text_stats`, deterministic `keyword_extract`, deterministic `text_chunk`, and deterministic `text_embed` text-preprocessing results. The `text_chunk` workload accepts plain input text plus optional `max_chars` (default 120, range 1-1000), preserves input character order, prefers whitespace boundaries, and splits long continuous spans at the character limit. The `text_embed` workload is prototype-only deterministic local feature extraction, not a real semantic ML embedding model; it accepts non-empty text plus optional `dimensions` (default 8, range 2-64) and returns exact integer SHA-256 token-bucket counts such as `{"dimensions": 4, "token_count": 3, "unique_terms": 2, "vector": [0, 2, 1, 0]}`. Invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo`, deterministic `text_stats`, deterministic `keyword_extract`, deterministic `text_chunk`, and deterministic `text_embed` text-preprocessing results. Invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+
+Prototype contribution scoring is deterministic, integer-only, capped, and local-only. The current rules are intentionally simple: `echo` earns 1 unit; `text_stats` earns 1 base unit plus 1 unit per 100-character output bucket capped at 5; `keyword_extract` earns 1 base unit plus 1 unit per 5 extracted unique-keyword bucket capped at 5; `text_chunk` earns 1 base unit plus 1 unit per 2 emitted chunks capped at 5; and `text_embed` earns 1 base unit plus bounded token-count and vector-dimension bucket units capped at 6. These units are prototype accounting for local auditability only; they are not rewards, payments, reputation, tokenomics, payouts, or an economic fairness model.
+
+The `text_chunk` workload accepts plain input text plus optional `max_chars` (default 120, range 1-1000), preserves input character order, prefers whitespace boundaries, and splits long continuous spans at the character limit. The `text_embed` workload is prototype-only deterministic local feature extraction, not a real semantic ML embedding model; it accepts non-empty text plus optional `dimensions` (default 8, range 2-64) and returns exact integer SHA-256 token-bucket counts such as `{"dimensions": 4, "token_count": 3, "unique_terms": 2, "vector": [0, 2, 1, 0]}`.
 
 The local-only `node_roster` includes each node's `node_id`, `status`, assignment count, contribution units, and deterministic heartbeat metadata. `heartbeat_sequence` and `heartbeat_count` are in-memory simulation counters recorded when available nodes start a local run; they are not real network heartbeats or wall-clock liveness timestamps.
 
@@ -199,7 +203,7 @@ Run the unit tests without installing anything:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. Contribution units are fixed demo accounting only; rewards and token economics are out of scope.
+The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. When ledger output is requested, contribution units are assigned through the same validation-gated prototype scorer; rewards and token economics are out of scope.
 
 To reuse the same local demo node id across runs, pass `--identity-path` instead of `--node-id`:
 

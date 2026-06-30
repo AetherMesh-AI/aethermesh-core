@@ -55,7 +55,7 @@ class MessageLogTests(unittest.TestCase):
         self.assertEqual(first_document["metadata"]["job_count"], 2)
         self.assertEqual(first_document["metadata"]["completed_count"], 2)
         self.assertEqual(first_document["metadata"]["failed_count"], 0)
-        self.assertEqual(first_document["metadata"]["total_contribution_units"], 2)
+        self.assertEqual(first_document["metadata"]["total_contribution_units"], 3)
         self.assertEqual(first_document["metadata"]["job_ids"], ["echo-1", "text-stats-1"])
         self.assertEqual(
             [message["message_id"] for message in first_document["messages"]],

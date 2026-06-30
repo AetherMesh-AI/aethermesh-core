@@ -32,8 +32,8 @@ class FlowAuditTests(unittest.TestCase):
                     "flow_messages": 8,
                     "receipts": 2,
                     "ledger_records": 2,
-                    "total_contribution_units": 2,
-                    "credited_receipt_units": 2,
+                    "total_contribution_units": 3,
+                    "credited_receipt_units": 3,
                 },
             },
         )
