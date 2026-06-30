@@ -7,9 +7,12 @@ from pathlib import Path
 from aethermesh_core.local_transport import (
     LocalTransportError,
     load_local_inbox,
+    load_local_outbox,
     local_inbox_path,
+    local_outbox_path,
     materialize_local_inboxes,
     write_local_inbox,
+    write_local_outbox,
 )
 from aethermesh_core.messages import MeshMessage
 
@@ -288,6 +291,130 @@ class LocalTransportTests(unittest.TestCase):
                         write_local_inbox(transport_dir=temp_dir, **kwargs)
                     self.assertEqual(str(cm.exception), expected_message)
 
+    def test_write_and_load_local_outbox_preserves_order_and_quotes_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            node_id = "node/a b?c"
+            path = write_local_outbox(
+                transport_dir=temp_dir,
+                node_id=node_id,
+                messages=[
+                    _outbox_message("msg-0001", node_id),
+                    _outbox_message("msg-0002", node_id),
+                ],
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+            messages = load_local_outbox(transport_dir=temp_dir, node_id=node_id)
+
+        self.assertEqual(path.name, "node%2Fa%20b%3Fc.json")
+        self.assertEqual(path.parent.name, "outboxes")
+        self.assertEqual(
+            str(local_outbox_path(temp_dir, "node-._~")),
+            str(Path(temp_dir) / "outboxes" / "node-._~.json"),
+        )
+        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["node_id"], node_id)
+        self.assertEqual(
+            [message["message_id"] for message in document["messages"]],
+            ["msg-0001", "msg-0002"],
+        )
+        self.assertEqual(
+            [message.message_id for message in messages], ["msg-0001", "msg-0002"]
+        )
+
+    def test_write_and_load_empty_local_outbox(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_local_outbox(
+                transport_dir=temp_dir,
+                node_id="node-a",
+                messages=[],
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+            messages = load_local_outbox(transport_dir=temp_dir, node_id="node-a")
+
+        self.assertEqual(
+            document, {"version": 1, "node_id": "node-a", "messages": []}
+        )
+        self.assertEqual(messages, [])
+
+    def test_load_local_outbox_error_messages_are_stable(self) -> None:
+        valid_message = _outbox_message("msg-0001", "node-a").to_dict()
+        cases = [
+            (
+                {"version": True, "node_id": "node-a", "messages": []},
+                "local transport outbox JSON must contain version 1",
+            ),
+            (
+                {"version": 1, "node_id": "node-b", "messages": []},
+                "local transport outbox node_id mismatch: expected node-a, found node-b",
+            ),
+            (
+                {"version": 1, "node_id": "node-a", "messages": {}},
+                "local transport outbox field 'messages' must be a list",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [valid_message, valid_message],
+                },
+                "duplicate message_id in local transport outbox: msg-0001",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [_outbox_message("msg-0002", "node-b").to_dict()],
+                },
+                "local transport outbox entry 0 sender_node_id must be node-a",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [{"message_type": "job_result_reported"}],
+                },
+                "local transport outbox entry 0 is invalid: message_id must be a non-empty string",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = local_outbox_path(temp_dir, "node-a")
+            path.parent.mkdir(parents=True)
+            path.write_text("not-json", encoding="utf-8")
+            with self.assertRaisesRegex(LocalTransportError, "malformed"):
+                load_local_outbox(transport_dir=temp_dir, node_id="node-a")
+
+            path.write_text(json.dumps([]), encoding="utf-8")
+            with self.assertRaisesRegex(LocalTransportError, "must be an object"):
+                load_local_outbox(transport_dir=temp_dir, node_id="node-a")
+
+            for document, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(LocalTransportError) as cm:
+                        load_local_outbox(transport_dir=temp_dir, node_id="node-a")
+                    self.assertEqual(str(cm.exception), expected_message)
+
+    def test_write_local_outbox_error_messages_are_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            duplicate = _outbox_message("msg-0001", "node-a")
+            wrong_sender = _outbox_message("msg-0002", "node-b")
+            cases = [
+                ({"node_id": "", "messages": []}, "node_id must be a non-empty string"),
+                (
+                    {"node_id": "node-a", "messages": [duplicate, duplicate]},
+                    "duplicate message_id in local transport outbox: msg-0001",
+                ),
+                (
+                    {"node_id": "node-a", "messages": [wrong_sender]},
+                    "local transport outbox entry 0 sender_node_id must be node-a",
+                ),
+            ]
+            for kwargs, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    with self.assertRaises(LocalTransportError) as cm:
+                        write_local_outbox(transport_dir=temp_dir, **kwargs)
+                    self.assertEqual(str(cm.exception), expected_message)
+
 
 def _message(message_id: str, recipient: str) -> MeshMessage:
     return MeshMessage(
@@ -300,6 +427,17 @@ def _message(message_id: str, recipient: str) -> MeshMessage:
             "job_type": "echo",
             "payload": {"message": message_id},
         },
+        correlation_id=message_id,
+    )
+
+
+def _outbox_message(message_id: str, sender: str) -> MeshMessage:
+    return MeshMessage(
+        message_id=message_id,
+        message_type="job_result_reported",
+        sender_node_id=sender,
+        recipient_node_id="local-ledger",
+        payload={"job_id": message_id, "status": "completed"},
         correlation_id=message_id,
     )
 

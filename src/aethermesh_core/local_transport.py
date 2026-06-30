@@ -1,9 +1,9 @@
-"""File-backed local transport inboxes for addressed mesh messages.
+"""File-backed local transport inboxes/outboxes for mesh messages.
 
 Version 1 local transport inboxes live at ``<transport-dir>/inboxes/<node-id>.json``
-where ``<node-id>`` is URL-quoted for safe deterministic filenames. Empty inboxes
-are omitted: materialization writes files only for recipients with addressed
-messages in the source message log.
+and outboxes live at ``<transport-dir>/outboxes/<node-id>.json`` where
+``<node-id>`` is URL-quoted for safe deterministic filenames. Empty materialized
+inboxes are omitted, while explicit outbox writes may contain zero messages.
 """
 
 from __future__ import annotations
@@ -19,10 +19,11 @@ from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.messages import MeshMessage, message_from_mapping
 
 LOCAL_TRANSPORT_INBOX_VERSION = 1
+LOCAL_TRANSPORT_OUTBOX_VERSION = 1
 
 
 class LocalTransportError(ValueError):
-    """Raised when a file-backed local transport inbox cannot be loaded or saved."""
+    """Raised when a file-backed local transport artifact cannot be loaded or saved."""
 
 
 def materialize_local_inboxes(
@@ -123,11 +124,74 @@ def load_local_inbox(*, transport_dir: str | Path, node_id: str) -> list[MeshMes
     return messages
 
 
+def write_local_outbox(
+    *,
+    transport_dir: str | Path,
+    node_id: str,
+    messages: Iterable[MeshMessage],
+) -> Path:
+    """Write one version 1 local transport outbox with an atomic replace."""
+
+    _require_node_id(node_id)
+    message_list = list(messages)
+    _validate_unique_messages_from_node(node_id, message_list)
+    document: dict[str, Any] = {
+        "version": LOCAL_TRANSPORT_OUTBOX_VERSION,
+        "node_id": node_id,
+        "messages": [message.to_dict() for message in message_list],
+    }
+
+    path = local_outbox_path(transport_dir, node_id)
+    _write_outbox_document(path, document)
+    return path
+
+
+def load_local_outbox(*, transport_dir: str | Path, node_id: str) -> list[MeshMessage]:
+    """Load and validate only ``node_id``'s local transport outbox messages."""
+
+    _require_node_id(node_id)
+    path = local_outbox_path(transport_dir, node_id)
+    document = _load_outbox_document(path)
+    document_node_id = document.get("node_id")
+    if document_node_id != node_id:
+        raise LocalTransportError(
+            f"local transport outbox node_id mismatch: expected {node_id}, found {document_node_id}"
+        )
+    entries = document.get("messages")
+    if not isinstance(entries, list):
+        raise LocalTransportError(
+            "local transport outbox field 'messages' must be a list"
+        )
+
+    messages: list[MeshMessage] = []
+    seen_ids: set[str] = set()
+    for index, entry in enumerate(entries):
+        message = _message_from_outbox_entry(entry, index)
+        if message.message_id in seen_ids:
+            raise LocalTransportError(
+                f"duplicate message_id in local transport outbox: {message.message_id}"
+            )
+        seen_ids.add(message.message_id)
+        if message.sender_node_id != node_id:
+            raise LocalTransportError(
+                f"local transport outbox entry {index} sender_node_id must be {node_id}"
+            )
+        messages.append(message)
+    return messages
+
+
 def local_inbox_path(transport_dir: str | Path, node_id: str) -> Path:
     """Return the deterministic inbox path for ``node_id``."""
 
     _require_node_id(node_id)
     return Path(transport_dir) / "inboxes" / f"{quote(node_id, safe='-._~')}.json"
+
+
+def local_outbox_path(transport_dir: str | Path, node_id: str) -> Path:
+    """Return the deterministic outbox path for ``node_id``."""
+
+    _require_node_id(node_id)
+    return Path(transport_dir) / "outboxes" / f"{quote(node_id, safe='-._~')}.json"
 
 
 def _load_inbox_document(path: Path) -> dict[str, Any]:
@@ -153,12 +217,44 @@ def _load_inbox_document(path: Path) -> dict[str, Any]:
     return document
 
 
+def _load_outbox_document(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise LocalTransportError(f"local transport outbox file does not exist: {path}")
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise LocalTransportError(
+            f"local transport outbox JSON is malformed: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise LocalTransportError(
+            f"could not read local transport outbox: {exc}"
+        ) from exc
+
+    if not isinstance(document, dict):
+        raise LocalTransportError("local transport outbox JSON must be an object")
+    version = document.get("version")
+    if version != LOCAL_TRANSPORT_OUTBOX_VERSION or isinstance(version, bool):
+        raise LocalTransportError("local transport outbox JSON must contain version 1")
+    return document
+
+
 def _message_from_inbox_entry(entry: Any, index: int) -> MeshMessage:
     try:
         return message_from_mapping(entry)
     except ValueError as exc:
         raise LocalTransportError(
             f"local transport inbox entry {index} is invalid: {exc}"
+        ) from exc
+
+
+def _message_from_outbox_entry(entry: Any, index: int) -> MeshMessage:
+    try:
+        return message_from_mapping(entry)
+    except ValueError as exc:
+        raise LocalTransportError(
+            f"local transport outbox entry {index} is invalid: {exc}"
         ) from exc
 
 
@@ -178,12 +274,37 @@ def _validate_unique_messages_for_node(
             )
 
 
+def _validate_unique_messages_from_node(
+    node_id: str, messages: list[MeshMessage]
+) -> None:
+    seen_ids: set[str] = set()
+    for index, message in enumerate(messages):
+        if message.message_id in seen_ids:
+            raise LocalTransportError(
+                f"duplicate message_id in local transport outbox: {message.message_id}"
+            )
+        seen_ids.add(message.message_id)
+        if message.sender_node_id != node_id:
+            raise LocalTransportError(
+                f"local transport outbox entry {index} sender_node_id must be {node_id}"
+            )
+
+
 def _write_inbox_document(path: Path, document: dict[str, Any]) -> None:
     try:
         atomic_write_json(path, document)
     except (OSError, TypeError, ValueError) as exc:
         raise LocalTransportError(
             f"could not write local transport inbox: {exc}"
+        ) from exc
+
+
+def _write_outbox_document(path: Path, document: dict[str, Any]) -> None:
+    try:
+        atomic_write_json(path, document)
+    except (OSError, TypeError, ValueError) as exc:
+        raise LocalTransportError(
+            f"could not write local transport outbox: {exc}"
         ) from exc
 
 

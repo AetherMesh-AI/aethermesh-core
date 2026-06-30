@@ -138,10 +138,10 @@ To test the file-backed local transport seam, materialize addressed dispatch mes
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli materialize-local-inboxes --message-log-path ./local-dispatch.json --transport-dir ./local-transport
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --transport-dir ./local-transport --ledger-path ./local-ledger.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --transport-dir ./local-transport --ledger-path ./local-ledger.json --write-transport-outbox
 ```
 
-This writes version 1 inbox documents at `./local-transport/inboxes/<node-id>.json` only for nodes with addressed messages; empty inboxes are omitted. Transport processing reuses the same validation, ledger, receipt/output-message, and node-state behavior as message-log replay, but reads only the requested node's inbox file.
+This writes version 1 inbox documents at `./local-transport/inboxes/<node-id>.json` only for nodes with addressed messages; empty inboxes are omitted. Transport processing reuses the same validation, ledger, receipt/output-message, and node-state behavior as message-log replay, but reads only the requested node's inbox file. With `--write-transport-outbox`, worker-originated emitted messages for that invocation are published as a separate local-only transport artifact at `./local-transport/outboxes/<node-id>.json`; this does not replace `--output-message-log-path`, which remains a replay/audit log containing input plus all emitted messages.
 
 Inspect the heartbeat-derived local peer roster from an existing version 1 message log without rewriting it:
 
