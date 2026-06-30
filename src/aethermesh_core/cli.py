@@ -24,6 +24,7 @@ from aethermesh_core.ledger import (
 )
 from aethermesh_core.local_transport import (
     LocalTransportError,
+    local_inbox_path,
     load_local_inbox,
     materialize_local_inboxes,
 )
@@ -157,6 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         required=True,
         help="Directory for deterministic local flow artifacts.",
+    )
+    local_flow.add_argument(
+        "--transport-dir",
+        default=None,
+        help="Opt in to file-backed local transport inboxes for worker processing.",
     )
 
     audit_local = subcommands.add_parser(
@@ -444,7 +450,9 @@ def summarize_peers(message_log_path: str) -> dict[str, object]:
     return peer_summary_document(message_log_path)
 
 
-def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
+def run_local_flow(
+    manifest_path: str, output_dir: str, transport_dir: str | None = None
+) -> dict[str, object]:
     """Run dispatch and all available local worker inboxes as one local flow."""
 
     batch = load_job_manifest(manifest_path)
@@ -479,6 +487,12 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     dispatch_payload = dispatch_local_batch_command(
         manifest_path, str(dispatch_message_log_path)
     )
+    transport_payload: dict[str, object] | None = None
+    if transport_dir is not None:
+        transport_payload = materialize_local_inboxes(
+            message_log_path=dispatch_message_log_path,
+            transport_dir=transport_dir,
+        )
 
     per_node_results: list[dict[str, object]] = []
     processed_assignments = []
@@ -491,7 +505,10 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         node_payload, inbox_result = _process_local_inbox(
             InboxReplayRequest(
                 node_id=node_id,
-                message_log_path=str(dispatch_message_log_path),
+                message_log_path=(
+                    str(dispatch_message_log_path) if transport_dir is None else None
+                ),
+                transport_dir=transport_dir,
                 ledger_path=str(ledger_path),
                 output_message_log_path=str(worker_message_log_path),
                 node_state_path=str(node_state_path),
@@ -553,7 +570,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         existing_document=existing_receipt_document,
     )
     write_receipt_document(receipts_path, receipt_document)
-    return {
+    result: dict[str, object] = {
         "command": "run-local-flow",
         "manifest_path": manifest_path,
         "output_dir": output_dir,
@@ -580,6 +597,19 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         "dispatch_summary": dispatch_payload,
         "node_results": per_node_results,
     }
+    if transport_payload is not None:
+        transport_inbox_paths = transport_payload.get("inbox_paths", {})
+        if not isinstance(transport_inbox_paths, dict):
+            raise ValueError("materialize-local-inboxes returned invalid inbox paths")
+        transport_dir_value = str(transport_dir)
+        result["transport_dir"] = str(transport_dir)
+        result["transport_inbox_count"] = transport_payload["inbox_count"]
+        result["transport_inbox_paths"] = {
+            node_id: str(local_inbox_path(transport_dir_value, node_id))
+            for node_id in sorted(available_node_ids)
+            if node_id in transport_inbox_paths
+        }
+    return result
 
 
 def _require_int_result_field(result: dict[str, object], field_name: str) -> int:
@@ -839,12 +869,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "run-local-flow":
         try:
-            payload = run_local_flow(args.manifest, args.output_dir)
+            payload = run_local_flow(args.manifest, args.output_dir, args.transport_dir)
         except ManifestError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         except (
             MessageLogPersistenceError,
+            LocalTransportError,
             LedgerPersistenceError,
             NodeStatePersistenceError,
             ValueError,

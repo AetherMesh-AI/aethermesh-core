@@ -9,6 +9,114 @@ from aethermesh_core.cli import main
 
 
 class LocalTransportCliTests(unittest.TestCase):
+    def test_run_local_flow_uses_transport_inboxes_and_audits(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            transport_dir = Path(temp_dir) / "transport"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [
+                            {"node_id": "local-node-a", "status": "available"},
+                            {"node_id": "local-node-b", "status": "offline"},
+                            {"node_id": "local-node-c", "status": "available"},
+                        ],
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}},
+                            {"job_id": "echo-2", "job_type": "echo", "payload": {"message": "two"}},
+                            {"job_id": "echo-3", "job_type": "echo", "payload": {"message": "three"}},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            first_stdout = io.StringIO()
+            with contextlib.redirect_stdout(first_stdout):
+                first_exit = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--transport-dir",
+                        str(transport_dir),
+                    ]
+                )
+            audit_stdout = io.StringIO()
+            with contextlib.redirect_stdout(audit_stdout):
+                audit_exit = main(["audit-local-flow", "--output-dir", str(output_dir)])
+            second_stdout = io.StringIO()
+            with contextlib.redirect_stdout(second_stdout):
+                second_exit = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--transport-dir",
+                        str(transport_dir),
+                    ]
+                )
+
+            first_payload = json.loads(first_stdout.getvalue())
+            audit_payload = json.loads(audit_stdout.getvalue())
+            second_payload = json.loads(second_stdout.getvalue())
+            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            node_a_inbox = json.loads(
+                (transport_dir / "inboxes" / "local-node-a.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            node_c_inbox = json.loads(
+                (transport_dir / "inboxes" / "local-node-c.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            offline_inbox_exists = (transport_dir / "inboxes" / "local-node-b.json").exists()
+            offline_worker_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-b.json"
+            ).exists()
+
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(audit_exit, 0)
+        self.assertEqual(second_exit, 0)
+        self.assertEqual(first_payload["transport_dir"], str(transport_dir))
+        self.assertEqual(first_payload["transport_inbox_count"], 2)
+        self.assertEqual(
+            first_payload["transport_inbox_paths"],
+            {
+                "local-node-a": str(transport_dir / "inboxes" / "local-node-a.json"),
+                "local-node-c": str(transport_dir / "inboxes" / "local-node-c.json"),
+            },
+        )
+        self.assertEqual(first_payload["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(first_payload["offline_node_ids"], ["local-node-b"])
+        self.assertEqual(first_payload["processed_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(first_payload["processed_assignment_count"], 3)
+        self.assertEqual(second_payload["processed_assignment_count"], 0)
+        self.assertEqual(second_payload["skipped_processed_assignment_count"], 3)
+        self.assertEqual(second_payload["transport_inbox_count"], 2)
+        self.assertEqual(audit_payload["ok"], True)
+        self.assertEqual(audit_payload["counts"]["ledger_records"], 3)
+        self.assertEqual(len(ledger["records"]), 3)
+        self.assertEqual(node_a_inbox["node_id"], "local-node-a")
+        self.assertEqual(node_c_inbox["node_id"], "local-node-c")
+        self.assertEqual(
+            [message["recipient_node_id"] for message in node_a_inbox["messages"]],
+            ["local-node-a", "local-node-a"],
+        )
+        self.assertEqual(
+            [message["recipient_node_id"] for message in node_c_inbox["messages"]],
+            ["local-node-c"],
+        )
+        self.assertFalse(offline_inbox_exists)
+        self.assertFalse(offline_worker_log_exists)
+
     def test_materialize_local_inboxes_and_process_transport_inbox(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
