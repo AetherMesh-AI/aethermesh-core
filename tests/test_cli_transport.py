@@ -222,7 +222,9 @@ class LocalTransportCliTests(unittest.TestCase):
         self.assertEqual(output_contents, output_original)
         self.assertEqual(outbox_contents, outbox_original)
 
-    def test_process_local_inbox_rejects_transport_outbox_without_transport_dir(self) -> None:
+    def test_process_local_inbox_rejects_transport_outbox_without_transport_dir(
+        self,
+    ) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
@@ -239,7 +241,9 @@ class LocalTransportCliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("--write-transport-outbox requires --transport-dir", stderr.getvalue())
+        self.assertIn(
+            "--write-transport-outbox requires --transport-dir", stderr.getvalue()
+        )
 
     def test_process_local_inbox_requires_one_input_source(self) -> None:
         stdout = io.StringIO()

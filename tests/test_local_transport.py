@@ -331,9 +331,7 @@ class LocalTransportTests(unittest.TestCase):
             document = json.loads(path.read_text(encoding="utf-8"))
             messages = load_local_outbox(transport_dir=temp_dir, node_id="node-a")
 
-        self.assertEqual(
-            document, {"version": 1, "node_id": "node-a", "messages": []}
-        )
+        self.assertEqual(document, {"version": 1, "node_id": "node-a", "messages": []})
         self.assertEqual(messages, [])
 
     def test_load_local_outbox_error_messages_are_stable(self) -> None:
