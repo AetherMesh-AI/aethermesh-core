@@ -16,6 +16,7 @@ class LocalTransportCliTests(unittest.TestCase):
             transport_dir = Path(temp_dir) / "transport"
             ledger_path = Path(temp_dir) / "ledger.json"
             state_path = Path(temp_dir) / "node-a-state.json"
+            outbox_path = transport_dir / "outboxes" / "local-node-a.json"
             manifest_path.write_text(
                 json.dumps(
                     {
@@ -126,10 +127,103 @@ class LocalTransportCliTests(unittest.TestCase):
         self.assertEqual(processed["processed_assignment_count"], 1)
         self.assertEqual(processed["validation_outcomes"][0]["valid"], True)
         self.assertEqual(processed["ledger_summary"]["total_units"], 1)
+        self.assertNotIn("transport_outbox_path", processed)
+        self.assertNotIn("transport_outbox_message_count", processed)
+        self.assertFalse(outbox_path.exists())
         self.assertEqual(rerun["processed_assignment_count"], 0)
         self.assertEqual(rerun["skipped_processed_message_ids"], ["msg-0003"])
         self.assertEqual(len(ledger["records"]), 1)
         self.assertEqual(ledger["records"][0]["node_id"], "local-node-a")
+
+    def test_transport_inbox_outbox_opt_in_writes_emitted_messages(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "transport"
+            inbox_path = transport_dir / "inboxes" / "local-node-a.json"
+            outbox_path = transport_dir / "outboxes" / "local-node-a.json"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            output_log_path = Path(temp_dir) / "worker-log.json"
+            inbox_path.parent.mkdir(parents=True)
+            inbox_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "node_id": "local-node-a",
+                        "messages": [
+                            {
+                                "message_id": "msg-assign-1",
+                                "message_type": "job_assigned",
+                                "sender_node_id": "scheduler",
+                                "recipient_node_id": "local-node-a",
+                                "payload": {
+                                    "job_id": "echo-1",
+                                    "job_type": "echo",
+                                    "payload": {"message": "hello outbox"},
+                                },
+                                "correlation_id": "echo-1",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "process-local-inbox",
+                        "--node-id",
+                        "local-node-a",
+                        "--transport-dir",
+                        str(transport_dir),
+                        "--ledger-path",
+                        str(ledger_path),
+                        "--output-message-log-path",
+                        str(output_log_path),
+                        "--write-transport-outbox",
+                    ]
+                )
+            processed = json.loads(stdout.getvalue())
+            outbox = json.loads(outbox_path.read_text(encoding="utf-8"))
+            worker_log = json.loads(output_log_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(processed["processed_assignment_count"], 1)
+        self.assertEqual(processed["transport_outbox_path"], str(outbox_path))
+        self.assertEqual(processed["transport_outbox_message_count"], 1)
+        self.assertEqual(outbox["version"], 1)
+        self.assertEqual(outbox["node_id"], "local-node-a")
+        self.assertEqual(outbox["source_inbox_path"], str(inbox_path))
+        self.assertEqual(outbox["processed_assignment_count"], 1)
+        self.assertEqual(
+            [message["message_type"] for message in outbox["messages"]],
+            ["job_result_reported"],
+        )
+        self.assertEqual(
+            [message["sender_node_id"] for message in outbox["messages"]],
+            ["local-node-a"],
+        )
+        self.assertNotIn("msg-assign-1", [message["message_id"] for message in outbox["messages"]])
+        self.assertEqual(len(worker_log["messages"]), 3)
+
+    def test_write_transport_outbox_rejects_message_log_input(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = main(
+                [
+                    "process-local-inbox",
+                    "--node-id",
+                    "local-node-a",
+                    "--message-log-path",
+                    "messages.json",
+                    "--write-transport-outbox",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("--write-transport-outbox requires --transport-dir", stderr.getvalue())
 
     def test_transport_inbox_failure_does_not_overwrite_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -138,7 +232,9 @@ class LocalTransportCliTests(unittest.TestCase):
             ledger_path = Path(temp_dir) / "ledger.json"
             state_path = Path(temp_dir) / "state.json"
             output_path = Path(temp_dir) / "output.json"
+            outbox_path = transport_dir / "outboxes" / "local-node-a.json"
             inbox_path.parent.mkdir(parents=True)
+            outbox_path.parent.mkdir(parents=True)
             inbox_path.write_text("not-json", encoding="utf-8")
             ledger_original = json.dumps({"version": 1, "records": [], "keep": True})
             state_original = json.dumps(
@@ -150,9 +246,11 @@ class LocalTransportCliTests(unittest.TestCase):
                 }
             )
             output_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            outbox_original = json.dumps({"version": 1, "messages": [], "keep": True})
             ledger_path.write_text(ledger_original, encoding="utf-8")
             state_path.write_text(state_original, encoding="utf-8")
             output_path.write_text(output_original, encoding="utf-8")
+            outbox_path.write_text(outbox_original, encoding="utf-8")
             stdout = io.StringIO()
             stderr = io.StringIO()
 
@@ -170,11 +268,13 @@ class LocalTransportCliTests(unittest.TestCase):
                         str(state_path),
                         "--output-message-log-path",
                         str(output_path),
+                        "--write-transport-outbox",
                     ]
                 )
             ledger_contents = ledger_path.read_text(encoding="utf-8")
             state_contents = state_path.read_text(encoding="utf-8")
             output_contents = output_path.read_text(encoding="utf-8")
+            outbox_contents = outbox_path.read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
@@ -182,6 +282,7 @@ class LocalTransportCliTests(unittest.TestCase):
         self.assertEqual(ledger_contents, ledger_original)
         self.assertEqual(state_contents, state_original)
         self.assertEqual(output_contents, output_original)
+        self.assertEqual(outbox_contents, outbox_original)
 
     def test_process_local_inbox_requires_one_input_source(self) -> None:
         stdout = io.StringIO()
