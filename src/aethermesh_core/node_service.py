@@ -56,7 +56,9 @@ class LocalNodeService:
         self.ledger = ledger
         self.ledger_node_id = ledger_node_id
         self._processed_message_ids_in_order = list(processed_message_ids or [])
-        self._processed_message_ids: set[str] = set(self._processed_message_ids_in_order)
+        self._processed_message_ids: set[str] = set(
+            self._processed_message_ids_in_order
+        )
 
     def process_inbox(self) -> InboxProcessResult:
         """Process unhandled ``job_assigned`` messages addressed to this node.
@@ -98,7 +100,9 @@ class LocalNodeService:
         job = _job_from_assignment_payload(message)
         result = self.runner.run(job)
         validation = validate_job_result(job, result)
-        accounted_result = result if validation.valid else replace(result, contribution_units=0)
+        accounted_result = (
+            result if validation.valid else replace(result, contribution_units=0)
+        )
         record = self.ledger.record(
             accounted_result,
             validation_valid=validation.valid,

@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
+from aethermesh_core.dispatch import _node_heartbeat_payloads
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.message_bus import LocalMessageBus, send_numbered_message
 from aethermesh_core.messages import MeshMessage
@@ -13,7 +14,12 @@ from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.node_service import LocalNodeService
 from aethermesh_core.node_registry import NodeRegistry
 from aethermesh_core.runner import LocalRunner
-from aethermesh_core.scheduler import JobAssignment, LocalScheduler, NodeStatus, ScheduledNode
+from aethermesh_core.scheduler import (
+    JobAssignment,
+    LocalScheduler,
+    NodeStatus,
+    ScheduledNode,
+)
 from aethermesh_core.validation import ValidationResult
 
 
@@ -81,7 +87,9 @@ def run_local_simulation(
         message_bus.register_node(node_id)
     message_bus.register_node("local-scheduler")
     message_bus.register_node("local-ledger")
-    for heartbeat_payload in _node_heartbeat_messages(registry):
+    for heartbeat_payload in _node_heartbeat_payloads(
+        registry, include_capabilities=False
+    ):
         send_numbered_message(
             message_bus,
             message_type="node_heartbeat",
@@ -151,7 +159,9 @@ def run_local_simulation(
     completed_jobs = sum(1 for result in results if result.status == "completed")
     failed_jobs = sum(1 for result in results if result.status == "failed")
     validation_summary = _validation_summary(validations)
-    contribution_units = sum(int(summary["contribution_units"]) for summary in summaries)
+    contribution_units = sum(
+        int(summary["contribution_units"]) for summary in summaries
+    )
 
     return LocalSimulationResult(
         nodes=ordered_node_ids,
@@ -184,25 +194,11 @@ def _node_roster_entry(
 ) -> dict[str, int | str | list[str]]:
     node_id = str(roster_entry["node_id"])
     return roster_entry | {
-        "assigned_jobs": sum(1 for assignment in assignments if assignment.node_id == node_id),
+        "assigned_jobs": sum(
+            1 for assignment in assignments if assignment.node_id == node_id
+        ),
         "contribution_units": int(summary["contribution_units"]),
     }
-
-
-def _node_heartbeat_messages(registry: NodeRegistry) -> list[dict[str, int | str]]:
-    """Return deterministic local heartbeat payloads for available nodes only."""
-
-    return [
-        {
-            "node_id": str(entry["node_id"]),
-            "status": str(entry["status"]),
-            "heartbeat_sequence": int(entry["heartbeat_sequence"]),
-            "heartbeat_count": int(entry["heartbeat_count"]),
-        }
-        for entry in registry.to_roster()
-        if entry["status"] == NodeStatus.AVAILABLE.value
-    ]
-
 
 
 def _summary_to_simulation_dict(

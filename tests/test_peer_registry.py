@@ -34,7 +34,11 @@ class PeerRegistryTests(unittest.TestCase):
                                 "message_type": "job_assigned",
                                 "sender_node_id": "local-scheduler",
                                 "recipient_node_id": "node-b",
-                                "payload": {"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                                "payload": {
+                                    "job_id": "echo-1",
+                                    "job_type": "echo",
+                                    "payload": {},
+                                },
                                 "correlation_id": "echo-1",
                             },
                             {
@@ -171,6 +175,71 @@ class PeerRegistryTests(unittest.TestCase):
 
         self.assertIn("capabilities", str(cm.exception))
         self.assertEqual(contents, original)
+
+    def test_malformed_heartbeat_error_messages_are_stable(self) -> None:
+        base = {
+            "version": 1,
+            "messages": [
+                {
+                    "message_id": "msg-0001",
+                    "message_type": "node_heartbeat",
+                    "sender_node_id": "node-a",
+                    "recipient_node_id": None,
+                    "payload": {
+                        "node_id": "node-a",
+                        "status": "available",
+                        "heartbeat_sequence": 1,
+                        "heartbeat_count": 1,
+                        "capabilities": ["echo"],
+                    },
+                    "correlation_id": None,
+                }
+            ],
+        }
+        cases = [
+            (
+                ("node_id", ""),
+                "heartbeat message msg-0001 payload field 'node_id' must be a non-empty string",
+            ),
+            (
+                ("status", ""),
+                "heartbeat message msg-0001 payload field 'status' must be a non-empty string",
+            ),
+            (
+                ("heartbeat_sequence", True),
+                "heartbeat message msg-0001 payload field 'heartbeat_sequence' must be a non-negative integer",
+            ),
+            (
+                ("heartbeat_sequence", -1),
+                "heartbeat message msg-0001 payload field 'heartbeat_sequence' must be a non-negative integer",
+            ),
+            (
+                ("heartbeat_count", False),
+                "heartbeat message msg-0001 payload field 'heartbeat_count' must be a non-negative integer",
+            ),
+            (
+                ("heartbeat_count", -1),
+                "heartbeat message msg-0001 payload field 'heartbeat_count' must be a non-negative integer",
+            ),
+            (
+                ("capabilities", "echo"),
+                "heartbeat message msg-0001 payload field 'capabilities' must be a list of strings",
+            ),
+            (
+                ("capabilities", [""]),
+                "heartbeat message msg-0001 payload field 'capabilities[0]' must be a non-empty string",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            for (field_name, value), expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    document = json.loads(json.dumps(base))
+                    document["messages"][0]["payload"][field_name] = value
+                    log_path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(PeerRegistryError) as cm:
+                        peer_summary_document(log_path)
+                    self.assertEqual(str(cm.exception), expected_message)
 
 
 if __name__ == "__main__":

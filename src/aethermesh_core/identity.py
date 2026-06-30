@@ -33,7 +33,9 @@ def _load_identity(path: Path) -> NodeIdentity:
         with path.open("r", encoding="utf-8") as handle:
             document = json.load(handle)
     except json.JSONDecodeError as exc:
-        raise IdentityPersistenceError(f"identity JSON is malformed: {exc.msg}") from exc
+        raise IdentityPersistenceError(
+            f"identity JSON is malformed: {exc.msg}"
+        ) from exc
     except OSError as exc:
         raise IdentityPersistenceError(f"could not read identity file: {exc}") from exc
 
@@ -47,7 +49,9 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError("identity JSON field 'node' must be an object")
     node_id = node.get("node_id")
     if not isinstance(node_id, str) or not node_id:
-        raise IdentityPersistenceError("identity JSON field 'node.node_id' must be a non-empty string")
+        raise IdentityPersistenceError(
+            "identity JSON field 'node.node_id' must be a non-empty string"
+        )
     return NodeIdentity(node_id=node_id)
 
 

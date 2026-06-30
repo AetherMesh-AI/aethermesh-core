@@ -36,3 +36,9 @@ exclude_lines = [
   "return 1",
   "return 2",
 ]
+
+[tool.mutmut]
+source_paths = ["src/aethermesh_core"]
+also_copy = ["examples"]
+pytest_add_cli_args = ["-q", "tests"]
+mutate_only_covered_lines = true

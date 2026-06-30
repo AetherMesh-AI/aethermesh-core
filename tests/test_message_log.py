@@ -49,22 +49,36 @@ class MessageLogTests(unittest.TestCase):
 
         self.assertEqual(first_document, second_document)
         self.assertEqual(first_document["version"], 1)
-        self.assertEqual(first_document["metadata"]["source"], "run-local-batch")
-        self.assertEqual(first_document["metadata"]["message_count"], 8)
-        self.assertEqual(first_document["metadata"]["node_count"], 2)
-        self.assertEqual(first_document["metadata"]["job_count"], 2)
-        self.assertEqual(first_document["metadata"]["completed_count"], 2)
-        self.assertEqual(first_document["metadata"]["failed_count"], 0)
-        self.assertEqual(first_document["metadata"]["total_contribution_units"], 2)
-        self.assertEqual(first_document["metadata"]["job_ids"], ["echo-1", "text-stats-1"])
+        self.assertEqual(
+            first_document["metadata"],
+            {
+                "source": "run-local-batch",
+                "manifest_path": "examples/local-batch.json",
+                "message_count": 8,
+                "node_count": 2,
+                "job_count": 2,
+                "completed_count": 2,
+                "failed_count": 0,
+                "total_contribution_units": 2,
+                "validation_summary": {"valid": 2, "invalid": 0, "unsupported": 0},
+                "node_ids": ["local-node-a", "local-node-b"],
+                "job_ids": ["echo-1", "text-stats-1"],
+            },
+        )
         self.assertEqual(
             [message["message_id"] for message in first_document["messages"]],
             [f"msg-{index:04d}" for index in range(1, 9)],
         )
-        self.assertEqual(first_document["messages"][0]["message_type"], "node_heartbeat")
+        self.assertEqual(
+            first_document["messages"][0]["message_type"], "node_heartbeat"
+        )
         self.assertEqual(first_document["messages"][2]["message_type"], "job_assigned")
-        self.assertEqual(first_document["messages"][3]["message_type"], "job_result_reported")
-        self.assertEqual(first_document["messages"][4]["message_type"], "contribution_recorded")
+        self.assertEqual(
+            first_document["messages"][3]["message_type"], "job_result_reported"
+        )
+        self.assertEqual(
+            first_document["messages"][4]["message_type"], "contribution_recorded"
+        )
         self.assertEqual(first_document["messages"][2]["correlation_id"], "echo-1")
 
         first_json = json.dumps(first_document, indent=2, sort_keys=True) + "\n"
@@ -78,13 +92,15 @@ class MessageLogTests(unittest.TestCase):
             "messages": [],
         }
         with tempfile.TemporaryDirectory() as temp_dir:
-            log_path = Path(temp_dir) / "nested" / "messages.json"
+            log_path = Path(temp_dir) / "deep" / "nested" / "messages.json"
 
             write_message_log(log_path, document)
 
             persisted = log_path.read_text(encoding="utf-8")
 
-        self.assertEqual(persisted, json.dumps(document, indent=2, sort_keys=True) + "\n")
+        self.assertEqual(
+            persisted, json.dumps(document, indent=2, sort_keys=True) + "\n"
+        )
 
     def test_build_replayed_message_log_document_appends_emitted_messages(self) -> None:
         replayed = [
@@ -119,20 +135,29 @@ class MessageLogTests(unittest.TestCase):
         )
 
         self.assertEqual(document["version"], 1)
-        self.assertEqual(document["metadata"]["source"], "process-local-inbox")
-        self.assertEqual(document["metadata"]["node_id"], "local-node-a")
-        self.assertEqual(document["metadata"]["message_count"], 2)
-        self.assertEqual(document["metadata"]["replayed_message_count"], 1)
-        self.assertEqual(document["metadata"]["emitted_message_count"], 1)
-        self.assertEqual(document["metadata"]["processed_assignment_count"], 1)
-        self.assertEqual(document["metadata"]["ignored_message_ids"], ["msg-0003"])
-        self.assertEqual(document["metadata"]["ledger_path"], "./local-ledger.json")
+        self.assertEqual(
+            document["metadata"],
+            {
+                "source": "process-local-inbox",
+                "node_id": "local-node-a",
+                "source_message_log_path": "./local-messages.json",
+                "ledger_path": "./local-ledger.json",
+                "message_count": 2,
+                "replayed_message_count": 1,
+                "emitted_message_count": 1,
+                "processed_assignment_count": 1,
+                "ignored_message_count": 1,
+                "ignored_message_ids": ["msg-0003"],
+            },
+        )
         self.assertEqual(
             [message["message_id"] for message in document["messages"]],
             ["msg-0001", "msg-0002"],
         )
 
-    def test_build_dispatch_message_log_document_contains_only_dispatch_metadata(self) -> None:
+    def test_build_dispatch_message_log_document_contains_only_dispatch_metadata(
+        self,
+    ) -> None:
         messages = [
             MeshMessage(
                 message_id="msg-0001",
@@ -160,10 +185,20 @@ class MessageLogTests(unittest.TestCase):
         )
 
         self.assertEqual(document["version"], 1)
-        self.assertEqual(document["metadata"]["source"], "dispatch-local-batch")
-        self.assertEqual(document["metadata"]["message_count"], 2)
-        self.assertEqual(document["metadata"]["assignment_count"], 1)
-        self.assertEqual(document["metadata"]["assigned_node_ids"], ["local-node-a"])
+        self.assertEqual(
+            document["metadata"],
+            {
+                "source": "dispatch-local-batch",
+                "manifest_path": "examples/local-batch.json",
+                "message_count": 2,
+                "node_count": 1,
+                "job_count": 1,
+                "assignment_count": 1,
+                "node_ids": ["local-node-a"],
+                "job_ids": ["echo-1"],
+                "assigned_node_ids": ["local-node-a"],
+            },
+        )
         self.assertNotIn("completed_count", document["metadata"])
         self.assertNotIn("total_contribution_units", document["metadata"])
         self.assertEqual(
@@ -171,7 +206,9 @@ class MessageLogTests(unittest.TestCase):
             ["node_heartbeat", "job_assigned"],
         )
 
-    def test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order(self) -> None:
+    def test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order(
+        self,
+    ) -> None:
         dispatch_messages = [
             MeshMessage(
                 message_id="msg-0001",
@@ -222,6 +259,7 @@ class MessageLogTests(unittest.TestCase):
             worker_message_log_paths={
                 "local-node-a": "worker-message-logs/local-node-a.json",
                 "local-node-b": "worker-message-logs/local-node-b.json",
+                "local-node-c": "worker-message-logs/local-node-c.json",
             },
             available_node_ids=["local-node-a", "local-node-b"],
             offline_node_ids=["local-node-c"],
@@ -232,18 +270,68 @@ class MessageLogTests(unittest.TestCase):
         )
 
         self.assertEqual(document["version"], 1)
-        self.assertEqual(document["metadata"]["source"], "run-local-flow")
-        self.assertEqual(document["metadata"]["dispatch_message_count"], 1)
-        self.assertEqual(document["metadata"]["emitted_message_count"], 3)
-        self.assertEqual(document["metadata"]["message_count"], 4)
-        self.assertEqual(document["metadata"]["available_node_ids"], ["local-node-a", "local-node-b"])
-        self.assertEqual(document["metadata"]["offline_node_ids"], ["local-node-c"])
+        self.assertEqual(
+            document["metadata"],
+            {
+                "source": "run-local-flow",
+                "manifest_path": "manifest.json",
+                "dispatch_message_log_path": "dispatch-message-log.json",
+                "ledger_path": "ledger.json",
+                "worker_message_log_paths": {
+                    "local-node-a": "worker-message-logs/local-node-a.json",
+                    "local-node-b": "worker-message-logs/local-node-b.json",
+                },
+                "available_node_ids": ["local-node-a", "local-node-b"],
+                "offline_node_ids": ["local-node-c"],
+                "processed_node_ids": ["local-node-a", "local-node-b"],
+                "processed_assignment_count": 2,
+                "skipped_processed_assignment_count": 0,
+                "total_contribution_units": 2,
+                "dispatch_message_count": 1,
+                "emitted_message_count": 3,
+                "message_count": 4,
+            },
+        )
         self.assertEqual(
             [message["message_id"] for message in document["messages"]],
             ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
         )
 
-    def test_load_worker_emitted_messages_skips_replayed_dispatch_messages(self) -> None:
+    def test_build_flow_message_log_document_treats_missing_node_as_empty(self) -> None:
+        dispatch_messages = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_assigned",
+                sender_node_id="local-scheduler",
+                recipient_node_id="local-node-a",
+                payload={"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                correlation_id="echo-1",
+            )
+        ]
+
+        document = build_flow_message_log_document(
+            dispatch_messages=dispatch_messages,
+            emitted_messages_by_node={},
+            manifest_path="manifest.json",
+            dispatch_message_log_path="dispatch-message-log.json",
+            ledger_path="ledger.json",
+            worker_message_log_paths={},
+            available_node_ids=["local-node-a"],
+            offline_node_ids=[],
+            processed_node_ids=[],
+            processed_assignment_count=0,
+            skipped_processed_assignment_count=1,
+            total_contribution_units=0,
+        )
+
+        self.assertEqual(document["metadata"]["emitted_message_count"], 0)
+        self.assertEqual(
+            [message["message_id"] for message in document["messages"]], ["msg-0001"]
+        )
+
+    def test_load_worker_emitted_messages_skips_replayed_dispatch_messages(
+        self,
+    ) -> None:
         replayed = [
             MeshMessage(
                 message_id="msg-0001",
@@ -286,7 +374,37 @@ class MessageLogTests(unittest.TestCase):
 
             loaded = load_worker_emitted_messages(log_path)
 
-        self.assertEqual([message.message_id for message in loaded], ["msg-0002", "msg-0003"])
+        self.assertEqual(
+            [message.message_id for message in loaded], ["msg-0002", "msg-0003"]
+        )
+
+    def test_load_worker_emitted_messages_allows_zero_replayed_messages(self) -> None:
+        emitted = [
+            MeshMessage(
+                message_id="msg-0001",
+                message_type="job_result_reported",
+                sender_node_id="local-node-a",
+                recipient_node_id="local-ledger",
+                payload={"job_id": "echo-1", "status": "completed"},
+                correlation_id="echo-1",
+            )
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "worker.json"
+            write_message_log(
+                log_path,
+                build_replayed_message_log_document(
+                    replayed_messages=[],
+                    emitted_messages=emitted,
+                    node_id="local-node-a",
+                    source_message_log_path="dispatch.json",
+                    processed_assignment_count=0,
+                ),
+            )
+
+            loaded = load_worker_emitted_messages(log_path)
+
+        self.assertEqual([message.message_id for message in loaded], ["msg-0001"])
 
     def test_write_message_log_failure_preserves_existing_path(self) -> None:
         document = {
@@ -306,7 +424,9 @@ class MessageLogTests(unittest.TestCase):
 
         self.assertIn("could not write message log file", str(cm.exception))
 
-    def test_load_message_log_messages_returns_validated_messages_without_writing(self) -> None:
+    def test_load_message_log_messages_returns_validated_messages_without_writing(
+        self,
+    ) -> None:
         document = {
             "version": 1,
             "metadata": {"message_count": 1},
@@ -385,9 +505,26 @@ class MessageLogTests(unittest.TestCase):
 
         self.assertIn("message log JSON must contain version 1", str(cm.exception))
 
-    def test_load_message_log_messages_rejects_missing_or_non_list_messages(self) -> None:
+    def test_load_message_log_messages_rejects_bool_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps({"version": True, "messages": []}), encoding="utf-8"
+            )
+
+            with self.assertRaises(MessageLogPersistenceError) as cm:
+                load_message_log_messages(log_path)
+
+        self.assertIn("message log JSON must contain version 1", str(cm.exception))
+
+    def test_load_message_log_messages_rejects_missing_or_non_list_messages(
+        self,
+    ) -> None:
         for document in ({"version": 1}, {"version": 1, "messages": {}}):
-            with self.subTest(document=document), tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                self.subTest(document=document),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
                 log_path = Path(temp_dir) / "messages.json"
                 log_path.write_text(json.dumps(document), encoding="utf-8")
 
@@ -395,7 +532,8 @@ class MessageLogTests(unittest.TestCase):
                     load_message_log_messages(log_path)
 
                 self.assertIn(
-                    "message log JSON field 'messages' must be a list", str(cm.exception)
+                    "message log JSON field 'messages' must be a list",
+                    str(cm.exception),
                 )
 
     def test_load_message_log_messages_rejects_invalid_message_entry(self) -> None:
@@ -410,6 +548,28 @@ class MessageLogTests(unittest.TestCase):
                 load_message_log_messages(log_path)
 
         self.assertIn("message log entry 0 is invalid", str(cm.exception))
+
+    def test_load_message_log_error_messages_are_stable(self) -> None:
+        cases = [
+            ([], "message log JSON must be an object"),
+            (
+                {"version": True, "messages": []},
+                "message log JSON must contain version 1",
+            ),
+            ({"version": 1}, "message log JSON field 'messages' must be a list"),
+            (
+                {"version": 1, "messages": {}},
+                "message log JSON field 'messages' must be a list",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            for document, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    log_path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(MessageLogPersistenceError) as cm:
+                        load_message_log_messages(log_path)
+                    self.assertEqual(str(cm.exception), expected_message)
 
 
 if __name__ == "__main__":

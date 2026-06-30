@@ -41,6 +41,10 @@ class LocalNodeServiceTests(unittest.TestCase):
             ["job_result_reported", "contribution_recorded"],
         )
         self.assertEqual(
+            [message.correlation_id for message in processed.emitted_messages],
+            ["echo-1", "echo-1"],
+        )
+        self.assertEqual(
             processed.emitted_messages[0].payload,
             {
                 "job_id": "echo-1",
@@ -195,13 +199,30 @@ class LocalNodeServiceTests(unittest.TestCase):
                 },
             )
         )
+        bus.send(
+            _assignment(
+                message_id="msg-0002",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={
+                    "job_id": "echo-2",
+                    "job_type": "echo",
+                    "payload": {"message": "hello node a"},
+                },
+            )
+        )
 
         result = service.process_inbox()
 
-        self.assertEqual(result.processed, [])
+        self.assertEqual(
+            [processed.message_id for processed in result.processed], ["msg-0002"]
+        )
         self.assertEqual(result.ignored_message_ids, [])
-        self.assertEqual(ledger.summary_for_node("node-a").total_result_count, 0)
-        self.assertEqual([message.message_id for message in bus.log()], ["msg-0001"])
+        self.assertEqual(ledger.summary_for_node("node-a").total_result_count, 1)
+        self.assertEqual(
+            [message.message_id for message in bus.log()],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
+        )
 
     def test_repeated_process_inbox_does_not_double_record_contribution(self) -> None:
         service, bus, ledger = _service("node-a")
@@ -232,10 +253,10 @@ class LocalNodeServiceTests(unittest.TestCase):
             ["msg-0001", "msg-0002", "msg-0003"],
         )
 
-    def test_seeded_processed_message_ids_skip_assignment_without_contribution(self) -> None:
-        service, bus, ledger = _service(
-            "node-a", processed_message_ids=["msg-0001"]
-        )
+    def test_seeded_processed_message_ids_skip_assignment_without_contribution(
+        self,
+    ) -> None:
+        service, bus, ledger = _service("node-a", processed_message_ids=["msg-0001"])
         bus.send(
             _assignment(
                 message_id="msg-0001",
@@ -263,13 +284,38 @@ class LocalNodeServiceTests(unittest.TestCase):
 
         result = service.process_inbox()
 
-        self.assertEqual([assignment.message_id for assignment in result.processed], ["msg-0002"])
+        self.assertEqual(
+            [assignment.message_id for assignment in result.processed], ["msg-0002"]
+        )
         self.assertEqual(result.ignored_message_ids, ["msg-0001"])
         self.assertEqual(result.skipped_processed_message_ids, ["msg-0001"])
         self.assertEqual(result.processed_message_ids, ["msg-0001", "msg-0002"])
         summary = ledger.summary_for_node("node-a")
         self.assertEqual(summary.total_result_count, 1)
         self.assertEqual(summary.total_contribution_units, 1)
+
+    def test_assignment_payload_fallbacks_are_explicit(self) -> None:
+        service, bus, _ledger = _service("node-a")
+        bus.send(
+            _assignment(
+                message_id="msg-0001",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={"payload": "not-object"},
+                correlation_id=None,
+            )
+        )
+
+        result = service.process_inbox()
+        processed = result.processed[0]
+
+        self.assertEqual(processed.job.job_id, "malformed-msg-0001")
+        self.assertEqual(processed.job.job_type, "__malformed_assignment__")
+        self.assertEqual(processed.job.payload, {})
+        self.assertEqual(
+            [message.correlation_id for message in processed.emitted_messages],
+            ["malformed-msg-0001", "malformed-msg-0001"],
+        )
 
     def test_contribution_is_recorded_only_after_validation(self) -> None:
         service, bus, ledger = _service("node-a")
@@ -301,7 +347,10 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.contribution_record.job_type, "echo")
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
         self.assertEqual(processed.emitted_messages[1].payload["valid"], False)
-        self.assertEqual(processed.emitted_messages[1].payload["validation"], "missing_payload_message")
+        self.assertEqual(
+            processed.emitted_messages[1].payload["validation"],
+            "missing_payload_message",
+        )
 
 
 def _service(

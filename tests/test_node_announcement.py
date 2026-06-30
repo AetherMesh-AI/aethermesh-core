@@ -15,7 +15,9 @@ from aethermesh_core.scheduler import DEFAULT_LOCAL_CAPABILITIES
 
 
 class NodeAnnouncementTests(unittest.TestCase):
-    def test_builds_single_heartbeat_message_log_with_default_capabilities(self) -> None:
+    def test_builds_single_heartbeat_message_log_with_default_capabilities(
+        self,
+    ) -> None:
         document = build_node_announcement_message_log_document(
             node_id="local-node-a",
         )

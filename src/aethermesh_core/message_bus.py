@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from aethermesh_core.messages import MeshMessage
 
@@ -70,7 +72,7 @@ def send_numbered_message(
     message_type: str,
     sender_node_id: str,
     recipient_node_id: str | None,
-    payload: dict[str, object],
+    payload: Mapping[str, Any],
     correlation_id: str | None,
 ) -> MeshMessage:
     """Create and send a message with the next deterministic bus sequence id."""
@@ -80,7 +82,7 @@ def send_numbered_message(
         message_type=message_type,
         sender_node_id=sender_node_id,
         recipient_node_id=recipient_node_id,
-        payload=payload,
+        payload=dict(payload),
         correlation_id=correlation_id,
     )
     return message_bus.send(message)

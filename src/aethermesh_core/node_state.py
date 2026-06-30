@@ -75,22 +75,31 @@ def load_node_processing_state(
         with state_path.open("r", encoding="utf-8") as handle:
             document = json.load(handle)
     except json.JSONDecodeError as exc:
-        raise NodeStatePersistenceError(f"node state JSON is malformed: {exc.msg}") from exc
+        raise NodeStatePersistenceError(
+            f"node state JSON is malformed: {exc.msg}"
+        ) from exc
     except OSError as exc:
-        raise NodeStatePersistenceError(f"could not read node state file: {exc}") from exc
+        raise NodeStatePersistenceError(
+            f"could not read node state file: {exc}"
+        ) from exc
 
     if not isinstance(document, dict):
         raise NodeStatePersistenceError("node state JSON must be an object")
     missing = sorted(_REQUIRED_FIELDS.difference(document))
     if missing:
         fields = ", ".join(missing)
-        raise NodeStatePersistenceError(f"node state JSON is missing required field(s): {fields}")
-    if document.get("version") != NODE_STATE_VERSION:
+        raise NodeStatePersistenceError(
+            f"node state JSON is missing required field(s): {fields}"
+        )
+    version = document.get("version")
+    if version != NODE_STATE_VERSION or isinstance(version, bool):
         raise NodeStatePersistenceError("node state JSON must contain version 1")
 
     node_id = document.get("node_id")
     if not isinstance(node_id, str) or node_id == "":
-        raise NodeStatePersistenceError("node state field 'node_id' must be a non-empty string")
+        raise NodeStatePersistenceError(
+            "node state field 'node_id' must be a non-empty string"
+        )
     if node_id != expected_node_id:
         raise NodeStatePersistenceError(
             f"node state belongs to node '{node_id}', not '{expected_node_id}'"
@@ -163,7 +172,9 @@ def save_node_processing_state(
     except (OSError, TypeError, ValueError) as exc:
         if temp_name is not None:
             _remove_temp_file(temp_name)
-        raise NodeStatePersistenceError(f"could not write node state file: {exc}") from exc
+        raise NodeStatePersistenceError(
+            f"could not write node state file: {exc}"
+        ) from exc
 
 
 def _remove_temp_file(path: str | Path) -> None:

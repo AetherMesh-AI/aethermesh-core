@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+
 from aethermesh_core.local_transport import (
     LocalTransportError,
     load_local_inbox,
@@ -23,7 +24,9 @@ class LocalTransportTests(unittest.TestCase):
                     {
                         "version": 1,
                         "messages": [
-                            _message_entry("msg-0001", "node-a", None, "node_heartbeat"),
+                            _message_entry(
+                                "msg-0001", "node-a", None, "node_heartbeat"
+                            ),
                             _message_entry("msg-0002", "scheduler", "node-b"),
                             _message_entry("msg-0003", "scheduler", "node-a"),
                             _message_entry("msg-0004", "scheduler", "node-b"),
@@ -48,16 +51,33 @@ class LocalTransportTests(unittest.TestCase):
             node_a = json.loads(first_a)
             node_b = json.loads(first_b)
 
-        self.assertEqual(first["node_ids"], ["node-a", "node-b"])
-        self.assertEqual(first["inbox_count"], 2)
-        self.assertEqual(first["message_count"], 3)
+        self.assertEqual(
+            first,
+            {
+                "command": "materialize-local-inboxes",
+                "message_log_path": str(message_log_path),
+                "transport_dir": str(transport_dir),
+                "inbox_count": 2,
+                "message_count": 3,
+                "node_ids": ["node-a", "node-b"],
+                "inbox_paths": {
+                    "node-a": str(node_a_path),
+                    "node-b": str(node_b_path),
+                },
+            },
+        )
         self.assertEqual(first, second)
         self.assertEqual(first_a, second_a)
         self.assertEqual(first_b, second_b)
         self.assertEqual(node_a["version"], 1)
         self.assertEqual(node_a["node_id"], "node-a")
-        self.assertEqual([message["message_id"] for message in node_a["messages"]], ["msg-0003"])
-        self.assertEqual([message["message_id"] for message in node_b["messages"]], ["msg-0002", "msg-0004"])
+        self.assertEqual(
+            [message["message_id"] for message in node_a["messages"]], ["msg-0003"]
+        )
+        self.assertEqual(
+            [message["message_id"] for message in node_b["messages"]],
+            ["msg-0002", "msg-0004"],
+        )
 
     def test_load_rejects_wrong_node_inbox(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -79,7 +99,10 @@ class LocalTransportTests(unittest.TestCase):
             with self.assertRaisesRegex(LocalTransportError, "malformed"):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
-            path.write_text(json.dumps({"version": 2, "node_id": "node-a", "messages": []}), encoding="utf-8")
+            path.write_text(
+                json.dumps({"version": 2, "node_id": "node-a", "messages": []}),
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(LocalTransportError, "version 1"):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
@@ -105,8 +128,165 @@ class LocalTransportTests(unittest.TestCase):
 
             document["messages"] = [_message("msg-0002", "node-b").to_dict()]
             path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(LocalTransportError, "recipient_node_id must be node-a"):
+            with self.assertRaisesRegex(
+                LocalTransportError, "recipient_node_id must be node-a"
+            ):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
+
+    def test_materialize_ignores_broadcast_messages_without_creating_inboxes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "broadcast-only.json"
+            transport_dir = Path(temp_dir) / "transport"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            _message_entry(
+                                "msg-0001", "node-a", None, "node_heartbeat"
+                            ),
+                            _message_entry(
+                                "msg-0002", "node-b", None, "node_heartbeat"
+                            ),
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = materialize_local_inboxes(
+                message_log_path=message_log_path, transport_dir=transport_dir
+            )
+
+            self.assertEqual(result["inbox_count"], 0)
+            self.assertEqual(result["message_count"], 0)
+            self.assertEqual(result["node_ids"], [])
+            self.assertEqual(result["inbox_paths"], {})
+            self.assertFalse((transport_dir / "inboxes").exists())
+
+    def test_materialize_rejects_duplicate_source_message_ids_before_writing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "duplicates.json"
+            transport_dir = Path(temp_dir) / "transport"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            _message_entry("msg-0001", "scheduler", "node-a"),
+                            _message_entry("msg-0001", "scheduler", "node-b"),
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                LocalTransportError, "duplicate message_id in source log"
+            ):
+                materialize_local_inboxes(
+                    message_log_path=message_log_path, transport_dir=transport_dir
+                )
+
+            self.assertFalse((transport_dir / "inboxes").exists())
+
+    def test_inbox_path_quotes_node_ids_without_changing_loaded_node_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            node_id = "node/a b?c"
+            source_path = Path(temp_dir) / "source log.json"
+            path = write_local_inbox(
+                transport_dir=temp_dir,
+                node_id=node_id,
+                messages=[_message("msg-quoted", node_id)],
+                source_message_log_path=source_path,
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+            messages = load_local_inbox(transport_dir=temp_dir, node_id=node_id)
+
+        self.assertEqual(path.name, "node%2Fa%20b%3Fc.json")
+        self.assertEqual(path.parent.name, "inboxes")
+        self.assertEqual(
+            str(local_inbox_path(temp_dir, "node-._~")),
+            str(Path(temp_dir) / "inboxes" / "node-._~.json"),
+        )
+        self.assertEqual(document["node_id"], node_id)
+        self.assertEqual(document["source_message_log_path"], str(source_path))
+        self.assertEqual([message.message_id for message in messages], ["msg-quoted"])
+
+    def test_load_local_inbox_error_messages_are_stable(self) -> None:
+        valid_message = _message("msg-0001", "node-a").to_dict()
+        cases = [
+            (
+                {"version": True, "node_id": "node-a", "messages": []},
+                "local transport inbox JSON must contain version 1",
+            ),
+            (
+                {"version": 1, "node_id": "node-b", "messages": []},
+                "local transport inbox node_id mismatch: expected node-a, found node-b",
+            ),
+            (
+                {"version": 1, "node_id": "node-a", "messages": {}},
+                "local transport inbox field 'messages' must be a list",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [valid_message, valid_message],
+                },
+                "duplicate message_id in local transport inbox: msg-0001",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [_message("msg-0002", "node-b").to_dict()],
+                },
+                "local transport inbox entry 0 recipient_node_id must be node-a",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "messages": [{"message_type": "job_assigned"}],
+                },
+                "local transport inbox entry 0 is invalid: message_id must be a non-empty string",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = local_inbox_path(temp_dir, "node-a")
+            path.parent.mkdir(parents=True)
+            for document, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(LocalTransportError) as cm:
+                        load_local_inbox(transport_dir=temp_dir, node_id="node-a")
+                    self.assertEqual(str(cm.exception), expected_message)
+
+    def test_write_local_inbox_error_messages_are_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            duplicate = _message("msg-0001", "node-a")
+            wrong_recipient = _message("msg-0002", "node-b")
+            cases = [
+                ({"node_id": "", "messages": []}, "node_id must be a non-empty string"),
+                (
+                    {"node_id": "node-a", "messages": [duplicate, duplicate]},
+                    "duplicate message_id in local transport inbox: msg-0001",
+                ),
+                (
+                    {"node_id": "node-a", "messages": [wrong_recipient]},
+                    "local transport inbox entry 0 recipient_node_id must be node-a",
+                ),
+            ]
+            for kwargs, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    with self.assertRaises(LocalTransportError) as cm:
+                        write_local_inbox(transport_dir=temp_dir, **kwargs)
+                    self.assertEqual(str(cm.exception), expected_message)
 
 
 def _message(message_id: str, recipient: str) -> MeshMessage:
@@ -115,7 +295,11 @@ def _message(message_id: str, recipient: str) -> MeshMessage:
         message_type="job_assigned",
         sender_node_id="scheduler",
         recipient_node_id=recipient,
-        payload={"job_id": message_id, "job_type": "echo", "payload": {"message": message_id}},
+        payload={
+            "job_id": message_id,
+            "job_type": "echo",
+            "payload": {"message": message_id},
+        },
         correlation_id=message_id,
     )
 
@@ -129,7 +313,11 @@ def _message_entry(
     payload = (
         {"node_id": sender}
         if message_type == "node_heartbeat"
-        else {"job_id": message_id, "job_type": "echo", "payload": {"message": message_id}}
+        else {
+            "job_id": message_id,
+            "job_type": "echo",
+            "payload": {"message": message_id},
+        }
     )
     return {
         "message_id": message_id,

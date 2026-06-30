@@ -10,7 +10,12 @@ from aethermesh_core.message_bus import LocalMessageBus, send_numbered_message
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job
 from aethermesh_core.node_registry import NodeRegistry
-from aethermesh_core.scheduler import JobAssignment, LocalScheduler, NodeStatus, ScheduledNode
+from aethermesh_core.scheduler import (
+    JobAssignment,
+    LocalScheduler,
+    NodeStatus,
+    ScheduledNode,
+)
 
 
 @dataclass(frozen=True)
@@ -28,7 +33,9 @@ class LocalDispatchResult:
     def to_dict(self) -> dict[str, Any]:
         """Serialize a deterministic, intentionally small CLI summary."""
 
-        assigned_node_ids = sorted({assignment.node_id for assignment in self.assignments})
+        assigned_node_ids = sorted(
+            {assignment.node_id for assignment in self.assignments}
+        )
         return {
             "command": "dispatch-local-batch",
             "manifest_path": self.manifest_path,
@@ -119,47 +126,33 @@ def dispatch_local_batch(
     )
 
 
-def _node_heartbeat_payloads(registry: NodeRegistry) -> list[dict[str, int | str | list[str]]]:
+def _node_heartbeat_payloads(
+    registry: Any,
+    *,
+    include_capabilities: bool = True,
+) -> list[dict[str, int | str | list[str]]]:
     payloads: list[dict[str, int | str | list[str]]] = []
     for entry in registry.to_roster():
         if entry["status"] != NodeStatus.AVAILABLE.value:
             continue
         heartbeat_sequence = entry["heartbeat_sequence"]
         heartbeat_count = entry["heartbeat_count"]
-        if not isinstance(heartbeat_sequence, int) or not isinstance(heartbeat_count, int):
+        if not isinstance(heartbeat_sequence, int) or not isinstance(
+            heartbeat_count, int
+        ):
             raise ValueError("registry heartbeat fields must be integers")
         capabilities = entry["capabilities"]
         if not isinstance(capabilities, list) or not all(
             isinstance(capability, str) for capability in capabilities
         ):
             raise ValueError("registry capabilities field must be a list of strings")
-        payloads.append(
-            {
-                "node_id": str(entry["node_id"]),
-                "status": str(entry["status"]),
-                "heartbeat_sequence": heartbeat_sequence,
-                "heartbeat_count": heartbeat_count,
-                "capabilities": list(capabilities),
-            }
-        )
+        payload: dict[str, int | str | list[str]] = {
+            "node_id": str(entry["node_id"]),
+            "status": str(entry["status"]),
+            "heartbeat_sequence": heartbeat_sequence,
+            "heartbeat_count": heartbeat_count,
+        }
+        if include_capabilities:
+            payload["capabilities"] = list(capabilities)
+        payloads.append(payload)
     return payloads
-
-
-def send_numbered_message(
-    message_bus: LocalMessageBus,
-    *,
-    message_type: str,
-    sender_node_id: str,
-    recipient_node_id: str | None,
-    payload: dict[str, Any],
-    correlation_id: str | None,
-) -> MeshMessage:
-    message = MeshMessage(
-        message_id=f"msg-{len(message_bus.log()) + 1:04d}",
-        message_type=message_type,
-        sender_node_id=sender_node_id,
-        recipient_node_id=recipient_node_id,
-        payload=payload,
-        correlation_id=correlation_id,
-    )
-    return message_bus.send(message)
