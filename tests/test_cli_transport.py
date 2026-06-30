@@ -9,7 +9,9 @@ from aethermesh_core.cli import main
 
 
 class LocalTransportCliTests(unittest.TestCase):
-    def test_run_local_flow_transport_handles_available_node_without_assignments(self) -> None:
+    def test_run_local_flow_transport_handles_available_node_without_assignments(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             output_dir = Path(temp_dir) / "flow"
@@ -53,8 +55,12 @@ class LocalTransportCliTests(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["available_node_ids"], ["local-node-a", "local-node-b"])
-        self.assertEqual(payload["processed_node_ids"], ["local-node-a", "local-node-b"])
+        self.assertEqual(
+            payload["available_node_ids"], ["local-node-a", "local-node-b"]
+        )
+        self.assertEqual(
+            payload["processed_node_ids"], ["local-node-a", "local-node-b"]
+        )
         self.assertEqual(payload["processed_assignment_count"], 1)
         self.assertEqual(payload["transport_inbox_count"], 1)
         self.assertEqual(node_b_inbox["node_id"], "local-node-b")
@@ -75,9 +81,21 @@ class LocalTransportCliTests(unittest.TestCase):
                             {"node_id": "local-node-c", "status": "available"},
                         ],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}},
-                            {"job_id": "echo-2", "job_type": "echo", "payload": {"message": "two"}},
-                            {"job_id": "echo-3", "job_type": "echo", "payload": {"message": "three"}},
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
+                            {
+                                "job_id": "echo-3",
+                                "job_type": "echo",
+                                "payload": {"message": "three"},
+                            },
                         ],
                     }
                 ),
@@ -117,7 +135,9 @@ class LocalTransportCliTests(unittest.TestCase):
             first_payload = json.loads(first_stdout.getvalue())
             audit_payload = json.loads(audit_stdout.getvalue())
             second_payload = json.loads(second_stdout.getvalue())
-            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
+            ledger = json.loads(
+                (output_dir / "ledger.json").read_text(encoding="utf-8")
+            )
             node_a_inbox = json.loads(
                 (transport_dir / "inboxes" / "local-node-a.json").read_text(
                     encoding="utf-8"
@@ -128,7 +148,9 @@ class LocalTransportCliTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            offline_inbox_exists = (transport_dir / "inboxes" / "local-node-b.json").exists()
+            offline_inbox_exists = (
+                transport_dir / "inboxes" / "local-node-b.json"
+            ).exists()
             offline_worker_log_exists = (
                 output_dir / "worker-message-logs" / "local-node-b.json"
             ).exists()
@@ -145,9 +167,13 @@ class LocalTransportCliTests(unittest.TestCase):
                 "local-node-c": str(transport_dir / "inboxes" / "local-node-c.json"),
             },
         )
-        self.assertEqual(first_payload["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            first_payload["available_node_ids"], ["local-node-a", "local-node-c"]
+        )
         self.assertEqual(first_payload["offline_node_ids"], ["local-node-b"])
-        self.assertEqual(first_payload["processed_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            first_payload["processed_node_ids"], ["local-node-a", "local-node-c"]
+        )
         self.assertEqual(first_payload["processed_assignment_count"], 3)
         self.assertEqual(second_payload["processed_assignment_count"], 0)
         self.assertEqual(second_payload["skipped_processed_assignment_count"], 3)
