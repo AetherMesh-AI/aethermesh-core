@@ -2633,6 +2633,8 @@ class CliTests(unittest.TestCase):
             [receipt["assignment_message_id"] for receipt in receipts["receipts"]],
             ["msg-0003", "msg-0005", "msg-0006", "msg-0007", "msg-0008", "msg-0004"],
         )
+        first_receipt_hash = receipts["receipts"][0]["result_hash"]
+        self.assertRegex(first_receipt_hash, r"^[0-9a-f]{64}$")
         self.assertEqual(
             receipts["receipts"][0],
             {
@@ -2644,6 +2646,7 @@ class CliTests(unittest.TestCase):
                 "result_message_id": "msg-0009",
                 "contribution_message_id": "msg-0010",
                 "result_status": "completed",
+                "result_hash": first_receipt_hash,
                 "validation": {"valid": True, "reason": "ok"},
                 "credited_units": 1,
                 "output_summary": {"value": "hello mesh"},
