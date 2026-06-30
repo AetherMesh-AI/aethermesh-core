@@ -56,6 +56,33 @@ class DispatchTests(unittest.TestCase):
             [
                 message.payload
                 for message in result.messages
+                if message.message_type == "job_assigned"
+            ],
+            [
+                {
+                    "job_id": "echo-1",
+                    "job_type": "echo",
+                    "payload": {"message": "one"},
+                    "node_id": "node-a",
+                },
+                {
+                    "job_id": "stats-1",
+                    "job_type": "text_stats",
+                    "payload": {"text": "hello mesh"},
+                    "node_id": "node-a",
+                },
+                {
+                    "job_id": "echo-2",
+                    "job_type": "echo",
+                    "payload": {"message": "two"},
+                    "node_id": "node-c",
+                },
+            ],
+        )
+        self.assertEqual(
+            [
+                message.payload
+                for message in result.messages
                 if message.message_type == "node_heartbeat"
             ],
             [
@@ -116,6 +143,16 @@ class DispatchTests(unittest.TestCase):
                 "assigned_node_ids": ["node-a", "node-c"],
             },
         )
+
+    def test_dispatch_empty_nodes_error_message_is_stable(self) -> None:
+        with self.assertRaises(ValueError) as cm:
+            dispatch_local_batch(
+                manifest_path="manifest.json",
+                message_log_path="messages.json",
+                nodes=[],
+                jobs=[Job(job_id="echo-1", job_type="echo", payload={})],
+            )
+        self.assertEqual(str(cm.exception), "nodes must contain at least one node")
 
     def test_dispatch_uses_scheduler_capability_failure(self) -> None:
         with self.assertRaises(ValueError) as cm:

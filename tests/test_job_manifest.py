@@ -244,6 +244,58 @@ class JobManifestTests(unittest.TestCase):
             ):
                 load_job_manifest(path)
 
+    def test_manifest_error_messages_are_stable(self) -> None:
+        cases = [
+            ([], "manifest must be a JSON object"),
+            (
+                {"version": True, "nodes": ["local-node-a"], "jobs": [self._job()]},
+                "manifest version must be integer 1",
+            ),
+            (
+                {"version": 1, "nodes": [], "jobs": [self._job()]},
+                "manifest nodes must be a non-empty list",
+            ),
+            (
+                {"version": 1, "nodes": [""], "jobs": [self._job()]},
+                "manifest nodes[0] must be a non-empty string",
+            ),
+            (
+                {
+                    "version": 1,
+                    "nodes": [{"node_id": "local-node-a", "capabilities": [""]}],
+                    "jobs": [self._job()],
+                },
+                "manifest nodes[0].capabilities[0] must be a non-empty string",
+            ),
+            (
+                {"version": 1, "nodes": ["local-node-a"], "jobs": []},
+                "manifest jobs must be a non-empty list",
+            ),
+            (
+                {
+                    "version": 1,
+                    "nodes": ["local-node-a"],
+                    "jobs": [{"job_id": "echo-1", "job_type": ""}],
+                },
+                "manifest jobs[0].job_type must be a non-empty string",
+            ),
+        ]
+        for document, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    path = Path(temp_dir) / "manifest.json"
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(ManifestError) as cm:
+                        load_job_manifest(path)
+                    self.assertEqual(str(cm.exception), expected_message)
+
+    def test_string_node_entries_default_to_available_status(self) -> None:
+        batch = self._load(
+            {"version": 1, "nodes": ["local-node-a"], "jobs": [self._job()]}
+        )
+
+        self.assertEqual(batch.nodes[0].status, NodeStatus.AVAILABLE)
+
     def _load(self, document: dict[str, object]):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "manifest.json"

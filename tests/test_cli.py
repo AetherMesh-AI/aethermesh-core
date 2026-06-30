@@ -964,6 +964,8 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
+        self.assertEqual(stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n")
+        self.assertEqual(set(payload), {"result", "validation", "ledger_summary"})
         self.assertEqual(payload["result"]["node_id"], "local-demo-node")
         self.assertEqual(payload["result"]["output"], "hello mesh")
         self.assertEqual(payload["validation"]["valid"], True)
@@ -980,6 +982,12 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
+        self.assertEqual(stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n")
+        self.assertEqual(
+            set(payload),
+            {"job_id", "node_id", "status", "output", "error", "contribution_units"},
+        )
+        self.assertEqual(payload["job_id"], "demo-echo")
         self.assertEqual(payload["node_id"], "local-demo-node")
         self.assertEqual(payload["output"], "hello mesh")
         self.assertNotIn("validation", payload)
@@ -2746,6 +2754,157 @@ class CliTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("error:", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_cli_json_stdout_is_sorted_for_core_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "batch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            commands = [
+                ["run-demo", "--node-id", "node-z", "--message", "hello"],
+                ["simulate-local"],
+                ["run-local-batch", "--manifest", str(manifest_path)],
+                [
+                    "dispatch-local-batch",
+                    "--manifest",
+                    str(manifest_path),
+                    "--message-log-path",
+                    str(root / "dispatch.json"),
+                ],
+            ]
+            for command in commands:
+                with self.subTest(command=command):
+                    stdout = io.StringIO()
+                    with contextlib.redirect_stdout(stdout):
+                        exit_code = main(command)
+                    self.assertEqual(exit_code, 0)
+                    payload = json.loads(stdout.getvalue())
+                    self.assertEqual(
+                        stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n"
+                    )
+
+    def test_run_local_flow_stdout_and_artifact_contracts_are_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "manifest.json"
+            output_dir = root / "deep" / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            expected_files = [
+                output_dir / "dispatch-message-log.json",
+                output_dir / "flow-message-log.json",
+                output_dir / "ledger.json",
+                output_dir / "receipts.json",
+                output_dir / "node-state" / "local-node-a.json",
+                output_dir / "worker-message-logs" / "local-node-a.json",
+            ]
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(
+                stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n"
+            )
+            self.assertEqual(
+                set(payload),
+                {
+                    "available_node_ids",
+                    "command",
+                    "dispatch_message_log_path",
+                    "dispatch_summary",
+                    "flow_emitted_message_count",
+                    "flow_message_count",
+                    "flow_message_log_path",
+                    "ignored_message_count",
+                    "ledger_path",
+                    "ledger_summary",
+                    "manifest_path",
+                    "node_results",
+                    "offline_node_ids",
+                    "output_dir",
+                    "processed_assignment_count",
+                    "processed_node_ids",
+                    "receipt_count",
+                    "receipts_path",
+                    "skipped_processed_assignment_count",
+                    "total_contribution_units",
+                },
+            )
+            self.assertEqual(
+                payload["dispatch_message_log_path"], str(expected_files[0])
+            )
+            self.assertEqual(payload["flow_message_log_path"], str(expected_files[1]))
+            self.assertEqual(payload["ledger_path"], str(expected_files[2]))
+            self.assertEqual(payload["receipts_path"], str(expected_files[3]))
+            self.assertEqual(
+                payload["node_results"][0]["node_state_path"], str(expected_files[4])
+            )
+            self.assertEqual(
+                payload["node_results"][0]["worker_message_log_path"],
+                str(expected_files[5]),
+            )
+            for path in expected_files:
+                self.assertTrue(path.exists(), path)
+            self.assertEqual(
+                sorted(path.name for path in output_dir.iterdir()),
+                [
+                    "dispatch-message-log.json",
+                    "flow-message-log.json",
+                    "ledger.json",
+                    "node-state",
+                    "receipts.json",
+                    "worker-message-logs",
+                ],
+            )
+            self.assertEqual(
+                sorted(path.name for path in (output_dir / "node-state").iterdir()),
+                ["local-node-a.json"],
+            )
+            self.assertEqual(
+                sorted(
+                    path.name for path in (output_dir / "worker-message-logs").iterdir()
+                ),
+                ["local-node-a.json"],
+            )
 
 
 if __name__ == "__main__":

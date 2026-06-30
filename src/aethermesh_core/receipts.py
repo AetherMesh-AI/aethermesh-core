@@ -176,7 +176,8 @@ def _json_compatible_value(value: Any) -> Any:
 
 
 def _validate_receipt_document(document: dict[str, Any]) -> None:
-    if document.get("version") != RECEIPT_DOCUMENT_VERSION:
+    version = document.get("version")
+    if version != RECEIPT_DOCUMENT_VERSION or isinstance(version, bool):
         raise ReceiptPersistenceError("receipt JSON must contain version 1")
     if document.get("run_source") != RUN_SOURCE:
         raise ReceiptPersistenceError(

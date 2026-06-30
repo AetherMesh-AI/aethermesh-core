@@ -87,6 +87,14 @@ class LocalMessageBusTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already registered: node-a"):
             bus.register_node("node-a")
 
+    def test_register_node_empty_id_error_message_is_exact(self) -> None:
+        bus = LocalMessageBus()
+
+        with self.assertRaises(ValueError) as cm:
+            bus.register_node("")
+
+        self.assertEqual(str(cm.exception), "node_id must be a non-empty string")
+
     def test_send_rejects_unregistered_sender(self) -> None:
         bus = LocalMessageBus()
         bus.register_node("node-b")

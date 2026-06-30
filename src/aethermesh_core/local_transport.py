@@ -147,7 +147,8 @@ def _load_inbox_document(path: Path) -> dict[str, Any]:
 
     if not isinstance(document, dict):
         raise LocalTransportError("local transport inbox JSON must be an object")
-    if document.get("version") != LOCAL_TRANSPORT_INBOX_VERSION:
+    version = document.get("version")
+    if version != LOCAL_TRANSPORT_INBOX_VERSION or isinstance(version, bool):
         raise LocalTransportError("local transport inbox JSON must contain version 1")
     return document
 

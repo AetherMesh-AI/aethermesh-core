@@ -166,8 +166,15 @@ class ValidationTests(unittest.TestCase):
             ),
         )
 
-        self.assertTrue(validation.valid)
-        self.assertEqual(validation.reason, "ok")
+        self.assertEqual(
+            validation.to_dict(),
+            {
+                "job_id": "text-stats-1",
+                "result_job_id": "text-stats-1",
+                "valid": True,
+                "reason": "ok",
+            },
+        )
 
     def test_text_stats_recomputes_expected_output(self) -> None:
         validation = validate_job_result(

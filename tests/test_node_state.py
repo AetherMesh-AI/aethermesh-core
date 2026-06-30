@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from aethermesh_core.node_state import (
     LocalNodeProcessingState,
@@ -24,7 +25,7 @@ class NodeStateTests(unittest.TestCase):
 
     def test_save_and_load_state_preserves_order_and_unknown_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            state_path = Path(temp_dir) / "nested" / "node-state.json"
+            state_path = Path(temp_dir) / "deep" / "nested" / "node-state.json"
             state = LocalNodeProcessingState(
                 node_id="node-a",
                 processed_message_ids=["msg-0001", "msg-0003"],
@@ -165,6 +166,210 @@ class NodeStateTests(unittest.TestCase):
 
             with self.assertRaisesRegex(NodeStatePersistenceError, "must equal"):
                 load_node_processing_state(state_path, expected_node_id="node-a")
+
+    def test_save_node_processing_state_uses_stable_json_and_cleans_temp_files(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "deep" / "nested" / "node-state.json"
+            state = LocalNodeProcessingState(
+                node_id="node-a",
+                processed_message_ids=["msg-0001", "msg-0003"],
+                extra_fields={"z_future": True, "a_note": "kept"},
+            )
+
+            save_node_processing_state(state_path, state)
+            raw = state_path.read_text(encoding="utf-8")
+
+            self.assertEqual(
+                raw,
+                '{\n  "a_note": "kept",\n  "node_id": "node-a",\n  "processed_assignment_count": 2,\n  "processed_message_ids": [\n    "msg-0001",\n    "msg-0003"\n  ],\n  "version": 1,\n  "z_future": true\n}\n',
+            )
+            self.assertEqual(
+                sorted(child.name for child in state_path.parent.iterdir()),
+                ["node-state.json"],
+            )
+
+    def test_save_node_processing_state_preserves_existing_file_on_atomic_replace_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "node-state.json"
+            state_path.write_text('{"original": true}\n', encoding="utf-8")
+            state = LocalNodeProcessingState(
+                node_id="node-a",
+                processed_message_ids=["msg-0001"],
+                extra_fields={},
+            )
+
+            with mock.patch(
+                "aethermesh_core.node_state.os.replace",
+                side_effect=OSError("replace failed"),
+            ):
+                with self.assertRaisesRegex(
+                    NodeStatePersistenceError, "replace failed"
+                ):
+                    save_node_processing_state(state_path, state)
+
+            self.assertEqual(
+                state_path.read_text(encoding="utf-8"), '{"original": true}\n'
+            )
+            self.assertEqual(
+                sorted(child.name for child in state_path.parent.iterdir()),
+                ["node-state.json"],
+            )
+
+    def test_bool_values_are_rejected_from_node_state_structural_fields(self) -> None:
+        cases = [
+            {
+                "version": True,
+                "node_id": "node-a",
+                "processed_message_ids": [],
+                "processed_assignment_count": 0,
+            },
+            {
+                "version": 1,
+                "node_id": "node-a",
+                "processed_message_ids": [True],
+                "processed_assignment_count": 1,
+            },
+            {
+                "version": 1,
+                "node_id": "node-a",
+                "processed_message_ids": [],
+                "processed_assignment_count": False,
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "node-state.json"
+            for document in cases:
+                with self.subTest(document=document):
+                    state_path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(NodeStatePersistenceError):
+                        load_node_processing_state(
+                            state_path, expected_node_id="node-a"
+                        )
+
+    def test_save_node_processing_state_uses_target_parent_temp_file_contract(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "deep" / "nested" / "node-state.json"
+            state = LocalNodeProcessingState("node-a", [], {})
+            calls: list[dict[str, object]] = []
+            real_named_temporary_file = tempfile.NamedTemporaryFile
+
+            def capture_named_temporary_file(*args, **kwargs):
+                calls.append({"args": args, "kwargs": dict(kwargs)})
+                return real_named_temporary_file(*args, **kwargs)
+
+            with mock.patch(
+                "aethermesh_core.node_state.tempfile.NamedTemporaryFile",
+                side_effect=capture_named_temporary_file,
+            ):
+                save_node_processing_state(path, state)
+
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["args"], ("w",))
+            self.assertEqual(calls[0]["kwargs"]["encoding"], "utf-8")
+            self.assertEqual(calls[0]["kwargs"]["dir"], path.parent)
+            self.assertEqual(calls[0]["kwargs"]["prefix"], ".node-state.json.")
+            self.assertEqual(calls[0]["kwargs"]["suffix"], ".tmp")
+            self.assertEqual(calls[0]["kwargs"]["delete"], False)
+
+    def test_load_node_processing_state_error_messages_are_stable(self) -> None:
+        cases = [
+            (
+                {
+                    "version": True,
+                    "node_id": "node-a",
+                    "processed_message_ids": [],
+                    "processed_assignment_count": 0,
+                },
+                "node state JSON must contain version 1",
+            ),
+            (
+                {
+                    "version": 1,
+                    "processed_message_ids": [],
+                    "processed_assignment_count": 0,
+                },
+                "node state JSON is missing required field(s): node_id",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "",
+                    "processed_message_ids": [],
+                    "processed_assignment_count": 0,
+                },
+                "node state field 'node_id' must be a non-empty string",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-b",
+                    "processed_message_ids": [],
+                    "processed_assignment_count": 0,
+                },
+                "node state belongs to node 'node-b', not 'node-a'",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "processed_message_ids": {},
+                    "processed_assignment_count": 0,
+                },
+                "node state field 'processed_message_ids' must be a list",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "processed_message_ids": [""],
+                    "processed_assignment_count": 1,
+                },
+                "node state processed_message_ids[0] must be a non-empty string",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "processed_message_ids": ["msg-1", "msg-1"],
+                    "processed_assignment_count": 2,
+                },
+                "node state contains duplicate processed message id: msg-1",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "processed_message_ids": [],
+                    "processed_assignment_count": False,
+                },
+                "node state field 'processed_assignment_count' must be an integer",
+            ),
+            (
+                {
+                    "version": 1,
+                    "node_id": "node-a",
+                    "processed_message_ids": ["msg-1"],
+                    "processed_assignment_count": 2,
+                },
+                "node state processed_assignment_count must equal the number of unique processed message ids",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "node-state.json"
+            for document, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    state_path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(NodeStatePersistenceError) as cm:
+                        load_node_processing_state(
+                            state_path, expected_node_id="node-a"
+                        )
+                    self.assertEqual(str(cm.exception), expected_message)
 
 
 if __name__ == "__main__":

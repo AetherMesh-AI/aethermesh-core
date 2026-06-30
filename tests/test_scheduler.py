@@ -199,6 +199,22 @@ class LocalSchedulerTests(unittest.TestCase):
         ):
             scheduler.assign_jobs([Job(job_id="embed-1", job_type="text_embed")])
 
+    def test_plain_job_like_object_requires_string_id_and_type(self) -> None:
+        class HalfJob:
+            job_id = "job-half"
+            job_type = None
+
+            def __str__(self) -> str:
+                return "fallback-half-job"
+
+        scheduler = LocalScheduler(["node-a"])
+
+        assignment = scheduler.assign_jobs([HalfJob()])[0]
+
+        self.assertEqual(
+            assignment.to_dict(), {"job_id": "fallback-half-job", "node_id": "node-a"}
+        )
+
     def test_accepts_plain_node_ids_as_available_nodes(self) -> None:
         scheduler = LocalScheduler(["node-a"])
 

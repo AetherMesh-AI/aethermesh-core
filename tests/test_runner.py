@@ -34,6 +34,22 @@ class LocalRunnerTests(unittest.TestCase):
             },
         )
 
+    def test_echo_missing_message_defaults_to_empty_string(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(Job(job_id="echo-empty", job_type="echo", payload={}))
+
+        self.assertEqual(
+            result.to_dict(),
+            {
+                "job_id": "echo-empty",
+                "node_id": "local-test-node",
+                "status": "completed",
+                "output": "",
+                "error": None,
+                "contribution_units": 1,
+            },
+        )
+
     def test_unsupported_job_type_fails_predictably(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         job = Job(job_id="job-nope-1", job_type="unsupported", payload={})
@@ -72,6 +88,20 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertIsNone(result.error)
         self.assertEqual(result.contribution_units, 1)
 
+    def test_text_stats_preview_is_truncated_to_80_characters(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        text = " ".join(["word"] * 30)
+
+        result = runner.run(
+            Job(job_id="stats-preview", job_type="text_stats", payload={"text": text})
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output["normalized_preview"], " ".join(text.split())[:80]
+        )
+        self.assertEqual(len(result.output["normalized_preview"]), 80)
+
     def test_text_stats_empty_text_completes_deterministically(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         job = Job(job_id="job-text-empty", job_type="text_stats", payload={"text": ""})
@@ -98,6 +128,8 @@ class LocalRunnerTests(unittest.TestCase):
             Job(job_id="non-string", job_type="text_stats", payload={"text": 123})
         )
 
+        self.assertEqual(missing.job_id, "missing")
+        self.assertEqual(missing.node_id, "local-test-node")
         self.assertEqual(missing.status, "failed")
         self.assertEqual(missing.contribution_units, 0)
         self.assertEqual(
@@ -180,6 +212,20 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual(result.status, "completed")
         self.assertEqual(len(result.output["keywords"]), 3)
 
+    def test_keyword_extract_accepts_min_and_max_limits(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        for limit in (1, 50):
+            with self.subTest(limit=limit):
+                result = runner.run(
+                    Job(
+                        job_id=f"keyword-limit-{limit}",
+                        job_type="keyword_extract",
+                        payload={"text": "alpha beta gamma", "limit": limit},
+                    )
+                )
+                self.assertEqual(result.status, "completed")
+                self.assertLessEqual(len(result.output["keywords"]), limit)
+
     def test_keyword_extract_malformed_payload_fails_predictably(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
 
@@ -239,6 +285,29 @@ class LocalRunnerTests(unittest.TestCase):
         )
         self.assertEqual(result.contribution_units, 1)
 
+    def test_text_chunk_splits_on_space_immediately_before_hard_end(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+
+        result = runner.run(
+            Job(
+                job_id="chunk-space-before-end",
+                job_type="text_chunk",
+                payload={"text": "abcd efgh", "max_chars": 6},
+            )
+        )
+
+        self.assertEqual(
+            result.output,
+            {
+                "chunks": [
+                    {"index": 0, "text": "abcd ", "character_count": 5},
+                    {"index": 1, "text": "efgh", "character_count": 4},
+                ],
+                "chunk_count": 2,
+                "character_count": 9,
+            },
+        )
+
     def test_text_chunk_empty_text_returns_zero_chunks(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
@@ -287,6 +356,20 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual(result.output["chunk_count"], 2)
         self.assertEqual(result.output["chunks"][0]["character_count"], 120)
         self.assertEqual(result.output["character_count"], 121)
+
+    def test_text_chunk_accepts_min_and_max_chunk_sizes(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        for max_chars in (1, 1000):
+            with self.subTest(max_chars=max_chars):
+                result = runner.run(
+                    Job(
+                        job_id=f"chunk-boundary-{max_chars}",
+                        job_type="text_chunk",
+                        payload={"text": "ab", "max_chars": max_chars},
+                    )
+                )
+                self.assertEqual(result.status, "completed")
+                self.assertEqual(result.contribution_units, 1)
 
     def test_text_chunk_malformed_payload_fails_predictably(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
@@ -372,6 +455,21 @@ class LocalRunnerTests(unittest.TestCase):
                 "vector": [1, 0, 2, 0, 0, 0, 0, 0],
             },
         )
+
+    def test_text_embed_accepts_min_and_max_dimensions(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        for dimensions in (2, 64):
+            with self.subTest(dimensions=dimensions):
+                result = runner.run(
+                    Job(
+                        job_id=f"embed-boundary-{dimensions}",
+                        job_type="text_embed",
+                        payload={"text": "alpha beta", "dimensions": dimensions},
+                    )
+                )
+                self.assertEqual(result.status, "completed")
+                self.assertEqual(result.output["dimensions"], dimensions)
+                self.assertEqual(len(result.output["vector"]), dimensions)
 
     def test_text_embed_malformed_payload_fails_predictably(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))

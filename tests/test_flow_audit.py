@@ -156,6 +156,31 @@ class FlowAuditTests(unittest.TestCase):
 
         self.assertEqual(after, before)
 
+    def test_duplicate_receipt_contribution_claims_must_match_duplicate_ledger_records(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = _write_manifest(Path(temp_dir))
+            output_dir = Path(temp_dir) / "flow"
+            run_local_flow(str(manifest_path), str(output_dir))
+            receipts_path = output_dir / "receipts.json"
+            receipts = _load_json(receipts_path)
+            receipt_entries = receipts["receipts"]
+            assert isinstance(receipt_entries, list)
+            receipt_entries.append(dict(receipt_entries[0]))
+            _write_json(receipts_path, receipts)
+            before = _artifact_contents(output_dir)
+
+            with self.assertRaises(FlowAuditError) as cm:
+                audit_local_flow(output_dir)
+            after = _artifact_contents(output_dir)
+
+        self.assertIn(
+            "receipt contribution claims do not match ledger records", str(cm.exception)
+        )
+        self.assertIn("missing node=local-node-a job=echo-1", str(cm.exception))
+        self.assertEqual(after, before)
+
 
 FlowTamper = Callable[[Path], None]
 
@@ -167,61 +192,67 @@ class FlowAuditTamperTests(unittest.TestCase):
                 lambda output_dir: _set_receipt_field(
                     output_dir, 0, "assignment_message_id", "missing-assignment"
                 ),
-                "assignment_message_id not found",
+                "receipt entry 0 job=echo-1 node=local-node-a assignment_message_id not found in dispatch log: missing-assignment",
             ),
             (
                 lambda output_dir: _set_receipt_field(
                     output_dir, 0, "result_message_id", "missing-result"
                 ),
-                "job_result_reported message_id not found",
+                "receipt entry 0 job=echo-1 node=local-node-a job_result_reported message_id not found in flow log: missing-result",
             ),
             (
                 lambda output_dir: _set_receipt_field(
                     output_dir, 0, "contribution_message_id", ""
                 ),
-                "contribution_message_id must be present",
+                "receipt entry 0 job=echo-1 node=local-node-a contribution_message_id must be present",
             ),
             (
                 lambda output_dir: _set_dispatch_assignment_payload(
                     output_dir, "msg-0003", "job_type", "text_stats"
                 ),
-                "assignment.job_type mismatch",
+                "receipt entry 0 job=echo-1 node=local-node-a assignment.job_type mismatch: receipt='echo' artifact='text_stats'",
             ),
             (
                 lambda output_dir: _set_flow_message_sender(
                     output_dir, "job_result_reported", "echo-1", "local-node-b"
                 ),
-                "job_result_reported message_id not found",
+                "receipt entry 0 job=echo-1 node=local-node-a job_result_reported message_id not found in flow log: msg-0005",
+            ),
+            (
+                lambda output_dir: _set_flow_message_payload(
+                    output_dir, "job_result_reported", "echo-1", "job_id", "other-job"
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a job_result_reported message_id not found in flow log: msg-0005",
             ),
             (
                 lambda output_dir: _set_flow_message_payload(
                     output_dir, "job_result_reported", "echo-1", "status", "failed"
                 ),
-                "result.status mismatch",
+                "receipt entry 0 job=echo-1 node=local-node-a result.status mismatch: receipt='completed' artifact='failed'",
             ),
             (
                 lambda output_dir: _set_flow_message_payload(
                     output_dir, "contribution_recorded", "echo-1", "job_id", "other-job"
                 ),
-                "contribution_recorded message_id not found",
+                "receipt entry 0 job=echo-1 node=local-node-a contribution_recorded message_id not found in flow log: msg-0006",
             ),
             (
                 lambda output_dir: _set_flow_message_payload(
                     output_dir, "contribution_recorded", "echo-1", "status", "failed"
                 ),
-                "contribution.status mismatch",
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.status mismatch: receipt='completed' artifact='failed'",
             ),
             (
                 lambda output_dir: _set_flow_message_payload(
                     output_dir, "contribution_recorded", "echo-1", "valid", False
                 ),
-                "contribution.valid mismatch",
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.valid mismatch: receipt=True artifact=False",
             ),
             (
                 lambda output_dir: _duplicate_flow_message(
                     output_dir, "job_result_reported", "echo-1"
                 ),
-                "job_result_reported message_id is ambiguous",
+                "receipt entry 0 job=echo-1 node=local-node-a job_result_reported message_id is ambiguous in flow log: msg-0005",
             ),
         ]
         for tamper, match in cases:
@@ -231,11 +262,10 @@ class FlowAuditTamperTests(unittest.TestCase):
                 run_local_flow(str(manifest_path), str(output_dir))
                 tamper(output_dir)
                 before = _artifact_contents(output_dir)
-                with (
-                    self.subTest(match=match),
-                    self.assertRaisesRegex(FlowAuditError, match),
-                ):
-                    audit_local_flow(output_dir)
+                with self.subTest(match=match):
+                    with self.assertRaises(FlowAuditError) as cm:
+                        audit_local_flow(output_dir)
+                    self.assertEqual(str(cm.exception), match)
                 after = _artifact_contents(output_dir)
             self.assertEqual(after, before)
 
@@ -272,6 +302,16 @@ def _set_dispatch_assignment_payload(
     payload = message["payload"]
     assert isinstance(payload, dict)
     payload[field_name] = value
+    _write_json(path, document)
+
+
+def _set_flow_message_type(
+    output_dir: Path, message_type: str, job_id: str, replacement_type: str
+) -> None:
+    path = output_dir / "flow-message-log.json"
+    document = _load_json(path)
+    message = _find_message(document, message_type, "job_id", job_id)
+    message["message_type"] = replacement_type
     _write_json(path, document)
 
 

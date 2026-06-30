@@ -188,7 +188,7 @@ class ContributionLedger:
         """Deserialize a ledger from the local JSON file shape."""
 
         version = document.get("version")
-        if version != 1:
+        if version != 1 or isinstance(version, bool):
             raise LedgerPersistenceError("ledger JSON must contain version 1")
         records = document.get("records")
         if not isinstance(records, list):

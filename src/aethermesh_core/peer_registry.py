@@ -96,13 +96,21 @@ def _parse_heartbeat(message: MeshMessage) -> PeerSummary:
         raise PeerRegistryError(
             f"heartbeat message {message.message_id} payload field 'status' must be a non-empty string"
         )
-    if not isinstance(heartbeat_sequence, int) or heartbeat_sequence < 0:
+    if (
+        not isinstance(heartbeat_sequence, int)
+        or isinstance(heartbeat_sequence, bool)
+        or heartbeat_sequence < 0
+    ):
         raise PeerRegistryError(
             f"heartbeat message {message.message_id} payload field 'heartbeat_sequence' must be a non-negative integer"
         )
     if "heartbeat_count" in payload:
         heartbeat_count = payload["heartbeat_count"]
-        if not isinstance(heartbeat_count, int) or heartbeat_count < 0:
+        if (
+            not isinstance(heartbeat_count, int)
+            or isinstance(heartbeat_count, bool)
+            or heartbeat_count < 0
+        ):
             raise PeerRegistryError(
                 f"heartbeat message {message.message_id} payload field 'heartbeat_count' must be a non-negative integer"
             )

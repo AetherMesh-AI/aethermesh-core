@@ -237,7 +237,8 @@ def _load_message_log_document(path: str | Path) -> dict[str, Any]:
 
     if not isinstance(document, dict):
         raise MessageLogPersistenceError("message log JSON must be an object")
-    if document.get("version") != 1:
+    version = document.get("version")
+    if version != 1 or isinstance(version, bool):
         raise MessageLogPersistenceError("message log JSON must contain version 1")
     entries = document.get("messages")
     if not isinstance(entries, list):

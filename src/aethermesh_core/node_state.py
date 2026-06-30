@@ -91,7 +91,8 @@ def load_node_processing_state(
         raise NodeStatePersistenceError(
             f"node state JSON is missing required field(s): {fields}"
         )
-    if document.get("version") != NODE_STATE_VERSION:
+    version = document.get("version")
+    if version != NODE_STATE_VERSION or isinstance(version, bool):
         raise NodeStatePersistenceError("node state JSON must contain version 1")
 
     node_id = document.get("node_id")
