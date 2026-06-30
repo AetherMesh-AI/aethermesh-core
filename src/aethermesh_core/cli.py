@@ -27,6 +27,7 @@ from aethermesh_core.local_transport import (
     local_inbox_path,
     load_local_inbox,
     materialize_local_inboxes,
+    write_local_inbox,
 )
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
@@ -493,6 +494,17 @@ def run_local_flow(
             message_log_path=dispatch_message_log_path,
             transport_dir=transport_dir,
         )
+        materialized_inbox_paths = transport_payload.get("inbox_paths", {})
+        if not isinstance(materialized_inbox_paths, dict):
+            raise ValueError("materialize-local-inboxes returned invalid inbox paths")
+        for node_id in available_node_ids:
+            if node_id not in materialized_inbox_paths:
+                write_local_inbox(
+                    transport_dir=transport_dir,
+                    node_id=node_id,
+                    messages=[],
+                    source_message_log_path=dispatch_message_log_path,
+                )
 
     per_node_results: list[dict[str, object]] = []
     processed_assignments = []

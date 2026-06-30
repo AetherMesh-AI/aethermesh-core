@@ -9,6 +9,57 @@ from aethermesh_core.cli import main
 
 
 class LocalTransportCliTests(unittest.TestCase):
+    def test_run_local_flow_transport_handles_available_node_without_assignments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            transport_dir = Path(temp_dir) / "transport"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--transport-dir",
+                        str(transport_dir),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            node_b_inbox = json.loads(
+                (transport_dir / "inboxes" / "local-node-b.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["available_node_ids"], ["local-node-a", "local-node-b"])
+        self.assertEqual(payload["processed_node_ids"], ["local-node-a", "local-node-b"])
+        self.assertEqual(payload["processed_assignment_count"], 1)
+        self.assertEqual(payload["transport_inbox_count"], 1)
+        self.assertEqual(node_b_inbox["node_id"], "local-node-b")
+        self.assertEqual(node_b_inbox["messages"], [])
+
     def test_run_local_flow_uses_transport_inboxes_and_audits(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
