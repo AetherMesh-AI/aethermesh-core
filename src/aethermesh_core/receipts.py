@@ -156,9 +156,7 @@ def _output_summary(output: Any) -> dict[str, Any]:
 
 def _json_compatible_dict(value: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {}
-    for key in sorted(value):
-        if not isinstance(key, str):
-            continue
+    for key in sorted(key for key in value if isinstance(key, str)):
         summary[key] = _json_compatible_value(value[key])
     return summary
 

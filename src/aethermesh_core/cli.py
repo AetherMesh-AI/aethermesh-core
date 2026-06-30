@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote
 
@@ -58,6 +58,16 @@ from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import NodeStatus
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
+
+
+@dataclass(frozen=True)
+class InboxReplayRequest:
+    node_id: str
+    message_log_path: str | None = None
+    transport_dir: str | None = None
+    ledger_path: str | None = None
+    output_message_log_path: str | None = None
+    node_state_path: str | None = None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -468,11 +478,13 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         worker_message_log_path = _node_artifact_path(worker_log_dir, node_id)
         worker_message_log_paths[node_id] = worker_message_log_path
         node_payload, inbox_result = _process_local_inbox(
-            node_id=node_id,
-            message_log_path=str(dispatch_message_log_path),
-            ledger_path=str(ledger_path),
-            output_message_log_path=str(worker_message_log_path),
-            node_state_path=str(node_state_path),
+            InboxReplayRequest(
+                node_id=node_id,
+                message_log_path=str(dispatch_message_log_path),
+                ledger_path=str(ledger_path),
+                output_message_log_path=str(worker_message_log_path),
+                node_state_path=str(node_state_path),
+            )
         )
         processed_assignments.extend(inbox_result.processed)
         raw_processed_count = node_payload["processed_assignment_count"]
@@ -580,88 +592,86 @@ def process_local_inbox(
     if (message_log_path is None) == (transport_dir is None):
         raise ValueError("provide exactly one of --message-log-path or --transport-dir")
     payload, _inbox_result = _process_local_inbox(
-        node_id=node_id,
-        message_log_path=message_log_path,
-        transport_dir=transport_dir,
-        ledger_path=ledger_path,
-        output_message_log_path=output_message_log_path,
-        node_state_path=node_state_path,
+        InboxReplayRequest(
+            node_id=node_id,
+            message_log_path=message_log_path,
+            transport_dir=transport_dir,
+            ledger_path=ledger_path,
+            output_message_log_path=output_message_log_path,
+            node_state_path=node_state_path,
+        )
     )
     return payload
 
 
 def _process_local_inbox(
-    *,
-    node_id: str,
-    message_log_path: str | None = None,
-    transport_dir: str | None = None,
-    ledger_path: str | None = None,
-    output_message_log_path: str | None = None,
-    node_state_path: str | None = None,
+    request: InboxReplayRequest,
 ) -> tuple[dict[str, object], InboxProcessResult]:
     """Replay saved local messages and return payload plus structured result."""
 
-    if (message_log_path is None) == (transport_dir is None):
+    if (request.message_log_path is None) == (request.transport_dir is None):
         raise ValueError("provide exactly one of --message-log-path or --transport-dir")
     node_state = (
-        load_node_processing_state(node_state_path, expected_node_id=node_id)
-        if node_state_path is not None
+        load_node_processing_state(request.node_state_path, expected_node_id=request.node_id)
+        if request.node_state_path is not None
         else None
     )
-    if transport_dir is not None:
-        messages = load_local_inbox(transport_dir=transport_dir, node_id=node_id)
-        source_message_path = str(Path(transport_dir) / "inboxes" / f"{_node_artifact_filename(node_id)}.json")
+    if request.transport_dir is not None:
+        messages = load_local_inbox(transport_dir=request.transport_dir, node_id=request.node_id)
+        source_message_path = str(
+            Path(request.transport_dir) / "inboxes" / f"{_node_artifact_filename(request.node_id)}.json"
+        )
     else:
-        if message_log_path is None:
+        if request.message_log_path is None:
             raise ValueError("message log path is required")
-        messages = load_message_log_messages(message_log_path)
-        source_message_path = message_log_path
+        messages = load_message_log_messages(request.message_log_path)
+        source_message_path = request.message_log_path
     ledger, extra_fields = (
-        load_ledger_document(ledger_path)
-        if ledger_path is not None
+        load_ledger_document(request.ledger_path)
+        if request.ledger_path is not None
         else (ContributionLedger(), {})
     )
     message_bus = LocalMessageBus()
-    for registered_node_id in _node_ids_from_replayed_messages(messages, node_id):
+    for registered_node_id in _node_ids_from_replayed_messages(messages, request.node_id):
         message_bus.register_node(registered_node_id)
     for message in messages:
         message_bus.send(message)
 
     service = LocalNodeService(
-        identity=NodeIdentity(node_id=node_id),
+        identity=NodeIdentity(node_id=request.node_id),
         message_bus=message_bus,
-        runner=LocalRunner(NodeIdentity(node_id=node_id)),
+        runner=LocalRunner(NodeIdentity(node_id=request.node_id)),
         ledger=ledger,
         processed_message_ids=(
             list(node_state.processed_message_ids) if node_state is not None else None
         ),
     )
     inbox_result = service.process_inbox()
-    if ledger_path is not None:
-        save_ledger_document(ledger_path, ledger, extra_fields)
-    payload = _inbox_process_result_to_dict(inbox_result, ledger, ledger_path)
-    if output_message_log_path is not None:
+    if request.ledger_path is not None:
+        save_ledger_document(request.ledger_path, ledger, extra_fields)
+    payload = _inbox_process_result_to_dict(inbox_result, ledger, request.ledger_path)
+    if request.output_message_log_path is not None:
         emitted_messages = _emitted_messages_from_inbox_result(inbox_result)
         output_document = build_replayed_message_log_document(
             replayed_messages=messages,
             emitted_messages=emitted_messages,
-            node_id=node_id,
+            node_id=request.node_id,
             source_message_log_path=source_message_path,
-            ledger_path=ledger_path,
+            ledger_path=request.ledger_path,
             processed_assignment_count=len(inbox_result.processed),
             ignored_message_ids=list(inbox_result.ignored_message_ids),
         )
-        write_message_log(output_message_log_path, output_document)
-        payload["output_message_log_path"] = output_message_log_path
+        write_message_log(request.output_message_log_path, output_document)
+        payload["output_message_log_path"] = request.output_message_log_path
         payload["final_message_count"] = len(messages) + len(emitted_messages)
-    if node_state_path is not None and node_state is not None:
+    if request.node_state_path is not None and node_state is not None:
         updated_state = LocalNodeProcessingState(
-            node_id=node_id,
+            node_id=request.node_id,
             processed_message_ids=list(inbox_result.processed_message_ids),
             extra_fields=node_state.extra_fields,
         )
-        save_node_processing_state(node_state_path, updated_state)
-        payload["node_state_path"] = node_state_path
+        save_node_processing_state(request.node_state_path, updated_state)
+        payload["node_state_path"] = request.node_state_path
         payload["processed_message_ids"] = list(updated_state.processed_message_ids)
         payload["skipped_processed_message_ids"] = list(
             inbox_result.skipped_processed_message_ids

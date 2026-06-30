@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Any
 
-from aethermesh_core.messages import MeshMessage
+from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.messages import MeshMessage, message_from_mapping
 from aethermesh_core.models import Job
 from aethermesh_core.scheduler import JobAssignment, ScheduledNode
 from aethermesh_core.simulation import LocalSimulationResult
@@ -203,25 +202,9 @@ def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
     """Write a local message log via temp-file then atomic replace."""
 
     log_path = Path(path)
-    parent = log_path.parent
-    temp_name: str | None = None
     try:
-        parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=parent,
-            prefix=f".{log_path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temp_name = handle.name
-            json.dump(document, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-        os.replace(temp_name, log_path)
+        atomic_write_json(log_path, document)
     except (OSError, TypeError, ValueError) as exc:
-        if temp_name is not None:
-            _remove_temp_file(temp_name)
         raise MessageLogPersistenceError(f"could not write message log file: {exc}") from exc
 
 
@@ -260,39 +243,7 @@ def _message_to_document_entry(message: MeshMessage) -> dict[str, Any]:
 
 
 def _message_from_document_entry(entry: Any, index: int) -> MeshMessage:
-    if not isinstance(entry, dict):
-        raise MessageLogPersistenceError(
-            f"message log entry {index} must be an object"
-        )
-    message_id = entry.get("message_id")
-    message_type = entry.get("message_type")
-    sender_node_id = entry.get("sender_node_id")
-    recipient_node_id = entry.get("recipient_node_id")
-    payload = entry.get("payload", {})
-    correlation_id = entry.get("correlation_id")
     try:
-        if not isinstance(message_id, str):
-            raise ValueError("message_id must be a non-empty string")
-        if not isinstance(message_type, str):
-            raise ValueError("message_type must be a non-empty string")
-        if not isinstance(sender_node_id, str):
-            raise ValueError("sender_node_id must be a non-empty string")
-        return MeshMessage(
-            message_id=message_id,
-            message_type=message_type,
-            sender_node_id=sender_node_id,
-            recipient_node_id=recipient_node_id,
-            payload=payload,
-            correlation_id=correlation_id,
-        )
+        return message_from_mapping(entry)
     except ValueError as exc:
-        raise MessageLogPersistenceError(
-            f"message log entry {index} is invalid: {exc}"
-        ) from exc
-
-
-def _remove_temp_file(path: str) -> None:
-    try:
-        os.unlink(path)
-    except FileNotFoundError:
-        return
+        raise MessageLogPersistenceError(f"message log entry {index} is invalid: {exc}") from exc

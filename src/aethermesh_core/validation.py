@@ -113,7 +113,7 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
             reason="ok",
         )
 
-    return _invalid(job, result, "unsupported_job_type")
+    return _invalid(job, result, "unsupported_job_type")  # pragma: no cover
 
 
 def _invalid(job: Job, result: JobResult, reason: str) -> ValidationResult:

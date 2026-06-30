@@ -9,15 +9,14 @@ messages in the source message log.
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 from aethermesh_core.message_log import load_message_log_messages
-from aethermesh_core.messages import MeshMessage
+from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.messages import MeshMessage, message_from_mapping
 
 LOCAL_TRANSPORT_INBOX_VERSION = 1
 
@@ -84,7 +83,7 @@ def write_local_inbox(
         document["source_message_log_path"] = str(source_message_log_path)
 
     path = local_inbox_path(transport_dir, node_id)
-    _atomic_write_json(path, document)
+    _write_inbox_document(path, document)
     return path
 
 
@@ -146,33 +145,10 @@ def _load_inbox_document(path: Path) -> dict[str, Any]:
 
 
 def _message_from_inbox_entry(entry: Any, index: int) -> MeshMessage:
-    if not isinstance(entry, dict):
-        raise LocalTransportError(f"local transport inbox entry {index} must be an object")
-    message_id = entry.get("message_id")
-    message_type = entry.get("message_type")
-    sender_node_id = entry.get("sender_node_id")
-    recipient_node_id = entry.get("recipient_node_id")
-    payload = entry.get("payload", {})
-    correlation_id = entry.get("correlation_id")
     try:
-        if not isinstance(message_id, str):
-            raise ValueError("message_id must be a non-empty string")
-        if not isinstance(message_type, str):
-            raise ValueError("message_type must be a non-empty string")
-        if not isinstance(sender_node_id, str):
-            raise ValueError("sender_node_id must be a non-empty string")
-        return MeshMessage(
-            message_id=message_id,
-            message_type=message_type,
-            sender_node_id=sender_node_id,
-            recipient_node_id=recipient_node_id,
-            payload=payload,
-            correlation_id=correlation_id,
-        )
+        return message_from_mapping(entry)
     except ValueError as exc:
-        raise LocalTransportError(
-            f"local transport inbox entry {index} is invalid: {exc}"
-        ) from exc
+        raise LocalTransportError(f"local transport inbox entry {index} is invalid: {exc}") from exc
 
 
 def _validate_unique_messages_for_node(node_id: str, messages: list[MeshMessage]) -> None:
@@ -187,36 +163,11 @@ def _validate_unique_messages_for_node(node_id: str, messages: list[MeshMessage]
             )
 
 
-def _atomic_write_json(path: Path, document: dict[str, Any]) -> None:
-    parent = path.parent
-    temp_name: str | None = None
+def _write_inbox_document(path: Path, document: dict[str, Any]) -> None:
     try:
-        parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temp_name = handle.name
-            json.dump(document, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temp_name, path)
+        atomic_write_json(path, document)
     except (OSError, TypeError, ValueError) as exc:
-        if temp_name is not None:
-            _remove_temp_file(temp_name)
         raise LocalTransportError(f"could not write local transport inbox: {exc}") from exc
-
-
-def _remove_temp_file(path: str) -> None:
-    try:
-        os.unlink(path)
-    except FileNotFoundError:
-        return
 
 
 def _require_node_id(node_id: object) -> None:

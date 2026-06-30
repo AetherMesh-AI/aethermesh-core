@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from aethermesh_core.message_bus import LocalMessageBus
+from aethermesh_core.message_bus import LocalMessageBus, send_numbered_message
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job
 from aethermesh_core.node_registry import NodeRegistry
@@ -80,7 +80,7 @@ def dispatch_local_batch(
     message_bus.register_node("local-scheduler")
 
     for heartbeat_payload in _node_heartbeat_payloads(registry):
-        _send_dispatch_message(
+        send_numbered_message(
             message_bus,
             message_type="node_heartbeat",
             sender_node_id=str(heartbeat_payload["node_id"]),
@@ -94,7 +94,7 @@ def dispatch_local_batch(
     job_by_id = {job.job_id: job for job in jobs}
     for assignment in assignments:
         job = job_by_id[assignment.job_id]
-        _send_dispatch_message(
+        send_numbered_message(
             message_bus,
             message_type="job_assigned",
             sender_node_id="local-scheduler",
@@ -145,7 +145,7 @@ def _node_heartbeat_payloads(registry: NodeRegistry) -> list[dict[str, int | str
     return payloads
 
 
-def _send_dispatch_message(
+def send_numbered_message(
     message_bus: LocalMessageBus,
     *,
     message_type: str,

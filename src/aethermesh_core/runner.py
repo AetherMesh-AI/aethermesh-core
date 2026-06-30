@@ -56,67 +56,13 @@ class LocalRunner:
             )
 
         if job.job_type == self.SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE:
-            try:
-                output = build_keyword_extract_output(job.payload)
-            except ValueError as exc:
-                return JobResult(
-                    job_id=job.job_id,
-                    node_id=self.identity.node_id,
-                    status="failed",
-                    output=None,
-                    error=str(exc),
-                    contribution_units=0,
-                )
-            return JobResult(
-                job_id=job.job_id,
-                node_id=self.identity.node_id,
-                status="completed",
-                output=output,
-                error=None,
-                contribution_units=1,
-            )
+            return self._run_payload_builder(job, build_keyword_extract_output)
 
         if job.job_type == self.SUPPORTED_TEXT_CHUNK_JOB_TYPE:
-            try:
-                output = build_text_chunk_output(job.payload)
-            except ValueError as exc:
-                return JobResult(
-                    job_id=job.job_id,
-                    node_id=self.identity.node_id,
-                    status="failed",
-                    output=None,
-                    error=str(exc),
-                    contribution_units=0,
-                )
-            return JobResult(
-                job_id=job.job_id,
-                node_id=self.identity.node_id,
-                status="completed",
-                output=output,
-                error=None,
-                contribution_units=1,
-            )
+            return self._run_payload_builder(job, build_text_chunk_output)
 
         if job.job_type == self.SUPPORTED_TEXT_EMBED_JOB_TYPE:
-            try:
-                output = build_text_embed_output(job.payload)
-            except ValueError as exc:
-                return JobResult(
-                    job_id=job.job_id,
-                    node_id=self.identity.node_id,
-                    status="failed",
-                    output=None,
-                    error=str(exc),
-                    contribution_units=0,
-                )
-            return JobResult(
-                job_id=job.job_id,
-                node_id=self.identity.node_id,
-                status="completed",
-                output=output,
-                error=None,
-                contribution_units=1,
-            )
+            return self._run_payload_builder(job, build_text_embed_output)
 
         return JobResult(
             job_id=job.job_id,
@@ -125,6 +71,29 @@ class LocalRunner:
             output=None,
             error=f"Unsupported job type: {job.job_type}",
             contribution_units=0,
+        )
+
+    def _run_payload_builder(
+        self, job: Job, builder: Any
+    ) -> JobResult:
+        try:
+            output = builder(job.payload)
+        except ValueError as exc:
+            return JobResult(
+                job_id=job.job_id,
+                node_id=self.identity.node_id,
+                status="failed",
+                output=None,
+                error=str(exc),
+                contribution_units=0,
+            )
+        return JobResult(
+            job_id=job.job_id,
+            node_id=self.identity.node_id,
+            status="completed",
+            output=output,
+            error=None,
+            contribution_units=1,
         )
 
 

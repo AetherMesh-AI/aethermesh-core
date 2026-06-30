@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from aethermesh_core.ledger import ContributionLedger
-from aethermesh_core.message_bus import LocalMessageBus
+from aethermesh_core.message_bus import LocalMessageBus, send_numbered_message
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.node_service import LocalNodeService
@@ -82,7 +82,7 @@ def run_local_simulation(
     message_bus.register_node("local-scheduler")
     message_bus.register_node("local-ledger")
     for heartbeat_payload in _node_heartbeat_messages(registry):
-        _send_simulation_message(
+        send_numbered_message(
             message_bus,
             message_type="node_heartbeat",
             sender_node_id=str(heartbeat_payload["node_id"]),
@@ -108,7 +108,7 @@ def run_local_simulation(
 
     for job, assignment in zip(jobs, assignments):
         node_id = assignment.node_id
-        assignment_message = _send_simulation_message(
+        assignment_message = send_numbered_message(
             message_bus,
             message_type="job_assigned",
             sender_node_id="local-scheduler",
@@ -203,25 +203,6 @@ def _node_heartbeat_messages(registry: NodeRegistry) -> list[dict[str, int | str
         if entry["status"] == NodeStatus.AVAILABLE.value
     ]
 
-
-def _send_simulation_message(
-    message_bus: LocalMessageBus,
-    *,
-    message_type: str,
-    sender_node_id: str,
-    recipient_node_id: str | None,
-    payload: dict[str, Any],
-    correlation_id: str | None,
-) -> MeshMessage:
-    message = MeshMessage(
-        message_id=f"msg-{len(message_bus.log()) + 1:04d}",
-        message_type=message_type,
-        sender_node_id=sender_node_id,
-        recipient_node_id=recipient_node_id,
-        payload=payload,
-        correlation_id=correlation_id,
-    )
-    return message_bus.send(message)
 
 
 def _summary_to_simulation_dict(
