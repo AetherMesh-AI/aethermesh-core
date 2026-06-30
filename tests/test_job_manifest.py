@@ -3,7 +3,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.job_manifest import ManifestError, load_job_manifest
+from aethermesh_core.job_manifest import (
+    ManifestError,
+    load_job_manifest,
+    load_manifest_jobs,
+)
 from aethermesh_core.scheduler import NodeStatus
 
 
@@ -330,6 +334,32 @@ class JobManifestTests(unittest.TestCase):
         )
 
         self.assertEqual(batch.nodes[0].status, NodeStatus.AVAILABLE)
+
+    def test_load_manifest_jobs_ignores_manifest_nodes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "manifest.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": [],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hi"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            jobs = load_manifest_jobs(path)
+
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(jobs[0].job_id, "echo-1")
+        self.assertEqual(jobs[0].payload, {"message": "hi"})
 
     def _load(self, document: dict[str, object]):
         with tempfile.TemporaryDirectory() as temp_dir:
