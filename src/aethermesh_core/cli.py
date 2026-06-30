@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote
@@ -194,6 +194,29 @@ def build_parser() -> argparse.ArgumentParser:
         "--transport-dir",
         default=None,
         help="Opt in to file-backed local transport inboxes for worker processing.",
+    )
+
+    local_transport_flow = subcommands.add_parser(
+        "run-local-transport-flow",
+        help=(
+            "Run the local flow using file-backed transport inboxes with a "
+            "default transport directory."
+        ),
+    )
+    local_transport_flow.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job-batch JSON manifest.",
+    )
+    local_transport_flow.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory for deterministic local flow artifacts.",
+    )
+    local_transport_flow.add_argument(
+        "--transport-dir",
+        default=None,
+        help="Override the default file-backed local transport directory.",
     )
 
     audit_local = subcommands.add_parser(
@@ -687,6 +710,19 @@ def run_local_flow(
     return result
 
 
+def run_local_transport_flow(
+    manifest_path: str, output_dir: str, transport_dir: str | None = None
+) -> dict[str, object]:
+    """Run the existing local flow with file-backed transport enabled."""
+
+    effective_transport_dir = transport_dir or str(Path(output_dir) / "transport")
+    return run_local_flow(
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        transport_dir=effective_transport_dir,
+    )
+
+
 def _require_int_result_field(result: dict[str, object], field_name: str) -> int:
     value = result.get(field_name)
     if not isinstance(value, int) or isinstance(value, bool):
@@ -907,6 +943,29 @@ def _inbox_process_result_to_dict(
     return payload
 
 
+FlowCommandError = (
+    ManifestError,
+    MessageLogPersistenceError,
+    LocalTransportError,
+    LedgerPersistenceError,
+    NodeStatePersistenceError,
+    ValueError,
+)
+
+
+def _run_json_command(
+    operation: Callable[[], dict[str, object]],
+    handled_errors: tuple[type[Exception], ...],
+) -> int:
+    try:
+        payload = operation()
+    except handled_errors as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -979,22 +1038,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run-local-flow":
-        try:
-            payload = run_local_flow(args.manifest, args.output_dir, args.transport_dir)
-        except ManifestError as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-        except (
-            MessageLogPersistenceError,
-            LocalTransportError,
-            LedgerPersistenceError,
-            NodeStatePersistenceError,
-            ValueError,
-        ) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-        print(json.dumps(payload, sort_keys=True))
-        return 0
+        return _run_json_command(
+            lambda: run_local_flow(args.manifest, args.output_dir, args.transport_dir),
+            FlowCommandError,
+        )
+
+    if args.command == "run-local-transport-flow":
+        return _run_json_command(
+            lambda: run_local_transport_flow(
+                args.manifest, args.output_dir, args.transport_dir
+            ),
+            FlowCommandError,
+        )
 
     if args.command == "audit-local-flow":
         try:

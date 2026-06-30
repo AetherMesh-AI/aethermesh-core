@@ -4,11 +4,161 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from aethermesh_core.cli import main
 
 
 class LocalTransportCliTests(unittest.TestCase):
+    def test_run_local_transport_flow_uses_default_transport_dir_and_audits(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            default_transport_dir = output_dir / "transport"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a", "local-node-b"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-transport-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            audit_stdout = io.StringIO()
+            with contextlib.redirect_stdout(audit_stdout):
+                audit_exit = main(["audit-local-flow", "--output-dir", str(output_dir)])
+
+            payload = json.loads(stdout.getvalue())
+            audit_payload = json.loads(audit_stdout.getvalue())
+            ledger_exists = (output_dir / "ledger.json").exists()
+            receipts_exists = (output_dir / "receipts.json").exists()
+            dispatch_log_exists = (output_dir / "dispatch-message-log.json").exists()
+            flow_log_exists = (output_dir / "flow-message-log.json").exists()
+            worker_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-a.json"
+            ).exists()
+            node_state_exists = (
+                output_dir / "node-state" / "local-node-a.json"
+            ).exists()
+            transport_inbox_exists = (
+                default_transport_dir / "inboxes" / "local-node-a.json"
+            ).exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(audit_exit, 0)
+        self.assertEqual(payload["command"], "run-local-flow")
+        self.assertEqual(payload["transport_dir"], str(default_transport_dir))
+        self.assertEqual(payload["transport_inbox_count"], 2)
+        self.assertEqual(payload["processed_assignment_count"], 2)
+        self.assertEqual(audit_payload["ok"], True)
+        self.assertTrue(ledger_exists)
+        self.assertTrue(receipts_exists)
+        self.assertTrue(dispatch_log_exists)
+        self.assertTrue(flow_log_exists)
+        self.assertTrue(worker_log_exists)
+        self.assertTrue(node_state_exists)
+        self.assertTrue(transport_inbox_exists)
+
+    def test_run_local_transport_flow_accepts_explicit_transport_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            output_dir = Path(temp_dir) / "flow"
+            transport_dir = Path(temp_dir) / "custom-transport"
+            default_transport_dir = output_dir / "transport"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-transport-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                        "--transport-dir",
+                        str(transport_dir),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            explicit_inbox_exists = (
+                transport_dir / "inboxes" / "local-node-a.json"
+            ).exists()
+            default_transport_exists = default_transport_dir.exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["command"], "run-local-flow")
+        self.assertEqual(payload["transport_dir"], str(transport_dir))
+        self.assertTrue(explicit_inbox_exists)
+        self.assertFalse(default_transport_exists)
+
+    def test_run_local_transport_flow_reports_runtime_errors(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            mock.patch(
+                "aethermesh_core.cli.run_local_transport_flow",
+                side_effect=ValueError("bad transport setup"),
+            ),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            exit_code = main(
+                [
+                    "run-local-transport-flow",
+                    "--manifest",
+                    "manifest.json",
+                    "--output-dir",
+                    "out",
+                ]
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("error: bad transport setup", stderr.getvalue())
+
     def test_run_local_flow_transport_handles_available_node_without_assignments(
         self,
     ) -> None:
