@@ -106,6 +106,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "success": True,
                     "output": "one",
                     "error": None,
+                    "contribution_units": 1,
                 },
                 {
                     "job_id": "echo-1",
@@ -174,7 +175,7 @@ class LocalSimulationTests(unittest.TestCase):
                 }
             ],
         )
-        self.assertEqual(result["totals"]["contribution_units"], 1)
+        self.assertEqual(result["totals"]["contribution_units"], 3)
 
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
         calls: list[str] = []
@@ -244,7 +245,7 @@ class LocalSimulationTests(unittest.TestCase):
         result = run_local_simulation(["node-a"], jobs)
 
         self.assertEqual(len(result.accounted_results), 1)
-        self.assertEqual(result.results[0].contribution_units, 1)
+        self.assertEqual(result.results[0].contribution_units, 0)
         self.assertEqual(result.accounted_results[0].status, "completed")
         self.assertEqual(result.accounted_results[0].contribution_units, 0)
 
@@ -477,7 +478,7 @@ class LocalSimulationTests(unittest.TestCase):
         result = run_local_simulation(["node-a"], jobs).to_dict()
 
         self.assertEqual(result["results"][0]["status"], "completed")
-        self.assertEqual(result["results"][0]["contribution_units"], 1)
+        self.assertEqual(result["results"][0]["contribution_units"], 0)
         self.assertEqual(
             result["validations"][0],
             {
@@ -536,8 +537,8 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["validations"][1]["reason"], "result_not_completed")
         self.assertEqual(result["summaries"][0]["completed_jobs"], 1)
         self.assertEqual(result["summaries"][0]["failed_jobs"], 1)
-        self.assertEqual(result["summaries"][0]["contribution_units"], 1)
-        self.assertEqual(result["totals"]["contribution_units"], 1)
+        self.assertEqual(result["summaries"][0]["contribution_units"], 2)
+        self.assertEqual(result["totals"]["contribution_units"], 2)
 
 
 if __name__ == "__main__":

@@ -52,6 +52,7 @@ class LocalNodeServiceTests(unittest.TestCase):
                 "success": True,
                 "output": "hello mesh",
                 "error": None,
+                "contribution_units": 1,
             },
         )
         self.assertEqual(
@@ -98,7 +99,7 @@ class LocalNodeServiceTests(unittest.TestCase):
             },
         )
         self.assertTrue(processed.validation.valid)
-        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 1)
+        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 2)
 
     def test_successful_text_embed_assignment_is_processed_from_inbox(self) -> None:
         service, bus, ledger = _service("node-a")
@@ -129,9 +130,9 @@ class LocalNodeServiceTests(unittest.TestCase):
             },
         )
         self.assertTrue(processed.validation.valid)
-        self.assertEqual(processed.contribution_record.contribution_units, 1)
+        self.assertEqual(processed.contribution_record.contribution_units, 3)
         self.assertEqual(processed.contribution_record.job_type, "text_embed")
-        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 1)
+        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 3)
 
     def test_malformed_assignment_is_failed_invalid_and_zero_contribution(self) -> None:
         service, bus, ledger = _service("node-a")

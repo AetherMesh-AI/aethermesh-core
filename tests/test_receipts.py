@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult
@@ -472,9 +473,10 @@ def _processed_assignment(
     contribution_message_id: str,
 ) -> ProcessedAssignment:
     validation = validate_job_result(job, result)
-    accounted_result = (
-        result if validation.valid else replace(result, contribution_units=0)
+    credited_units = (
+        score_validated_contribution(job, result) if validation.valid else 0
     )
+    accounted_result = replace(result, contribution_units=credited_units)
     record = ContributionLedger().record(
         accounted_result,
         validation_valid=validation.valid,
