@@ -1,64 +1,137 @@
 # AetherMesh Core
 
-AetherMesh Core is the foundation for a decentralized AI network where people can run nodes, contribute useful compute or work, improve the system, and eventually receive access or usage benefits from the network they support.
+AetherMesh Core is the foundation for a decentralized AI network where people can run nodes, contribute useful compute/work, improve the system, and eventually receive access, usage benefits, credits, or earnings from the network they help support.
 
-The project is early-stage. The immediate goal is not to design the perfect decentralized AI platform. The goal is to build the smallest real, runnable, open-source prototype that proves the concept one layer at a time.
+The project is still early-stage. The near-term goal is a real, runnable, open-source prototype that proves nodes can join locally, advertise capabilities, receive useful work, complete work, report results, record contribution, and validate output. The long-term goal is a people-owned AI mesh built around **AER: Adaptive Expert Routing**, not a centralized model host and not traditional monolithic MoE.
+
+The persistent goal used by the automation loop is mirrored in [docs/persistent-goal.md](docs/persistent-goal.md). Every plan, PR, and commit should move the project toward that goal while staying small, testable, and understandable.
 
 ## North star
 
-AetherMesh should grow into a decentralized AI mesh where:
+Build a decentralized AI mesh where:
 
 - Anyone can run a node.
 - Nodes connect into a shared network.
+- Nodes advertise what work they can perform.
 - The network assigns useful AI-related work.
 - Nodes complete work and report results.
-- The system measures meaningful contributions.
-- Contributors can eventually earn usage, access, or credits.
+- The system measures meaningful contribution.
+- Work can be validated instead of blindly trusted.
+- Useful contributors can eventually earn usage, access, credits, or rewards.
 - The project remains understandable, testable, and open.
+
+The smallest useful prototype should prove the local version of this loop:
+
+```text
+Node starts
+↓
+Node registers locally or with a simple coordinator
+↓
+Node advertises capabilities
+↓
+System assigns a simple job
+↓
+Node executes the job
+↓
+Node reports the result
+↓
+System records the contribution
+↓
+System validates the result in a basic way
+```
+
+## Architecture direction
+
+AetherMesh should grow toward **AER — Adaptive Expert Routing**. AER routes work across a decentralized fabric of replicated expert models, validators, aggregators, tool runners, and supporting nodes. It is not traditional Mixture-of-Experts inside one monolithic model.
+
+The long-term request flow should become:
+
+```text
+User Request
+   ↓
+AetherMesh Gateway
+   ↓
+AER Router
+   ↓
+Selected Expert Replica(s)
+   ↓
+Validator Node(s)
+   ↓
+Aggregator / Synthesis Layer
+   ↓
+Final Answer
+```
+
+The core request pipeline should follow the **REVA** pattern:
+
+```text
+Router → Expert → Validator → Aggregator
+```
+
+The long-term hosting layer is the **AEF — Aether Expert Fabric**, where expert models, adapters, validators, routers, aggregators, and support services are versioned, replicated, measured, and validated across the network.
+
+See [docs/architecture.md](docs/architecture.md) for the architecture map and [docs/persistent-goal.md](docs/persistent-goal.md) for the full north-star directive.
 
 ## Development approach
 
-Build in layers. Each change should make the project more real, runnable, testable, or easier to understand.
+Build in layers. Each change should make the project more real, runnable, measurable, validated, or easier to extend.
 
 Prefer:
 
-- Small working systems over large unfinished ones
+- Small working systems over large unfinished systems
 - Simple protocols before complex ones
 - Local development before distributed deployment
+- Clear documentation over vague ambition
 - Testable code over clever code
 - Practical contribution tracking before tokenomics
 - Security-minded design before public exposure
+- Real node behavior before dashboard polish
+- Real validation before reward logic
+- Simple routing before AI-powered routing
 
 Avoid:
 
 - Empty boilerplate
 - Placeholder-only systems
+- Unnecessary large rewrites
 - Unused abstractions
 - Marketing-heavy documentation without technical value
 - Token or reward logic before useful work exists
 - Dashboard polish before core functionality
 - Unsupported technical claims
+- Pretending the system is decentralized before nodes actually coordinate
+- Calling the system MoE when it is currently routed expert networking
 
 ## Current status
 
-The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes a package manifest, a simple node identity model with optional local JSON persistence for `run-demo`, an in-memory echo job runner, a local echo result validation gate, a CLI demo command, deterministic local simulation, and unit tests.
+The repository contains project direction, architecture notes, and a first runnable local-only prototype. It includes local node identity, deterministic local jobs, manifest-driven batch execution, local message logs, local transport inboxes, contribution accounting, validation gates, receipts, peer heartbeat summaries, flow auditing, and strict tests.
 
-The next meaningful step is to strengthen the local node model and validation path without trying to solve networking, distributed coordination, rewards, or production security all at once.
+This is still a local prototype. It proves the mechanics that future distributed behavior can build on, but it does not yet provide public networking, production peer discovery, distributed consensus, real reward logic, or hosted AI experts.
 
 ## Near-term build direction
 
-AetherMesh Core should grow toward:
+When uncertain, prioritize work that moves the prototype toward the persistent goal:
 
-1. A runnable local node
-2. Basic local communication or message modeling
-3. Simple job execution
-4. Result reporting
-5. Contribution tracking
-6. Work validation
-7. Easy local deployment
-8. System visibility
-9. Gradual introduction of AI workloads
-10. Expansion beyond local environments
+1. Making the project runnable
+2. Clarifying the architecture
+3. Making the node real
+4. Enabling basic node identity
+5. Enabling node communication
+6. Implementing simple jobs
+7. Reporting job results
+8. Tracking contributions
+9. Validating work
+10. Advertising node capabilities
+11. Adding simple routing
+12. Simplifying Docker setup
+13. Improving onboarding
+14. Expanding into AI workloads
+15. Introducing expert-style job categories
+16. Replicating expert services
+17. Adding validator roles
+18. Adding aggregator/synthesis behavior
+19. Improving routing toward AER
+20. Growing toward the Aether Expert Fabric
 
 Each addition should be small, validated, and useful on its own.
 
@@ -97,17 +170,16 @@ A minimal manifest lists ordered local node IDs and ordered jobs. Node entries m
     {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}},
     {"job_id": "keyword-extract-1", "job_type": "keyword_extract", "payload": {"text": "AetherMesh nodes process useful local work for the mesh.", "limit": 5}},
     {"job_id": "text-chunk-1", "job_type": "text_chunk", "payload": {"text": "AetherMesh prepares local text chunks for future AI processing.", "max_chars": 24}},
-    {"job_id": "text-embed-1", "job_type": "text_embed", "payload": {"text": "AetherMesh nodes prepare deterministic local feature vectors.", "dimensions": 8}},
-    {"job_id": "text-retrieve-1", "job_type": "text_retrieve", "payload": {"query": "local mesh context", "documents": [{"id": "doc-a", "text": "Local AetherMesh nodes execute validation-gated work."}, {"id": "doc-b", "text": "Context retrieval ranks candidate text for later AI tasks."}], "limit": 2}}
+    {"job_id": "text-embed-1", "job_type": "text_embed", "payload": {"text": "AetherMesh nodes prepare deterministic local feature vectors.", "dimensions": 8}}
   ]
 }
 ```
 
-The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo`, deterministic `text_stats`, deterministic `keyword_extract`, deterministic `text_chunk`, deterministic `text_embed`, and deterministic `text_retrieve` text-preprocessing results. Invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
+The simulation output includes per-result validation details and a compact `validation_summary`. Contribution credit is recorded only for validated completed `echo`, deterministic `text_stats`, deterministic `keyword_extract`, deterministic `text_chunk`, and deterministic `text_embed` text-preprocessing results. Invalid or unsupported results remain visible in the output for local audit/debugging and earn zero contribution units.
 
-Prototype contribution scoring is deterministic, integer-only, capped, and local-only. The current rules are intentionally simple: `echo` earns 1 unit; `text_stats` earns 1 base unit plus 1 unit per 100-character output bucket capped at 5; `keyword_extract` earns 1 base unit plus 1 unit per 5 extracted unique-keyword bucket capped at 5; `text_chunk` earns 1 base unit plus 1 unit per 2 emitted chunks capped at 5; `text_embed` earns 1 base unit plus bounded token-count and vector-dimension bucket units capped at 6; and `text_retrieve` earns 1 unit for a validated deterministic retrieval result. These units are prototype accounting for local auditability only; they are not rewards, payments, reputation, tokenomics, payouts, or an economic fairness model.
+Prototype contribution scoring is deterministic, integer-only, capped, and local-only. The current rules are intentionally simple: `echo` earns 1 unit; `text_stats` earns 1 base unit plus 1 unit per 100-character output bucket capped at 5; `keyword_extract` earns 1 base unit plus 1 unit per 5 extracted unique-keyword bucket capped at 5; `text_chunk` earns 1 base unit plus 1 unit per 2 emitted chunks capped at 5; and `text_embed` earns 1 base unit plus bounded token-count and vector-dimension bucket units capped at 6. These units are prototype accounting for local auditability only; they are not rewards, payments, reputation, tokenomics, payouts, or an economic fairness model.
 
-The `text_chunk` workload accepts plain input text plus optional `max_chars` (default 120, range 1-1000), preserves input character order, prefers whitespace boundaries, and splits long continuous spans at the character limit. The `text_embed` workload is prototype-only deterministic local feature extraction, not a real semantic ML embedding model; it accepts non-empty text plus optional `dimensions` (default 8, range 2-64) and returns exact integer SHA-256 token-bucket counts such as `{"dimensions": 4, "token_count": 3, "unique_terms": 2, "vector": [0, 2, 1, 0]}`. The `text_retrieve` workload is prototype-only deterministic token-overlap ranking, not semantic retrieval or ML inference; it accepts a non-empty `query`, non-empty `documents` with unique string `id` and non-empty `text`, and optional `limit`, then returns query terms plus ranked matches.
+The `text_chunk` workload accepts plain input text plus optional `max_chars` (default 120, range 1-1000), preserves input character order, prefers whitespace boundaries, and splits long continuous spans at the character limit. The `text_embed` workload is prototype-only deterministic local feature extraction, not a real semantic ML embedding model; it accepts non-empty text plus optional `dimensions` (default 8, range 2-64) and returns exact integer SHA-256 token-bucket counts such as `{"dimensions": 4, "token_count": 3, "unique_terms": 2, "vector": [0, 2, 1, 0]}`.
 
 The local-only `node_roster` includes each node's `node_id`, `status`, assignment count, contribution units, and deterministic heartbeat metadata. `heartbeat_sequence` and `heartbeat_count` are in-memory simulation counters recorded when available nodes start a local run; they are not real network heartbeats or wall-clock liveness timestamps.
 
@@ -134,14 +206,6 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-
 ```
 
 The dispatch log contains deterministic `node_heartbeat` messages for available nodes and `job_assigned` messages for scheduled jobs. Heartbeat payloads include each available node's manifest capabilities. Use `process-local-inbox` to consume the dispatch log later for one node and record validation-gated contribution.
-
-Dispatch manifest jobs using peers discovered from an existing local heartbeat message log instead of the manifest's `nodes` roster:
-
-```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-peer-batch --peer-log-path ./peer-heartbeats.json --manifest examples/local-batch.json --message-log-path ./peer-dispatch.json
-```
-
-This remains local-only: `dispatch-peer-batch` reads recorded `node_heartbeat` messages, derives the latest peer state, ignores manifest nodes, and writes the same assignment-only dispatch log shape for available capable peers.
 
 To test the file-backed local transport seam, materialize addressed dispatch messages into per-node inbox files and have a node consume only its own inbox:
 
@@ -176,13 +240,13 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 The flow writes `dispatch-message-log.json`, a merged run-level `flow-message-log.json`, one shared `ledger.json`, deterministic per-job `receipts.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. The flow log is a deterministic local audit transcript: dispatch messages appear once, followed by worker-emitted result/contribution messages in stable available-node order. Receipts compactly tie each processed assignment to its result, validation decision, contribution record, credited units, and output summary. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
 
-To route the same local flow through file-backed per-node inboxes before worker processing, opt in with `--transport-dir`:
+Run the equivalent one-command file-backed transport proof, where dispatch is first materialized into isolated per-node inbox files and workers read only their own inbox:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-flow --manifest examples/local-batch.json --output-dir /tmp/aethermesh-local-flow --transport-dir /tmp/aethermesh-local-transport
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-transport-flow --manifest examples/local-batch.json --output-dir /tmp/aethermesh-local-transport-flow
 ```
 
-This still writes the dispatch log under `--output-dir`, then materializes addressed dispatch messages to version 1 inbox files under the transport directory and has each available worker consume its own local inbox. The JSON result includes deterministic transport metadata (`transport_dir`, `transport_inbox_count`, and `transport_inbox_paths`). This is local file-backed transport only, not real networking or peer discovery.
+This writes the same core flow artifacts plus `transport/inboxes/<node-id>.json` for available nodes with assignments. The command remains local-only: it proves the transport seam without sockets, daemons, distributed consensus, or production networking.
 
 Audit an existing local flow artifact directory without modifying it:
 
