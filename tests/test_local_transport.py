@@ -3,7 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import pytest
 
 from aethermesh_core.local_transport import (
     LocalTransportError,
@@ -122,6 +121,85 @@ class LocalTransportTests(unittest.TestCase):
             ):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
+    def test_materialize_ignores_broadcast_messages_without_creating_inboxes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "broadcast-only.json"
+            transport_dir = Path(temp_dir) / "transport"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            _message_entry(
+                                "msg-0001", "node-a", None, "node_heartbeat"
+                            ),
+                            _message_entry(
+                                "msg-0002", "node-b", None, "node_heartbeat"
+                            ),
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = materialize_local_inboxes(
+                message_log_path=message_log_path, transport_dir=transport_dir
+            )
+
+            self.assertEqual(result["inbox_count"], 0)
+            self.assertEqual(result["message_count"], 0)
+            self.assertEqual(result["node_ids"], [])
+            self.assertEqual(result["inbox_paths"], {})
+            self.assertFalse((transport_dir / "inboxes").exists())
+
+    def test_materialize_rejects_duplicate_source_message_ids_before_writing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "duplicates.json"
+            transport_dir = Path(temp_dir) / "transport"
+            message_log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            _message_entry("msg-0001", "scheduler", "node-a"),
+                            _message_entry("msg-0001", "scheduler", "node-b"),
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                LocalTransportError, "duplicate message_id in source log"
+            ):
+                materialize_local_inboxes(
+                    message_log_path=message_log_path, transport_dir=transport_dir
+                )
+
+            self.assertFalse((transport_dir / "inboxes").exists())
+
+    def test_inbox_path_quotes_node_ids_without_changing_loaded_node_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            node_id = "node/a b?c"
+            source_path = Path(temp_dir) / "source log.json"
+            path = write_local_inbox(
+                transport_dir=temp_dir,
+                node_id=node_id,
+                messages=[_message("msg-quoted", node_id)],
+                source_message_log_path=source_path,
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+            messages = load_local_inbox(transport_dir=temp_dir, node_id=node_id)
+
+        self.assertEqual(path.name, "node%2Fa%20b%3Fc.json")
+        self.assertEqual(document["node_id"], node_id)
+        self.assertEqual(document["source_message_log_path"], str(source_path))
+        self.assertEqual([message.message_id for message in messages], ["msg-quoted"])
+
 
 def _message(message_id: str, recipient: str) -> MeshMessage:
     return MeshMessage(
@@ -161,80 +239,6 @@ def _message_entry(
         "payload": payload,
         "correlation_id": None if message_type == "node_heartbeat" else message_id,
     }
-
-
-def test_materialize_ignores_broadcast_messages_without_creating_inboxes() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        message_log_path = Path(temp_dir) / "broadcast-only.json"
-        transport_dir = Path(temp_dir) / "transport"
-        message_log_path.write_text(
-            json.dumps(
-                {
-                    "version": 1,
-                    "messages": [
-                        _message_entry("msg-0001", "node-a", None, "node_heartbeat"),
-                        _message_entry("msg-0002", "node-b", None, "node_heartbeat"),
-                    ],
-                }
-            ),
-            encoding="utf-8",
-        )
-
-        result = materialize_local_inboxes(
-            message_log_path=message_log_path, transport_dir=transport_dir
-        )
-
-        assert result["inbox_count"] == 0
-        assert result["message_count"] == 0
-        assert result["node_ids"] == []
-        assert result["inbox_paths"] == {}
-        assert not (transport_dir / "inboxes").exists()
-
-
-def test_materialize_rejects_duplicate_source_message_ids_before_writing() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        message_log_path = Path(temp_dir) / "duplicates.json"
-        transport_dir = Path(temp_dir) / "transport"
-        message_log_path.write_text(
-            json.dumps(
-                {
-                    "version": 1,
-                    "messages": [
-                        _message_entry("msg-0001", "scheduler", "node-a"),
-                        _message_entry("msg-0001", "scheduler", "node-b"),
-                    ],
-                }
-            ),
-            encoding="utf-8",
-        )
-
-        with pytest.raises(
-            LocalTransportError, match="duplicate message_id in source log"
-        ):
-            materialize_local_inboxes(
-                message_log_path=message_log_path, transport_dir=transport_dir
-            )
-
-        assert not (transport_dir / "inboxes").exists()
-
-
-def test_inbox_path_quotes_node_ids_without_changing_loaded_node_id() -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        node_id = "node/a b?c"
-        source_path = Path(temp_dir) / "source log.json"
-        path = write_local_inbox(
-            transport_dir=temp_dir,
-            node_id=node_id,
-            messages=[_message("msg-quoted", node_id)],
-            source_message_log_path=source_path,
-        )
-        document = json.loads(path.read_text(encoding="utf-8"))
-        messages = load_local_inbox(transport_dir=temp_dir, node_id=node_id)
-
-    assert path.name == "node%2Fa%20b%3Fc.json"
-    assert document["node_id"] == node_id
-    assert document["source_message_log_path"] == str(source_path)
-    assert [message.message_id for message in messages] == ["msg-quoted"]
 
 
 if __name__ == "__main__":

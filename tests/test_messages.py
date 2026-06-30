@@ -1,8 +1,6 @@
 import unittest
 from typing import Any, cast
 
-import pytest
-
 from aethermesh_core.messages import (
     MeshMessage,
     SUPPORTED_MESSAGE_TYPES,
@@ -147,77 +145,75 @@ class MeshMessageTests(unittest.TestCase):
             message.payload, {"job_id": "echo-1", "nested": [1, True, None]}
         )
 
-
-@pytest.mark.parametrize(
-    ("entry", "message"),
-    [
-        ([], "must be an object"),
-        ({"message_type": "job_assigned", "sender_node_id": "node-a"}, "message_id"),
-        (
-            {
-                "message_id": "",
-                "message_type": "job_assigned",
-                "sender_node_id": "node-a",
-            },
-            "message_id",
-        ),
-        ({"message_id": "msg-1", "sender_node_id": "node-a"}, "message_type"),
-        (
-            {"message_id": "msg-1", "message_type": "", "sender_node_id": "node-a"},
-            "message_type",
-        ),
-        ({"message_id": "msg-1", "message_type": "job_assigned"}, "sender_node_id"),
-        (
-            {
-                "message_id": "msg-1",
-                "message_type": "job_assigned",
-                "sender_node_id": "",
-            },
-            "sender_node_id",
-        ),
-        (
-            {
-                "message_id": "msg-1",
-                "message_type": "job_assigned",
-                "sender_node_id": "node-a",
-                "recipient_node_id": "",
-            },
-            "recipient_node_id",
-        ),
-        (
-            {
-                "message_id": "msg-1",
-                "message_type": "job_assigned",
-                "sender_node_id": "node-a",
-                "payload": [],
-            },
-            "payload must be a dictionary",
-        ),
-        (
-            {
-                "message_id": "msg-1",
-                "message_type": "job_assigned",
-                "sender_node_id": "node-a",
-                "payload": {1: "not-json-key"},
-            },
-            "payload keys must be strings",
-        ),
-        (
-            {
-                "message_id": "msg-1",
-                "message_type": "job_assigned",
-                "sender_node_id": "node-a",
-                "correlation_id": "",
-            },
-            "correlation_id",
-        ),
-    ],
-)
-def test_message_from_mapping_rejects_malformed_entries(
-    entry: object, message: str
-) -> None:
-    with pytest.raises(ValueError, match=message):
-        message_from_mapping(entry)
+    def test_message_from_mapping_rejects_malformed_entries(self) -> None:
+        cases: list[tuple[object, str]] = [
+            ([], "must be an object"),
+            (
+                {"message_type": "job_assigned", "sender_node_id": "node-a"},
+                "message_id",
+            ),
+            (
+                {
+                    "message_id": "",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "node-a",
+                },
+                "message_id",
+            ),
+            ({"message_id": "msg-1", "sender_node_id": "node-a"}, "message_type"),
+            (
+                {"message_id": "msg-1", "message_type": "", "sender_node_id": "node-a"},
+                "message_type",
+            ),
+            ({"message_id": "msg-1", "message_type": "job_assigned"}, "sender_node_id"),
+            (
+                {
+                    "message_id": "msg-1",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "",
+                },
+                "sender_node_id",
+            ),
+            (
+                {
+                    "message_id": "msg-1",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "node-a",
+                    "recipient_node_id": "",
+                },
+                "recipient_node_id",
+            ),
+            (
+                {
+                    "message_id": "msg-1",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "node-a",
+                    "payload": [],
+                },
+                "payload must be a dictionary",
+            ),
+            (
+                {
+                    "message_id": "msg-1",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "node-a",
+                    "payload": {1: "not-json-key"},
+                },
+                "payload keys must be strings",
+            ),
+            (
+                {
+                    "message_id": "msg-1",
+                    "message_type": "job_assigned",
+                    "sender_node_id": "node-a",
+                    "correlation_id": "",
+                },
+                "correlation_id",
+            ),
+        ]
+        for entry, message in cases:
+            with self.subTest(entry=entry), self.assertRaisesRegex(ValueError, message):
+                message_from_mapping(entry)
 
 
 if __name__ == "__main__":

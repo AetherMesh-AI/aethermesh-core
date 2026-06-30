@@ -4,7 +4,6 @@ import unittest
 from collections.abc import Callable
 from pathlib import Path
 
-import pytest
 
 from aethermesh_core.cli import run_local_flow
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
@@ -161,84 +160,84 @@ class FlowAuditTests(unittest.TestCase):
 FlowTamper = Callable[[Path], None]
 
 
-@pytest.mark.parametrize(
-    ("tamper", "match"),
-    [
-        (
-            lambda output_dir: _set_receipt_field(
-                output_dir, 0, "assignment_message_id", "missing-assignment"
+class FlowAuditTamperTests(unittest.TestCase):
+    def test_audit_local_flow_rejects_tampered_cross_artifact_fields(self) -> None:
+        cases: list[tuple[FlowTamper, str]] = [
+            (
+                lambda output_dir: _set_receipt_field(
+                    output_dir, 0, "assignment_message_id", "missing-assignment"
+                ),
+                "assignment_message_id not found",
             ),
-            "assignment_message_id not found",
-        ),
-        (
-            lambda output_dir: _set_receipt_field(
-                output_dir, 0, "result_message_id", "missing-result"
+            (
+                lambda output_dir: _set_receipt_field(
+                    output_dir, 0, "result_message_id", "missing-result"
+                ),
+                "job_result_reported message_id not found",
             ),
-            "job_result_reported message_id not found",
-        ),
-        (
-            lambda output_dir: _set_receipt_field(
-                output_dir, 0, "contribution_message_id", ""
+            (
+                lambda output_dir: _set_receipt_field(
+                    output_dir, 0, "contribution_message_id", ""
+                ),
+                "contribution_message_id must be present",
             ),
-            "contribution_message_id must be present",
-        ),
-        (
-            lambda output_dir: _set_dispatch_assignment_payload(
-                output_dir, "msg-0003", "job_type", "text_stats"
+            (
+                lambda output_dir: _set_dispatch_assignment_payload(
+                    output_dir, "msg-0003", "job_type", "text_stats"
+                ),
+                "assignment.job_type mismatch",
             ),
-            "assignment.job_type mismatch",
-        ),
-        (
-            lambda output_dir: _set_flow_message_sender(
-                output_dir, "job_result_reported", "echo-1", "local-node-b"
+            (
+                lambda output_dir: _set_flow_message_sender(
+                    output_dir, "job_result_reported", "echo-1", "local-node-b"
+                ),
+                "job_result_reported message_id not found",
             ),
-            "job_result_reported message_id not found",
-        ),
-        (
-            lambda output_dir: _set_flow_message_payload(
-                output_dir, "job_result_reported", "echo-1", "status", "failed"
+            (
+                lambda output_dir: _set_flow_message_payload(
+                    output_dir, "job_result_reported", "echo-1", "status", "failed"
+                ),
+                "result.status mismatch",
             ),
-            "result.status mismatch",
-        ),
-        (
-            lambda output_dir: _set_flow_message_payload(
-                output_dir, "contribution_recorded", "echo-1", "job_id", "other-job"
+            (
+                lambda output_dir: _set_flow_message_payload(
+                    output_dir, "contribution_recorded", "echo-1", "job_id", "other-job"
+                ),
+                "contribution_recorded message_id not found",
             ),
-            "contribution_recorded message_id not found",
-        ),
-        (
-            lambda output_dir: _set_flow_message_payload(
-                output_dir, "contribution_recorded", "echo-1", "status", "failed"
+            (
+                lambda output_dir: _set_flow_message_payload(
+                    output_dir, "contribution_recorded", "echo-1", "status", "failed"
+                ),
+                "contribution.status mismatch",
             ),
-            "contribution.status mismatch",
-        ),
-        (
-            lambda output_dir: _set_flow_message_payload(
-                output_dir, "contribution_recorded", "echo-1", "valid", False
+            (
+                lambda output_dir: _set_flow_message_payload(
+                    output_dir, "contribution_recorded", "echo-1", "valid", False
+                ),
+                "contribution.valid mismatch",
             ),
-            "contribution.valid mismatch",
-        ),
-        (
-            lambda output_dir: _duplicate_flow_message(
-                output_dir, "job_result_reported", "echo-1"
+            (
+                lambda output_dir: _duplicate_flow_message(
+                    output_dir, "job_result_reported", "echo-1"
+                ),
+                "job_result_reported message_id is ambiguous",
             ),
-            "job_result_reported message_id is ambiguous",
-        ),
-    ],
-)
-def test_audit_local_flow_rejects_tampered_cross_artifact_fields(
-    tamper: FlowTamper, match: str
-) -> None:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        manifest_path = _write_manifest(Path(temp_dir))
-        output_dir = Path(temp_dir) / "flow"
-        run_local_flow(str(manifest_path), str(output_dir))
-        tamper(output_dir)
-        before = _artifact_contents(output_dir)
-        with pytest.raises(FlowAuditError, match=match):
-            audit_local_flow(output_dir)
-        after = _artifact_contents(output_dir)
-    assert after == before
+        ]
+        for tamper, match in cases:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                manifest_path = _write_manifest(Path(temp_dir))
+                output_dir = Path(temp_dir) / "flow"
+                run_local_flow(str(manifest_path), str(output_dir))
+                tamper(output_dir)
+                before = _artifact_contents(output_dir)
+                with (
+                    self.subTest(match=match),
+                    self.assertRaisesRegex(FlowAuditError, match),
+                ):
+                    audit_local_flow(output_dir)
+                after = _artifact_contents(output_dir)
+            self.assertEqual(after, before)
 
 
 def _write_json(path: Path, document: dict[str, object]) -> None:
