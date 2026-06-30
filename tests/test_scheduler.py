@@ -11,7 +11,7 @@ from aethermesh_core.scheduler import (
 
 
 class LocalSchedulerTests(unittest.TestCase):
-    def test_assigns_jobs_round_robin_across_available_nodes(self) -> None:
+    def test_assigns_jobs_fairly_across_available_nodes(self) -> None:
         scheduler = LocalScheduler(["node-a", "node-b"])
 
         assignments = scheduler.assign_jobs(["job-1", "job-2", "job-3"])
@@ -87,7 +87,7 @@ class LocalSchedulerTests(unittest.TestCase):
             ["node-b", "node-b", "node-b"],
         )
 
-    def test_round_robin_is_per_capable_available_subset(self) -> None:
+    def test_prefers_fewest_batch_assignments_then_manifest_order(self) -> None:
         scheduler = LocalScheduler(
             [
                 ScheduledNode("node-a", capabilities=("echo",)),
@@ -107,7 +107,25 @@ class LocalSchedulerTests(unittest.TestCase):
 
         self.assertEqual(
             [assignment.node_id for assignment in assignments],
-            ["node-a", "node-b", "node-b", "node-c"],
+            ["node-a", "node-b", "node-a", "node-c"],
+        )
+
+    def test_mixed_job_types_share_work_across_equally_capable_nodes(self) -> None:
+        scheduler = LocalScheduler(["node-a", "node-b"])
+
+        assignments = scheduler.assign_jobs(
+            [
+                Job(job_id="echo-1", job_type="echo"),
+                Job(job_id="stats-1", job_type="text_stats"),
+                Job(job_id="keyword-1", job_type="keyword_extract"),
+                Job(job_id="chunk-1", job_type="text_chunk"),
+                Job(job_id="embed-1", job_type="text_embed"),
+            ]
+        )
+
+        self.assertEqual(
+            [assignment.node_id for assignment in assignments],
+            ["node-a", "node-b", "node-a", "node-b", "node-a"],
         )
 
     def test_routes_keyword_extract_by_declared_capability(self) -> None:
