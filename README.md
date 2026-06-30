@@ -167,6 +167,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 The flow writes `dispatch-message-log.json`, a merged run-level `flow-message-log.json`, one shared `ledger.json`, deterministic per-job `receipts.json`, per-node state files under `node-state/`, and per-node replay/output logs under `worker-message-logs/`. The flow log is a deterministic local audit transcript: dispatch messages appear once, followed by worker-emitted result/contribution messages in stable available-node order. Receipts compactly tie each processed assignment to its result, validation decision, contribution record, credited units, and output summary. Offline manifest nodes stay visible in the JSON summary but are not processed as workers.
 
+Run the equivalent one-command file-backed transport proof, where dispatch is first materialized into isolated per-node inbox files and workers read only their own inbox:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local-transport-flow --manifest examples/local-batch.json --output-dir /tmp/aethermesh-local-transport-flow
+```
+
+This writes the same core flow artifacts plus `transport/inboxes/<node-id>.json` for available nodes with assignments. The command remains local-only: it proves the transport seam without sockets, daemons, distributed consensus, or production networking.
+
 Audit an existing local flow artifact directory without modifying it:
 
 ```bash

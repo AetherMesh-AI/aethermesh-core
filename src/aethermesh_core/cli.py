@@ -69,6 +69,7 @@ class InboxReplayRequest:
     ledger_path: str | None = None
     output_message_log_path: str | None = None
     node_state_path: str | None = None
+    preserve_existing_output_log: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -157,6 +158,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         required=True,
         help="Directory for deterministic local flow artifacts.",
+    )
+
+    local_transport_flow = subcommands.add_parser(
+        "run-local-transport-flow",
+        help="Run a full local flow where workers consume file-backed transport inboxes.",
+    )
+    local_transport_flow.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job-batch JSON manifest.",
+    )
+    local_transport_flow.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory for deterministic local transport flow artifacts.",
     )
 
     audit_local = subcommands.add_parser(
@@ -447,6 +463,18 @@ def summarize_peers(message_log_path: str) -> dict[str, object]:
 def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     """Run dispatch and all available local worker inboxes as one local flow."""
 
+    return _run_local_flow(manifest_path, output_dir, use_transport=False)
+
+
+def run_local_transport_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
+    """Run a full local flow backed by materialized per-node transport inboxes."""
+
+    return _run_local_flow(manifest_path, output_dir, use_transport=True)
+
+
+def _run_local_flow(
+    manifest_path: str, output_dir: str, *, use_transport: bool
+) -> dict[str, object]:
     batch = load_job_manifest(manifest_path)
     output_path = Path(output_dir)
     try:
@@ -460,6 +488,7 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     receipts_path = output_path / "receipts.json"
     node_state_dir = output_path / "node-state"
     worker_log_dir = output_path / "worker-message-logs"
+    transport_dir = output_path / "transport"
 
     available_node_ids = [
         node.node_id for node in batch.nodes if node.status.value == "available"
@@ -479,22 +508,39 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     dispatch_payload = dispatch_local_batch_command(
         manifest_path, str(dispatch_message_log_path)
     )
+    transport_payload: dict[str, object] | None = None
+    process_node_ids = list(available_node_ids)
+    if use_transport:
+        transport_payload = materialize_local_inboxes(
+            message_log_path=dispatch_message_log_path,
+            transport_dir=transport_dir,
+        )
+        materialized_node_ids = transport_payload.get("node_ids")
+        if not isinstance(materialized_node_ids, list) or not all(
+            isinstance(node_id, str) for node_id in materialized_node_ids
+        ):
+            raise ValueError("materialize-local-inboxes returned invalid node id list")
+        process_node_ids = [
+            node_id for node_id in available_node_ids if node_id in materialized_node_ids
+        ]
 
     per_node_results: list[dict[str, object]] = []
     processed_assignments = []
     emitted_messages_by_node: dict[str, list[MeshMessage]] = {}
     worker_message_log_paths: dict[str, str | Path] = {}
-    for node_id in available_node_ids:
+    for node_id in process_node_ids:
         node_state_path = _node_artifact_path(node_state_dir, node_id)
         worker_message_log_path = _node_artifact_path(worker_log_dir, node_id)
         worker_message_log_paths[node_id] = worker_message_log_path
         node_payload, inbox_result = _process_local_inbox(
             InboxReplayRequest(
                 node_id=node_id,
-                message_log_path=str(dispatch_message_log_path),
+                message_log_path=(None if use_transport else str(dispatch_message_log_path)),
+                transport_dir=(str(transport_dir) if use_transport else None),
                 ledger_path=str(ledger_path),
                 output_message_log_path=str(worker_message_log_path),
                 node_state_path=str(node_state_path),
+                preserve_existing_output_log=use_transport,
             )
         )
         processed_assignments.extend(inbox_result.processed)
@@ -508,17 +554,20 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         ignored_ids = node_payload["ignored_message_ids"]
         if not isinstance(ignored_ids, list):
             raise ValueError("process-local-inbox returned invalid ignored id list")
-        per_node_results.append(
-            {
-                "node_id": node_id,
-                "node_state_path": str(node_state_path),
-                "worker_message_log_path": str(worker_message_log_path),
-                "processed_assignment_count": processed_count,
-                "skipped_processed_assignment_count": len(skipped_ids),
-                "ignored_message_count": len(ignored_ids),
-                "ledger_summary": node_payload.get("ledger_summary"),
-            }
-        )
+        node_result = {
+            "node_id": node_id,
+            "node_state_path": str(node_state_path),
+            "worker_message_log_path": str(worker_message_log_path),
+            "processed_assignment_count": processed_count,
+            "skipped_processed_assignment_count": len(skipped_ids),
+            "ignored_message_count": len(ignored_ids),
+            "ledger_summary": node_payload.get("ledger_summary"),
+        }
+        if use_transport:
+            node_result["transport_inbox_path"] = str(
+                transport_dir / "inboxes" / f"{_node_artifact_filename(node_id)}.json"
+            )
+        per_node_results.append(node_result)
         emitted_messages_by_node[node_id] = load_worker_emitted_messages(
             worker_message_log_path
         )
@@ -546,6 +595,8 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         processed_assignment_count=processed_assignment_count,
         skipped_processed_assignment_count=skipped_processed_assignment_count,
         total_contribution_units=int(str(ledger_summary["total_contribution_units"])),
+        source="run-local-transport-flow" if use_transport else "run-local-flow",
+        transport_dir=transport_dir if use_transport else None,
     )
     write_message_log(flow_message_log_path, flow_message_log_document)
     receipt_document = build_receipt_document(
@@ -553,8 +604,19 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         existing_document=existing_receipt_document,
     )
     write_receipt_document(receipts_path, receipt_document)
-    return {
-        "command": "run-local-flow",
+
+    artifacts = {
+        "dispatch_message_log": str(dispatch_message_log_path),
+        "flow_message_log": str(flow_message_log_path),
+        "ledger": str(ledger_path),
+        "receipts": str(receipts_path),
+        "node_state_dir": str(node_state_dir),
+        "worker_message_log_dir": str(worker_log_dir),
+    }
+    if use_transport:
+        artifacts["transport_dir"] = str(transport_dir)
+    result = {
+        "command": "run-local-transport-flow" if use_transport else "run-local-flow",
         "manifest_path": manifest_path,
         "output_dir": output_dir,
         "dispatch_message_log_path": str(dispatch_message_log_path),
@@ -580,6 +642,26 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         "dispatch_summary": dispatch_payload,
         "node_results": per_node_results,
     }
+    if use_transport:
+        result.update(
+            {
+                "dispatch_message_log": str(dispatch_message_log_path),
+                "transport_dir": str(transport_dir),
+                "inbox_count": (
+                    transport_payload["inbox_count"]
+                    if transport_payload is not None
+                    else 0
+                ),
+                "emitted_message_count": flow_message_log_document["metadata"][
+                    "emitted_message_count"
+                ],
+                "processed_nodes": processed_node_ids,
+                "ledger_totals": ledger_summary,
+                "transport_summary": transport_payload,
+                "artifacts": artifacts,
+            }
+        )
+    return result
 
 
 def _require_int_result_field(result: dict[str, object], field_name: str) -> int:
@@ -683,18 +765,25 @@ def _process_local_inbox(
     payload = _inbox_process_result_to_dict(inbox_result, ledger, request.ledger_path)
     if request.output_message_log_path is not None:
         emitted_messages = _emitted_messages_from_inbox_result(inbox_result)
-        output_document = build_replayed_message_log_document(
-            replayed_messages=messages,
-            emitted_messages=emitted_messages,
-            node_id=request.node_id,
-            source_message_log_path=source_message_path,
-            ledger_path=request.ledger_path,
-            processed_assignment_count=len(inbox_result.processed),
-            ignored_message_ids=list(inbox_result.ignored_message_ids),
+        output_path = Path(request.output_message_log_path)
+        preserve_existing_output = (
+            request.preserve_existing_output_log
+            and not emitted_messages
+            and output_path.exists()
         )
-        write_message_log(request.output_message_log_path, output_document)
+        if not preserve_existing_output:
+            output_document = build_replayed_message_log_document(
+                replayed_messages=messages,
+                emitted_messages=emitted_messages,
+                node_id=request.node_id,
+                source_message_log_path=source_message_path,
+                ledger_path=request.ledger_path,
+                processed_assignment_count=len(inbox_result.processed),
+                ignored_message_ids=list(inbox_result.ignored_message_ids),
+            )
+            write_message_log(request.output_message_log_path, output_document)
+            payload["final_message_count"] = len(messages) + len(emitted_messages)
         payload["output_message_log_path"] = request.output_message_log_path
-        payload["final_message_count"] = len(messages) + len(emitted_messages)
     if request.node_state_path is not None and node_state is not None:
         updated_state = LocalNodeProcessingState(
             node_id=request.node_id,
@@ -847,6 +936,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             MessageLogPersistenceError,
             LedgerPersistenceError,
             NodeStatePersistenceError,
+            ReceiptPersistenceError,
+            ValueError,
+        ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "run-local-transport-flow":
+        try:
+            payload = run_local_transport_flow(args.manifest, args.output_dir)
+        except ManifestError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except (
+            MessageLogPersistenceError,
+            LocalTransportError,
+            LedgerPersistenceError,
+            NodeStatePersistenceError,
+            ReceiptPersistenceError,
             ValueError,
         ) as exc:
             print(f"error: {exc}", file=sys.stderr)

@@ -183,6 +183,124 @@ class LocalTransportCliTests(unittest.TestCase):
         self.assertEqual(state_contents, state_original)
         self.assertEqual(output_contents, output_original)
 
+    def test_run_local_transport_flow_happy_path_and_idempotent_rerun(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-transport-flow",
+                        "--manifest",
+                        "examples/local-batch.json",
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            rerun_stdout = io.StringIO()
+            with contextlib.redirect_stdout(rerun_stdout):
+                rerun_exit = main(
+                    [
+                        "run-local-transport-flow",
+                        "--manifest",
+                        "examples/local-batch.json",
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            audit_stdout = io.StringIO()
+            with contextlib.redirect_stdout(audit_stdout):
+                audit_exit = main(["audit-local-flow", "--output-dir", str(output_dir)])
+
+            payload = json.loads(stdout.getvalue())
+            rerun_payload = json.loads(rerun_stdout.getvalue())
+            audit_payload = json.loads(audit_stdout.getvalue())
+            node_a_inbox = json.loads(
+                (output_dir / "transport" / "inboxes" / "local-node-a.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            node_c_inbox = json.loads(
+                (output_dir / "transport" / "inboxes" / "local-node-c.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            worker_log = json.loads(
+                (output_dir / "worker-message-logs" / "local-node-a.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            artifact_exists = {
+                "dispatch": (output_dir / "dispatch-message-log.json").exists(),
+                "flow": (output_dir / "flow-message-log.json").exists(),
+                "ledger": (output_dir / "ledger.json").exists(),
+                "receipts": (output_dir / "receipts.json").exists(),
+                "node_state_a": (output_dir / "node-state" / "local-node-a.json").exists(),
+                "worker_log_c": (
+                    output_dir / "worker-message-logs" / "local-node-c.json"
+                ).exists(),
+            }
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(rerun_exit, 0)
+        self.assertEqual(audit_exit, 0)
+        self.assertEqual(payload["command"], "run-local-transport-flow")
+        self.assertEqual(payload["inbox_count"], 2)
+        self.assertEqual(payload["offline_node_ids"], ["local-node-b"])
+        self.assertEqual(payload["processed_nodes"], ["local-node-a", "local-node-c"])
+        self.assertEqual(payload["processed_assignment_count"], 5)
+        self.assertEqual(payload["receipt_count"], 5)
+        self.assertEqual(rerun_payload["processed_assignment_count"], 0)
+        self.assertEqual(rerun_payload["receipt_count"], 5)
+        self.assertEqual(audit_payload["ok"], True)
+        self.assertTrue(artifact_exists["dispatch"])
+        self.assertTrue(artifact_exists["flow"])
+        self.assertTrue(artifact_exists["ledger"])
+        self.assertTrue(artifact_exists["receipts"])
+        self.assertTrue(artifact_exists["node_state_a"])
+        self.assertTrue(artifact_exists["worker_log_c"])
+        self.assertEqual(node_a_inbox["node_id"], "local-node-a")
+        self.assertEqual(node_c_inbox["node_id"], "local-node-c")
+        self.assertTrue(
+            all(
+                message["recipient_node_id"] == "local-node-a"
+                for message in node_a_inbox["messages"]
+            )
+        )
+        self.assertEqual(
+            worker_log["metadata"]["source_message_log_path"],
+            str(output_dir / "transport" / "inboxes" / "local-node-a.json"),
+        )
+
+    def test_run_local_transport_flow_existing_malformed_ledger_fails_before_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            ledger_path = output_dir / "ledger.json"
+            flow_path = output_dir / "flow-message-log.json"
+            ledger_path.write_text("not-json", encoding="utf-8")
+            flow_original = json.dumps({"version": 1, "messages": [], "keep": True})
+            flow_path.write_text(flow_original, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "run-local-transport-flow",
+                        "--manifest",
+                        "examples/local-batch.json",
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            flow_contents = flow_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("ledger JSON is malformed", stderr.getvalue())
+        self.assertEqual(flow_contents, flow_original)
+
     def test_process_local_inbox_requires_one_input_source(self) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()
