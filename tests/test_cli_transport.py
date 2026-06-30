@@ -203,7 +203,9 @@ class LocalTransportCliTests(unittest.TestCase):
             [message["sender_node_id"] for message in outbox["messages"]],
             ["local-node-a"],
         )
-        self.assertNotIn("msg-assign-1", [message["message_id"] for message in outbox["messages"]])
+        self.assertNotIn(
+            "msg-assign-1", [message["message_id"] for message in outbox["messages"]]
+        )
         self.assertEqual(len(worker_log["messages"]), 3)
 
     def test_write_transport_outbox_rejects_message_log_input(self) -> None:
@@ -223,7 +225,9 @@ class LocalTransportCliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("--write-transport-outbox requires --transport-dir", stderr.getvalue())
+        self.assertIn(
+            "--write-transport-outbox requires --transport-dir", stderr.getvalue()
+        )
 
     def test_transport_inbox_failure_does_not_overwrite_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

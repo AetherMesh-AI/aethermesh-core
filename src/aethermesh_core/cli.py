@@ -713,7 +713,9 @@ def _process_local_inbox(
         messages = load_local_inbox(
             transport_dir=request.transport_dir, node_id=request.node_id
         )
-        source_message_path = str(local_inbox_path(request.transport_dir, request.node_id))
+        source_message_path = str(
+            local_inbox_path(request.transport_dir, request.node_id)
+        )
     else:
         if request.message_log_path is None:
             raise ValueError("message log path is required")
