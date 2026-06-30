@@ -510,6 +510,7 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertTrue(
                     str(result.error).startswith("text_embed payload requires")
                 )
+
     def test_extractive_summary_completes_with_deterministic_output(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
@@ -549,7 +550,9 @@ class LocalRunnerTests(unittest.TestCase):
         )
         self.assertEqual(result.contribution_units, 1)
 
-    def test_extractive_summary_uses_default_and_original_order_tie_breaks(self) -> None:
+    def test_extractive_summary_uses_default_and_original_order_tie_breaks(
+        self,
+    ) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
             Job(
@@ -596,7 +599,10 @@ class LocalRunnerTests(unittest.TestCase):
                     Job(
                         job_id=f"summary-boundary-{max_sentences}",
                         job_type="extractive_summary",
-                        payload={"text": "Alpha. Beta. Gamma.", "max_sentences": max_sentences},
+                        payload={
+                            "text": "Alpha. Beta. Gamma.",
+                            "max_sentences": max_sentences,
+                        },
                     )
                 )
                 self.assertEqual(result.status, "completed")
@@ -607,7 +613,11 @@ class LocalRunnerTests(unittest.TestCase):
         cases = [
             Job(job_id="missing", job_type="extractive_summary", payload={}),
             Job(job_id="blank", job_type="extractive_summary", payload={"text": "  "}),
-            Job(job_id="non-string", job_type="extractive_summary", payload={"text": 123}),
+            Job(
+                job_id="non-string",
+                job_type="extractive_summary",
+                payload={"text": 123},
+            ),
             Job(
                 job_id="zero-max-sentences",
                 job_type="extractive_summary",
@@ -642,7 +652,9 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertIsNone(result.output)
                 self.assertEqual(result.contribution_units, 0)
                 self.assertIsInstance(result.error, str)
-                self.assertTrue(str(result.error).startswith("extractive_summary payload requires"))
+                self.assertTrue(
+                    str(result.error).startswith("extractive_summary payload requires")
+                )
 
 
 if __name__ == "__main__":

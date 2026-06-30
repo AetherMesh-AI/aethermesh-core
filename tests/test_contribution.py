@@ -97,7 +97,9 @@ class ContributionScoringTests(unittest.TestCase):
             TEXT_EMBED_MAX_UNITS,
         )
 
-    def test_extractive_summary_scores_by_capped_selected_sentence_buckets(self) -> None:
+    def test_extractive_summary_scores_by_capped_selected_sentence_buckets(
+        self,
+    ) -> None:
         job, result = _run(
             Job(
                 "summary",
@@ -251,7 +253,13 @@ class ContributionScoringTests(unittest.TestCase):
                     "summary",
                     "node-a",
                     "completed",
-                    {"summary": 123, "sentences": [], "sentence_count": 0, "source_sentence_count": 0, "character_count": 0},
+                    {
+                        "summary": 123,
+                        "sentences": [],
+                        "sentence_count": 0,
+                        "source_sentence_count": 0,
+                        "character_count": 0,
+                    },
                     None,
                     1,
                 ),
@@ -262,7 +270,13 @@ class ContributionScoringTests(unittest.TestCase):
                     "summary",
                     "node-a",
                     "completed",
-                    {"summary": "", "sentences": [], "sentence_count": 1, "source_sentence_count": 1, "character_count": 1},
+                    {
+                        "summary": "",
+                        "sentences": [],
+                        "sentence_count": 1,
+                        "source_sentence_count": 1,
+                        "character_count": 1,
+                    },
                     None,
                     1,
                 ),
@@ -273,7 +287,15 @@ class ContributionScoringTests(unittest.TestCase):
                     "summary",
                     "node-a",
                     "completed",
-                    {"summary": "x", "sentences": [{"index": 0, "text": "x", "score": True, "token_count": 1}], "sentence_count": 1, "source_sentence_count": 1, "character_count": 1},
+                    {
+                        "summary": "x",
+                        "sentences": [
+                            {"index": 0, "text": "x", "score": True, "token_count": 1}
+                        ],
+                        "sentence_count": 1,
+                        "source_sentence_count": 1,
+                        "character_count": 1,
+                    },
                     None,
                     1,
                 ),

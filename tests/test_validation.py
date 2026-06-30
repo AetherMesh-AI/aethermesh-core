@@ -627,7 +627,10 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
-    def test_completed_extractive_summary_result_with_matching_output_is_valid(self) -> None:
+
+    def test_completed_extractive_summary_result_with_matching_output_is_valid(
+        self,
+    ) -> None:
         validation = validate_job_result(
             Job(
                 job_id="summary-1",
@@ -691,7 +694,12 @@ class ValidationTests(unittest.TestCase):
                 {
                     **valid_output,
                     "sentences": [
-                        {"index": 1, "text": "Gamma gamma beta.", "score": 4, "token_count": 3}
+                        {
+                            "index": 1,
+                            "text": "Gamma gamma beta.",
+                            "score": 4,
+                            "token_count": 3,
+                        }
                     ],
                 },
             ),
@@ -718,8 +726,16 @@ class ValidationTests(unittest.TestCase):
     def test_extractive_summary_malformed_payload_is_invalid(self) -> None:
         cases = [
             Job(job_id="summary-missing", job_type="extractive_summary", payload={}),
-            Job(job_id="summary-blank", job_type="extractive_summary", payload={"text": "  "}),
-            Job(job_id="summary-non-string", job_type="extractive_summary", payload={"text": 123}),
+            Job(
+                job_id="summary-blank",
+                job_type="extractive_summary",
+                payload={"text": "  "},
+            ),
+            Job(
+                job_id="summary-non-string",
+                job_type="extractive_summary",
+                payload={"text": 123},
+            ),
             Job(
                 job_id="summary-bool-max",
                 job_type="extractive_summary",
@@ -746,11 +762,17 @@ class ValidationTests(unittest.TestCase):
                     ),
                 )
                 self.assertFalse(validation.valid)
-                self.assertEqual(validation.reason, "malformed_extractive_summary_payload")
+                self.assertEqual(
+                    validation.reason, "malformed_extractive_summary_payload"
+                )
 
     def test_failed_extractive_summary_result_earns_zero_credit(self) -> None:
         validation = validate_job_result(
-            Job(job_id="summary-1", job_type="extractive_summary", payload={"text": "alpha"}),
+            Job(
+                job_id="summary-1",
+                job_type="extractive_summary",
+                payload={"text": "alpha"},
+            ),
             JobResult(
                 job_id="summary-1",
                 node_id="node-a",
