@@ -77,3 +77,30 @@ def _validate_json_compatible(field_name: str, value: object) -> None:
             _validate_json_compatible(f"{field_name}.{key}", item)
         return
     raise ValueError(f"{field_name} must contain only JSON-compatible values")
+
+
+def message_from_mapping(entry: object) -> MeshMessage:
+    """Build a validated MeshMessage from a JSON-like mapping."""
+
+    if not isinstance(entry, dict):
+        raise ValueError("must be an object")
+    message_id = entry.get("message_id")
+    message_type = entry.get("message_type")
+    sender_node_id = entry.get("sender_node_id")
+    recipient_node_id = entry.get("recipient_node_id")
+    payload = entry.get("payload", {})
+    correlation_id = entry.get("correlation_id")
+    if not isinstance(message_id, str):
+        raise ValueError("message_id must be a non-empty string")
+    if not isinstance(message_type, str):
+        raise ValueError("message_type must be a non-empty string")
+    if not isinstance(sender_node_id, str):
+        raise ValueError("sender_node_id must be a non-empty string")
+    return MeshMessage(
+        message_id=message_id,
+        message_type=message_type,
+        sender_node_id=sender_node_id,
+        recipient_node_id=recipient_node_id,
+        payload=payload,
+        correlation_id=correlation_id,
+    )

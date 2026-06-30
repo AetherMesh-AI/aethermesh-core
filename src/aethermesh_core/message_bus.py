@@ -62,3 +62,25 @@ class LocalMessageBus:
         if node_id not in self._registered_node_ids:
             raise ValueError(f"node_id is not registered: {node_id}")
         return list(self._inboxes[node_id])
+
+
+def send_numbered_message(
+    message_bus: LocalMessageBus,
+    *,
+    message_type: str,
+    sender_node_id: str,
+    recipient_node_id: str | None,
+    payload: dict[str, object],
+    correlation_id: str | None,
+) -> MeshMessage:
+    """Create and send a message with the next deterministic bus sequence id."""
+
+    message = MeshMessage(
+        message_id=f"msg-{len(message_bus.log()) + 1:04d}",
+        message_type=message_type,
+        sender_node_id=sender_node_id,
+        recipient_node_id=recipient_node_id,
+        payload=payload,
+        correlation_id=correlation_id,
+    )
+    return message_bus.send(message)
