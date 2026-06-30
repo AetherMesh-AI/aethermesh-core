@@ -7,6 +7,7 @@ from pathlib import Path
 import aethermesh_core.local_transport as local_transport
 from aethermesh_core.local_transport import (
     LocalTransportError,
+    collect_local_outboxes,
     load_local_inbox,
     local_inbox_path,
     local_outbox_path,
@@ -373,6 +374,143 @@ class LocalTransportTests(unittest.TestCase):
             preserved = path.read_text(encoding="utf-8")
 
         self.assertEqual(preserved, original)
+
+    def test_collect_local_outboxes_writes_deterministic_message_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "transport"
+            output_path = Path(temp_dir) / "collected.json"
+            node_b_path = write_local_outbox(
+                transport_dir=transport_dir,
+                node_id="node-b",
+                source_inbox_path="inbox-b.json",
+                processed_assignment_count=1,
+                messages=[_emitted_message("msg-b-1", "node-b")],
+            )
+            node_a_path = write_local_outbox(
+                transport_dir=transport_dir,
+                node_id="node-a",
+                source_inbox_path="inbox-a.json",
+                processed_assignment_count=2,
+                messages=[
+                    _emitted_message("msg-a-1", "node-a"),
+                    _emitted_message("msg-a-2", "node-a"),
+                ],
+            )
+            before_a = node_a_path.read_text(encoding="utf-8")
+            before_b = node_b_path.read_text(encoding="utf-8")
+
+            result = collect_local_outboxes(
+                transport_dir=transport_dir, message_log_path=output_path
+            )
+            collected = json.loads(output_path.read_text(encoding="utf-8"))
+            after_a = node_a_path.read_text(encoding="utf-8")
+            after_b = node_b_path.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {
+                "source": "collect-local-outboxes",
+                "transport_dir": str(transport_dir),
+                "output_path": str(output_path),
+                "outbox_count": 2,
+                "node_ids": ["node-a", "node-b"],
+                "message_count": 3,
+            },
+        )
+        self.assertEqual(collected["version"], 1)
+        self.assertEqual(collected["metadata"], result)
+        self.assertEqual(
+            [message["message_id"] for message in collected["messages"]],
+            ["msg-a-1", "msg-a-2", "msg-b-1"],
+        )
+        self.assertEqual(after_a, before_a)
+        self.assertEqual(after_b, before_b)
+
+    def test_collect_local_outboxes_empty_cases_write_empty_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cases = [
+                Path(temp_dir) / "missing-transport",
+                Path(temp_dir) / "empty-transport",
+                Path(temp_dir) / "transport-without-outboxes",
+                Path(temp_dir) / "transport-with-empty-outboxes",
+            ]
+            cases[1].mkdir()
+            (cases[2] / "inboxes").mkdir(parents=True)
+            (cases[3] / "outboxes").mkdir(parents=True)
+            for index, transport_dir in enumerate(cases):
+                output_path = Path(temp_dir) / f"empty-{index}.json"
+                result = collect_local_outboxes(
+                    transport_dir=transport_dir, message_log_path=output_path
+                )
+                collected = json.loads(output_path.read_text(encoding="utf-8"))
+
+                self.assertEqual(result["outbox_count"], 0)
+                self.assertEqual(result["node_ids"], [])
+                self.assertEqual(result["message_count"], 0)
+                self.assertEqual(collected["version"], 1)
+                self.assertEqual(collected["messages"], [])
+
+    def test_collect_local_outboxes_rejects_malformed_outboxes_without_writing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "transport"
+            outbox_dir = transport_dir / "outboxes"
+            outbox_dir.mkdir(parents=True)
+            output_path = Path(temp_dir) / "collected.json"
+            output_path.write_text("original", encoding="utf-8")
+            cases = [
+                ("node-a.json", "not-json", "malformed"),
+                (
+                    "node-a.json",
+                    json.dumps({"version": 2, "node_id": "node-a", "messages": []}),
+                    "version 1",
+                ),
+                (
+                    "node-a.json",
+                    json.dumps({"version": 1, "node_id": "node-a", "messages": {}}),
+                    "messages' must be a list",
+                ),
+                (
+                    "node-a.json",
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "node_id": "node-a",
+                            "messages": [{"message_type": "job_result_reported"}],
+                        }
+                    ),
+                    "entry 0 is invalid",
+                ),
+                (
+                    "node-a.json",
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "node_id": "node-a",
+                            "messages": [_emitted_message("msg-1", "node-b").to_dict()],
+                        }
+                    ),
+                    "sender_node_id must be node-a",
+                ),
+                (
+                    "node%2Da.json",
+                    json.dumps({"version": 1, "node_id": "node-a", "messages": []}),
+                    "filename is not a safe node id",
+                ),
+            ]
+            for filename, contents, expected in cases:
+                with self.subTest(expected=expected):
+                    for path in outbox_dir.glob("*.json"):
+                        path.unlink()
+                    (outbox_dir / filename).write_text(contents, encoding="utf-8")
+                    with self.assertRaisesRegex(LocalTransportError, expected):
+                        collect_local_outboxes(
+                            transport_dir=transport_dir, message_log_path=output_path
+                        )
+                    self.assertEqual(
+                        output_path.read_text(encoding="utf-8"), "original"
+                    )
 
 
 def _message(message_id: str, recipient: str) -> MeshMessage:

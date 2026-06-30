@@ -81,6 +81,30 @@ def build_replayed_message_log_document(
     }
 
 
+def build_collected_outbox_message_log_document(
+    *,
+    messages: list[MeshMessage],
+    transport_dir: str | Path,
+    output_path: str | Path,
+    outbox_count: int,
+    node_ids: list[str],
+) -> dict[str, Any]:
+    """Build a deterministic version 1 log from collected local transport outboxes."""
+
+    return {
+        "version": 1,
+        "metadata": {
+            "source": "collect-local-outboxes",
+            "transport_dir": str(transport_dir),
+            "output_path": str(output_path),
+            "outbox_count": outbox_count,
+            "node_ids": list(node_ids),
+            "message_count": len(messages),
+        },
+        "messages": [_message_to_document_entry(message) for message in messages],
+    }
+
+
 def build_dispatch_message_log_document(
     *,
     messages: list[MeshMessage],
