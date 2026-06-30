@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   pull-requests: read
 
 jobs:
@@ -279,9 +278,9 @@ jobs:
           python -m pip install -e . pytest
       - name: repeated pytest passes
         run: |
-          for attempt in 1 2 3; do
-            echo "Flaky-test pass ${attempt}/3"
-            python -m pytest -q tests
+          for seed in 1 2 3; do
+            echo "Flaky-test pass with PYTHONHASHSEED=${seed}"
+            PYTHONHASHSEED="${seed}" python -m pytest -q tests
           done
 
   python-artifact-provenance-check:

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -178,6 +179,12 @@ def command_workflow_security(_: argparse.Namespace) -> int:
             )
         if re.search(r"permissions:\s*write-all\b", lowered):
             violations.append(f"{rel}: permissions: write-all is not allowed")
+        for line_number, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip().lower()
+            if re.match(r"[a-z-]+:\s*write(?:\s|$)", stripped):
+                violations.append(
+                    f"{rel}:{line_number}: write permission is not allowed in PR workflows: {line.strip()}"
+                )
         if re.search(r"curl\b[^\n|]*\|\s*(?:sh|bash)\b", text):
             violations.append(f"{rel}: curl-to-shell install pattern is not allowed")
         if "${{ secrets." in text and "pull_request:" in lowered:
@@ -188,6 +195,12 @@ def command_workflow_security(_: argparse.Namespace) -> int:
                 violations.append(
                     f"{rel}:{line_number}: action reference must include a version"
                 )
+            if stripped.startswith("uses:"):
+                action_ref = stripped.removeprefix("uses:").strip().strip("\"'")
+                if not action_ref.startswith("actions/"):
+                    violations.append(
+                        f"{rel}:{line_number}: third-party action requires explicit review/allowlist: {action_ref}"
+                    )
     if violations:
         print("Workflow security violations found:")
         print("\n".join(violations))
@@ -202,7 +215,8 @@ def command_pr_size(args: argparse.Namespace) -> int:
         print(result.stdout, end="")
         return result.returncode
     changed_files = 0
-    changed_lines = 0
+    additions = 0
+    deletions = 0
     binary_files = 0
     for line in result.stdout.splitlines():
         if not line.strip():
@@ -215,9 +229,11 @@ def command_pr_size(args: argparse.Namespace) -> int:
         if added == "-" or deleted == "-":
             binary_files += 1
             continue
-        changed_lines += int(added) + int(deleted)
+        additions += int(added)
+        deletions += int(deleted)
+    changed_lines = additions + deletions
     print(
-        f"PR size: files={changed_files}, changed_lines={changed_lines}, binary_files={binary_files}"
+        f"PR size: files={changed_files}, additions={additions}, deletions={deletions}, changed_lines={changed_lines}, binary_files={binary_files}"
     )
     failures = []
     if changed_files > args.max_files:
@@ -284,6 +300,24 @@ def command_artifact_provenance(args: argparse.Namespace) -> int:
     if not dist.exists():
         print(f"Artifact directory does not exist: {dist}")
         return 1
+    github_sha = os.environ.get("GITHUB_SHA")
+    github_workflow = os.environ.get("GITHUB_WORKFLOW")
+    github_run_id = os.environ.get("GITHUB_RUN_ID")
+    if github_sha:
+        head = run(["git", "rev-parse", "HEAD"])
+        if head.returncode != 0:
+            print(head.stdout, end="")
+            return head.returncode
+        if head.stdout.strip() != github_sha:
+            print(
+                f"Artifact provenance check failed: GITHUB_SHA {github_sha} does not match HEAD {head.stdout.strip()}"
+            )
+            return 1
+        print(f"source_commit={github_sha}")
+    if github_workflow:
+        print(f"workflow={github_workflow}")
+    if github_run_id:
+        print(f"workflow_run_id={github_run_id}")
     artifacts = sorted(path for path in dist.iterdir() if path.is_file())
     wheels = [path for path in artifacts if path.suffix == ".whl"]
     sdists = [path for path in artifacts if path.name.endswith(".tar.gz")]
