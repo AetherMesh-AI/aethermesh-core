@@ -29,6 +29,8 @@ class LocalDispatchResult:
     assignments: list[JobAssignment]
     messages: list[MeshMessage]
     node_roster: list[dict[str, int | str | list[str]]]
+    command: str = "dispatch-local-batch"
+    peer_log_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize a deterministic, intentionally small CLI summary."""
@@ -36,8 +38,8 @@ class LocalDispatchResult:
         assigned_node_ids = sorted(
             {assignment.node_id for assignment in self.assignments}
         )
-        return {
-            "command": "dispatch-local-batch",
+        payload: dict[str, Any] = {
+            "command": self.command,
             "manifest_path": self.manifest_path,
             "message_log_path": self.message_log_path,
             "job_count": len(self.jobs),
@@ -54,6 +56,9 @@ class LocalDispatchResult:
             "assignments": [assignment.to_dict() for assignment in self.assignments],
             "assigned_node_ids": assigned_node_ids,
         }
+        if self.peer_log_path is not None:
+            payload["peer_log_path"] = self.peer_log_path
+        return payload
 
 
 def dispatch_local_batch(
@@ -62,6 +67,8 @@ def dispatch_local_batch(
     message_log_path: str,
     nodes: Sequence[ScheduledNode],
     jobs: list[Job],
+    command: str = "dispatch-local-batch",
+    peer_log_path: str | None = None,
 ) -> LocalDispatchResult:
     """Build a local dispatch log with heartbeats and job assignments only.
 
@@ -123,6 +130,8 @@ def dispatch_local_batch(
         assignments=assignments,
         messages=message_bus.log(),
         node_roster=registry.to_roster(),
+        command=command,
+        peer_log_path=peer_log_path,
     )
 
 

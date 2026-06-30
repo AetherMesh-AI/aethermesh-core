@@ -3,7 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    peer_summary_document,
+    scheduled_nodes_from_peer_log,
+)
+from aethermesh_core.scheduler import NodeStatus
 
 
 class PeerRegistryTests(unittest.TestCase):
@@ -240,6 +245,95 @@ class PeerRegistryTests(unittest.TestCase):
                     with self.assertRaises(PeerRegistryError) as cm:
                         peer_summary_document(log_path)
                     self.assertEqual(str(cm.exception), expected_message)
+    def test_scheduled_nodes_from_peer_log_latest_sorted_and_capability_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            self._heartbeat(
+                                "msg-0001",
+                                "node-b",
+                                "available",
+                                1,
+                                ["text_stats"],
+                            ),
+                            self._heartbeat(
+                                "msg-0002",
+                                "node-a",
+                                "offline",
+                                2,
+                                ["echo"],
+                            ),
+                            self._heartbeat(
+                                "msg-0003",
+                                "node-b",
+                                "available",
+                                3,
+                                ["echo", "text_stats"],
+                            ),
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            nodes = scheduled_nodes_from_peer_log(log_path)
+
+        self.assertEqual([node.node_id for node in nodes], ["node-a", "node-b"])
+        self.assertEqual([node.status for node in nodes], [NodeStatus.OFFLINE, NodeStatus.AVAILABLE])
+        self.assertEqual([node.capabilities for node in nodes], [("echo",), ("echo", "text_stats")])
+
+    def test_scheduled_nodes_from_peer_log_rejects_unknown_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            self._heartbeat("msg-0001", "node-a", "busy", 1, ["echo"])
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(PeerRegistryError, "status must be one of"):
+                scheduled_nodes_from_peer_log(log_path)
+
+    def test_scheduled_nodes_from_peer_log_requires_heartbeat_peers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(json.dumps({"version": 1, "messages": []}), encoding="utf-8")
+
+            with self.assertRaisesRegex(PeerRegistryError, "no heartbeat peers"):
+                scheduled_nodes_from_peer_log(log_path)
+
+    def _heartbeat(
+        self,
+        message_id: str,
+        node_id: str,
+        status: str,
+        sequence: int,
+        capabilities: list[str],
+    ) -> dict[str, object]:
+        return {
+            "message_id": message_id,
+            "message_type": "node_heartbeat",
+            "sender_node_id": node_id,
+            "recipient_node_id": None,
+            "payload": {
+                "node_id": node_id,
+                "status": status,
+                "heartbeat_sequence": sequence,
+                "heartbeat_count": 1,
+                "capabilities": capabilities,
+            },
+            "correlation_id": None,
+        }
 
 
 if __name__ == "__main__":

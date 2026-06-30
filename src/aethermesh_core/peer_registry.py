@@ -11,6 +11,7 @@ from aethermesh_core.message_log import (
     load_message_log_messages,
 )
 from aethermesh_core.messages import MeshMessage
+from aethermesh_core.scheduler import NodeStatus, ScheduledNode
 
 
 class PeerRegistryError(ValueError):
@@ -79,6 +80,53 @@ def peer_summary_document(message_log_path: str | Path) -> dict[str, object]:
     return {
         "peers": [peers[node_id].to_dict() for node_id in sorted(peers)],
     }
+
+
+def scheduled_nodes_from_peer_log(message_log_path: str | Path) -> list[ScheduledNode]:
+    """Load heartbeat-derived peers as deterministic scheduler roster entries."""
+
+    document = peer_summary_document(message_log_path)
+    peers = document["peers"]
+    if not isinstance(peers, list):
+        raise PeerRegistryError("peer summary document field 'peers' must be a list")
+    if not peers:
+        raise PeerRegistryError("peer log contains no heartbeat peers")
+
+    nodes: list[ScheduledNode] = []
+    for index, peer in enumerate(peers):
+        if not isinstance(peer, dict):
+            raise PeerRegistryError(f"peer summary peers[{index}] must be an object")
+        node_id = peer.get("node_id")
+        status_value = peer.get("status")
+        capabilities = peer.get("capabilities")
+        if not isinstance(node_id, str) or node_id == "":
+            raise PeerRegistryError(
+                f"peer summary peers[{index}].node_id must be a non-empty string"
+            )
+        if not isinstance(status_value, str):
+            raise PeerRegistryError(f"peer summary peers[{index}].status must be a string")
+        try:
+            status = NodeStatus(status_value)
+        except ValueError as exc:
+            supported_statuses = ", ".join(status.value for status in NodeStatus)
+            raise PeerRegistryError(
+                f"peer summary peers[{index}].status must be one of: {supported_statuses}"
+            ) from exc
+        if not isinstance(capabilities, list) or not all(
+            isinstance(capability, str) and capability != ""
+            for capability in capabilities
+        ):
+            raise PeerRegistryError(
+                f"peer summary peers[{index}].capabilities must be a list of non-empty strings"
+            )
+        nodes.append(
+            ScheduledNode(
+                node_id=node_id,
+                status=status,
+                capabilities=tuple(sorted(capabilities)),
+            )
+        )
+    return nodes
 
 
 def _parse_heartbeat(message: MeshMessage) -> PeerSummary:

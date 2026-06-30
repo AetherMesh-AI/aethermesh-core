@@ -14,7 +14,7 @@ from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
-from aethermesh_core.job_manifest import ManifestError, load_job_manifest
+from aethermesh_core.job_manifest import ManifestError, load_job_manifest, load_manifest_jobs
 from aethermesh_core.ledger import (
     ContributionLedger,
     LedgerPersistenceError,
@@ -48,7 +48,11 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    peer_summary_document,
+    scheduled_nodes_from_peer_log,
+)
 from aethermesh_core.receipts import (
     ReceiptPersistenceError,
     build_receipt_document,
@@ -139,6 +143,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a version 1 local job-batch JSON manifest.",
     )
     dispatch.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to write the version 1 assignment-only local message log.",
+    )
+
+    peer_dispatch = subcommands.add_parser(
+        "dispatch-peer-batch",
+        help="Write local dispatch messages using heartbeat-discovered peers.",
+    )
+    peer_dispatch.add_argument(
+        "--peer-log-path",
+        required=True,
+        help="Path to an existing version 1 local heartbeat message log.",
+    )
+    peer_dispatch.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 manifest whose jobs should be dispatched.",
+    )
+    peer_dispatch.add_argument(
         "--message-log-path",
         required=True,
         help="Path to write the version 1 assignment-only local message log.",
@@ -419,6 +443,34 @@ def dispatch_local_batch_command(
         message_log_path=message_log_path,
         nodes=batch.nodes,
         jobs=batch.jobs,
+    )
+    message_log_document = build_dispatch_message_log_document(
+        messages=dispatch.messages,
+        jobs=dispatch.jobs,
+        nodes=dispatch.nodes,
+        assignments=dispatch.assignments,
+        manifest_path=manifest_path,
+    )
+    write_message_log(message_log_path, message_log_document)
+    return dispatch.to_dict()
+
+
+def dispatch_peer_batch_command(
+    peer_log_path: str,
+    manifest_path: str,
+    message_log_path: str,
+) -> dict[str, object]:
+    """Dispatch manifest jobs to heartbeat-derived peers without execution."""
+
+    nodes = scheduled_nodes_from_peer_log(peer_log_path)
+    jobs = load_manifest_jobs(manifest_path)
+    dispatch = dispatch_local_batch(
+        manifest_path=manifest_path,
+        message_log_path=message_log_path,
+        nodes=nodes,
+        jobs=jobs,
+        command="dispatch-peer-batch",
+        peer_log_path=peer_log_path,
     )
     message_log_document = build_dispatch_message_log_document(
         messages=dispatch.messages,
@@ -833,6 +885,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"error: local batch dispatch failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "dispatch-peer-batch":
+        try:
+            payload = dispatch_peer_batch_command(
+                args.peer_log_path, args.manifest, args.message_log_path
+            )
+        except (ManifestError, PeerRegistryError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except MessageLogPersistenceError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            print(f"error: peer batch dispatch failed: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0
