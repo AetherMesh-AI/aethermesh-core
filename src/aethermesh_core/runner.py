@@ -18,6 +18,7 @@ class LocalRunner:
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"
     SUPPORTED_TEXT_CHUNK_JOB_TYPE = "text_chunk"
     SUPPORTED_TEXT_EMBED_JOB_TYPE = "text_embed"
+    SUPPORTED_TEXT_RETRIEVE_JOB_TYPE = "text_retrieve"
 
     def __init__(self, identity: NodeIdentity) -> None:
         self.identity = identity
@@ -63,6 +64,9 @@ class LocalRunner:
 
         if job.job_type == self.SUPPORTED_TEXT_EMBED_JOB_TYPE:
             return self._run_payload_builder(job, build_text_embed_output)
+
+        if job.job_type == self.SUPPORTED_TEXT_RETRIEVE_JOB_TYPE:
+            return self._run_payload_builder(job, build_text_retrieve_output)
 
         return JobResult(
             job_id=job.job_id,
@@ -203,6 +207,78 @@ def build_text_embed_output(payload: dict[str, Any]) -> dict[str, object]:
         "unique_terms": len(counts),
         "vector": vector,
     }
+
+
+def build_text_retrieve_output(payload: dict[str, Any]) -> dict[str, object]:
+    """Build deterministic token-overlap rankings for ``text_retrieve`` jobs."""
+
+    query = payload.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("text_retrieve payload requires non-empty string field: query")
+    query_terms = sorted(set(_KEYWORD_TOKEN_PATTERN.findall(query.lower())))
+    if not query_terms:
+        raise ValueError(
+            "text_retrieve payload requires query with at least one word token"
+        )
+
+    documents = payload.get("documents")
+    if not isinstance(documents, list) or not documents:
+        raise ValueError(
+            "text_retrieve payload requires non-empty list field: documents"
+        )
+
+    limit = payload.get("limit", len(documents))
+    if (
+        not isinstance(limit, int)
+        or isinstance(limit, bool)
+        or limit < 1
+        or limit > len(documents)
+    ):
+        raise ValueError(
+            "text_retrieve payload requires integer field: "
+            "limit between 1 and number of documents"
+        )
+
+    seen_document_ids: set[str] = set()
+    matches: list[dict[str, Any]] = []
+    for index, document in enumerate(documents):
+        if not isinstance(document, dict):
+            raise ValueError(f"text_retrieve documents[{index}] must be an object")
+        document_id = document.get("id")
+        if not isinstance(document_id, str) or not document_id.strip():
+            raise ValueError(
+                f"text_retrieve documents[{index}] requires non-empty string field: id"
+            )
+        if document_id in seen_document_ids:
+            raise ValueError("text_retrieve document ids must be unique")
+        seen_document_ids.add(document_id)
+
+        text = document.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError(
+                f"text_retrieve documents[{index}] requires non-empty string field: text"
+            )
+
+        document_terms = set(_KEYWORD_TOKEN_PATTERN.findall(text.lower()))
+        matched_terms = [term for term in query_terms if term in document_terms]
+        matched_term_count = len(matched_terms)
+        matches.append(
+            {
+                "id": document_id,
+                "score": matched_term_count / len(query_terms),
+                "matched_term_count": matched_term_count,
+                "matched_terms": matched_terms,
+            }
+        )
+
+    matches.sort(
+        key=lambda match: (
+            -float(match["score"]),
+            -int(match["matched_term_count"]),
+            str(match["id"]),
+        )
+    )
+    return {"query_terms": query_terms, "matches": matches[:limit]}
 
 
 TEXT_CHUNK_DEFAULT_MAX_CHARS = 120

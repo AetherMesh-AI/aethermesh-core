@@ -1,5 +1,6 @@
 import unittest
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.validation import validate_job_result
 
@@ -627,6 +628,261 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
+
+    def test_completed_text_retrieve_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="retrieve-1",
+                job_type="text_retrieve",
+                payload={
+                    "query": "Mesh mesh retrieval",
+                    "documents": [
+                        {"id": "doc-c", "text": "Retrieval systems rank context."},
+                        {"id": "doc-b", "text": "Retrieval helps mesh nodes."},
+                        {"id": "doc-a", "text": "Mesh workers process tasks."},
+                    ],
+                    "limit": 2,
+                },
+            ),
+            JobResult(
+                job_id="retrieve-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "query_terms": ["mesh", "retrieval"],
+                    "matches": [
+                        {
+                            "id": "doc-b",
+                            "score": 1.0,
+                            "matched_term_count": 2,
+                            "matched_terms": ["mesh", "retrieval"],
+                        },
+                        {
+                            "id": "doc-a",
+                            "score": 0.5,
+                            "matched_term_count": 1,
+                            "matched_terms": ["mesh"],
+                        },
+                    ],
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_text_retrieve_contribution_rejects_malformed_output_shapes(self) -> None:
+        job = Job(
+            job_id="retrieve-1",
+            job_type="text_retrieve",
+            payload={
+                "query": "alpha beta",
+                "documents": [
+                    {"id": "doc-b", "text": "alpha only"},
+                    {"id": "doc-a", "text": "alpha beta"},
+                ],
+            },
+        )
+        base_output = {
+            "query_terms": ["alpha", "beta"],
+            "matches": [
+                {
+                    "id": "doc-a",
+                    "score": 1.0,
+                    "matched_term_count": 2,
+                    "matched_terms": ["alpha", "beta"],
+                }
+            ],
+        }
+        malformed_outputs = [
+            None,
+            {**base_output, "query_terms": "alpha"},
+            {**base_output, "matches": "not-a-list"},
+            {**base_output, "query_terms": ["alpha", 3]},
+            {**base_output, "matches": ["not-a-dict"]},
+            {**base_output, "matches": [{**base_output["matches"][0], "id": 123}]},
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "matched_term_count": -1}],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "matched_terms": "alpha"}],
+            },
+            {
+                **base_output,
+                "matches": [
+                    {**base_output["matches"][0], "matched_terms": ["alpha", 3]}
+                ],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "score": True}],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "score": -0.1}],
+            },
+        ]
+
+        for output in malformed_outputs:
+            with self.subTest(output=output):
+                self.assertEqual(
+                    score_validated_contribution(
+                        job,
+                        JobResult(
+                            job_id="retrieve-1",
+                            node_id="node-a",
+                            status="completed",
+                            output=output,
+                            error=None,
+                            contribution_units=0,
+                        ),
+                    ),
+                    0,
+                )
+
+    def test_text_retrieve_rejects_changed_output(self) -> None:
+        job = Job(
+            job_id="retrieve-1",
+            job_type="text_retrieve",
+            payload={
+                "query": "alpha beta",
+                "documents": [
+                    {"id": "doc-b", "text": "alpha only"},
+                    {"id": "doc-a", "text": "alpha beta"},
+                ],
+            },
+        )
+        valid_output = {
+            "query_terms": ["alpha", "beta"],
+            "matches": [
+                {
+                    "id": "doc-a",
+                    "score": 1.0,
+                    "matched_term_count": 2,
+                    "matched_terms": ["alpha", "beta"],
+                },
+                {
+                    "id": "doc-b",
+                    "score": 0.5,
+                    "matched_term_count": 1,
+                    "matched_terms": ["alpha"],
+                },
+            ],
+        }
+        cases = [
+            (
+                "changed_score",
+                {
+                    **valid_output,
+                    "matches": [
+                        {**valid_output["matches"][0], "score": 0.5},
+                        valid_output["matches"][1],
+                    ],
+                },
+            ),
+            (
+                "changed_order",
+                {**valid_output, "matches": list(reversed(valid_output["matches"]))},
+            ),
+            ("changed_terms", {**valid_output, "query_terms": ["beta", "alpha"]}),
+            ("malformed_output", ["doc-a", "doc-b"]),
+        ]
+
+        for name, output in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="retrieve-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_text_retrieve_malformed_payload_is_invalid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="retrieve-bad",
+                job_type="text_retrieve",
+                payload={"query": "alpha", "documents": []},
+            ),
+            JobResult(
+                job_id="retrieve-bad",
+                node_id="node-a",
+                status="completed",
+                output={"query_terms": ["alpha"], "matches": []},
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "malformed_text_retrieve_payload")
+
+    def test_failed_text_retrieve_result_earns_zero_credit(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="retrieve-1",
+                job_type="text_retrieve",
+                payload={
+                    "query": "alpha",
+                    "documents": [{"id": "doc-1", "text": "alpha"}],
+                },
+            ),
+            JobResult(
+                job_id="retrieve-1",
+                node_id="node-a",
+                status="failed",
+                output=None,
+                error="text_retrieve payload requires non-empty list field: documents",
+                contribution_units=0,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_not_completed")
+
+    def test_text_retrieve_rejects_wrong_job_id_and_contribution_units(self) -> None:
+        job = Job(
+            job_id="retrieve-1",
+            job_type="text_retrieve",
+            payload={
+                "query": "alpha",
+                "documents": [{"id": "doc-1", "text": "alpha"}],
+            },
+        )
+        output = {
+            "query_terms": ["alpha"],
+            "matches": [
+                {
+                    "id": "doc-1",
+                    "score": 1.0,
+                    "matched_term_count": 1,
+                    "matched_terms": ["alpha"],
+                }
+            ],
+        }
+
+        wrong_job = validate_job_result(
+            job,
+            JobResult("other-job", "node-a", "completed", output, None, 1),
+        )
+        wrong_units = validate_job_result(
+            job,
+            JobResult("retrieve-1", "node-a", "completed", output, None, 2),
+        )
+
+        self.assertEqual(wrong_job.reason, "job_id_mismatch")
+        self.assertEqual(wrong_units.reason, "unexpected_contribution_units")
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ DEFAULT_LOCAL_CAPABILITIES = (
     "keyword_extract",
     "text_chunk",
     "text_embed",
+    "text_retrieve",
     "text_stats",
 )
 

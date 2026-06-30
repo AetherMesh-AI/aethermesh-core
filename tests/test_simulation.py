@@ -177,6 +177,51 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(result["totals"]["contribution_units"], 3)
 
+    def test_text_retrieve_flows_through_simulation_and_validation_accounting(
+        self,
+    ) -> None:
+        jobs = [
+            Job(
+                job_id="retrieve-1",
+                job_type="text_retrieve",
+                payload={
+                    "query": "alpha beta",
+                    "documents": [
+                        {"id": "doc-b", "text": "alpha only"},
+                        {"id": "doc-a", "text": "alpha beta"},
+                    ],
+                },
+            )
+        ]
+
+        result = run_local_simulation(["node-a"], jobs).to_dict()
+
+        self.assertEqual(
+            result["assignments"], [{"job_id": "retrieve-1", "node_id": "node-a"}]
+        )
+        self.assertEqual(
+            result["results"][0]["output"],
+            {
+                "query_terms": ["alpha", "beta"],
+                "matches": [
+                    {
+                        "id": "doc-a",
+                        "score": 1.0,
+                        "matched_term_count": 2,
+                        "matched_terms": ["alpha", "beta"],
+                    },
+                    {
+                        "id": "doc-b",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["alpha"],
+                    },
+                ],
+            },
+        )
+        self.assertEqual(result["validations"][0]["valid"], True)
+        self.assertEqual(result["totals"]["contribution_units"], 1)
+
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
         calls: list[str] = []
         original_process_inbox = LocalNodeService.process_inbox
@@ -285,6 +330,7 @@ class LocalSimulationTests(unittest.TestCase):
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
+                        "text_retrieve",
                         "text_stats",
                     ],
                     "heartbeat_sequence": 1,
@@ -300,6 +346,7 @@ class LocalSimulationTests(unittest.TestCase):
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
+                        "text_retrieve",
                         "text_stats",
                     ],
                     "heartbeat_sequence": 0,
@@ -315,6 +362,7 @@ class LocalSimulationTests(unittest.TestCase):
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
+                        "text_retrieve",
                         "text_stats",
                     ],
                     "heartbeat_sequence": 2,
