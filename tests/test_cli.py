@@ -23,6 +23,7 @@ class CliTests(unittest.TestCase):
             "audit-local-flow",
             "ledger-summary",
             "peer-summary",
+            "discover-local-peers",
             "announce-local-node",
             "materialize-local-inboxes",
             "process-local-inbox",
@@ -86,6 +87,18 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(peers.command, "peer-summary")
         self.assertEqual(peers.message_log_path, "messages.json")
+
+        discover_peers = parser.parse_args(
+            [
+                "discover-local-peers",
+                "--message-log-path",
+                "node-a.json",
+                "--message-log-path",
+                "node-b.json",
+            ]
+        )
+        self.assertEqual(discover_peers.command, "discover-local-peers")
+        self.assertEqual(discover_peers.message_log_path, ["node-a.json", "node-b.json"])
 
         announcement = parser.parse_args(
             [
@@ -157,7 +170,7 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,discover-local-peers,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,discover-local-peers,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. discover-local-peers Aggregate heartbeat-derived peers from existing local message logs. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
@@ -170,6 +183,7 @@ class CliTests(unittest.TestCase):
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
                 "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
                 "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
+                "discover-local-peers": "usage: aethermesh-core discover-local-peers [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log. May be supplied multiple times.",
                 "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
                 "materialize-local-inboxes": "usage: aethermesh-core materialize-local-inboxes [-h] --message-log-path MESSAGE_LOG_PATH --transport-dir TRANSPORT_DIR options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to a version 1 local dispatch/message log. --transport-dir TRANSPORT_DIR Directory where per-node local transport inboxes should be written.",
                 "process-local-inbox": "usage: aethermesh-core process-local-inbox [-h] --node-id NODE_ID [--message-log-path MESSAGE_LOG_PATH] [--transport-dir TRANSPORT_DIR] [--ledger-path LEDGER_PATH] [--output-message-log-path OUTPUT_MESSAGE_LOG_PATH] [--node-state-path NODE_STATE_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Local node id whose replayed inbox should be processed. --message-log-path MESSAGE_LOG_PATH Path to a version 1 local message log produced by run-local-batch. --transport-dir TRANSPORT_DIR Read this node's file-backed local transport inbox instead of a message log. --ledger-path LEDGER_PATH Opt in to persisting validation-gated contribution records. --output-message-log-path OUTPUT_MESSAGE_LOG_PATH Opt in to writing replayed plus emitted worker messages as a local message log. --node-state-path NODE_STATE_PATH Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
@@ -1629,6 +1643,127 @@ class CliTests(unittest.TestCase):
         self.assertIn("heartbeat_sequence", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(contents, original)
+
+    def test_discover_local_peers_prints_aggregated_roster(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_log = Path(temp_dir) / "node-b.json"
+            second_log = Path(temp_dir) / "node-a.json"
+            first_log.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            second_log.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 2,
+                                    "capabilities": ["text_stats"],
+                                },
+                                "correlation_id": None,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "discover-local-peers",
+                        "--message-log-path",
+                        str(first_log),
+                        "--message-log-path",
+                        str(second_log),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "peers": [
+                    {
+                        "node_id": "node-a",
+                        "status": "available",
+                        "heartbeat_count": 1,
+                        "last_heartbeat_sequence": 2,
+                        "capabilities": ["text_stats"],
+                    },
+                    {
+                        "node_id": "node-b",
+                        "status": "available",
+                        "heartbeat_count": 1,
+                        "last_heartbeat_sequence": 1,
+                        "capabilities": ["echo"],
+                    },
+                ]
+            },
+        )
+
+    def test_discover_local_peers_rejects_missing_message_log_path(self) -> None:
+        stderr = io.StringIO()
+
+        with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+            main(["discover-local-peers"])
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("--message-log-path", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_discover_local_peers_malformed_input_returns_nonzero_without_traceback(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            message_log_path = Path(temp_dir) / "messages.json"
+            message_log_path.write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "discover-local-peers",
+                        "--message-log-path",
+                        str(message_log_path),
+                    ]
+                )
+            contents = message_log_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("error: message log JSON is malformed", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(contents, "not-json")
 
     def test_process_local_inbox_consumes_dispatch_log(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

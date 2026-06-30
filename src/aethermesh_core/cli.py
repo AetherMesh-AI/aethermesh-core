@@ -48,7 +48,11 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    discover_local_peers_document,
+    peer_summary_document,
+)
 from aethermesh_core.receipts import (
     ReceiptPersistenceError,
     build_receipt_document,
@@ -187,6 +191,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--message-log-path",
         required=True,
         help="Path to an existing version 1 local message log.",
+    )
+
+    discover_peers = subcommands.add_parser(
+        "discover-local-peers",
+        help="Aggregate heartbeat-derived peers from existing local message logs.",
+    )
+    discover_peers.add_argument(
+        "--message-log-path",
+        action="append",
+        required=True,
+        help="Path to an existing version 1 local message log. May be supplied multiple times.",
     )
 
     announce = subcommands.add_parser(
@@ -442,6 +457,12 @@ def summarize_peers(message_log_path: str) -> dict[str, object]:
     """Load an existing message log and return a read-only peer roster."""
 
     return peer_summary_document(message_log_path)
+
+
+def discover_peers(message_log_paths: Sequence[str]) -> dict[str, object]:
+    """Load existing message logs and return one read-only peer roster."""
+
+    return discover_local_peers_document(message_log_paths)
 
 
 def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
@@ -881,6 +902,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "peer-summary":
         try:
             payload = summarize_peers(args.message_log_path)
+        except PeerRegistryError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "discover-local-peers":
+        try:
+            payload = discover_peers(args.message_log_path)
         except PeerRegistryError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1

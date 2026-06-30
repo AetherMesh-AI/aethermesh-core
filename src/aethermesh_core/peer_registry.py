@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -44,41 +45,62 @@ def peer_summary_document(message_log_path: str | Path) -> dict[str, object]:
     the roster; every other valid message type is ignored.
     """
 
-    try:
-        messages = load_message_log_messages(message_log_path)
-    except MessageLogPersistenceError as exc:
-        raise PeerRegistryError(str(exc)) from exc
+    return discover_local_peers_document([message_log_path])
+
+
+def discover_local_peers_document(
+    message_log_paths: Iterable[str | Path],
+) -> dict[str, object]:
+    """Load one or more version 1 message logs and summarize heartbeat peers.
+
+    All source message logs are read only. Paths are traversed in caller-supplied
+    order so equal-sequence heartbeat ties keep the first visible peer state
+    encountered while still counting every valid heartbeat message.
+    """
+
+    paths = list(message_log_paths)
+    if not paths:
+        raise PeerRegistryError("at least one message log path is required")
 
     peers: dict[str, PeerSummary] = {}
-    for message in messages:
-        if message.message_type != "node_heartbeat":
-            continue
-        heartbeat = _parse_heartbeat(message)
-        current = peers.get(heartbeat.node_id)
-        heartbeat_count = 1 if current is None else current.heartbeat_count + 1
-        if (
-            current is None
-            or heartbeat.last_heartbeat_sequence > current.last_heartbeat_sequence
-        ):
-            peers[heartbeat.node_id] = PeerSummary(
-                node_id=heartbeat.node_id,
-                status=heartbeat.status,
-                heartbeat_count=heartbeat_count,
-                last_heartbeat_sequence=heartbeat.last_heartbeat_sequence,
-                capabilities=heartbeat.capabilities,
-            )
-        else:
-            peers[heartbeat.node_id] = PeerSummary(
-                node_id=current.node_id,
-                status=current.status,
-                heartbeat_count=heartbeat_count,
-                last_heartbeat_sequence=current.last_heartbeat_sequence,
-                capabilities=list(current.capabilities),
-            )
+    for message_log_path in paths:
+        try:
+            messages = load_message_log_messages(message_log_path)
+        except MessageLogPersistenceError as exc:
+            raise PeerRegistryError(str(exc)) from exc
+
+        for message in messages:
+            if message.message_type != "node_heartbeat":
+                continue
+            _merge_heartbeat(peers, _parse_heartbeat(message))
 
     return {
         "peers": [peers[node_id].to_dict() for node_id in sorted(peers)],
     }
+
+
+def _merge_heartbeat(peers: dict[str, PeerSummary], heartbeat: PeerSummary) -> None:
+    current = peers.get(heartbeat.node_id)
+    heartbeat_count = 1 if current is None else current.heartbeat_count + 1
+    if (
+        current is None
+        or heartbeat.last_heartbeat_sequence > current.last_heartbeat_sequence
+    ):
+        peers[heartbeat.node_id] = PeerSummary(
+            node_id=heartbeat.node_id,
+            status=heartbeat.status,
+            heartbeat_count=heartbeat_count,
+            last_heartbeat_sequence=heartbeat.last_heartbeat_sequence,
+            capabilities=heartbeat.capabilities,
+        )
+    else:
+        peers[heartbeat.node_id] = PeerSummary(
+            node_id=current.node_id,
+            status=current.status,
+            heartbeat_count=heartbeat_count,
+            last_heartbeat_sequence=current.last_heartbeat_sequence,
+            capabilities=list(current.capabilities),
+        )
 
 
 def _parse_heartbeat(message: MeshMessage) -> PeerSummary:

@@ -149,6 +149,14 @@ Inspect the heartbeat-derived local peer roster from an existing version 1 messa
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli peer-summary --message-log-path ./local-dispatch.json
 ```
 
+Aggregate local file-backed discovery from multiple existing heartbeat announcement logs:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli announce-local-node --node-id local-node-a --message-log-path ./node-a-heartbeat.json --capability echo
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli announce-local-node --node-id local-node-b --message-log-path ./node-b-heartbeat.json --capability text_stats
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli discover-local-peers --message-log-path ./node-a-heartbeat.json --message-log-path ./node-b-heartbeat.json
+```
+
 This is local message-log peer discovery only: it summarizes recorded `node_heartbeat` messages into deterministic JSON and does not imply real networking, production peer discovery, or wall-clock health monitoring.
 
 Replay a saved local message log into an in-memory bus and process exactly one node's assigned inbox work:
