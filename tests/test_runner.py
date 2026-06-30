@@ -510,6 +510,7 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertTrue(
                     str(result.error).startswith("text_embed payload requires")
                 )
+
     def test_text_retrieve_completes_with_deterministic_output(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
@@ -606,15 +607,57 @@ class LocalRunnerTests(unittest.TestCase):
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         valid_documents = [{"id": "doc-1", "text": "alpha beta"}]
         cases = [
-            Job(job_id="missing-query", job_type="text_retrieve", payload={"documents": valid_documents}),
-            Job(job_id="blank-query", job_type="text_retrieve", payload={"query": "  ", "documents": valid_documents}),
-            Job(job_id="punct-query", job_type="text_retrieve", payload={"query": "!!!", "documents": valid_documents}),
-            Job(job_id="missing-docs", job_type="text_retrieve", payload={"query": "alpha"}),
-            Job(job_id="empty-docs", job_type="text_retrieve", payload={"query": "alpha", "documents": []}),
-            Job(job_id="bad-limit", job_type="text_retrieve", payload={"query": "alpha", "documents": valid_documents, "limit": 0}),
-            Job(job_id="bool-limit", job_type="text_retrieve", payload={"query": "alpha", "documents": valid_documents, "limit": True}),
-            Job(job_id="duplicate-id", job_type="text_retrieve", payload={"query": "alpha", "documents": [{"id": "doc-1", "text": "alpha"}, {"id": "doc-1", "text": "beta"}]}),
-            Job(job_id="bad-doc", job_type="text_retrieve", payload={"query": "alpha", "documents": [{"id": "doc-1", "text": ""}]}),
+            Job(
+                job_id="missing-query",
+                job_type="text_retrieve",
+                payload={"documents": valid_documents},
+            ),
+            Job(
+                job_id="blank-query",
+                job_type="text_retrieve",
+                payload={"query": "  ", "documents": valid_documents},
+            ),
+            Job(
+                job_id="punct-query",
+                job_type="text_retrieve",
+                payload={"query": "!!!", "documents": valid_documents},
+            ),
+            Job(
+                job_id="missing-docs",
+                job_type="text_retrieve",
+                payload={"query": "alpha"},
+            ),
+            Job(
+                job_id="empty-docs",
+                job_type="text_retrieve",
+                payload={"query": "alpha", "documents": []},
+            ),
+            Job(
+                job_id="bad-limit",
+                job_type="text_retrieve",
+                payload={"query": "alpha", "documents": valid_documents, "limit": 0},
+            ),
+            Job(
+                job_id="bool-limit",
+                job_type="text_retrieve",
+                payload={"query": "alpha", "documents": valid_documents, "limit": True},
+            ),
+            Job(
+                job_id="duplicate-id",
+                job_type="text_retrieve",
+                payload={
+                    "query": "alpha",
+                    "documents": [
+                        {"id": "doc-1", "text": "alpha"},
+                        {"id": "doc-1", "text": "beta"},
+                    ],
+                },
+            ),
+            Job(
+                job_id="bad-doc",
+                job_type="text_retrieve",
+                payload={"query": "alpha", "documents": [{"id": "doc-1", "text": ""}]},
+            ),
         ]
 
         for job in cases:

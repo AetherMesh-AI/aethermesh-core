@@ -627,6 +627,7 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
+
     def test_completed_text_retrieve_result_with_matching_output_is_valid(self) -> None:
         validation = validate_job_result(
             Job(
@@ -701,8 +702,20 @@ class ValidationTests(unittest.TestCase):
             ],
         }
         cases = [
-            ("changed_score", {**valid_output, "matches": [{**valid_output["matches"][0], "score": 0.5}, valid_output["matches"][1]]}),
-            ("changed_order", {**valid_output, "matches": list(reversed(valid_output["matches"]))}),
+            (
+                "changed_score",
+                {
+                    **valid_output,
+                    "matches": [
+                        {**valid_output["matches"][0], "score": 0.5},
+                        valid_output["matches"][1],
+                    ],
+                },
+            ),
+            (
+                "changed_order",
+                {**valid_output, "matches": list(reversed(valid_output["matches"]))},
+            ),
             ("changed_terms", {**valid_output, "query_terms": ["beta", "alpha"]}),
             ("malformed_output", ["doc-a", "doc-b"]),
         ]
