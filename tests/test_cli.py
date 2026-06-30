@@ -184,7 +184,7 @@ class CliTests(unittest.TestCase):
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
                 "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
                 "dispatch-peer-batch": "usage: aethermesh-core dispatch-peer-batch [-h] --peer-log-path PEER_LOG_PATH --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --peer-log-path PEER_LOG_PATH Path to an existing version 1 local heartbeat message log. --manifest MANIFEST Path to a version 1 manifest whose jobs should be dispatched. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
-                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts.",
+                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts. --transport-dir TRANSPORT_DIR Opt in to file-backed local transport inboxes for worker processing.",
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
                 "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
                 "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
@@ -2574,6 +2574,9 @@ class CliTests(unittest.TestCase):
             payload["flow_message_log_path"], str(output_dir / "flow-message-log.json")
         )
         self.assertEqual(payload["receipts_path"], str(output_dir / "receipts.json"))
+        self.assertNotIn("transport_dir", payload)
+        self.assertNotIn("transport_inbox_count", payload)
+        self.assertNotIn("transport_inbox_paths", payload)
         self.assertEqual(payload["receipt_count"], 6)
         self.assertEqual(payload["flow_message_count"], 20)
         self.assertEqual(payload["flow_emitted_message_count"], 12)
