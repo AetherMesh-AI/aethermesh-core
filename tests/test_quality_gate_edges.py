@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
 import tempfile
 import unittest
 from collections import Counter
@@ -70,9 +73,38 @@ from aethermesh_core.receipts import (
 )
 from aethermesh_core.scheduler import ScheduledJob, _coerce_job
 from aethermesh_core.validation import validate_job_result
+from scripts import ci_quality_gates
 
 
 class QualityGateEdgeCoverageTests(unittest.TestCase):
+    def test_pr_size_excludes_graphify_out_from_reviewability_counts(self) -> None:
+        args = argparse.Namespace(
+            base="origin/main",
+            max_files=1,
+            max_lines=5,
+            max_binary_files=0,
+            exclude_path_prefix=["graphify-out/"],
+        )
+        diff = "\n".join(
+            [
+                "100\t200\tgraphify-out/graph.json",
+                "-\t-\tgraphify-out/graph.html",
+                "2\t3\tsrc/aethermesh_core/example.py",
+            ]
+        )
+        result = argparse.Namespace(returncode=0, stdout=diff)
+        stdout = io.StringIO()
+
+        with mock.patch.object(ci_quality_gates, "run", return_value=result):
+            with contextlib.redirect_stdout(stdout):
+                exit_code = ci_quality_gates.command_pr_size(args)
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("files=1", stdout.getvalue())
+        self.assertIn("changed_lines=5", stdout.getvalue())
+        self.assertIn("binary_files=0", stdout.getvalue())
+        self.assertIn("ignored_files=2", stdout.getvalue())
+
     def test_remove_temp_helpers_ignore_missing_files(self) -> None:
         for remover in (remove_temp_file, remove_ledger_temp, remove_receipt_temp):
             remover("/tmp/aethermesh-definitely-missing-temp-file")
