@@ -235,7 +235,9 @@ class LocalTransportCliTests(unittest.TestCase):
                 "flow": (output_dir / "flow-message-log.json").exists(),
                 "ledger": (output_dir / "ledger.json").exists(),
                 "receipts": (output_dir / "receipts.json").exists(),
-                "node_state_a": (output_dir / "node-state" / "local-node-a.json").exists(),
+                "node_state_a": (
+                    output_dir / "node-state" / "local-node-a.json"
+                ).exists(),
                 "worker_log_c": (
                     output_dir / "worker-message-logs" / "local-node-c.json"
                 ).exists(),
@@ -272,7 +274,9 @@ class LocalTransportCliTests(unittest.TestCase):
             str(output_dir / "transport" / "inboxes" / "local-node-a.json"),
         )
 
-    def test_run_local_transport_flow_existing_malformed_ledger_fails_before_overwrite(self) -> None:
+    def test_run_local_transport_flow_existing_malformed_ledger_fails_before_overwrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "flow"
             output_dir.mkdir()

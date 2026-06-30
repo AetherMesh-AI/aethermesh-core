@@ -521,7 +521,9 @@ def _run_local_flow(
         ):
             raise ValueError("materialize-local-inboxes returned invalid node id list")
         process_node_ids = [
-            node_id for node_id in available_node_ids if node_id in materialized_node_ids
+            node_id
+            for node_id in available_node_ids
+            if node_id in materialized_node_ids
         ]
 
     per_node_results: list[dict[str, object]] = []
@@ -535,7 +537,9 @@ def _run_local_flow(
         node_payload, inbox_result = _process_local_inbox(
             InboxReplayRequest(
                 node_id=node_id,
-                message_log_path=(None if use_transport else str(dispatch_message_log_path)),
+                message_log_path=(
+                    None if use_transport else str(dispatch_message_log_path)
+                ),
                 transport_dir=(str(transport_dir) if use_transport else None),
                 ledger_path=str(ledger_path),
                 output_message_log_path=str(worker_message_log_path),
