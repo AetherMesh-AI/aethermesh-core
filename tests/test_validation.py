@@ -1,5 +1,6 @@
 import unittest
 
+from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.validation import validate_job_result
 
@@ -671,6 +672,77 @@ class ValidationTests(unittest.TestCase):
 
         self.assertTrue(validation.valid)
         self.assertEqual(validation.reason, "ok")
+
+    def test_text_retrieve_contribution_rejects_malformed_output_shapes(self) -> None:
+        job = Job(
+            job_id="retrieve-1",
+            job_type="text_retrieve",
+            payload={
+                "query": "alpha beta",
+                "documents": [
+                    {"id": "doc-b", "text": "alpha only"},
+                    {"id": "doc-a", "text": "alpha beta"},
+                ],
+            },
+        )
+        base_output = {
+            "query_terms": ["alpha", "beta"],
+            "matches": [
+                {
+                    "id": "doc-a",
+                    "score": 1.0,
+                    "matched_term_count": 2,
+                    "matched_terms": ["alpha", "beta"],
+                }
+            ],
+        }
+        malformed_outputs = [
+            None,
+            {**base_output, "query_terms": "alpha"},
+            {**base_output, "matches": "not-a-list"},
+            {**base_output, "query_terms": ["alpha", 3]},
+            {**base_output, "matches": ["not-a-dict"]},
+            {**base_output, "matches": [{**base_output["matches"][0], "id": 123}]},
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "matched_term_count": -1}],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "matched_terms": "alpha"}],
+            },
+            {
+                **base_output,
+                "matches": [
+                    {**base_output["matches"][0], "matched_terms": ["alpha", 3]}
+                ],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "score": True}],
+            },
+            {
+                **base_output,
+                "matches": [{**base_output["matches"][0], "score": -0.1}],
+            },
+        ]
+
+        for output in malformed_outputs:
+            with self.subTest(output=output):
+                self.assertEqual(
+                    score_validated_contribution(
+                        job,
+                        JobResult(
+                            job_id="retrieve-1",
+                            node_id="node-a",
+                            status="completed",
+                            output=output,
+                            error=None,
+                            contribution_units=0,
+                        ),
+                    ),
+                    0,
+                )
 
     def test_text_retrieve_rejects_changed_output(self) -> None:
         job = Job(
