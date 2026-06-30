@@ -98,7 +98,9 @@ class CliTests(unittest.TestCase):
             ]
         )
         self.assertEqual(discover_peers.command, "discover-local-peers")
-        self.assertEqual(discover_peers.message_log_path, ["node-a.json", "node-b.json"])
+        self.assertEqual(
+            discover_peers.message_log_path, ["node-a.json", "node-b.json"]
+        )
 
         announcement = parser.parse_args(
             [

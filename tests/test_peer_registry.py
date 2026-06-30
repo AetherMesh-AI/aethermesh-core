@@ -245,12 +245,15 @@ class PeerRegistryTests(unittest.TestCase):
                         peer_summary_document(log_path)
                     self.assertEqual(str(cm.exception), expected_message)
 
-
-    def test_discover_local_peers_aggregates_sorted_roster_from_multiple_logs(self) -> None:
+    def test_discover_local_peers_aggregates_sorted_roster_from_multiple_logs(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             first_log = Path(temp_dir) / "node-b.json"
             second_log = Path(temp_dir) / "node-a.json"
-            _write_message_log(first_log, [_heartbeat("msg-0001", "node-b", 1, ["echo"])])
+            _write_message_log(
+                first_log, [_heartbeat("msg-0001", "node-b", 1, ["echo"])]
+            )
             _write_message_log(
                 second_log,
                 [
@@ -259,7 +262,11 @@ class PeerRegistryTests(unittest.TestCase):
                         "message_type": "job_assigned",
                         "sender_node_id": "local-scheduler",
                         "recipient_node_id": "node-a",
-                        "payload": {"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                        "payload": {
+                            "job_id": "echo-1",
+                            "job_type": "echo",
+                            "payload": {},
+                        },
                         "correlation_id": "echo-1",
                     },
                     _heartbeat("msg-0003", "node-a", 1, ["text_stats"]),
@@ -290,11 +297,15 @@ class PeerRegistryTests(unittest.TestCase):
             },
         )
 
-    def test_discover_local_peers_merges_duplicate_nodes_by_highest_sequence(self) -> None:
+    def test_discover_local_peers_merges_duplicate_nodes_by_highest_sequence(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             first_log = Path(temp_dir) / "node-a-old.json"
             second_log = Path(temp_dir) / "node-a-new.json"
-            _write_message_log(first_log, [_heartbeat("msg-0001", "node-a", 1, ["echo"])])
+            _write_message_log(
+                first_log, [_heartbeat("msg-0001", "node-a", 1, ["echo"])]
+            )
             _write_message_log(
                 second_log,
                 [_heartbeat("msg-0002", "node-a", 3, ["text_stats"], status="offline")],
@@ -317,11 +328,15 @@ class PeerRegistryTests(unittest.TestCase):
             },
         )
 
-    def test_discover_local_peers_equal_sequence_keeps_first_visible_state(self) -> None:
+    def test_discover_local_peers_equal_sequence_keeps_first_visible_state(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             first_log = Path(temp_dir) / "node-a-first.json"
             second_log = Path(temp_dir) / "node-a-second.json"
-            _write_message_log(first_log, [_heartbeat("msg-0001", "node-a", 2, ["echo"])])
+            _write_message_log(
+                first_log, [_heartbeat("msg-0001", "node-a", 2, ["echo"])]
+            )
             _write_message_log(
                 second_log,
                 [_heartbeat("msg-0002", "node-a", 2, ["text_stats"], status="offline")],
@@ -350,7 +365,9 @@ class PeerRegistryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             first_log = Path(temp_dir) / "valid.json"
             second_log = Path(temp_dir) / "malformed.json"
-            _write_message_log(first_log, [_heartbeat("msg-0001", "node-a", 1, ["echo"])])
+            _write_message_log(
+                first_log, [_heartbeat("msg-0001", "node-a", 1, ["echo"])]
+            )
             original_first = first_log.read_text(encoding="utf-8")
             second_log.write_text("not-json", encoding="utf-8")
 
