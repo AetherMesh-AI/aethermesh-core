@@ -36,8 +36,22 @@ class JobManifestTests(unittest.TestCase):
         self.assertEqual(
             [node.capabilities for node in batch.nodes],
             [
-                ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"),
-                ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"),
+                (
+                    "echo",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_retrieve",
+                    "text_stats",
+                ),
+                (
+                    "echo",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_retrieve",
+                    "text_stats",
+                ),
             ],
         )
         self.assertEqual(batch.jobs[0].job_id, "echo-1")
@@ -79,9 +93,30 @@ class JobManifestTests(unittest.TestCase):
         self.assertEqual(
             [node.capabilities for node in batch.nodes],
             [
-                ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"),
-                ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"),
-                ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"),
+                (
+                    "echo",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_retrieve",
+                    "text_stats",
+                ),
+                (
+                    "echo",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_retrieve",
+                    "text_stats",
+                ),
+                (
+                    "echo",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_retrieve",
+                    "text_stats",
+                ),
             ],
         )
 

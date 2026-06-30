@@ -510,6 +510,121 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertTrue(
                     str(result.error).startswith("text_embed payload requires")
                 )
+    def test_text_retrieve_completes_with_deterministic_output(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="retrieve-1",
+                job_type="text_retrieve",
+                payload={
+                    "query": "Mesh mesh retrieval",
+                    "documents": [
+                        {"id": "doc-c", "text": "Retrieval systems rank context."},
+                        {"id": "doc-b", "text": "Retrieval helps mesh nodes."},
+                        {"id": "doc-a", "text": "Mesh workers process tasks."},
+                    ],
+                    "limit": 3,
+                },
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "query_terms": ["mesh", "retrieval"],
+                "matches": [
+                    {
+                        "id": "doc-b",
+                        "score": 1.0,
+                        "matched_term_count": 2,
+                        "matched_terms": ["mesh", "retrieval"],
+                    },
+                    {
+                        "id": "doc-a",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["mesh"],
+                    },
+                    {
+                        "id": "doc-c",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["retrieval"],
+                    },
+                ],
+            },
+        )
+        self.assertEqual(result.contribution_units, 1)
+
+    def test_text_retrieve_uses_default_limit_and_stable_id_tiebreaker(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="retrieve-tie",
+                job_type="text_retrieve",
+                payload={
+                    "query": "alpha beta",
+                    "documents": [
+                        {"id": "doc-c", "text": "alpha only"},
+                        {"id": "doc-a", "text": "beta only"},
+                        {"id": "doc-b", "text": "no overlap"},
+                    ],
+                },
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "query_terms": ["alpha", "beta"],
+                "matches": [
+                    {
+                        "id": "doc-a",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["beta"],
+                    },
+                    {
+                        "id": "doc-c",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["alpha"],
+                    },
+                    {
+                        "id": "doc-b",
+                        "score": 0.0,
+                        "matched_term_count": 0,
+                        "matched_terms": [],
+                    },
+                ],
+            },
+        )
+
+    def test_text_retrieve_malformed_payload_fails_predictably(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        valid_documents = [{"id": "doc-1", "text": "alpha beta"}]
+        cases = [
+            Job(job_id="missing-query", job_type="text_retrieve", payload={"documents": valid_documents}),
+            Job(job_id="blank-query", job_type="text_retrieve", payload={"query": "  ", "documents": valid_documents}),
+            Job(job_id="punct-query", job_type="text_retrieve", payload={"query": "!!!", "documents": valid_documents}),
+            Job(job_id="missing-docs", job_type="text_retrieve", payload={"query": "alpha"}),
+            Job(job_id="empty-docs", job_type="text_retrieve", payload={"query": "alpha", "documents": []}),
+            Job(job_id="bad-limit", job_type="text_retrieve", payload={"query": "alpha", "documents": valid_documents, "limit": 0}),
+            Job(job_id="bool-limit", job_type="text_retrieve", payload={"query": "alpha", "documents": valid_documents, "limit": True}),
+            Job(job_id="duplicate-id", job_type="text_retrieve", payload={"query": "alpha", "documents": [{"id": "doc-1", "text": "alpha"}, {"id": "doc-1", "text": "beta"}]}),
+            Job(job_id="bad-doc", job_type="text_retrieve", payload={"query": "alpha", "documents": [{"id": "doc-1", "text": ""}]}),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                result = runner.run(job)
+                self.assertEqual(result.status, "failed")
+                self.assertIsNone(result.output)
+                self.assertEqual(result.contribution_units, 0)
+                self.assertIsInstance(result.error, str)
+                self.assertTrue(str(result.error).startswith("text_retrieve"))
 
 
 if __name__ == "__main__":
