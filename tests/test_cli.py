@@ -27,6 +27,7 @@ class CliTests(unittest.TestCase):
             "peer-summary",
             "announce-local-node",
             "materialize-local-inboxes",
+            "collect-local-outboxes",
             "process-local-inbox",
         ]:
             self.assertIn(command, help_text)
@@ -155,6 +156,19 @@ class CliTests(unittest.TestCase):
         self.assertEqual(materialize.message_log_path, "dispatch.json")
         self.assertEqual(materialize.transport_dir, "transport")
 
+        collect = parser.parse_args(
+            [
+                "collect-local-outboxes",
+                "--transport-dir",
+                "transport",
+                "--message-log-path",
+                "collected.json",
+            ]
+        )
+        self.assertEqual(collect.command, "collect-local-outboxes")
+        self.assertEqual(collect.transport_dir, "transport")
+        self.assertEqual(collect.message_log_path, "collected.json")
+
         inbox = parser.parse_args(
             [
                 "process-local-inbox",
@@ -193,7 +207,7 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
@@ -210,6 +224,7 @@ class CliTests(unittest.TestCase):
                 "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
                 "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
                 "materialize-local-inboxes": "usage: aethermesh-core materialize-local-inboxes [-h] --message-log-path MESSAGE_LOG_PATH --transport-dir TRANSPORT_DIR options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to a version 1 local dispatch/message log. --transport-dir TRANSPORT_DIR Directory where per-node local transport inboxes should be written.",
+                "collect-local-outboxes": "usage: aethermesh-core collect-local-outboxes [-h] --transport-dir TRANSPORT_DIR --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --transport-dir TRANSPORT_DIR Directory containing per-node local transport outboxes. --message-log-path MESSAGE_LOG_PATH Path to write the collected version 1 local message log.",
                 "process-local-inbox": "usage: aethermesh-core process-local-inbox [-h] --node-id NODE_ID [--message-log-path MESSAGE_LOG_PATH] [--transport-dir TRANSPORT_DIR] [--ledger-path LEDGER_PATH] [--output-message-log-path OUTPUT_MESSAGE_LOG_PATH] [--node-state-path NODE_STATE_PATH] [--write-transport-outbox] options: -h, --help show this help message and exit --node-id NODE_ID Local node id whose replayed inbox should be processed. --message-log-path MESSAGE_LOG_PATH Path to a version 1 local message log produced by run-local-batch. --transport-dir TRANSPORT_DIR Read this node's file-backed local transport inbox instead of a message log. --ledger-path LEDGER_PATH Opt in to persisting validation-gated contribution records. --output-message-log-path OUTPUT_MESSAGE_LOG_PATH Opt in to writing replayed plus emitted worker messages as a local message log. --node-state-path NODE_STATE_PATH Opt in to JSON-file-backed local processed-assignment state for resume/idempotency. --write-transport-outbox Opt in to writing emitted worker messages to this node's local transport outbox.",
             },
         )

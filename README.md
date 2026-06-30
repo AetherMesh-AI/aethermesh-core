@@ -207,14 +207,15 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-
 
 The dispatch log contains deterministic `node_heartbeat` messages for available nodes and `job_assigned` messages for scheduled jobs. Heartbeat payloads include each available node's manifest capabilities. Use `process-local-inbox` to consume the dispatch log later for one node and record validation-gated contribution.
 
-To test the file-backed local transport seam, materialize addressed dispatch messages into per-node inbox files and have a node consume only its own inbox:
+To test the file-backed local transport seam, materialize addressed dispatch messages into per-node inbox files, have a node consume only its own inbox, optionally write that node's emitted messages to a per-node outbox, then collect worker outboxes into one coordinator-side message log:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli materialize-local-inboxes --message-log-path ./local-dispatch.json --transport-dir ./local-transport
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --transport-dir ./local-transport --ledger-path ./local-ledger.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli process-local-inbox --node-id local-node-a --transport-dir ./local-transport --ledger-path ./local-ledger.json --write-transport-outbox
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli collect-local-outboxes --transport-dir ./local-transport --message-log-path ./collected-worker-output.json
 ```
 
-This writes version 1 inbox documents at `./local-transport/inboxes/<node-id>.json` only for nodes with addressed messages; empty inboxes are omitted. Transport processing reuses the same validation, ledger, receipt/output-message, and node-state behavior as message-log replay, but reads only the requested node's inbox file.
+This writes version 1 inbox documents at `./local-transport/inboxes/<node-id>.json` only for nodes with addressed messages; empty inboxes are omitted. Transport processing reuses the same validation, ledger, receipt/output-message, and node-state behavior as message-log replay, but reads only the requested node's inbox file. When `--write-transport-outbox` is used, the worker writes emitted result/contribution messages to `./local-transport/outboxes/<node-id>.json`. `collect-local-outboxes` reads those outboxes without deleting, acknowledging, or rewriting them and writes a deterministic version 1 message log ordered by node id and outbox message order. Missing or empty transport/outbox directories are valid no-op collections that write an empty message log with `message_count: 0` metadata.
 
 Inspect the heartbeat-derived local peer roster from an existing version 1 message log without rewriting it:
 

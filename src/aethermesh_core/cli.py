@@ -28,6 +28,7 @@ from aethermesh_core.ledger import (
 )
 from aethermesh_core.local_transport import (
     LocalTransportError,
+    collect_local_outboxes,
     local_inbox_path,
     load_local_inbox,
     materialize_local_inboxes,
@@ -289,6 +290,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--transport-dir",
         required=True,
         help="Directory where per-node local transport inboxes should be written.",
+    )
+
+    collect_outboxes = subcommands.add_parser(
+        "collect-local-outboxes",
+        help="Collect per-node local transport outboxes into one message log.",
+    )
+    collect_outboxes.add_argument(
+        "--transport-dir",
+        required=True,
+        help="Directory containing per-node local transport outboxes.",
+    )
+    collect_outboxes.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to write the collected version 1 local message log.",
     )
 
     inbox = subcommands.add_parser(
@@ -1105,6 +1121,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 transport_dir=args.transport_dir,
             )
         except (MessageLogPersistenceError, LocalTransportError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "collect-local-outboxes":
+        try:
+            payload = collect_local_outboxes(
+                transport_dir=args.transport_dir,
+                message_log_path=args.message_log_path,
+            )
+        except (LocalTransportError, MessageLogPersistenceError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))

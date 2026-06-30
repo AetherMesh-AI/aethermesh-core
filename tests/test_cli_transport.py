@@ -543,6 +543,208 @@ class LocalTransportCliTests(unittest.TestCase):
         )
         self.assertEqual(len(worker_log["messages"]), 3)
 
+    def test_collect_local_outboxes_cli_collects_worker_outbox(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "transport"
+            outbox_dir = transport_dir / "outboxes"
+            outbox_dir.mkdir(parents=True)
+            output_path = Path(temp_dir) / "collected.json"
+            (outbox_dir / "node-b.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "node_id": "node-b",
+                        "source_inbox_path": "inbox-b.json",
+                        "processed_assignment_count": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-b-result",
+                                "message_type": "job_result_reported",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": "scheduler",
+                                "payload": {"job_id": "job-b", "status": "completed"},
+                                "correlation_id": "job-b",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (outbox_dir / "node-a.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "node_id": "node-a",
+                        "source_inbox_path": "inbox-a.json",
+                        "processed_assignment_count": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-a-result",
+                                "message_type": "job_result_reported",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": "scheduler",
+                                "payload": {"job_id": "job-a", "status": "completed"},
+                                "correlation_id": "job-a",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "collect-local-outboxes",
+                        "--transport-dir",
+                        str(transport_dir),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            collected = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["source"], "collect-local-outboxes")
+        self.assertEqual(payload["outbox_count"], 2)
+        self.assertEqual(payload["node_ids"], ["node-a", "node-b"])
+        self.assertEqual(payload["message_count"], 2)
+        self.assertEqual(collected["metadata"], payload)
+        self.assertEqual(
+            [message["message_id"] for message in collected["messages"]],
+            ["msg-a-result", "msg-b-result"],
+        )
+
+    def test_collect_local_outboxes_cli_missing_transport_writes_empty_log(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "missing"
+            output_path = Path(temp_dir) / "collected.json"
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "collect-local-outboxes",
+                        "--transport-dir",
+                        str(transport_dir),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            collected = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["outbox_count"], 0)
+        self.assertEqual(payload["message_count"], 0)
+        self.assertEqual(payload["node_ids"], [])
+        self.assertEqual(collected["messages"], [])
+
+    def test_collect_local_outboxes_cli_error_does_not_overwrite_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            transport_dir = Path(temp_dir) / "transport"
+            outbox_dir = transport_dir / "outboxes"
+            outbox_dir.mkdir(parents=True)
+            output_path = Path(temp_dir) / "collected.json"
+            output_path.write_text("original", encoding="utf-8")
+            (outbox_dir / "node-a.json").write_text("not-json", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "collect-local-outboxes",
+                        "--transport-dir",
+                        str(transport_dir),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+            output_contents = output_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("local transport outbox JSON is malformed", stderr.getvalue())
+        self.assertEqual(output_contents, "original")
+
+    def test_transport_outbox_full_loop_can_be_collected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "local-batch.json"
+            dispatch_path = Path(temp_dir) / "dispatch.json"
+            transport_dir = Path(temp_dir) / "transport"
+            ledger_path = Path(temp_dir) / "ledger.json"
+            collected_path = Path(temp_dir) / "collected-worker-output.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "collect me"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            commands = [
+                [
+                    "dispatch-local-batch",
+                    "--manifest",
+                    str(manifest_path),
+                    "--message-log-path",
+                    str(dispatch_path),
+                ],
+                [
+                    "materialize-local-inboxes",
+                    "--message-log-path",
+                    str(dispatch_path),
+                    "--transport-dir",
+                    str(transport_dir),
+                ],
+                [
+                    "process-local-inbox",
+                    "--node-id",
+                    "local-node-a",
+                    "--transport-dir",
+                    str(transport_dir),
+                    "--ledger-path",
+                    str(ledger_path),
+                    "--write-transport-outbox",
+                ],
+                [
+                    "collect-local-outboxes",
+                    "--transport-dir",
+                    str(transport_dir),
+                    "--message-log-path",
+                    str(collected_path),
+                ],
+            ]
+            outputs = []
+            for command in commands:
+                stdout = io.StringIO()
+                with contextlib.redirect_stdout(stdout):
+                    exit_code = main(command)
+                self.assertEqual(exit_code, 0)
+                outputs.append(json.loads(stdout.getvalue()))
+            collected = json.loads(collected_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(outputs[-1]["outbox_count"], 1)
+        self.assertEqual(outputs[-1]["node_ids"], ["local-node-a"])
+        self.assertEqual(outputs[-1]["message_count"], 1)
+        self.assertEqual(
+            [message["message_type"] for message in collected["messages"]],
+            ["job_result_reported"],
+        )
+
     def test_write_transport_outbox_rejects_message_log_input(self) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()
