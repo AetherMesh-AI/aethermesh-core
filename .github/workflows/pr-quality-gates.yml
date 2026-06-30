@@ -188,10 +188,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
       - name: no secrets detected
         run: |
-          go install github.com/gitleaks/gitleaks/v8@latest
+          go install github.com/zricethezav/gitleaks/v8@latest
           "$HOME/go/bin/gitleaks" detect --no-banner --source . --redact --verbose
 
   test-integrity:
