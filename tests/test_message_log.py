@@ -59,7 +59,7 @@ class MessageLogTests(unittest.TestCase):
                 "job_count": 2,
                 "completed_count": 2,
                 "failed_count": 0,
-                "total_contribution_units": 2,
+                "total_contribution_units": 3,
                 "validation_summary": {"valid": 2, "invalid": 0, "unsupported": 0},
                 "node_ids": ["local-node-a", "local-node-b"],
                 "job_ids": ["echo-1", "text-stats-1"],

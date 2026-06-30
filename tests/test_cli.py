@@ -251,7 +251,7 @@ class CliTests(unittest.TestCase):
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 3,
-                    "contribution_units": 3,
+                    "contribution_units": 4,
                 },
                 {
                     "node_id": "local-node-b",
@@ -267,7 +267,7 @@ class CliTests(unittest.TestCase):
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
-                    "contribution_units": 2,
+                    "contribution_units": 3,
                 },
             ],
         )
@@ -282,7 +282,7 @@ class CliTests(unittest.TestCase):
                 "valid_results": 5,
                 "invalid_results": 0,
                 "unsupported_results": 0,
-                "contribution_units": 5,
+                "contribution_units": 7,
             },
         )
 
@@ -331,7 +331,7 @@ class CliTests(unittest.TestCase):
             payload["validation_summary"], {"valid": 2, "invalid": 0, "unsupported": 0}
         )
         self.assertEqual(payload["totals"]["jobs"], 2)
-        self.assertEqual(payload["totals"]["contribution_units"], 2)
+        self.assertEqual(payload["totals"]["contribution_units"], 3)
 
     def test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster(
         self,
@@ -637,7 +637,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["metadata"]["job_count"], 2)
         self.assertEqual(persisted["metadata"]["completed_count"], 2)
         self.assertEqual(persisted["metadata"]["failed_count"], 0)
-        self.assertEqual(persisted["metadata"]["total_contribution_units"], 2)
+        self.assertEqual(persisted["metadata"]["total_contribution_units"], 3)
         self.assertEqual(
             [message["message_id"] for message in persisted["messages"]],
             [f"msg-{index:04d}" for index in range(1, 9)],
@@ -751,14 +751,14 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(
             first_payload["persisted_ledger_summaries"][1]["total_contribution_units"],
-            1,
+            2,
         )
         self.assertEqual(
             second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
         )
         self.assertEqual(
             second_payload["persisted_ledger_summaries"][1]["total_contribution_units"],
-            2,
+            4,
         )
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
@@ -1805,7 +1805,7 @@ class CliTests(unittest.TestCase):
                 {
                     "job_id": "text-stats-1",
                     "valid": True,
-                    "credited_units": 1,
+                    "credited_units": 2,
                     "reason": "ok",
                 },
             ],
@@ -1814,8 +1814,8 @@ class CliTests(unittest.TestCase):
             payload["ledger_summary"],
             {
                 "path": str(ledger_path),
-                "total_units": 2,
-                "node_units": 2,
+                "total_units": 3,
+                "node_units": 3,
                 "record_count": 2,
             },
         )
@@ -2344,7 +2344,7 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(payload["processed_assignment_count"], 6)
         self.assertEqual(payload["skipped_processed_assignment_count"], 0)
-        self.assertEqual(payload["total_contribution_units"], 6)
+        self.assertEqual(payload["total_contribution_units"], 12)
         self.assertEqual(
             payload["flow_message_log_path"], str(output_dir / "flow-message-log.json")
         )
