@@ -61,7 +61,10 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         _assert_result_message_matches_receipt(context, receipt, result_message)
 
         contribution_message_id = receipt.get("contribution_message_id")
-        if not isinstance(contribution_message_id, str) or contribution_message_id == "":
+        if (
+            not isinstance(contribution_message_id, str)
+            or contribution_message_id == ""
+        ):
             raise FlowAuditError(f"{context} contribution_message_id must be present")
         contribution_message = _find_flow_message_for_receipt(
             context,
@@ -76,14 +79,15 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         expected_ledger_claims[_ledger_claim_from_receipt(receipt)] += 1
 
     actual_ledger_claims = Counter(
-        _ledger_claim_from_record(record)
-        for record in ledger.to_document()["records"]
+        _ledger_claim_from_record(record) for record in ledger.to_document()["records"]
     )
     if expected_ledger_claims != actual_ledger_claims:
         missing = expected_ledger_claims - actual_ledger_claims
         extra = actual_ledger_claims - expected_ledger_claims
         detail = _ledger_mismatch_detail(missing, extra)
-        raise FlowAuditError(f"receipt contribution claims do not match ledger records: {detail}")
+        raise FlowAuditError(
+            f"receipt contribution claims do not match ledger records: {detail}"
+        )
 
     ledger_summary = ledger.summary_document(ledger_path)
     ledger_total_units = int(ledger_summary["total_contribution_units"])
@@ -140,9 +144,9 @@ def _find_flow_message_for_receipt(
         if message.payload.get("job_id") != receipt["job_id"]:
             return False
         if message_type == "job_result_reported":
-            return message.sender_node_id == receipt["node_id"]
+            return bool(message.sender_node_id == receipt["node_id"])
         if message_type == "contribution_recorded":
-            return message.payload.get("node_id") == receipt["node_id"]
+            return bool(message.payload.get("node_id") == receipt["node_id"])
         return False
 
     matches = [
@@ -166,7 +170,9 @@ def _find_flow_message_for_receipt(
 def _assert_assignment_matches_receipt(
     context: str, receipt: dict[str, Any], payload: dict[str, Any]
 ) -> None:
-    _assert_equal(context, "assignment.job_id", receipt["job_id"], payload.get("job_id"))
+    _assert_equal(
+        context, "assignment.job_id", receipt["job_id"], payload.get("job_id")
+    )
     _assert_equal(
         context, "assignment.job_type", receipt["job_type"], payload.get("job_type")
     )
@@ -179,10 +185,15 @@ def _assert_result_message_matches_receipt(
         raise FlowAuditError(
             f"{context} result_message_id references {message.message_type}, expected job_result_reported"
         )
-    _assert_equal(context, "result.job_id", receipt["job_id"], message.payload.get("job_id"))
+    _assert_equal(
+        context, "result.job_id", receipt["job_id"], message.payload.get("job_id")
+    )
     _assert_equal(context, "result.node_id", receipt["node_id"], message.sender_node_id)
     _assert_equal(
-        context, "result.status", receipt["result_status"], message.payload.get("status")
+        context,
+        "result.status",
+        receipt["result_status"],
+        message.payload.get("status"),
     )
     _assert_equal(
         context,
@@ -204,7 +215,10 @@ def _assert_contribution_message_matches_receipt(
         context, "contribution.job_id", receipt["job_id"], message.payload.get("job_id")
     )
     _assert_equal(
-        context, "contribution.node_id", receipt["node_id"], message.payload.get("node_id")
+        context,
+        "contribution.node_id",
+        receipt["node_id"],
+        message.payload.get("node_id"),
     )
     _assert_equal(
         context,

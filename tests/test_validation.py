@@ -126,7 +126,9 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "output_mismatch")
 
-    def test_completed_result_with_unexpected_contribution_units_is_invalid(self) -> None:
+    def test_completed_result_with_unexpected_contribution_units_is_invalid(
+        self,
+    ) -> None:
         validation = validate_job_result(
             Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
             JobResult(
@@ -164,12 +166,21 @@ class ValidationTests(unittest.TestCase):
             ),
         )
 
-        self.assertTrue(validation.valid)
-        self.assertEqual(validation.reason, "ok")
+        self.assertEqual(
+            validation.to_dict(),
+            {
+                "job_id": "text-stats-1",
+                "result_job_id": "text-stats-1",
+                "valid": True,
+                "reason": "ok",
+            },
+        )
 
     def test_text_stats_recomputes_expected_output(self) -> None:
         validation = validate_job_result(
-            Job(job_id="text-stats-1", job_type="text_stats", payload={"text": "hello"}),
+            Job(
+                job_id="text-stats-1", job_type="text_stats", payload={"text": "hello"}
+            ),
             JobResult(
                 job_id="text-stats-1",
                 node_id="node-a",
@@ -201,7 +212,11 @@ class ValidationTests(unittest.TestCase):
             ),
         )
         non_string = validate_job_result(
-            Job(job_id="text-stats-non-string", job_type="text_stats", payload={"text": 123}),
+            Job(
+                job_id="text-stats-non-string",
+                job_type="text_stats",
+                payload={"text": 123},
+            ),
             JobResult(
                 job_id="text-stats-non-string",
                 node_id="node-a",
@@ -217,7 +232,9 @@ class ValidationTests(unittest.TestCase):
         self.assertFalse(non_string.valid)
         self.assertEqual(non_string.reason, "missing_payload_text")
 
-    def test_completed_keyword_extract_result_with_matching_output_is_valid(self) -> None:
+    def test_completed_keyword_extract_result_with_matching_output_is_valid(
+        self,
+    ) -> None:
         validation = validate_job_result(
             Job(
                 job_id="keyword-1",
@@ -265,10 +282,41 @@ class ValidationTests(unittest.TestCase):
             "total_terms": 3,
         }
         cases = [
-            ("changed_order", {"keywords": list(reversed(valid_output["keywords"])), "unique_terms": 2, "total_terms": 3}),
-            ("missing_terms", {"keywords": [valid_output["keywords"][0]], "unique_terms": 2, "total_terms": 3}),
-            ("changed_count", {"keywords": [{"term": "beta", "count": 1}, {"term": "alpha", "count": 1}], "unique_terms": 2, "total_terms": 3}),
-            ("incorrect_totals", {"keywords": valid_output["keywords"], "unique_terms": 99, "total_terms": 3}),
+            (
+                "changed_order",
+                {
+                    "keywords": list(reversed(valid_output["keywords"])),
+                    "unique_terms": 2,
+                    "total_terms": 3,
+                },
+            ),
+            (
+                "missing_terms",
+                {
+                    "keywords": [valid_output["keywords"][0]],
+                    "unique_terms": 2,
+                    "total_terms": 3,
+                },
+            ),
+            (
+                "changed_count",
+                {
+                    "keywords": [
+                        {"term": "beta", "count": 1},
+                        {"term": "alpha", "count": 1},
+                    ],
+                    "unique_terms": 2,
+                    "total_terms": 3,
+                },
+            ),
+            (
+                "incorrect_totals",
+                {
+                    "keywords": valid_output["keywords"],
+                    "unique_terms": 99,
+                    "total_terms": 3,
+                },
+            ),
             ("malformed_output", ["beta", "alpha"]),
         ]
 
@@ -290,7 +338,11 @@ class ValidationTests(unittest.TestCase):
 
     def test_keyword_extract_rejects_output_from_different_payload(self) -> None:
         validation = validate_job_result(
-            Job(job_id="keyword-1", job_type="keyword_extract", payload={"text": "alpha beta"}),
+            Job(
+                job_id="keyword-1",
+                job_type="keyword_extract",
+                payload={"text": "alpha beta"},
+            ),
             JobResult(
                 job_id="keyword-1",
                 node_id="node-a",
@@ -310,7 +362,9 @@ class ValidationTests(unittest.TestCase):
 
     def test_keyword_extract_malformed_payload_is_invalid(self) -> None:
         validation = validate_job_result(
-            Job(job_id="keyword-blank", job_type="keyword_extract", payload={"text": ""}),
+            Job(
+                job_id="keyword-blank", job_type="keyword_extract", payload={"text": ""}
+            ),
             JobResult(
                 job_id="keyword-blank",
                 node_id="node-a",
@@ -326,7 +380,11 @@ class ValidationTests(unittest.TestCase):
 
     def test_failed_keyword_extract_result_earns_zero_credit(self) -> None:
         validation = validate_job_result(
-            Job(job_id="keyword-1", job_type="keyword_extract", payload={"text": "alpha"}),
+            Job(
+                job_id="keyword-1",
+                job_type="keyword_extract",
+                payload={"text": "alpha"},
+            ),
             JobResult(
                 job_id="keyword-1",
                 node_id="node-a",
@@ -339,6 +397,7 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
+
     def test_completed_text_chunk_result_with_matching_output_is_valid(self) -> None:
         validation = validate_job_result(
             Job(
@@ -381,8 +440,17 @@ class ValidationTests(unittest.TestCase):
             "character_count": 16,
         }
         cases = [
-            ("changed_text", {**valid_output, "chunks": [{"index": 0, "text": "alpha", "character_count": 5}]}),
-            ("changed_order", {**valid_output, "chunks": list(reversed(valid_output["chunks"]))}),
+            (
+                "changed_text",
+                {
+                    **valid_output,
+                    "chunks": [{"index": 0, "text": "alpha", "character_count": 5}],
+                },
+            ),
+            (
+                "changed_order",
+                {**valid_output, "chunks": list(reversed(valid_output["chunks"]))},
+            ),
             ("changed_chunk_count", {**valid_output, "chunk_count": 99}),
             ("changed_total", {**valid_output, "character_count": 99}),
             ("malformed_output", ["alpha beta", " gamma"]),
@@ -406,7 +474,11 @@ class ValidationTests(unittest.TestCase):
 
     def test_text_chunk_malformed_payload_is_invalid(self) -> None:
         validation = validate_job_result(
-            Job(job_id="chunk-bad", job_type="text_chunk", payload={"text": "hello", "max_chars": 0}),
+            Job(
+                job_id="chunk-bad",
+                job_type="text_chunk",
+                payload={"text": "hello", "max_chars": 0},
+            ),
             JobResult(
                 job_id="chunk-bad",
                 node_id="node-a",
@@ -441,7 +513,10 @@ class ValidationTests(unittest.TestCase):
             Job(
                 job_id="embed-1",
                 job_type="text_embed",
-                payload={"text": "AetherMesh nodes process useful local work for the mesh.", "dimensions": 8},
+                payload={
+                    "text": "AetherMesh nodes process useful local work for the mesh.",
+                    "dimensions": 8,
+                },
             ),
             JobResult(
                 job_id="embed-1",
@@ -501,10 +576,24 @@ class ValidationTests(unittest.TestCase):
         cases = [
             Job(job_id="embed-missing", job_type="text_embed", payload={}),
             Job(job_id="embed-blank", job_type="text_embed", payload={"text": "  "}),
-            Job(job_id="embed-non-string", job_type="text_embed", payload={"text": 123}),
-            Job(job_id="embed-bool-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": True}),
-            Job(job_id="embed-small-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 1}),
-            Job(job_id="embed-large-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 65}),
+            Job(
+                job_id="embed-non-string", job_type="text_embed", payload={"text": 123}
+            ),
+            Job(
+                job_id="embed-bool-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": True},
+            ),
+            Job(
+                job_id="embed-small-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": 1},
+            ),
+            Job(
+                job_id="embed-large-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": 65},
+            ),
         ]
 
         for job in cases:

@@ -69,7 +69,9 @@ class JobManifestTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(batch.node_ids, ["local-node-a", "local-node-b", "local-node-c"])
+        self.assertEqual(
+            batch.node_ids, ["local-node-a", "local-node-b", "local-node-c"]
+        )
         self.assertEqual(
             [node.status for node in batch.nodes],
             [NodeStatus.AVAILABLE, NodeStatus.OFFLINE, NodeStatus.AVAILABLE],
@@ -111,17 +113,21 @@ class JobManifestTests(unittest.TestCase):
             ({"capabilities": []}, "capabilities must be a non-empty list"),
             ({"capabilities": "echo"}, "capabilities must be a non-empty list"),
             ({"capabilities": [""]}, "capabilities\\[0\\] must be a non-empty string"),
-            ({"capabilities": ["   "]}, "capabilities\\[0\\] must be a non-empty string"),
+            (
+                {"capabilities": ["   "]},
+                "capabilities\\[0\\] must be a non-empty string",
+            ),
             ({"capabilities": [123]}, "capabilities\\[0\\] must be a non-empty string"),
-            ({"capabilities": ["echo", "echo"]}, "capabilities contains duplicate: echo"),
+            (
+                {"capabilities": ["echo", "echo"]},
+                "capabilities contains duplicate: echo",
+            ),
         ]
         for patch, message in cases:
             node = {"node_id": "local-node-a"} | patch
             with self.subTest(patch=patch):
                 with self.assertRaisesRegex(ManifestError, message):
-                    self._load(
-                        {"version": 1, "nodes": [node], "jobs": [self._job()]}
-                    )
+                    self._load({"version": 1, "nodes": [node], "jobs": [self._job()]})
 
     def test_malformed_json_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -187,7 +193,9 @@ class JobManifestTests(unittest.TestCase):
             )
 
     def test_non_string_node_status_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ManifestError, "nodes\\[0\\].status must be a string"):
+        with self.assertRaisesRegex(
+            ManifestError, "nodes\\[0\\].status must be a string"
+        ):
             self._load(
                 {
                     "version": 1,
@@ -213,7 +221,7 @@ class JobManifestTests(unittest.TestCase):
             )
 
     def test_invalid_job_entry_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ManifestError, "jobs\[0\] must be a JSON object"):
+        with self.assertRaisesRegex(ManifestError, r"jobs\[0\] must be a JSON object"):
             self._load({"version": 1, "nodes": ["local-node-a"], "jobs": ["bad"]})
 
     def test_invalid_job_id_is_rejected(self) -> None:
@@ -231,8 +239,62 @@ class JobManifestTests(unittest.TestCase):
             path = Path(temp_dir) / "manifest.json"
             path.write_text("[]", encoding="utf-8")
 
-            with self.assertRaisesRegex(ManifestError, "manifest must be a JSON object"):
+            with self.assertRaisesRegex(
+                ManifestError, "manifest must be a JSON object"
+            ):
                 load_job_manifest(path)
+
+    def test_manifest_error_messages_are_stable(self) -> None:
+        cases = [
+            ([], "manifest must be a JSON object"),
+            (
+                {"version": True, "nodes": ["local-node-a"], "jobs": [self._job()]},
+                "manifest version must be integer 1",
+            ),
+            (
+                {"version": 1, "nodes": [], "jobs": [self._job()]},
+                "manifest nodes must be a non-empty list",
+            ),
+            (
+                {"version": 1, "nodes": [""], "jobs": [self._job()]},
+                "manifest nodes[0] must be a non-empty string",
+            ),
+            (
+                {
+                    "version": 1,
+                    "nodes": [{"node_id": "local-node-a", "capabilities": [""]}],
+                    "jobs": [self._job()],
+                },
+                "manifest nodes[0].capabilities[0] must be a non-empty string",
+            ),
+            (
+                {"version": 1, "nodes": ["local-node-a"], "jobs": []},
+                "manifest jobs must be a non-empty list",
+            ),
+            (
+                {
+                    "version": 1,
+                    "nodes": ["local-node-a"],
+                    "jobs": [{"job_id": "echo-1", "job_type": ""}],
+                },
+                "manifest jobs[0].job_type must be a non-empty string",
+            ),
+        ]
+        for document, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    path = Path(temp_dir) / "manifest.json"
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(ManifestError) as cm:
+                        load_job_manifest(path)
+                    self.assertEqual(str(cm.exception), expected_message)
+
+    def test_string_node_entries_default_to_available_status(self) -> None:
+        batch = self._load(
+            {"version": 1, "nodes": ["local-node-a"], "jobs": [self._job()]}
+        )
+
+        self.assertEqual(batch.nodes[0].status, NodeStatus.AVAILABLE)
 
     def _load(self, document: dict[str, object]):
         with tempfile.TemporaryDirectory() as temp_dir:

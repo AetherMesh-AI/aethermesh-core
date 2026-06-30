@@ -2,6 +2,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
+from unittest import mock
 
 from aethermesh_core.ledger import (
     ContributionLedger,
@@ -142,10 +144,12 @@ class ContributionLedgerTests(unittest.TestCase):
             status="completed",
             output="invalid units",
             error=None,
-            contribution_units="1",  # type: ignore[arg-type]
+            contribution_units=cast(Any, "1"),
         )
 
-        with self.assertRaisesRegex(ValueError, "contribution_units must be an integer"):
+        with self.assertRaisesRegex(
+            ValueError, "contribution_units must be an integer"
+        ):
             ledger.record(result)
 
     def test_contribution_record_round_trips_through_json_dict(self) -> None:
@@ -270,7 +274,9 @@ class ContributionLedgerTests(unittest.TestCase):
 
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), "{not json")
 
-    def test_existing_ledger_loader_rejects_missing_file_without_creating_it(self) -> None:
+    def test_existing_ledger_loader_rejects_missing_file_without_creating_it(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "ledger.json"
 
@@ -316,6 +322,94 @@ class ContributionLedgerTests(unittest.TestCase):
                 ],
             },
         )
+
+    def test_save_ledger_document_uses_stable_json_and_cleans_temp_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "deep" / "nested" / "ledger.json"
+            ledger = ContributionLedger()
+            ledger.record(
+                JobResult(
+                    job_id="job-1",
+                    node_id="node-a",
+                    status="completed",
+                    output="hello mesh",
+                    error=None,
+                    contribution_units=1,
+                )
+            )
+
+            save_ledger_document(
+                ledger_path, ledger, {"z_future": True, "a_note": "kept"}
+            )
+            raw = ledger_path.read_text(encoding="utf-8")
+
+            self.assertEqual(
+                raw,
+                '{\n  "a_note": "kept",\n  "records": [\n    {\n      "contribution_units": 1,\n      "job_id": "job-1",\n      "job_type": null,\n      "message": "hello mesh",\n      "node_id": "node-a",\n      "status": "completed",\n      "validation_reason": null,\n      "validation_valid": null\n    }\n  ],\n  "version": 1,\n  "z_future": true\n}\n',
+            )
+            self.assertEqual(
+                sorted(path.name for path in ledger_path.parent.iterdir()),
+                ["ledger.json"],
+            )
+
+    def test_save_ledger_document_preserves_existing_file_on_atomic_replace_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger_path.write_text('{"original": true}\n', encoding="utf-8")
+            ledger = ContributionLedger()
+            ledger.record(JobResult("job-1", "node-a", "completed", "hello", None, 1))
+
+            with mock.patch(
+                "aethermesh_core.ledger.os.replace",
+                side_effect=OSError("replace failed"),
+            ):
+                with self.assertRaisesRegex(LedgerPersistenceError, "replace failed"):
+                    save_ledger_document(ledger_path, ledger)
+
+            self.assertEqual(
+                ledger_path.read_text(encoding="utf-8"), '{"original": true}\n'
+            )
+            self.assertEqual(
+                sorted(path.name for path in ledger_path.parent.iterdir()),
+                ["ledger.json"],
+            )
+
+    def test_bool_version_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            ledger_path.write_text(
+                json.dumps({"version": True, "records": []}), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(LedgerPersistenceError, "version 1"):
+                load_existing_ledger_document(ledger_path)
+
+    def test_save_ledger_document_uses_target_parent_temp_file_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "deep" / "nested" / "ledger.json"
+            ledger = ContributionLedger()
+            calls: list[dict[str, object]] = []
+            real_named_temporary_file = tempfile.NamedTemporaryFile
+
+            def capture_named_temporary_file(*args, **kwargs):
+                calls.append({"args": args, "kwargs": dict(kwargs)})
+                return real_named_temporary_file(*args, **kwargs)
+
+            with mock.patch(
+                "aethermesh_core.ledger.tempfile.NamedTemporaryFile",
+                side_effect=capture_named_temporary_file,
+            ):
+                save_ledger_document(ledger_path, ledger)
+
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["args"], ("w",))
+            self.assertEqual(calls[0]["kwargs"]["encoding"], "utf-8")
+            self.assertEqual(calls[0]["kwargs"]["dir"], ledger_path.parent)
+            self.assertEqual(calls[0]["kwargs"]["prefix"], ".ledger.json.")
+            self.assertEqual(calls[0]["kwargs"]["suffix"], ".tmp")
+            self.assertEqual(calls[0]["kwargs"]["delete"], False)
 
 
 if __name__ == "__main__":

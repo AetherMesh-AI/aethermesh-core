@@ -5,10 +5,181 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.cli import main
+from aethermesh_core.cli import build_parser, main
 
 
 class CliTests(unittest.TestCase):
+    def test_build_parser_declares_command_argument_contracts(self) -> None:
+        parser = build_parser()
+
+        self.assertEqual(parser.prog, "aethermesh-core")
+        help_text = parser.format_help()
+        for command in [
+            "run-demo",
+            "simulate-local",
+            "run-local-batch",
+            "dispatch-local-batch",
+            "run-local-flow",
+            "audit-local-flow",
+            "ledger-summary",
+            "peer-summary",
+            "announce-local-node",
+            "materialize-local-inboxes",
+            "process-local-inbox",
+        ]:
+            self.assertIn(command, help_text)
+
+        demo = parser.parse_args(["run-demo"])
+        self.assertEqual(demo.command, "run-demo")
+        self.assertEqual(demo.node_id, None)
+        self.assertEqual(demo.identity_path, None)
+        self.assertEqual(demo.message, "hello mesh")
+        self.assertEqual(demo.include_ledger, False)
+        self.assertEqual(demo.ledger_path, None)
+
+        batch = parser.parse_args(
+            [
+                "run-local-batch",
+                "--manifest",
+                "manifest.json",
+                "--ledger-path",
+                "ledger.json",
+                "--message-log-path",
+                "messages.json",
+            ]
+        )
+        self.assertEqual(batch.command, "run-local-batch")
+        self.assertEqual(batch.manifest, "manifest.json")
+        self.assertEqual(batch.ledger_path, "ledger.json")
+        self.assertEqual(batch.message_log_path, "messages.json")
+
+        dispatch = parser.parse_args(
+            [
+                "dispatch-local-batch",
+                "--manifest",
+                "manifest.json",
+                "--message-log-path",
+                "dispatch.json",
+            ]
+        )
+        self.assertEqual(dispatch.command, "dispatch-local-batch")
+        self.assertEqual(dispatch.manifest, "manifest.json")
+        self.assertEqual(dispatch.message_log_path, "dispatch.json")
+
+        flow = parser.parse_args(
+            ["run-local-flow", "--manifest", "manifest.json", "--output-dir", "out"]
+        )
+        self.assertEqual(flow.command, "run-local-flow")
+        self.assertEqual(flow.manifest, "manifest.json")
+        self.assertEqual(flow.output_dir, "out")
+
+        audit = parser.parse_args(["audit-local-flow", "--output-dir", "out"])
+        self.assertEqual(audit.command, "audit-local-flow")
+        self.assertEqual(audit.output_dir, "out")
+
+        ledger = parser.parse_args(["ledger-summary", "--ledger-path", "ledger.json"])
+        self.assertEqual(ledger.command, "ledger-summary")
+        self.assertEqual(ledger.ledger_path, "ledger.json")
+
+        peers = parser.parse_args(
+            ["peer-summary", "--message-log-path", "messages.json"]
+        )
+        self.assertEqual(peers.command, "peer-summary")
+        self.assertEqual(peers.message_log_path, "messages.json")
+
+        announcement = parser.parse_args(
+            [
+                "announce-local-node",
+                "--node-id",
+                "node-a",
+                "--message-log-path",
+                "announce.json",
+                "--status",
+                "offline",
+                "--capability",
+                "echo",
+                "--capability",
+                "text_stats",
+            ]
+        )
+        self.assertEqual(announcement.command, "announce-local-node")
+        self.assertEqual(announcement.node_id, "node-a")
+        self.assertEqual(announcement.message_log_path, "announce.json")
+        self.assertEqual(announcement.status, "offline")
+        self.assertEqual(announcement.capability, ["echo", "text_stats"])
+
+        materialize = parser.parse_args(
+            [
+                "materialize-local-inboxes",
+                "--message-log-path",
+                "dispatch.json",
+                "--transport-dir",
+                "transport",
+            ]
+        )
+        self.assertEqual(materialize.command, "materialize-local-inboxes")
+        self.assertEqual(materialize.message_log_path, "dispatch.json")
+        self.assertEqual(materialize.transport_dir, "transport")
+
+        inbox = parser.parse_args(
+            [
+                "process-local-inbox",
+                "--node-id",
+                "node-a",
+                "--message-log-path",
+                "messages.json",
+                "--transport-dir",
+                "transport",
+                "--ledger-path",
+                "ledger.json",
+                "--output-message-log-path",
+                "worker.json",
+                "--node-state-path",
+                "node-state.json",
+            ]
+        )
+        self.assertEqual(inbox.command, "process-local-inbox")
+        self.assertEqual(inbox.node_id, "node-a")
+        self.assertEqual(inbox.message_log_path, "messages.json")
+        self.assertEqual(inbox.transport_dir, "transport")
+        self.assertEqual(inbox.ledger_path, "ledger.json")
+        self.assertEqual(inbox.output_message_log_path, "worker.json")
+        self.assertEqual(inbox.node_state_path, "node-state.json")
+
+    def test_build_parser_help_snapshots_stay_stable(self) -> None:
+        parser = build_parser()
+        subparsers_action = next(
+            action for action in parser._actions if action.dest == "command"
+        )
+        subparser_help = {
+            command: self._normalize_parser_help(subparser.format_help())
+            for command, subparser in dict(subparsers_action.choices).items()
+        }
+        self.assertEqual(
+            self._normalize_parser_help(parser.format_help()),
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+        )
+        self.assertEqual(
+            subparser_help,
+            {
+                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to an ephemeral id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
+                "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
+                "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
+                "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
+                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts.",
+                "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
+                "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
+                "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
+                "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
+                "materialize-local-inboxes": "usage: aethermesh-core materialize-local-inboxes [-h] --message-log-path MESSAGE_LOG_PATH --transport-dir TRANSPORT_DIR options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to a version 1 local dispatch/message log. --transport-dir TRANSPORT_DIR Directory where per-node local transport inboxes should be written.",
+                "process-local-inbox": "usage: aethermesh-core process-local-inbox [-h] --node-id NODE_ID [--message-log-path MESSAGE_LOG_PATH] [--transport-dir TRANSPORT_DIR] [--ledger-path LEDGER_PATH] [--output-message-log-path OUTPUT_MESSAGE_LOG_PATH] [--node-state-path NODE_STATE_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Local node id whose replayed inbox should be processed. --message-log-path MESSAGE_LOG_PATH Path to a version 1 local message log produced by run-local-batch. --transport-dir TRANSPORT_DIR Read this node's file-backed local transport inbox instead of a message log. --ledger-path LEDGER_PATH Opt in to persisting validation-gated contribution records. --output-message-log-path OUTPUT_MESSAGE_LOG_PATH Opt in to writing replayed plus emitted worker messages as a local message log. --node-state-path NODE_STATE_PATH Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
+            },
+        )
+
+    @staticmethod
+    def _normalize_parser_help(text: str) -> str:
+        return " ".join(text.split()).replace("run- local", "run-local")
+
     def test_simulate_local_prints_deterministic_json_shape(self) -> None:
         stdout = io.StringIO()
 
@@ -55,7 +226,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["messages"][2]["correlation_id"], "echo-1")
         self.assertEqual(payload["messages"][2]["recipient_node_id"], "local-node-a")
         self.assertEqual(payload["messages"][3]["message_type"], "job_result_reported")
-        self.assertEqual(payload["messages"][4]["message_type"], "contribution_recorded")
+        self.assertEqual(
+            payload["messages"][4]["message_type"], "contribution_recorded"
+        )
         self.assertEqual(payload["validations"][0]["valid"], True)
         self.assertEqual(
             payload["validation_summary"], {"valid": 5, "invalid": 0, "unsupported": 0}
@@ -67,7 +240,13 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 3,
@@ -76,7 +255,13 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -146,7 +331,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["totals"]["jobs"], 2)
         self.assertEqual(payload["totals"]["contribution_units"], 3)
 
-    def test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster(self) -> None:
+    def test_run_local_batch_skips_offline_manifest_nodes_and_prints_roster(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             manifest_path.write_text(
@@ -186,7 +373,9 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["nodes"], ["local-node-a", "local-node-b", "local-node-c"])
+        self.assertEqual(
+            payload["nodes"], ["local-node-a", "local-node-b", "local-node-c"]
+        )
         self.assertEqual(
             payload["assignments"],
             [
@@ -201,7 +390,13 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -210,7 +405,13 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-b",
                     "status": "offline",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -219,7 +420,13 @@ class CliTests(unittest.TestCase):
                 {
                     "node_id": "local-node-c",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -228,7 +435,9 @@ class CliTests(unittest.TestCase):
             ],
         )
 
-    def test_run_local_batch_all_offline_returns_nonzero_without_writing_ledger(self) -> None:
+    def test_run_local_batch_all_offline_returns_nonzero_without_writing_ledger(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -269,7 +478,9 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertFalse(ledger_exists)
 
-    def test_run_local_batch_manifest_error_returns_nonzero_without_traceback(self) -> None:
+    def test_run_local_batch_manifest_error_returns_nonzero_without_traceback(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             manifest_path.write_text("not-json", encoding="utf-8")
@@ -428,8 +639,12 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(persisted["messages"][0]["message_type"], "node_heartbeat")
         self.assertEqual(persisted["messages"][2]["message_type"], "job_assigned")
-        self.assertEqual(persisted["messages"][3]["message_type"], "job_result_reported")
-        self.assertEqual(persisted["messages"][4]["message_type"], "contribution_recorded")
+        self.assertEqual(
+            persisted["messages"][3]["message_type"], "job_result_reported"
+        )
+        self.assertEqual(
+            persisted["messages"][4]["message_type"], "contribution_recorded"
+        )
 
     def test_run_local_batch_message_log_write_error_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -530,13 +745,15 @@ class CliTests(unittest.TestCase):
             first_payload["persisted_ledger_summaries"][0]["total_result_count"], 1
         )
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 2
+            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"],
+            2,
         )
         self.assertEqual(
             second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 4
+            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"],
+            4,
         )
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
@@ -591,7 +808,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["owner"], "local-dev")
         self.assertEqual(len(persisted["records"]), 1)
 
-    def test_run_local_batch_persists_invalid_completed_result_with_zero_units(self) -> None:
+    def test_run_local_batch_persists_invalid_completed_result_with_zero_units(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -623,7 +842,9 @@ class CliTests(unittest.TestCase):
 
         payload = json.loads(stdout.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["validation_summary"], {"valid": 0, "invalid": 1, "unsupported": 0})
+        self.assertEqual(
+            payload["validation_summary"], {"valid": 0, "invalid": 1, "unsupported": 0}
+        )
         self.assertEqual(persisted["records"][0]["status"], "completed")
         self.assertEqual(persisted["records"][0]["contribution_units"], 0)
         self.assertEqual(persisted["records"][0]["validation_valid"], False)
@@ -632,7 +853,9 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(persisted["records"][0]["job_type"], "echo")
 
-    def test_run_local_batch_unsupported_job_type_persists_invalid_audit_record(self) -> None:
+    def test_run_local_batch_unsupported_job_type_persists_invalid_audit_record(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -675,10 +898,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["records"][0]["status"], "failed")
         self.assertEqual(persisted["records"][0]["contribution_units"], 0)
         self.assertEqual(persisted["records"][0]["validation_valid"], False)
-        self.assertEqual(persisted["records"][0]["validation_reason"], "unsupported_job_type")
+        self.assertEqual(
+            persisted["records"][0]["validation_reason"], "unsupported_job_type"
+        )
         self.assertEqual(persisted["records"][0]["job_type"], "unknown")
 
-    def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:
+    def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -737,6 +964,8 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
+        self.assertEqual(stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n")
+        self.assertEqual(set(payload), {"result", "validation", "ledger_summary"})
         self.assertEqual(payload["result"]["node_id"], "local-demo-node")
         self.assertEqual(payload["result"]["output"], "hello mesh")
         self.assertEqual(payload["validation"]["valid"], True)
@@ -753,6 +982,12 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
+        self.assertEqual(stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n")
+        self.assertEqual(
+            set(payload),
+            {"job_id", "node_id", "status", "output", "error", "contribution_units"},
+        )
+        self.assertEqual(payload["job_id"], "demo-echo")
         self.assertEqual(payload["node_id"], "local-demo-node")
         self.assertEqual(payload["output"], "hello mesh")
         self.assertNotIn("validation", payload)
@@ -796,12 +1031,17 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("validation", first_payload)
         self.assertNotIn("ledger_summary", first_payload)
 
-    def test_run_demo_node_id_and_identity_path_conflict_returns_cli_error(self) -> None:
+    def test_run_demo_node_id_and_identity_path_conflict_returns_cli_error(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
             stderr = io.StringIO()
 
-            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
                 main(
                     [
                         "run-demo",
@@ -818,13 +1058,18 @@ class CliTests(unittest.TestCase):
         self.assertIn("mutually exclusive", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
-    def test_run_demo_malformed_identity_path_returns_cli_error_without_overwrite(self) -> None:
+    def test_run_demo_malformed_identity_path_returns_cli_error_without_overwrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
             identity_path.write_text("not-json", encoding="utf-8")
             stderr = io.StringIO()
 
-            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
                 main(["run-demo", "--identity-path", str(identity_path)])
 
             identity_contents = identity_path.read_text(encoding="utf-8")
@@ -834,14 +1079,19 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(identity_contents, "not-json")
 
-    def test_run_demo_unsupported_identity_version_returns_cli_error_without_overwrite(self) -> None:
+    def test_run_demo_unsupported_identity_version_returns_cli_error_without_overwrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
             original = json.dumps({"version": 2, "node": {"node_id": "local-future"}})
             identity_path.write_text(original, encoding="utf-8")
             stderr = io.StringIO()
 
-            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
                 main(["run-demo", "--identity-path", str(identity_path)])
 
             identity_contents = identity_path.read_text(encoding="utf-8")
@@ -911,7 +1161,10 @@ class CliTests(unittest.TestCase):
             ledger_path.write_text("not-json", encoding="utf-8")
             stderr = io.StringIO()
 
-            with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as cm:
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
                 main(["run-demo", "--ledger-path", str(ledger_path)])
 
             self.assertEqual(cm.exception.code, 2)
@@ -991,7 +1244,9 @@ class CliTests(unittest.TestCase):
             },
         )
 
-    def test_ledger_summary_missing_file_returns_nonzero_without_creating_it(self) -> None:
+    def test_ledger_summary_missing_file_returns_nonzero_without_creating_it(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "missing" / "ledger.json"
             stdout = io.StringIO()
@@ -1010,7 +1265,9 @@ class CliTests(unittest.TestCase):
         self.assertFalse(ledger_exists)
         self.assertFalse(parent_exists)
 
-    def test_ledger_summary_malformed_ledger_returns_nonzero_without_overwrite(self) -> None:
+    def test_ledger_summary_malformed_ledger_returns_nonzero_without_overwrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "ledger.json"
             ledger_path.write_text("not-json", encoding="utf-8")
@@ -1093,14 +1350,39 @@ class CliTests(unittest.TestCase):
                     {
                         "version": 1,
                         "nodes": [
-                            {"node_id": "local-node-a", "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"]},
-                            {"node_id": "local-node-b", "status": "offline", "capabilities": ["echo"]},
+                            {
+                                "node_id": "local-node-a",
+                                "capabilities": [
+                                    "echo",
+                                    "keyword_extract",
+                                    "text_chunk",
+                                    "text_embed",
+                                    "text_stats",
+                                ],
+                            },
+                            {
+                                "node_id": "local-node-b",
+                                "status": "offline",
+                                "capabilities": ["echo"],
+                            },
                             {"node_id": "local-node-c", "capabilities": ["echo"]},
                         ],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}},
-                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh"}},
-                            {"job_id": "echo-2", "job_type": "echo", "payload": {"message": "two"}},
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
                         ],
                     }
                 ),
@@ -1144,15 +1426,27 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["metadata"]["assignment_count"], 3)
         self.assertEqual(
             [message["message_type"] for message in persisted["messages"]],
-            ["node_heartbeat", "node_heartbeat", "job_assigned", "job_assigned", "job_assigned"],
+            [
+                "node_heartbeat",
+                "node_heartbeat",
+                "job_assigned",
+                "job_assigned",
+                "job_assigned",
+            ],
         )
         self.assertEqual(
             [message["sender_node_id"] for message in persisted["messages"][:2]],
             ["local-node-a", "local-node-c"],
         )
         self.assertEqual(
-            [message["payload"]["capabilities"] for message in persisted["messages"][:2]],
-            [["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"], ["echo"]],
+            [
+                message["payload"]["capabilities"]
+                for message in persisted["messages"][:2]
+            ],
+            [
+                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                ["echo"],
+            ],
         )
         self.assertNotIn("job_result_reported", json.dumps(persisted))
         self.assertNotIn("contribution_recorded", json.dumps(persisted))
@@ -1167,8 +1461,16 @@ class CliTests(unittest.TestCase):
                 json.dumps(
                     {
                         "version": 1,
-                        "nodes": [{"node_id": "local-node-a", "capabilities": ["echo"]}],
-                        "jobs": [{"job_id": "stats-1", "job_type": "text_stats", "payload": {}}],
+                        "nodes": [
+                            {"node_id": "local-node-a", "capabilities": ["echo"]}
+                        ],
+                        "jobs": [
+                            {
+                                "job_id": "stats-1",
+                                "job_type": "text_stats",
+                                "payload": {},
+                            }
+                        ],
                     }
                 ),
                 encoding="utf-8",
@@ -1260,7 +1562,9 @@ class CliTests(unittest.TestCase):
             stdout = io.StringIO()
 
             with contextlib.redirect_stdout(stdout):
-                exit_code = main(["peer-summary", "--message-log-path", str(message_log_path)])
+                exit_code = main(
+                    ["peer-summary", "--message-log-path", str(message_log_path)]
+                )
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(
@@ -1285,7 +1589,9 @@ class CliTests(unittest.TestCase):
             },
         )
 
-    def test_peer_summary_malformed_heartbeat_returns_nonzero_without_rewrite(self) -> None:
+    def test_peer_summary_malformed_heartbeat_returns_nonzero_without_rewrite(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "messages.json"
             original = json.dumps(
@@ -1313,7 +1619,9 @@ class CliTests(unittest.TestCase):
             stderr = io.StringIO()
 
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-                exit_code = main(["peer-summary", "--message-log-path", str(message_log_path)])
+                exit_code = main(
+                    ["peer-summary", "--message-log-path", str(message_log_path)]
+                )
             contents = message_log_path.read_text(encoding="utf-8")
 
         self.assertEqual(exit_code, 1)
@@ -1333,7 +1641,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
                         ],
                     }
                 ),
@@ -1479,7 +1791,12 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             payload["validation_outcomes"],
             [
-                {"job_id": "echo-1", "valid": True, "credited_units": 1, "reason": "ok"},
+                {
+                    "job_id": "echo-1",
+                    "valid": True,
+                    "credited_units": 1,
+                    "reason": "ok",
+                },
                 {
                     "job_id": "text-stats-1",
                     "valid": True,
@@ -1498,7 +1815,10 @@ class CliTests(unittest.TestCase):
             },
         )
         self.assertEqual(len(persisted_ledger["records"]), 2)
-        self.assertEqual([record["node_id"] for record in persisted_ledger["records"]], ["local-node-a", "local-node-a"])
+        self.assertEqual(
+            [record["node_id"] for record in persisted_ledger["records"]],
+            ["local-node-a", "local-node-a"],
+        )
         self.assertEqual(after_message_log, before_message_log)
         self.assertEqual(after_mtime, before_mtime)
         self.assertNotIn("output_message_log_path", payload)
@@ -1507,7 +1827,9 @@ class CliTests(unittest.TestCase):
     def test_process_local_inbox_writes_output_message_log_when_requested(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "local-messages.json"
-            output_message_log_path = Path(temp_dir) / "local-node-a-output-messages.json"
+            output_message_log_path = (
+                Path(temp_dir) / "local-node-a-output-messages.json"
+            )
             ledger_path = Path(temp_dir) / "local-ledger.json"
             message_log_path.write_text(
                 json.dumps(
@@ -1540,7 +1862,10 @@ class CliTests(unittest.TestCase):
                                 "message_type": "contribution_recorded",
                                 "sender_node_id": "local-ledger",
                                 "recipient_node_id": "local-node-a",
-                                "payload": {"job_id": "older-job", "contribution_units": 1},
+                                "payload": {
+                                    "job_id": "older-job",
+                                    "contribution_units": 1,
+                                },
                                 "correlation_id": "older-job",
                             },
                         ],
@@ -1568,14 +1893,18 @@ class CliTests(unittest.TestCase):
 
         payload = json.loads(stdout.getvalue())
         self.assertEqual(exit_code, 0)
-        self.assertEqual(payload["output_message_log_path"], str(output_message_log_path))
+        self.assertEqual(
+            payload["output_message_log_path"], str(output_message_log_path)
+        )
         self.assertEqual(payload["final_message_count"], 5)
         self.assertEqual(payload["processed_assignment_count"], 1)
         self.assertEqual(payload["ignored_message_ids"], ["msg-0003"])
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(persisted["metadata"]["source"], "process-local-inbox")
         self.assertEqual(persisted["metadata"]["node_id"], "local-node-a")
-        self.assertEqual(persisted["metadata"]["source_message_log_path"], str(message_log_path))
+        self.assertEqual(
+            persisted["metadata"]["source_message_log_path"], str(message_log_path)
+        )
         self.assertEqual(persisted["metadata"]["ledger_path"], str(ledger_path))
         self.assertEqual(persisted["metadata"]["message_count"], 5)
         self.assertEqual(persisted["metadata"]["replayed_message_count"], 3)
@@ -1584,10 +1913,16 @@ class CliTests(unittest.TestCase):
             [message["message_id"] for message in persisted["messages"]],
             ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
         )
-        self.assertEqual(persisted["messages"][3]["message_type"], "job_result_reported")
-        self.assertEqual(persisted["messages"][4]["message_type"], "contribution_recorded")
+        self.assertEqual(
+            persisted["messages"][3]["message_type"], "job_result_reported"
+        )
+        self.assertEqual(
+            persisted["messages"][4]["message_type"], "contribution_recorded"
+        )
 
-    def test_process_local_inbox_output_message_log_ordering_is_deterministic(self) -> None:
+    def test_process_local_inbox_output_message_log_ordering_is_deterministic(
+        self,
+    ) -> None:
         document = {
             "version": 1,
             "messages": [
@@ -1706,7 +2041,9 @@ class CliTests(unittest.TestCase):
         self.assertFalse(ledger_path.exists())
         self.assertNotIn("ledger_summary", payload)
 
-    def test_process_local_inbox_invalid_node_state_returns_nonzero_without_writes(self) -> None:
+    def test_process_local_inbox_invalid_node_state_returns_nonzero_without_writes(
+        self,
+    ) -> None:
         cases = [
             ("malformed", "not-json", "node state JSON is malformed"),
             (
@@ -1769,7 +2106,10 @@ class CliTests(unittest.TestCase):
                     stdout = io.StringIO()
                     stderr = io.StringIO()
 
-                    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    with (
+                        contextlib.redirect_stdout(stdout),
+                        contextlib.redirect_stderr(stderr),
+                    ):
                         exit_code = main(
                             [
                                 "process-local-inbox",
@@ -1790,10 +2130,17 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(stdout.getvalue(), "")
                     self.assertIn(expected_error, stderr.getvalue())
                     self.assertFalse(ledger_path.exists())
-                    self.assertEqual(output_message_log_path.read_text(encoding="utf-8"), "keep output")
-                    self.assertEqual(state_path.read_text(encoding="utf-8"), original_state)
+                    self.assertEqual(
+                        output_message_log_path.read_text(encoding="utf-8"),
+                        "keep output",
+                    )
+                    self.assertEqual(
+                        state_path.read_text(encoding="utf-8"), original_state
+                    )
 
-    def test_process_local_inbox_with_node_state_resumes_without_duplicate_ledger_records(self) -> None:
+    def test_process_local_inbox_with_node_state_resumes_without_duplicate_ledger_records(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "local-messages.json"
             ledger_path = Path(temp_dir) / "local-ledger.json"
@@ -1871,7 +2218,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(second_state, first_state)
         self.assertEqual(len(ledger["records"]), 1)
 
-    def test_process_local_inbox_invalid_message_log_does_not_write_output_log(self) -> None:
+    def test_process_local_inbox_invalid_message_log_does_not_write_output_log(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "local-messages.json"
             output_message_log_path = Path(temp_dir) / "output-messages.json"
@@ -1899,7 +2248,9 @@ class CliTests(unittest.TestCase):
         self.assertIn("message log JSON is malformed", stderr.getvalue())
         self.assertEqual(output_contents, "keep me")
 
-    def test_process_local_inbox_invalid_message_log_returns_nonzero_without_ledger(self) -> None:
+    def test_process_local_inbox_invalid_message_log_returns_nonzero_without_ledger(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             message_log_path = Path(temp_dir) / "local-messages.json"
             ledger_path = Path(temp_dir) / "local-ledger.json"
@@ -1945,29 +2296,53 @@ class CliTests(unittest.TestCase):
                 )
 
             payload = json.loads(stdout.getvalue())
-            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
-            receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
-            flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
+            ledger = json.loads(
+                (output_dir / "ledger.json").read_text(encoding="utf-8")
+            )
+            receipts = json.loads(
+                (output_dir / "receipts.json").read_text(encoding="utf-8")
+            )
+            flow_log = json.loads(
+                (output_dir / "flow-message-log.json").read_text(encoding="utf-8")
+            )
             dispatch_exists = (output_dir / "dispatch-message-log.json").exists()
             flow_log_exists = (output_dir / "flow-message-log.json").exists()
-            node_a_state_exists = (output_dir / "node-state" / "local-node-a.json").exists()
-            node_c_state_exists = (output_dir / "node-state" / "local-node-c.json").exists()
-            node_a_log_exists = (output_dir / "worker-message-logs" / "local-node-a.json").exists()
-            node_c_log_exists = (output_dir / "worker-message-logs" / "local-node-c.json").exists()
-            offline_state_exists = (output_dir / "node-state" / "local-node-b.json").exists()
-            offline_log_exists = (output_dir / "worker-message-logs" / "local-node-b.json").exists()
+            node_a_state_exists = (
+                output_dir / "node-state" / "local-node-a.json"
+            ).exists()
+            node_c_state_exists = (
+                output_dir / "node-state" / "local-node-c.json"
+            ).exists()
+            node_a_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-a.json"
+            ).exists()
+            node_c_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-c.json"
+            ).exists()
+            offline_state_exists = (
+                output_dir / "node-state" / "local-node-b.json"
+            ).exists()
+            offline_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-b.json"
+            ).exists()
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["command"], "run-local-flow")
         self.assertEqual(payload["manifest_path"], str(manifest_path))
         self.assertEqual(payload["output_dir"], str(output_dir))
-        self.assertEqual(payload["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            payload["available_node_ids"], ["local-node-a", "local-node-c"]
+        )
         self.assertEqual(payload["offline_node_ids"], ["local-node-b"])
-        self.assertEqual(payload["processed_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            payload["processed_node_ids"], ["local-node-a", "local-node-c"]
+        )
         self.assertEqual(payload["processed_assignment_count"], 5)
         self.assertEqual(payload["skipped_processed_assignment_count"], 0)
         self.assertEqual(payload["total_contribution_units"], 11)
-        self.assertEqual(payload["flow_message_log_path"], str(output_dir / "flow-message-log.json"))
+        self.assertEqual(
+            payload["flow_message_log_path"], str(output_dir / "flow-message-log.json")
+        )
         self.assertEqual(payload["receipts_path"], str(output_dir / "receipts.json"))
         self.assertEqual(payload["receipt_count"], 5)
         self.assertEqual(payload["flow_message_count"], 17)
@@ -2013,8 +2388,16 @@ class CliTests(unittest.TestCase):
                 "chunk_count": 3,
                 "chunks": [
                     {"character_count": 20, "index": 0, "text": "AetherMesh prepares "},
-                    {"character_count": 22, "index": 1, "text": "local text chunks for "},
-                    {"character_count": 21, "index": 2, "text": "future AI processing."},
+                    {
+                        "character_count": 22,
+                        "index": 1,
+                        "text": "local text chunks for ",
+                    },
+                    {
+                        "character_count": 21,
+                        "index": 2,
+                        "text": "future AI processing.",
+                    },
                 ],
             },
         )
@@ -2023,7 +2406,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 7)
         self.assertEqual(flow_log["metadata"]["emitted_message_count"], 10)
         self.assertEqual(flow_log["metadata"]["message_count"], 17)
-        self.assertEqual(flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"])
+        self.assertEqual(
+            flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"]
+        )
         self.assertEqual(flow_log["metadata"]["offline_node_ids"], ["local-node-b"])
         self.assertEqual(flow_log["metadata"]["processed_assignment_count"], 5)
         self.assertEqual(flow_log["metadata"]["skipped_processed_assignment_count"], 0)
@@ -2063,7 +2448,11 @@ class CliTests(unittest.TestCase):
                             {"node_id": "local-node-b", "status": "available"},
                         ],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            }
                         ],
                     }
                 ),
@@ -2083,9 +2472,15 @@ class CliTests(unittest.TestCase):
                 )
 
             payload = json.loads(stdout.getvalue())
-            available_state_exists = (output_dir / "node-state" / "local-node-b.json").exists()
-            offline_state_exists = (output_dir / "node-state" / "local-node-a.json").exists()
-            offline_log_exists = (output_dir / "worker-message-logs" / "local-node-a.json").exists()
+            available_state_exists = (
+                output_dir / "node-state" / "local-node-b.json"
+            ).exists()
+            offline_state_exists = (
+                output_dir / "node-state" / "local-node-a.json"
+            ).exists()
+            offline_log_exists = (
+                output_dir / "worker-message-logs" / "local-node-a.json"
+            ).exists()
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["available_node_ids"], ["local-node-b"])
@@ -2106,7 +2501,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
                         ],
                     }
                 ),
@@ -2115,19 +2514,39 @@ class CliTests(unittest.TestCase):
             first_stdout = io.StringIO()
             with contextlib.redirect_stdout(first_stdout):
                 first_exit = main(
-                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
                 )
             second_stdout = io.StringIO()
             with contextlib.redirect_stdout(second_stdout):
                 second_exit = main(
-                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
                 )
             first_payload = json.loads(first_stdout.getvalue())
-            first_receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
+            first_receipts = json.loads(
+                (output_dir / "receipts.json").read_text(encoding="utf-8")
+            )
             second_payload = json.loads(second_stdout.getvalue())
-            ledger = json.loads((output_dir / "ledger.json").read_text(encoding="utf-8"))
-            flow_log = json.loads((output_dir / "flow-message-log.json").read_text(encoding="utf-8"))
-            second_receipts = json.loads((output_dir / "receipts.json").read_text(encoding="utf-8"))
+            ledger = json.loads(
+                (output_dir / "ledger.json").read_text(encoding="utf-8")
+            )
+            flow_log = json.loads(
+                (output_dir / "flow-message-log.json").read_text(encoding="utf-8")
+            )
+            second_receipts = json.loads(
+                (output_dir / "receipts.json").read_text(encoding="utf-8")
+            )
 
         self.assertEqual(first_exit, 0)
         self.assertEqual(first_payload["processed_assignment_count"], 1)
@@ -2145,7 +2564,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log["metadata"]["emitted_message_count"], 0)
         self.assertEqual(flow_log["metadata"]["message_count"], 2)
 
-    def test_run_local_flow_malformed_existing_receipts_do_not_overwrite_dispatch(self) -> None:
+    def test_run_local_flow_malformed_existing_receipts_do_not_overwrite_dispatch(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             output_dir = Path(temp_dir) / "flow"
@@ -2164,7 +2585,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
                         ],
                     }
                 ),
@@ -2175,7 +2600,13 @@ class CliTests(unittest.TestCase):
 
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 exit_code = main(
-                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
                 )
             dispatch_contents = dispatch_path.read_text(encoding="utf-8")
             flow_log_contents = flow_log_path.read_text(encoding="utf-8")
@@ -2189,7 +2620,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log_contents, flow_log_original)
         self.assertEqual(receipts_contents, "not-json")
 
-    def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(self) -> None:
+    def test_run_local_flow_malformed_existing_ledger_does_not_overwrite_dispatch(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             output_dir = Path(temp_dir) / "flow"
@@ -2208,7 +2641,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
                         ],
                     }
                 ),
@@ -2219,7 +2656,13 @@ class CliTests(unittest.TestCase):
 
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 exit_code = main(
-                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
                 )
             dispatch_contents = dispatch_path.read_text(encoding="utf-8")
             flow_log_contents = flow_log_path.read_text(encoding="utf-8")
@@ -2243,7 +2686,11 @@ class CliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}}
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
                         ],
                     }
                 ),
@@ -2252,7 +2699,13 @@ class CliTests(unittest.TestCase):
             run_stdout = io.StringIO()
             with contextlib.redirect_stdout(run_stdout):
                 run_exit = main(
-                    ["run-local-flow", "--manifest", str(manifest_path), "--output-dir", str(output_dir)]
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
                 )
             stdout = io.StringIO()
 
@@ -2285,7 +2738,9 @@ class CliTests(unittest.TestCase):
             },
         )
 
-    def test_audit_local_flow_missing_receipts_returns_nonzero_without_traceback(self) -> None:
+    def test_audit_local_flow_missing_receipts_returns_nonzero_without_traceback(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "flow"
             output_dir.mkdir()
@@ -2299,6 +2754,157 @@ class CliTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("error:", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_cli_json_stdout_is_sorted_for_core_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "batch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            commands = [
+                ["run-demo", "--node-id", "node-z", "--message", "hello"],
+                ["simulate-local"],
+                ["run-local-batch", "--manifest", str(manifest_path)],
+                [
+                    "dispatch-local-batch",
+                    "--manifest",
+                    str(manifest_path),
+                    "--message-log-path",
+                    str(root / "dispatch.json"),
+                ],
+            ]
+            for command in commands:
+                with self.subTest(command=command):
+                    stdout = io.StringIO()
+                    with contextlib.redirect_stdout(stdout):
+                        exit_code = main(command)
+                    self.assertEqual(exit_code, 0)
+                    payload = json.loads(stdout.getvalue())
+                    self.assertEqual(
+                        stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n"
+                    )
+
+    def test_run_local_flow_stdout_and_artifact_contracts_are_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "manifest.json"
+            output_dir = root / "deep" / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            expected_files = [
+                output_dir / "dispatch-message-log.json",
+                output_dir / "flow-message-log.json",
+                output_dir / "ledger.json",
+                output_dir / "receipts.json",
+                output_dir / "node-state" / "local-node-a.json",
+                output_dir / "worker-message-logs" / "local-node-a.json",
+            ]
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(
+                stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n"
+            )
+            self.assertEqual(
+                set(payload),
+                {
+                    "available_node_ids",
+                    "command",
+                    "dispatch_message_log_path",
+                    "dispatch_summary",
+                    "flow_emitted_message_count",
+                    "flow_message_count",
+                    "flow_message_log_path",
+                    "ignored_message_count",
+                    "ledger_path",
+                    "ledger_summary",
+                    "manifest_path",
+                    "node_results",
+                    "offline_node_ids",
+                    "output_dir",
+                    "processed_assignment_count",
+                    "processed_node_ids",
+                    "receipt_count",
+                    "receipts_path",
+                    "skipped_processed_assignment_count",
+                    "total_contribution_units",
+                },
+            )
+            self.assertEqual(
+                payload["dispatch_message_log_path"], str(expected_files[0])
+            )
+            self.assertEqual(payload["flow_message_log_path"], str(expected_files[1]))
+            self.assertEqual(payload["ledger_path"], str(expected_files[2]))
+            self.assertEqual(payload["receipts_path"], str(expected_files[3]))
+            self.assertEqual(
+                payload["node_results"][0]["node_state_path"], str(expected_files[4])
+            )
+            self.assertEqual(
+                payload["node_results"][0]["worker_message_log_path"],
+                str(expected_files[5]),
+            )
+            for path in expected_files:
+                self.assertTrue(path.exists(), path)
+            self.assertEqual(
+                sorted(path.name for path in output_dir.iterdir()),
+                [
+                    "dispatch-message-log.json",
+                    "flow-message-log.json",
+                    "ledger.json",
+                    "node-state",
+                    "receipts.json",
+                    "worker-message-logs",
+                ],
+            )
+            self.assertEqual(
+                sorted(path.name for path in (output_dir / "node-state").iterdir()),
+                ["local-node-a.json"],
+            )
+            self.assertEqual(
+                sorted(
+                    path.name for path in (output_dir / "worker-message-logs").iterdir()
+                ),
+                ["local-node-a.json"],
+            )
 
 
 if __name__ == "__main__":

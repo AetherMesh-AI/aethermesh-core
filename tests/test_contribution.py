@@ -10,8 +10,8 @@ from aethermesh_core.contribution import (
 )
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.runner import LocalRunner
-from aethermesh_core.validation import validate_job_result
 from aethermesh_core.models import NodeIdentity
+from aethermesh_core.validation import validate_job_result
 
 
 class ContributionScoringTests(unittest.TestCase):

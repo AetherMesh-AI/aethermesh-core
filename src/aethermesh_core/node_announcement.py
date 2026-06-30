@@ -20,7 +20,9 @@ def normalize_announcement_capabilities(
 ) -> tuple[str, ...]:
     """Return deterministic, unique, non-empty node capabilities."""
 
-    raw_capabilities = DEFAULT_LOCAL_CAPABILITIES if capabilities is None else capabilities
+    raw_capabilities = (
+        DEFAULT_LOCAL_CAPABILITIES if capabilities is None else capabilities
+    )
     normalized: set[str] = set()
     for index, capability in enumerate(raw_capabilities):
         if not isinstance(capability, str) or capability == "":

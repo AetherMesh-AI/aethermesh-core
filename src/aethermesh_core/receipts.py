@@ -176,10 +176,13 @@ def _json_compatible_value(value: Any) -> Any:
 
 
 def _validate_receipt_document(document: dict[str, Any]) -> None:
-    if document.get("version") != RECEIPT_DOCUMENT_VERSION:
+    version = document.get("version")
+    if version != RECEIPT_DOCUMENT_VERSION or isinstance(version, bool):
         raise ReceiptPersistenceError("receipt JSON must contain version 1")
     if document.get("run_source") != RUN_SOURCE:
-        raise ReceiptPersistenceError("receipt JSON field 'run_source' must be run-local-flow")
+        raise ReceiptPersistenceError(
+            "receipt JSON field 'run_source' must be run-local-flow"
+        )
     receipts = document.get("receipts")
     if not isinstance(receipts, list):
         raise ReceiptPersistenceError("receipt JSON field 'receipts' must be a list")
@@ -194,7 +197,10 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
             "result_message_id",
             "result_status",
         ):
-            if not isinstance(receipt.get(field_name), str) or receipt[field_name] == "":
+            if (
+                not isinstance(receipt.get(field_name), str)
+                or receipt[field_name] == ""
+            ):
                 raise ReceiptPersistenceError(
                     f"receipt entry {index} field '{field_name}' must be a non-empty string"
                 )
