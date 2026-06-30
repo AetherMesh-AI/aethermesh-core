@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import re
 import subprocess
 import sys
 import tempfile
 import tomllib
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -159,6 +162,149 @@ def command_mutation_score(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_workflow_security(_: argparse.Namespace) -> int:
+    workflow_dir = ROOT / ".github" / "workflows"
+    violations: list[str] = []
+    if not workflow_dir.exists():
+        print("No GitHub workflow directory found.")
+        return 0
+    for path in sorted(workflow_dir.glob("*.y*ml")):
+        rel = path.relative_to(ROOT)
+        text = path.read_text(encoding="utf-8")
+        lowered = text.lower()
+        if "pull_request_target:" in lowered:
+            violations.append(
+                f"{rel}: pull_request_target is not allowed for PR checks"
+            )
+        if re.search(r"permissions:\s*write-all\b", lowered):
+            violations.append(f"{rel}: permissions: write-all is not allowed")
+        if re.search(r"curl\b[^\n|]*\|\s*(?:sh|bash)\b", text):
+            violations.append(f"{rel}: curl-to-shell install pattern is not allowed")
+        if "${{ secrets." in text and "pull_request:" in lowered:
+            violations.append(f"{rel}: PR workflows must not expose repository secrets")
+        for line_number, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("uses:") and "@" not in stripped:
+                violations.append(
+                    f"{rel}:{line_number}: action reference must include a version"
+                )
+    if violations:
+        print("Workflow security violations found:")
+        print("\n".join(violations))
+        return 1
+    print("Workflow security check passed.")
+    return 0
+
+
+def command_pr_size(args: argparse.Namespace) -> int:
+    result = run(["git", "diff", "--numstat", f"{args.base}...HEAD"])
+    if result.returncode != 0:
+        print(result.stdout, end="")
+        return result.returncode
+    changed_files = 0
+    changed_lines = 0
+    binary_files = 0
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) < 3:
+            continue
+        added, deleted, _path = parts[:3]
+        changed_files += 1
+        if added == "-" or deleted == "-":
+            binary_files += 1
+            continue
+        changed_lines += int(added) + int(deleted)
+    print(
+        f"PR size: files={changed_files}, changed_lines={changed_lines}, binary_files={binary_files}"
+    )
+    failures = []
+    if changed_files > args.max_files:
+        failures.append(f"files {changed_files} > {args.max_files}")
+    if changed_lines > args.max_lines:
+        failures.append(f"changed_lines {changed_lines} > {args.max_lines}")
+    if binary_files > args.max_binary_files:
+        failures.append(f"binary_files {binary_files} > {args.max_binary_files}")
+    if failures:
+        print("PR size check failed: " + "; ".join(failures))
+        return 1
+    return 0
+
+
+def _urlsafe_b64_digest(data: bytes) -> str:
+    return (
+        base64.urlsafe_b64encode(hashlib.sha256(data).digest())
+        .rstrip(b"=")
+        .decode("ascii")
+    )
+
+
+def _verify_wheel_record(wheel: Path) -> list[str]:
+    violations: list[str] = []
+    with zipfile.ZipFile(wheel) as archive:
+        names = archive.namelist()
+        record_names = [name for name in names if name.endswith(".dist-info/RECORD")]
+        if len(record_names) != 1:
+            return [
+                f"{wheel.name}: expected exactly one RECORD file, found {len(record_names)}"
+            ]
+        record = archive.read(record_names[0]).decode("utf-8").splitlines()
+        recorded_paths = set()
+        for row in record:
+            columns = row.split(",")
+            if len(columns) < 3:
+                violations.append(f"{wheel.name}: malformed RECORD row: {row}")
+                continue
+            path, digest, size = columns[:3]
+            recorded_paths.add(path)
+            if path == record_names[0]:
+                continue
+            if path not in names:
+                violations.append(
+                    f"{wheel.name}: RECORD references missing file {path}"
+                )
+                continue
+            data = archive.read(path)
+            expected_digest = "sha256=" + _urlsafe_b64_digest(data)
+            if digest != expected_digest:
+                violations.append(f"{wheel.name}: digest mismatch for {path}")
+            if size and int(size) != len(data):
+                violations.append(f"{wheel.name}: size mismatch for {path}")
+        missing_record = sorted(set(names) - recorded_paths)
+        if missing_record:
+            violations.append(
+                f"{wheel.name}: files missing from RECORD: {', '.join(missing_record[:10])}"
+            )
+    return violations
+
+
+def command_artifact_provenance(args: argparse.Namespace) -> int:
+    dist = ROOT / args.dist
+    if not dist.exists():
+        print(f"Artifact directory does not exist: {dist}")
+        return 1
+    artifacts = sorted(path for path in dist.iterdir() if path.is_file())
+    wheels = [path for path in artifacts if path.suffix == ".whl"]
+    sdists = [path for path in artifacts if path.name.endswith(".tar.gz")]
+    violations: list[str] = []
+    if len(wheels) != 1:
+        violations.append(f"expected exactly one wheel, found {len(wheels)}")
+    if len(sdists) != 1:
+        violations.append(f"expected exactly one sdist, found {len(sdists)}")
+    for artifact in artifacts:
+        digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        print(f"{artifact.name} sha256={digest}")
+    for wheel in wheels:
+        violations.extend(_verify_wheel_record(wheel))
+    if violations:
+        print("Artifact provenance check failed:")
+        print("\n".join(violations))
+        return 1
+    print("Artifact provenance check passed.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -176,6 +322,20 @@ def main() -> int:
     mutation = sub.add_parser("mutation-score")
     mutation.add_argument("--minimum", type=float, default=95.0)
     mutation.set_defaults(func=command_mutation_score)
+
+    workflow_security = sub.add_parser("workflow-security")
+    workflow_security.set_defaults(func=command_workflow_security)
+
+    pr_size = sub.add_parser("pr-size")
+    pr_size.add_argument("--base", default="origin/main")
+    pr_size.add_argument("--max-files", type=int, default=80)
+    pr_size.add_argument("--max-lines", type=int, default=3000)
+    pr_size.add_argument("--max-binary-files", type=int, default=0)
+    pr_size.set_defaults(func=command_pr_size)
+
+    provenance = sub.add_parser("artifact-provenance")
+    provenance.add_argument("--dist", default="dist")
+    provenance.set_defaults(func=command_artifact_provenance)
 
     args = parser.parse_args()
     return int(args.func(args))

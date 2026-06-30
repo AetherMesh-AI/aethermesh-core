@@ -236,5 +236,66 @@ jobs:
         run: |
           python -m venv /tmp/aethermesh-install-check
           /tmp/aethermesh-install-check/bin/python -m pip install --upgrade pip
-          /tmp/aethermesh-install-check/bin/python -m pip install dist/*.whl
+          /tmp/aethermesh-install-check/bin/python -m pip install --force-reinstall dist/*.whl
           /tmp/aethermesh-install-check/bin/aethermesh-core --help
+
+  python-workflow-security-check:
+    name: Python - Workflow Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: workflow security check passes
+        run: python scripts/ci_quality_gates.py workflow-security
+
+  python-pr-size-check:
+    name: Python - PR Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: PR size stays reviewable
+        run: |
+          git fetch origin "${GITHUB_BASE_REF:-main}" --depth=1
+          python scripts/ci_quality_gates.py pr-size --base "origin/${GITHUB_BASE_REF:-main}" --max-files 80 --max-lines 8000 --max-binary-files 0
+
+  python-flaky-test-check:
+    name: Python - Flaky Test Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+      - name: repeated pytest passes
+        run: |
+          for attempt in 1 2 3; do
+            echo "Flaky-test pass ${attempt}/3"
+            python -m pytest -q tests
+          done
+
+  python-artifact-provenance-check:
+    name: Python - Artifact Provenance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build artifacts from source
+        run: |
+          python -m pip install --upgrade pip build
+          rm -rf dist build *.egg-info src/*.egg-info
+          python -m build
+      - name: Verify artifact provenance metadata
+        run: python scripts/ci_quality_gates.py artifact-provenance --dist dist
