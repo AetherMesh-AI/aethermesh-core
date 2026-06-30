@@ -36,6 +36,21 @@ class LocalJobBatch:
 def load_job_manifest(path: str | Path) -> LocalJobBatch:
     """Load and validate a version 1 local job-batch manifest."""
 
+    document = _load_manifest_document(path)
+    return LocalJobBatch(
+        nodes=_parse_nodes(document.get("nodes")),
+        jobs=_parse_jobs(document.get("jobs")),
+    )
+
+
+def load_manifest_jobs(path: str | Path) -> list[Job]:
+    """Load only jobs from a version 1 manifest, ignoring any node roster."""
+
+    document = _load_manifest_document(path)
+    return _parse_jobs(document.get("jobs"))
+
+
+def _load_manifest_document(path: str | Path) -> dict[str, Any]:
     manifest_path = Path(path)
     try:
         raw_manifest = manifest_path.read_text(encoding="utf-8")
@@ -55,11 +70,7 @@ def load_job_manifest(path: str | Path) -> LocalJobBatch:
         raise ManifestError("manifest version must be integer 1")
     if version != 1:
         raise ManifestError(f"unsupported manifest version: {version}")
-
-    return LocalJobBatch(
-        nodes=_parse_nodes(document.get("nodes")),
-        jobs=_parse_jobs(document.get("jobs")),
-    )
+    return document
 
 
 def _parse_nodes(value: Any) -> list[ScheduledNode]:
