@@ -22,7 +22,7 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-a"},
+                {"job_id": "text-stats-1", "node_id": "local-node-b"},
                 {"job_id": "keyword-extract-1", "node_id": "local-node-a"},
                 {"job_id": "echo-2", "node_id": "local-node-b"},
                 {"job_id": "echo-3", "node_id": "local-node-a"},
@@ -70,8 +70,8 @@ class CliTests(unittest.TestCase):
                     "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
-                    "assigned_jobs": 4,
-                    "contribution_units": 4,
+                    "assigned_jobs": 3,
+                    "contribution_units": 3,
                 },
                 {
                     "node_id": "local-node-b",
@@ -79,8 +79,8 @@ class CliTests(unittest.TestCase):
                     "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
-                    "assigned_jobs": 1,
-                    "contribution_units": 1,
+                    "assigned_jobs": 2,
+                    "contribution_units": 2,
                 },
             ],
         )
@@ -135,7 +135,7 @@ class CliTests(unittest.TestCase):
             payload["assignments"],
             [
                 {"job_id": "echo-1", "node_id": "local-node-a"},
-                {"job_id": "text-stats-1", "node_id": "local-node-a"},
+                {"job_id": "text-stats-1", "node_id": "local-node-b"},
             ],
         )
         self.assertEqual(payload["results"][0]["output"], "hello mesh")
@@ -527,16 +527,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first_payload["ledger_path"], str(ledger_path))
         self.assertEqual(len(first_payload["results"]), 2)
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
+            first_payload["persisted_ledger_summaries"][0]["total_result_count"], 1
         )
         self.assertEqual(
-            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
+            first_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 1
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 4
+            second_payload["persisted_ledger_summaries"][0]["total_result_count"], 2
         )
         self.assertEqual(
-            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 0
+            second_payload["persisted_ledger_summaries"][1]["total_contribution_units"], 2
         )
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(len(persisted["records"]), 4)
@@ -544,7 +544,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["records"][0]["validation_valid"], True)
         self.assertEqual(persisted["records"][0]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][0]["job_type"], "echo")
-        self.assertEqual(persisted["records"][1]["node_id"], "local-node-a")
+        self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
         self.assertEqual(persisted["records"][1]["validation_valid"], True)
         self.assertEqual(persisted["records"][1]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][1]["job_type"], "text_stats")

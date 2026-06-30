@@ -38,7 +38,6 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         for message in dispatch_messages
         if message.message_type == "job_assigned"
     }
-    flow_messages_by_id = {message.message_id: message for message in flow_messages}
 
     expected_ledger_claims: Counter[tuple[Any, ...]] = Counter()
     for index, receipt in enumerate(receipts):
@@ -52,21 +51,25 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         _assert_assignment_matches_receipt(context, receipt, assignment_message.payload)
 
         result_message_id = receipt["result_message_id"]
-        result_message = flow_messages_by_id.get(result_message_id)
-        if result_message is None:
-            raise FlowAuditError(
-                f"{context} result_message_id not found in flow log: {result_message_id}"
-            )
+        result_message = _find_flow_message_for_receipt(
+            context,
+            flow_messages,
+            receipt,
+            message_id=result_message_id,
+            message_type="job_result_reported",
+        )
         _assert_result_message_matches_receipt(context, receipt, result_message)
 
         contribution_message_id = receipt.get("contribution_message_id")
         if not isinstance(contribution_message_id, str) or contribution_message_id == "":
             raise FlowAuditError(f"{context} contribution_message_id must be present")
-        contribution_message = flow_messages_by_id.get(contribution_message_id)
-        if contribution_message is None:
-            raise FlowAuditError(
-                f"{context} contribution_message_id not found in flow log: {contribution_message_id}"
-            )
+        contribution_message = _find_flow_message_for_receipt(
+            context,
+            flow_messages,
+            receipt,
+            message_id=contribution_message_id,
+            message_type="contribution_recorded",
+        )
         _assert_contribution_message_matches_receipt(
             context, receipt, contribution_message
         )
@@ -115,6 +118,48 @@ def _receipt_context(index: int, receipt: dict[str, Any]) -> str:
     return (
         f"receipt entry {index} "
         f"job={receipt.get('job_id')} node={receipt.get('node_id')}"
+    )
+
+
+def _find_flow_message_for_receipt(
+    context: str,
+    flow_messages: list[MeshMessage],
+    receipt: dict[str, Any],
+    *,
+    message_id: str,
+    message_type: str,
+) -> MeshMessage:
+    """Find the flow message that matches one receipt.
+
+    Worker logs use deterministic local message ids per node, so a merged flow
+    log can contain the same emitted message id from multiple nodes. Match by id
+    plus receipt identity instead of treating emitted ids as globally unique.
+    """
+
+    def matches_receipt_identity(message: MeshMessage) -> bool:
+        if message.payload.get("job_id") != receipt["job_id"]:
+            return False
+        if message_type == "job_result_reported":
+            return message.sender_node_id == receipt["node_id"]
+        if message_type == "contribution_recorded":
+            return message.payload.get("node_id") == receipt["node_id"]
+        return False
+
+    matches = [
+        message
+        for message in flow_messages
+        if message.message_id == message_id
+        and message.message_type == message_type
+        and matches_receipt_identity(message)
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FlowAuditError(
+            f"{context} {message_type} message_id not found in flow log: {message_id}"
+        )
+    raise FlowAuditError(
+        f"{context} {message_type} message_id is ambiguous in flow log: {message_id}"
     )
 
 
