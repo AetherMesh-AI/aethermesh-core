@@ -370,7 +370,9 @@ class PeerRegistryTests(unittest.TestCase):
             self.fail("metadata must be a dictionary")
         self.assertEqual(metadata.get("heartbeat_counts_by_node"), {"node-a": 3})
 
-    def test_peer_roster_omits_empty_capabilities_for_manifest_compatibility(self) -> None:
+    def test_peer_roster_omits_empty_capabilities_for_manifest_compatibility(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "messages.json"
             _write_message_log(

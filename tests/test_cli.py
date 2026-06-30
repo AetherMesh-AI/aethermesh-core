@@ -1803,8 +1803,9 @@ class CliTests(unittest.TestCase):
                 )
             written = json.loads(roster_path.read_text(encoding="utf-8"))
             roster_path.write_text("sentinel", encoding="utf-8")
-            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
-                stderr
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(stderr),
             ):
                 failure_exit_code = main(
                     [

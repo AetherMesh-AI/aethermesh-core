@@ -119,7 +119,9 @@ def peer_roster_document(message_log_paths: Sequence[str | Path]) -> dict[str, o
     sorted_node_ids = sorted(selected)
     return {
         "version": 1,
-        "nodes": [_peer_roster_node_entry(selected[node_id]) for node_id in sorted_node_ids],
+        "nodes": [
+            _peer_roster_node_entry(selected[node_id]) for node_id in sorted_node_ids
+        ],
         "metadata": {
             "source_message_log_paths": [str(path) for path in message_log_paths],
             "peer_count": len(selected),
