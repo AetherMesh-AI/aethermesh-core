@@ -257,6 +257,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli audit-loc
 
 The audit command reads the dispatch log, flow log, ledger, and receipts, verifies that receipts reference assignment/result/contribution messages and that credited receipt units match ledger totals, then prints deterministic JSON counts. Missing, malformed, unsupported-version, or inconsistent artifacts return a concise nonzero CLI error without rewriting the artifact directory.
 
+Replay local assignment and result logs through an independent validator artifact without running workers or mutating the input logs/ledger:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli validate-local-results --assignment-log-path /tmp/aethermesh-local-flow/dispatch-message-log.json --result-log-path /tmp/aethermesh-local-flow/flow-message-log.json --validation-log-path /tmp/aethermesh-local-flow/validation-message-log.json
+```
+
+The validation replay command reads `job_assigned` and `job_result_reported` messages, matches them by correlation/job id, rebuilds the assigned job and reported result, recomputes `validate_job_result`, and writes a version 1 `local_validation_report` with deterministic `job_result_validated` entries. It refuses to overwrite an existing validation report and returns a concise nonzero error for malformed logs, missing assignments, duplicate assignment keys, duplicate result claims, or absent required payload fields. Invalid worker results are recorded in the report with `valid: false` instead of crashing the command.
+
 To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
 
 ```bash
