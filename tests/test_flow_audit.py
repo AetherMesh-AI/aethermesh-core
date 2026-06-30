@@ -1,7 +1,10 @@
 import json
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
+
+import pytest
 
 from aethermesh_core.cli import run_local_flow
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
@@ -153,6 +156,179 @@ class FlowAuditTests(unittest.TestCase):
             after = _artifact_contents(output_dir)
 
         self.assertEqual(after, before)
+
+
+FlowTamper = Callable[[Path], None]
+
+
+@pytest.mark.parametrize(
+    ("tamper", "match"),
+    [
+        (
+            lambda output_dir: _set_receipt_field(
+                output_dir, 0, "assignment_message_id", "missing-assignment"
+            ),
+            "assignment_message_id not found",
+        ),
+        (
+            lambda output_dir: _set_receipt_field(
+                output_dir, 0, "result_message_id", "missing-result"
+            ),
+            "job_result_reported message_id not found",
+        ),
+        (
+            lambda output_dir: _set_receipt_field(
+                output_dir, 0, "contribution_message_id", ""
+            ),
+            "contribution_message_id must be present",
+        ),
+        (
+            lambda output_dir: _set_dispatch_assignment_payload(
+                output_dir, "msg-0003", "job_type", "text_stats"
+            ),
+            "assignment.job_type mismatch",
+        ),
+        (
+            lambda output_dir: _set_flow_message_sender(
+                output_dir, "job_result_reported", "echo-1", "local-node-b"
+            ),
+            "job_result_reported message_id not found",
+        ),
+        (
+            lambda output_dir: _set_flow_message_payload(
+                output_dir, "job_result_reported", "echo-1", "status", "failed"
+            ),
+            "result.status mismatch",
+        ),
+        (
+            lambda output_dir: _set_flow_message_payload(
+                output_dir, "contribution_recorded", "echo-1", "job_id", "other-job"
+            ),
+            "contribution_recorded message_id not found",
+        ),
+        (
+            lambda output_dir: _set_flow_message_payload(
+                output_dir, "contribution_recorded", "echo-1", "status", "failed"
+            ),
+            "contribution.status mismatch",
+        ),
+        (
+            lambda output_dir: _set_flow_message_payload(
+                output_dir, "contribution_recorded", "echo-1", "valid", False
+            ),
+            "contribution.valid mismatch",
+        ),
+        (
+            lambda output_dir: _duplicate_flow_message(
+                output_dir, "job_result_reported", "echo-1"
+            ),
+            "job_result_reported message_id is ambiguous",
+        ),
+    ],
+)
+def test_audit_local_flow_rejects_tampered_cross_artifact_fields(
+    tamper: FlowTamper, match: str
+) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        manifest_path = _write_manifest(Path(temp_dir))
+        output_dir = Path(temp_dir) / "flow"
+        run_local_flow(str(manifest_path), str(output_dir))
+        tamper(output_dir)
+        before = _artifact_contents(output_dir)
+        with pytest.raises(FlowAuditError, match=match):
+            audit_local_flow(output_dir)
+        after = _artifact_contents(output_dir)
+    assert after == before
+
+
+def _write_json(path: Path, document: dict[str, object]) -> None:
+    path.write_text(
+        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def _load_json(path: Path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _set_receipt_field(
+    output_dir: Path, index: int, field_name: str, value: object
+) -> None:
+    path = output_dir / "receipts.json"
+    document = _load_json(path)
+    receipts = document["receipts"]
+    assert isinstance(receipts, list)
+    receipt = receipts[index]
+    assert isinstance(receipt, dict)
+    receipt[field_name] = value
+    _write_json(path, document)
+
+
+def _set_dispatch_assignment_payload(
+    output_dir: Path, message_id: str, field_name: str, value: object
+) -> None:
+    path = output_dir / "dispatch-message-log.json"
+    document = _load_json(path)
+    message = _find_message(document, "job_assigned", "job_id", "echo-1", message_id)
+    payload = message["payload"]
+    assert isinstance(payload, dict)
+    payload[field_name] = value
+    _write_json(path, document)
+
+
+def _set_flow_message_sender(
+    output_dir: Path, message_type: str, job_id: str, sender_node_id: str
+) -> None:
+    path = output_dir / "flow-message-log.json"
+    document = _load_json(path)
+    message = _find_message(document, message_type, "job_id", job_id)
+    message["sender_node_id"] = sender_node_id
+    _write_json(path, document)
+
+
+def _set_flow_message_payload(
+    output_dir: Path, message_type: str, job_id: str, field_name: str, value: object
+) -> None:
+    path = output_dir / "flow-message-log.json"
+    document = _load_json(path)
+    message = _find_message(document, message_type, "job_id", job_id)
+    payload = message["payload"]
+    assert isinstance(payload, dict)
+    payload[field_name] = value
+    _write_json(path, document)
+
+
+def _duplicate_flow_message(output_dir: Path, message_type: str, job_id: str) -> None:
+    path = output_dir / "flow-message-log.json"
+    document = _load_json(path)
+    messages = document["messages"]
+    assert isinstance(messages, list)
+    messages.append(dict(_find_message(document, message_type, "job_id", job_id)))
+    _write_json(path, document)
+
+
+def _find_message(
+    document: dict[str, object],
+    message_type: str,
+    payload_field: str,
+    payload_value: object,
+    message_id: str | None = None,
+) -> dict[str, object]:
+    messages = document["messages"]
+    assert isinstance(messages, list)
+    for message in messages:
+        assert isinstance(message, dict)
+        payload = message.get("payload")
+        if (
+            isinstance(payload, dict)
+            and message.get("message_type") == message_type
+            and payload.get(payload_field) == payload_value
+            and (message_id is None or message.get("message_id") == message_id)
+        ):
+            return message
+    raise AssertionError(
+        f"missing {message_type} message for {payload_field}={payload_value}"
+    )
 
 
 def _write_manifest(directory: Path) -> Path:

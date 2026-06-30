@@ -1,7 +1,13 @@
 import unittest
 from typing import Any, cast
 
-from aethermesh_core.messages import MeshMessage, SUPPORTED_MESSAGE_TYPES
+import pytest
+
+from aethermesh_core.messages import (
+    MeshMessage,
+    SUPPORTED_MESSAGE_TYPES,
+    message_from_mapping,
+)
 
 
 class MeshMessageTests(unittest.TestCase):
@@ -118,6 +124,100 @@ class MeshMessageTests(unittest.TestCase):
                 payload=cast(Any, []),
                 correlation_id=None,
             )
+
+    def test_message_from_mapping_defaults_optional_fields_and_preserves_payload(
+        self,
+    ) -> None:
+        message = message_from_mapping(
+            {
+                "message_id": "msg-0001",
+                "message_type": "job_assigned",
+                "sender_node_id": "scheduler",
+                "recipient_node_id": None,
+                "payload": {"job_id": "echo-1", "nested": [1, True, None]},
+            }
+        )
+
+        self.assertEqual(message.message_id, "msg-0001")
+        self.assertEqual(message.message_type, "job_assigned")
+        self.assertEqual(message.sender_node_id, "scheduler")
+        self.assertIsNone(message.recipient_node_id)
+        self.assertIsNone(message.correlation_id)
+        self.assertEqual(
+            message.payload, {"job_id": "echo-1", "nested": [1, True, None]}
+        )
+
+
+@pytest.mark.parametrize(
+    ("entry", "message"),
+    [
+        ([], "must be an object"),
+        ({"message_type": "job_assigned", "sender_node_id": "node-a"}, "message_id"),
+        (
+            {
+                "message_id": "",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+            },
+            "message_id",
+        ),
+        ({"message_id": "msg-1", "sender_node_id": "node-a"}, "message_type"),
+        (
+            {"message_id": "msg-1", "message_type": "", "sender_node_id": "node-a"},
+            "message_type",
+        ),
+        ({"message_id": "msg-1", "message_type": "job_assigned"}, "sender_node_id"),
+        (
+            {
+                "message_id": "msg-1",
+                "message_type": "job_assigned",
+                "sender_node_id": "",
+            },
+            "sender_node_id",
+        ),
+        (
+            {
+                "message_id": "msg-1",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "recipient_node_id": "",
+            },
+            "recipient_node_id",
+        ),
+        (
+            {
+                "message_id": "msg-1",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "payload": [],
+            },
+            "payload must be a dictionary",
+        ),
+        (
+            {
+                "message_id": "msg-1",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "payload": {1: "not-json-key"},
+            },
+            "payload keys must be strings",
+        ),
+        (
+            {
+                "message_id": "msg-1",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+                "correlation_id": "",
+            },
+            "correlation_id",
+        ),
+    ],
+)
+def test_message_from_mapping_rejects_malformed_entries(
+    entry: object, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        message_from_mapping(entry)
 
 
 if __name__ == "__main__":

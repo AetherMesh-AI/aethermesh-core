@@ -5,10 +5,181 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.cli import main
+from aethermesh_core.cli import build_parser, main
 
 
 class CliTests(unittest.TestCase):
+    def test_build_parser_declares_command_argument_contracts(self) -> None:
+        parser = build_parser()
+
+        self.assertEqual(parser.prog, "aethermesh-core")
+        help_text = parser.format_help()
+        for command in [
+            "run-demo",
+            "simulate-local",
+            "run-local-batch",
+            "dispatch-local-batch",
+            "run-local-flow",
+            "audit-local-flow",
+            "ledger-summary",
+            "peer-summary",
+            "announce-local-node",
+            "materialize-local-inboxes",
+            "process-local-inbox",
+        ]:
+            self.assertIn(command, help_text)
+
+        demo = parser.parse_args(["run-demo"])
+        self.assertEqual(demo.command, "run-demo")
+        self.assertEqual(demo.node_id, None)
+        self.assertEqual(demo.identity_path, None)
+        self.assertEqual(demo.message, "hello mesh")
+        self.assertEqual(demo.include_ledger, False)
+        self.assertEqual(demo.ledger_path, None)
+
+        batch = parser.parse_args(
+            [
+                "run-local-batch",
+                "--manifest",
+                "manifest.json",
+                "--ledger-path",
+                "ledger.json",
+                "--message-log-path",
+                "messages.json",
+            ]
+        )
+        self.assertEqual(batch.command, "run-local-batch")
+        self.assertEqual(batch.manifest, "manifest.json")
+        self.assertEqual(batch.ledger_path, "ledger.json")
+        self.assertEqual(batch.message_log_path, "messages.json")
+
+        dispatch = parser.parse_args(
+            [
+                "dispatch-local-batch",
+                "--manifest",
+                "manifest.json",
+                "--message-log-path",
+                "dispatch.json",
+            ]
+        )
+        self.assertEqual(dispatch.command, "dispatch-local-batch")
+        self.assertEqual(dispatch.manifest, "manifest.json")
+        self.assertEqual(dispatch.message_log_path, "dispatch.json")
+
+        flow = parser.parse_args(
+            ["run-local-flow", "--manifest", "manifest.json", "--output-dir", "out"]
+        )
+        self.assertEqual(flow.command, "run-local-flow")
+        self.assertEqual(flow.manifest, "manifest.json")
+        self.assertEqual(flow.output_dir, "out")
+
+        audit = parser.parse_args(["audit-local-flow", "--output-dir", "out"])
+        self.assertEqual(audit.command, "audit-local-flow")
+        self.assertEqual(audit.output_dir, "out")
+
+        ledger = parser.parse_args(["ledger-summary", "--ledger-path", "ledger.json"])
+        self.assertEqual(ledger.command, "ledger-summary")
+        self.assertEqual(ledger.ledger_path, "ledger.json")
+
+        peers = parser.parse_args(
+            ["peer-summary", "--message-log-path", "messages.json"]
+        )
+        self.assertEqual(peers.command, "peer-summary")
+        self.assertEqual(peers.message_log_path, "messages.json")
+
+        announcement = parser.parse_args(
+            [
+                "announce-local-node",
+                "--node-id",
+                "node-a",
+                "--message-log-path",
+                "announce.json",
+                "--status",
+                "offline",
+                "--capability",
+                "echo",
+                "--capability",
+                "text_stats",
+            ]
+        )
+        self.assertEqual(announcement.command, "announce-local-node")
+        self.assertEqual(announcement.node_id, "node-a")
+        self.assertEqual(announcement.message_log_path, "announce.json")
+        self.assertEqual(announcement.status, "offline")
+        self.assertEqual(announcement.capability, ["echo", "text_stats"])
+
+        materialize = parser.parse_args(
+            [
+                "materialize-local-inboxes",
+                "--message-log-path",
+                "dispatch.json",
+                "--transport-dir",
+                "transport",
+            ]
+        )
+        self.assertEqual(materialize.command, "materialize-local-inboxes")
+        self.assertEqual(materialize.message_log_path, "dispatch.json")
+        self.assertEqual(materialize.transport_dir, "transport")
+
+        inbox = parser.parse_args(
+            [
+                "process-local-inbox",
+                "--node-id",
+                "node-a",
+                "--message-log-path",
+                "messages.json",
+                "--transport-dir",
+                "transport",
+                "--ledger-path",
+                "ledger.json",
+                "--output-message-log-path",
+                "worker.json",
+                "--node-state-path",
+                "node-state.json",
+            ]
+        )
+        self.assertEqual(inbox.command, "process-local-inbox")
+        self.assertEqual(inbox.node_id, "node-a")
+        self.assertEqual(inbox.message_log_path, "messages.json")
+        self.assertEqual(inbox.transport_dir, "transport")
+        self.assertEqual(inbox.ledger_path, "ledger.json")
+        self.assertEqual(inbox.output_message_log_path, "worker.json")
+        self.assertEqual(inbox.node_state_path, "node-state.json")
+
+    def test_build_parser_help_snapshots_stay_stable(self) -> None:
+        parser = build_parser()
+        subparsers_action = next(
+            action for action in parser._actions if action.dest == "command"
+        )
+        subparser_help = {
+            command: self._normalize_parser_help(subparser.format_help())
+            for command, subparser in dict(subparsers_action.choices).items()
+        }
+        self.assertEqual(
+            self._normalize_parser_help(parser.format_help()),
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+        )
+        self.assertEqual(
+            subparser_help,
+            {
+                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to an ephemeral id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
+                "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
+                "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
+                "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
+                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts.",
+                "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
+                "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
+                "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
+                "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
+                "materialize-local-inboxes": "usage: aethermesh-core materialize-local-inboxes [-h] --message-log-path MESSAGE_LOG_PATH --transport-dir TRANSPORT_DIR options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to a version 1 local dispatch/message log. --transport-dir TRANSPORT_DIR Directory where per-node local transport inboxes should be written.",
+                "process-local-inbox": "usage: aethermesh-core process-local-inbox [-h] --node-id NODE_ID [--message-log-path MESSAGE_LOG_PATH] [--transport-dir TRANSPORT_DIR] [--ledger-path LEDGER_PATH] [--output-message-log-path OUTPUT_MESSAGE_LOG_PATH] [--node-state-path NODE_STATE_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Local node id whose replayed inbox should be processed. --message-log-path MESSAGE_LOG_PATH Path to a version 1 local message log produced by run-local-batch. --transport-dir TRANSPORT_DIR Read this node's file-backed local transport inbox instead of a message log. --ledger-path LEDGER_PATH Opt in to persisting validation-gated contribution records. --output-message-log-path OUTPUT_MESSAGE_LOG_PATH Opt in to writing replayed plus emitted worker messages as a local message log. --node-state-path NODE_STATE_PATH Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
+            },
+        )
+
+    @staticmethod
+    def _normalize_parser_help(text: str) -> str:
+        return " ".join(text.split()).replace("run- local", "run-local")
+
     def test_simulate_local_prints_deterministic_json_shape(self) -> None:
         stdout = io.StringIO()
 
