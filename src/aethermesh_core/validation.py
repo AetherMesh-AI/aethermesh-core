@@ -10,6 +10,7 @@ from aethermesh_core.runner import (
     build_keyword_extract_output,
     build_text_chunk_output,
     build_text_embed_output,
+    build_text_retrieve_output,
     build_text_stats_output,
 )
 
@@ -43,6 +44,7 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
         "keyword_extract",
         "text_chunk",
         "text_embed",
+        "text_retrieve",
         "text_stats",
     }:
         return _invalid(job, result, "unsupported_job_type")
@@ -110,6 +112,20 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
             expected_output = build_text_embed_output(job.payload)
         except ValueError:
             return _invalid(job, result, "malformed_text_embed_payload")
+        if result.output != expected_output:
+            return _invalid(job, result, "output_mismatch")
+        return ValidationResult(
+            job_id=job.job_id,
+            result_job_id=result.job_id,
+            valid=True,
+            reason="ok",
+        )
+
+    if job.job_type == "text_retrieve":
+        try:
+            expected_output = build_text_retrieve_output(job.payload)
+        except ValueError:
+            return _invalid(job, result, "malformed_text_retrieve_payload")
         if result.output != expected_output:
             return _invalid(job, result, "output_mismatch")
         return ValidationResult(

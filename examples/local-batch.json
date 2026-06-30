@@ -39,6 +39,19 @@
         "text": "AetherMesh nodes prepare deterministic local feature vectors.",
         "dimensions": 8
       }
+    },
+    {
+      "job_id": "text-retrieve-1",
+      "job_type": "text_retrieve",
+      "payload": {
+        "query": "local mesh context",
+        "documents": [
+          {"id": "doc-a", "text": "Local AetherMesh nodes execute validation-gated work."},
+          {"id": "doc-b", "text": "Context retrieval ranks candidate text for later AI tasks."},
+          {"id": "doc-c", "text": "Receipts and ledgers keep local mesh work auditable."}
+        ],
+        "limit": 2
+      }
     }
   ]
 }

@@ -5,6 +5,7 @@ from aethermesh_core.contribution import (
     KEYWORD_EXTRACT_MAX_UNITS,
     TEXT_CHUNK_MAX_UNITS,
     TEXT_EMBED_MAX_UNITS,
+    TEXT_RETRIEVE_CONTRIBUTION_UNITS,
     TEXT_STATS_MAX_UNITS,
     score_validated_contribution,
 )
@@ -94,6 +95,26 @@ class ContributionScoringTests(unittest.TestCase):
         self.assertEqual(
             score_validated_contribution(capped_job, capped_result),
             TEXT_EMBED_MAX_UNITS,
+        )
+
+    def test_text_retrieve_scores_one_unit_after_validation(self) -> None:
+        job, result = _run(
+            Job(
+                "retrieve",
+                "text_retrieve",
+                {
+                    "query": "alpha beta",
+                    "documents": [
+                        {"id": "doc-a", "text": "alpha beta"},
+                        {"id": "doc-b", "text": "alpha"},
+                    ],
+                },
+            )
+        )
+
+        self.assertEqual(
+            score_validated_contribution(job, result),
+            TEXT_RETRIEVE_CONTRIBUTION_UNITS,
         )
 
     def test_invalid_failed_unsupported_mismatched_or_malformed_results_score_zero(

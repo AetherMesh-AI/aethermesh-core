@@ -134,6 +134,56 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.contribution_record.job_type, "text_embed")
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 3)
 
+    def test_successful_text_retrieve_assignment_is_processed_from_inbox(self) -> None:
+        service, bus, ledger = _service("node-a")
+        bus.send(
+            _assignment(
+                message_id="msg-0001",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={
+                    "job_id": "text-retrieve-1",
+                    "job_type": "text_retrieve",
+                    "payload": {
+                        "query": "alpha beta",
+                        "documents": [
+                            {"id": "doc-b", "text": "alpha only"},
+                            {"id": "doc-a", "text": "alpha beta"},
+                        ],
+                    },
+                },
+            )
+        )
+
+        result = service.process_inbox()
+
+        processed = result.processed[0]
+        self.assertEqual(processed.result.status, "completed")
+        self.assertEqual(
+            processed.result.output,
+            {
+                "query_terms": ["alpha", "beta"],
+                "matches": [
+                    {
+                        "id": "doc-a",
+                        "score": 1.0,
+                        "matched_term_count": 2,
+                        "matched_terms": ["alpha", "beta"],
+                    },
+                    {
+                        "id": "doc-b",
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                        "matched_terms": ["alpha"],
+                    },
+                ],
+            },
+        )
+        self.assertTrue(processed.validation.valid)
+        self.assertEqual(processed.contribution_record.contribution_units, 1)
+        self.assertEqual(processed.contribution_record.job_type, "text_retrieve")
+        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 1)
+
     def test_malformed_assignment_is_failed_invalid_and_zero_contribution(self) -> None:
         service, bus, ledger = _service("node-a")
         bus.send(

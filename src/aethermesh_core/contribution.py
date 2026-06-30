@@ -22,6 +22,8 @@ TEXT_EMBED_TOKENS_PER_UNIT = 10
 TEXT_EMBED_DIMENSIONS_PER_UNIT = 16
 TEXT_EMBED_MAX_UNITS = 6
 
+TEXT_RETRIEVE_CONTRIBUTION_UNITS = 1
+
 
 def score_validated_contribution(job: Job, result: JobResult) -> int:
     """Return capped integer contribution units for one validated local result.
@@ -45,6 +47,8 @@ def score_validated_contribution(job: Job, result: JobResult) -> int:
         return _score_text_chunk(result.output)
     if job.job_type == "text_embed":
         return _score_text_embed(result.output)
+    if job.job_type == "text_retrieve":
+        return _score_text_retrieve(result.output)
     return 0
 
 
@@ -101,6 +105,33 @@ def _score_text_embed(output: Any) -> int:
     token_units = _ceil_div(cast(int, token_count), TEXT_EMBED_TOKENS_PER_UNIT)
     dimension_units = _ceil_div(cast(int, dimensions), TEXT_EMBED_DIMENSIONS_PER_UNIT)
     return _cap_units(1 + token_units + dimension_units, TEXT_EMBED_MAX_UNITS)
+
+
+def _score_text_retrieve(output: Any) -> int:
+    if not isinstance(output, dict):
+        return 0
+    query_terms = output.get("query_terms")
+    matches = output.get("matches")
+    if not isinstance(query_terms, list) or not isinstance(matches, list):
+        return 0
+    if any(not isinstance(term, str) for term in query_terms):
+        return 0
+    for match in matches:
+        if not isinstance(match, dict):
+            return 0
+        if not isinstance(match.get("id"), str):
+            return 0
+        if not _non_negative_int(match.get("matched_term_count")):
+            return 0
+        matched_terms = match.get("matched_terms")
+        if not isinstance(matched_terms, list) or any(
+            not isinstance(term, str) for term in matched_terms
+        ):
+            return 0
+        score = match.get("score")
+        if not isinstance(score, (int, float)) or isinstance(score, bool) or score < 0:
+            return 0
+    return TEXT_RETRIEVE_CONTRIBUTION_UNITS
 
 
 def _ceil_div(value: int, bucket_size: int) -> int:
