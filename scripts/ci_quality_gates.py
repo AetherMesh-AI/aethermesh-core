@@ -214,17 +214,22 @@ def command_pr_size(args: argparse.Namespace) -> int:
     if result.returncode != 0:
         print(result.stdout, end="")
         return result.returncode
+    excluded_prefixes = tuple(args.exclude_path_prefix or ())
     changed_files = 0
     additions = 0
     deletions = 0
     binary_files = 0
+    ignored_files = 0
     for line in result.stdout.splitlines():
         if not line.strip():
             continue
         parts = line.split("\t")
         if len(parts) < 3:
             continue
-        added, deleted, _path = parts[:3]
+        added, deleted, path = parts[:3]
+        if excluded_prefixes and path.startswith(excluded_prefixes):
+            ignored_files += 1
+            continue
         changed_files += 1
         if added == "-" or deleted == "-":
             binary_files += 1
@@ -233,7 +238,8 @@ def command_pr_size(args: argparse.Namespace) -> int:
         deletions += int(deleted)
     changed_lines = additions + deletions
     print(
-        f"PR size: files={changed_files}, additions={additions}, deletions={deletions}, changed_lines={changed_lines}, binary_files={binary_files}"
+        f"PR size: files={changed_files}, additions={additions}, deletions={deletions}, "
+        f"changed_lines={changed_lines}, binary_files={binary_files}, ignored_files={ignored_files}"
     )
     failures = []
     if changed_files > args.max_files:
@@ -365,6 +371,7 @@ def main() -> int:
     pr_size.add_argument("--max-files", type=int, default=80)
     pr_size.add_argument("--max-lines", type=int, default=3000)
     pr_size.add_argument("--max-binary-files", type=int, default=0)
+    pr_size.add_argument("--exclude-path-prefix", action="append", default=[])
     pr_size.set_defaults(func=command_pr_size)
 
     provenance = sub.add_parser("artifact-provenance")
