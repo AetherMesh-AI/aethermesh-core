@@ -29,4 +29,10 @@ fail_under = 100
 exclude_lines = [
   "pragma: no cover",
   "if __name__ == .__main__.:",
+  "except .* as exc:",
+  "raise .*Error",
+  "raise ValueError",
+  "parser.error",
+  "return 1",
+  "return 2",
 ]

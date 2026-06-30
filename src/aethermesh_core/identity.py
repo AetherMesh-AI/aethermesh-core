@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
+from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.models import NodeIdentity
 
 IDENTITY_SCHEMA_VERSION = 1
@@ -57,35 +55,14 @@ def _save_identity(path: Path, identity: NodeIdentity) -> None:
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
     document = _identity_document(identity)
-    temp_name: str | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temp_name = handle.name
-            json.dump(document, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-        os.replace(temp_name, path)
+        atomic_write_json(path, document)
     except OSError as exc:
-        if temp_name is not None:
-            _remove_temp_file(temp_name)
         raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
 
 
-def _identity_document(identity: NodeIdentity) -> dict[str, Any]:
+def _identity_document(identity: NodeIdentity) -> dict[str, object]:
     return {
         "version": IDENTITY_SCHEMA_VERSION,
         "node": {"node_id": identity.node_id},
     }
-
-
-def _remove_temp_file(path: str) -> None:
-    try:
-        os.unlink(path)
-    except FileNotFoundError:
-        return
