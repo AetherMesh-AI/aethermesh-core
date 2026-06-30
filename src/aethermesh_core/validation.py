@@ -38,7 +38,13 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
     for contribution credit.
     """
 
-    if job.job_type not in {"echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"}:
+    if job.job_type not in {
+        "echo",
+        "keyword_extract",
+        "text_chunk",
+        "text_embed",
+        "text_stats",
+    }:
         return _invalid(job, result, "unsupported_job_type")
     if result.status != "completed":
         return _invalid(job, result, "result_not_completed")
@@ -113,7 +119,9 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
             reason="ok",
         )
 
-    return _invalid(job, result, "unsupported_job_type")  # pragma: no cover
+    return _invalid(
+        job, result, "unsupported_job_type"
+    )  # pragma: no cover  # justification: defensive fallback after supported job types are handled above
 
 
 def _invalid(job: Job, result: JobResult, reason: str) -> ValidationResult:

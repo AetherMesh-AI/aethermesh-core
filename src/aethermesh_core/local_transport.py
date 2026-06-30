@@ -35,7 +35,9 @@ def materialize_local_inboxes(
     seen_message_ids: set[str] = set()
     for message in messages:
         if message.message_id in seen_message_ids:
-            raise LocalTransportError(f"duplicate message_id in source log: {message.message_id}")
+            raise LocalTransportError(
+                f"duplicate message_id in source log: {message.message_id}"
+            )
         seen_message_ids.add(message.message_id)
         if message.recipient_node_id is None:
             continue
@@ -87,9 +89,7 @@ def write_local_inbox(
     return path
 
 
-def load_local_inbox(
-    *, transport_dir: str | Path, node_id: str
-) -> list[MeshMessage]:
+def load_local_inbox(*, transport_dir: str | Path, node_id: str) -> list[MeshMessage]:
     """Load and validate only ``node_id``'s local transport inbox messages."""
 
     _require_node_id(node_id)
@@ -102,14 +102,18 @@ def load_local_inbox(
         )
     entries = document.get("messages")
     if not isinstance(entries, list):
-        raise LocalTransportError("local transport inbox field 'messages' must be a list")
+        raise LocalTransportError(
+            "local transport inbox field 'messages' must be a list"
+        )
 
     messages: list[MeshMessage] = []
     seen_ids: set[str] = set()
     for index, entry in enumerate(entries):
         message = _message_from_inbox_entry(entry, index)
         if message.message_id in seen_ids:
-            raise LocalTransportError(f"duplicate message_id in local transport inbox: {message.message_id}")
+            raise LocalTransportError(
+                f"duplicate message_id in local transport inbox: {message.message_id}"
+            )
         seen_ids.add(message.message_id)
         if message.recipient_node_id != node_id:
             raise LocalTransportError(
@@ -133,9 +137,13 @@ def _load_inbox_document(path: Path) -> dict[str, Any]:
         with path.open("r", encoding="utf-8") as handle:
             document = json.load(handle)
     except json.JSONDecodeError as exc:
-        raise LocalTransportError(f"local transport inbox JSON is malformed: {exc.msg}") from exc
+        raise LocalTransportError(
+            f"local transport inbox JSON is malformed: {exc.msg}"
+        ) from exc
     except OSError as exc:
-        raise LocalTransportError(f"could not read local transport inbox: {exc}") from exc
+        raise LocalTransportError(
+            f"could not read local transport inbox: {exc}"
+        ) from exc
 
     if not isinstance(document, dict):
         raise LocalTransportError("local transport inbox JSON must be an object")
@@ -148,14 +156,20 @@ def _message_from_inbox_entry(entry: Any, index: int) -> MeshMessage:
     try:
         return message_from_mapping(entry)
     except ValueError as exc:
-        raise LocalTransportError(f"local transport inbox entry {index} is invalid: {exc}") from exc
+        raise LocalTransportError(
+            f"local transport inbox entry {index} is invalid: {exc}"
+        ) from exc
 
 
-def _validate_unique_messages_for_node(node_id: str, messages: list[MeshMessage]) -> None:
+def _validate_unique_messages_for_node(
+    node_id: str, messages: list[MeshMessage]
+) -> None:
     seen_ids: set[str] = set()
     for index, message in enumerate(messages):
         if message.message_id in seen_ids:
-            raise LocalTransportError(f"duplicate message_id in local transport inbox: {message.message_id}")
+            raise LocalTransportError(
+                f"duplicate message_id in local transport inbox: {message.message_id}"
+            )
         seen_ids.add(message.message_id)
         if message.recipient_node_id != node_id:
             raise LocalTransportError(
@@ -167,7 +181,9 @@ def _write_inbox_document(path: Path, document: dict[str, Any]) -> None:
     try:
         atomic_write_json(path, document)
     except (OSError, TypeError, ValueError) as exc:
-        raise LocalTransportError(f"could not write local transport inbox: {exc}") from exc
+        raise LocalTransportError(
+            f"could not write local transport inbox: {exc}"
+        ) from exc
 
 
 def _require_node_id(node_id: object) -> None:

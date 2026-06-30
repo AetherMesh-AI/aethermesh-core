@@ -22,8 +22,16 @@ class LocalTransportCliTests(unittest.TestCase):
                         "version": 1,
                         "nodes": ["local-node-a", "local-node-b"],
                         "jobs": [
-                            {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "one"}},
-                            {"job_id": "echo-2", "job_type": "echo", "payload": {"message": "two"}},
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "one"},
+                            },
+                            {
+                                "job_id": "echo-2",
+                                "job_type": "echo",
+                                "payload": {"message": "two"},
+                            },
                         ],
                     }
                 ),

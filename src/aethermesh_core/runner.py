@@ -73,9 +73,7 @@ class LocalRunner:
             contribution_units=0,
         )
 
-    def _run_payload_builder(
-        self, job: Job, builder: Any
-    ) -> JobResult:
+    def _run_payload_builder(self, job: Job, builder: Any) -> JobResult:
         try:
             output = builder(job.payload)
         except ValueError as exc:
@@ -111,7 +109,22 @@ def build_text_stats_output(text: str) -> dict[str, int | str]:
 KEYWORD_EXTRACT_DEFAULT_LIMIT = 10
 KEYWORD_EXTRACT_MAX_LIMIT = 50
 KEYWORD_EXTRACT_STOPWORDS = frozenset(
-    {"a", "an", "and", "are", "as", "for", "in", "is", "of", "on", "or", "the", "to", "with"}
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "for",
+        "in",
+        "is",
+        "of",
+        "on",
+        "or",
+        "the",
+        "to",
+        "with",
+    }
 )
 _KEYWORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 TEXT_EMBED_DEFAULT_DIMENSIONS = 8
@@ -124,7 +137,9 @@ def build_keyword_extract_output(payload: dict[str, Any]) -> dict[str, object]:
 
     text = payload.get("text")
     if not isinstance(text, str) or not text.strip():
-        raise ValueError("keyword_extract payload requires non-empty string field: text")
+        raise ValueError(
+            "keyword_extract payload requires non-empty string field: text"
+        )
 
     limit = payload.get("limit", KEYWORD_EXTRACT_DEFAULT_LIMIT)
     if (
@@ -218,7 +233,9 @@ def build_text_chunk_output(payload: dict[str, Any]) -> dict[str, object]:
     start = 0
     while start < len(text):
         end = min(start + max_chars, len(text))
-        split_at = end if end == len(text) else _preferred_text_chunk_split(text, start, end)
+        split_at = (
+            end if end == len(text) else _preferred_text_chunk_split(text, start, end)
+        )
         chunk_text = text[start:split_at]
         chunks.append(
             {

@@ -11,7 +11,13 @@ class NoAvailableNodesError(ValueError):
     """Raised when local job assignment has jobs but no available nodes."""
 
 
-DEFAULT_LOCAL_CAPABILITIES = ("echo", "keyword_extract", "text_chunk", "text_embed", "text_stats")
+DEFAULT_LOCAL_CAPABILITIES = (
+    "echo",
+    "keyword_extract",
+    "text_chunk",
+    "text_embed",
+    "text_stats",
+)
 
 
 class NodeStatus(str, Enum):
@@ -30,7 +36,9 @@ class ScheduledNode:
     capabilities: tuple[str, ...] = field(default=DEFAULT_LOCAL_CAPABILITIES)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "capabilities", _normalize_capabilities(self.capabilities))
+        object.__setattr__(
+            self, "capabilities", _normalize_capabilities(self.capabilities)
+        )
 
 
 @dataclass(frozen=True)
@@ -95,7 +103,9 @@ class LocalScheduler:
                 ),
             )
             assignment_count_by_node[selected_node.node_id] += 1
-            assignments.append(JobAssignment(job_id=job.job_id, node_id=selected_node.node_id))
+            assignments.append(
+                JobAssignment(job_id=job.job_id, node_id=selected_node.node_id)
+            )
         return assignments
 
 

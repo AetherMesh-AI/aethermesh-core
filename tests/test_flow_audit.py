@@ -22,7 +22,9 @@ class FlowAuditTests(unittest.TestCase):
                 "ok": True,
                 "output_dir": str(output_dir),
                 "artifacts": {
-                    "dispatch_message_log": str(output_dir / "dispatch-message-log.json"),
+                    "dispatch_message_log": str(
+                        output_dir / "dispatch-message-log.json"
+                    ),
                     "flow_message_log": str(output_dir / "flow-message-log.json"),
                     "ledger": str(output_dir / "ledger.json"),
                     "receipts": str(output_dir / "receipts.json"),
@@ -38,7 +40,9 @@ class FlowAuditTests(unittest.TestCase):
             },
         )
 
-    def test_missing_receipts_returns_audit_error_without_mutating_artifacts(self) -> None:
+    def test_missing_receipts_returns_audit_error_without_mutating_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = _write_manifest(Path(temp_dir))
             output_dir = Path(temp_dir) / "flow"
@@ -54,7 +58,9 @@ class FlowAuditTests(unittest.TestCase):
 
         self.assertEqual(after, before)
 
-    def test_mismatched_receipt_units_returns_audit_error_without_mutating_artifacts(self) -> None:
+    def test_mismatched_receipt_units_returns_audit_error_without_mutating_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = _write_manifest(Path(temp_dir))
             output_dir = Path(temp_dir) / "flow"
@@ -62,17 +68,23 @@ class FlowAuditTests(unittest.TestCase):
             receipts_path = output_dir / "receipts.json"
             receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
             receipts["receipts"][0]["credited_units"] = 99
-            receipts_path.write_text(json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            receipts_path.write_text(
+                json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
             before = _artifact_contents(output_dir)
 
-            with self.assertRaisesRegex(FlowAuditError, "contribution.contribution_units mismatch"):
+            with self.assertRaisesRegex(
+                FlowAuditError, "contribution.contribution_units mismatch"
+            ):
                 audit_local_flow(output_dir)
 
             after = _artifact_contents(output_dir)
 
         self.assertEqual(after, before)
 
-    def test_tampered_receipt_validation_reason_returns_audit_error_without_mutating_artifacts(self) -> None:
+    def test_tampered_receipt_validation_reason_returns_audit_error_without_mutating_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = _write_manifest(Path(temp_dir))
             output_dir = Path(temp_dir) / "flow"
@@ -80,17 +92,23 @@ class FlowAuditTests(unittest.TestCase):
             receipts_path = output_dir / "receipts.json"
             receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
             receipts["receipts"][0]["validation"]["reason"] = "tampered reason"
-            receipts_path.write_text(json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            receipts_path.write_text(
+                json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
             before = _artifact_contents(output_dir)
 
-            with self.assertRaisesRegex(FlowAuditError, "contribution.validation mismatch"):
+            with self.assertRaisesRegex(
+                FlowAuditError, "contribution.validation mismatch"
+            ):
                 audit_local_flow(output_dir)
 
             after = _artifact_contents(output_dir)
 
         self.assertEqual(after, before)
 
-    def test_tampered_receipt_output_summary_returns_audit_error_without_mutating_artifacts(self) -> None:
+    def test_tampered_receipt_output_summary_returns_audit_error_without_mutating_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = _write_manifest(Path(temp_dir))
             output_dir = Path(temp_dir) / "flow"
@@ -98,17 +116,23 @@ class FlowAuditTests(unittest.TestCase):
             receipts_path = output_dir / "receipts.json"
             receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
             receipts["receipts"][0]["output_summary"] = {"tampered": True}
-            receipts_path.write_text(json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            receipts_path.write_text(
+                json.dumps(receipts, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
             before = _artifact_contents(output_dir)
 
-            with self.assertRaisesRegex(FlowAuditError, "result.output_summary mismatch"):
+            with self.assertRaisesRegex(
+                FlowAuditError, "result.output_summary mismatch"
+            ):
                 audit_local_flow(output_dir)
 
             after = _artifact_contents(output_dir)
 
         self.assertEqual(after, before)
 
-    def test_tampered_ledger_record_returns_audit_error_without_mutating_artifacts(self) -> None:
+    def test_tampered_ledger_record_returns_audit_error_without_mutating_artifacts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = _write_manifest(Path(temp_dir))
             output_dir = Path(temp_dir) / "flow"
@@ -116,10 +140,14 @@ class FlowAuditTests(unittest.TestCase):
             ledger_path = output_dir / "ledger.json"
             ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
             ledger["records"][0]["validation_reason"] = "tampered reason"
-            ledger_path.write_text(json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            ledger_path.write_text(
+                json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
             before = _artifact_contents(output_dir)
 
-            with self.assertRaisesRegex(FlowAuditError, "contribution claims do not match ledger records"):
+            with self.assertRaisesRegex(
+                FlowAuditError, "contribution claims do not match ledger records"
+            ):
                 audit_local_flow(output_dir)
 
             after = _artifact_contents(output_dir)
@@ -135,8 +163,16 @@ def _write_manifest(directory: Path) -> Path:
                 "version": 1,
                 "nodes": ["local-node-a", "local-node-b"],
                 "jobs": [
-                    {"job_id": "echo-1", "job_type": "echo", "payload": {"message": "hello mesh"}},
-                    {"job_id": "text-stats-1", "job_type": "text_stats", "payload": {"text": "hello mesh\nhello node"}},
+                    {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "hello mesh"},
+                    },
+                    {
+                        "job_id": "text-stats-1",
+                        "job_type": "text_stats",
+                        "payload": {"text": "hello mesh\nhello node"},
+                    },
                 ],
             }
         ),

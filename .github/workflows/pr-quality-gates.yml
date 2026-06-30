@@ -1,0 +1,237 @@
+name: PR Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+      - name: pytest passes
+        run: python -m pytest -q tests
+
+  line-coverage:
+    name: Line Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and coverage tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest pytest-cov coverage[toml]
+      - name: 100% line coverage
+        run: python -m pytest -q --cov=aethermesh_core --cov-report=term-missing --cov-fail-under=100 tests
+
+  branch-coverage:
+    name: Branch Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and coverage tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest pytest-cov coverage[toml]
+      - name: 100% branch coverage
+        run: python -m pytest -q --cov=aethermesh_core --cov-branch --cov-report=term-missing --cov-fail-under=100 tests
+
+  mutation-score:
+    name: Mutation Score
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and mutation tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest mutmut
+      - name: mutation score >= 95%
+        run: |
+          mutmut run --max-children 4
+          python scripts/ci_quality_gates.py mutation-score --minimum 95
+
+  ruff-check:
+    name: Ruff Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install ruff
+        run: python -m pip install --upgrade ruff
+      - name: ruff check passes
+        run: ruff check src tests scripts
+
+  ruff-format:
+    name: Ruff Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install ruff
+        run: python -m pip install --upgrade ruff
+      - name: ruff format check passes
+        run: ruff format --check src tests scripts
+
+  strict-type-check:
+    name: Strict Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and mypy
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . mypy
+      - name: mypy strict passes
+        run: mypy --strict src scripts
+
+  duplicate-code:
+    name: Duplicate Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: duplicate code check passes
+        run: npx --yes jscpd@5.0.11 src --format python --threshold 0 --reporters console --ignore "**/__pycache__/**" --no-tips
+
+  complexity:
+    name: Complexity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install radon
+        run: python -m pip install --upgrade radon
+      - name: complexity check passes
+        run: radon cc src tests -s -n E
+
+  dead-code:
+    name: Dead Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install vulture
+        run: python -m pip install --upgrade vulture
+      - name: dead code check passes
+        run: vulture src tests --min-confidence 100
+
+  bandit:
+    name: Bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install bandit
+        run: python -m pip install --upgrade bandit
+      - name: bandit security scan passes
+        run: bandit -q -r src
+
+  pip-audit:
+    name: Pip Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip-audit
+      - name: pip-audit passes
+        run: python scripts/ci_quality_gates.py dependency-audit
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: no secrets detected
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test-integrity:
+    name: Test Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: no unjustified skip/xfail/type-ignore/noqa/coverage-ignore
+        run: python scripts/ci_quality_gates.py test-integrity
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: no new dependency without justification
+        run: |
+          git fetch origin "${GITHUB_BASE_REF:-main}" --depth=1
+          python scripts/ci_quality_gates.py dependency-review --base "origin/${GITHUB_BASE_REF:-main}"
+
+  build-install:
+    name: Build Install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build package
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+      - name: Install from scratch and smoke test
+        run: |
+          python -m venv /tmp/aethermesh-install-check
+          /tmp/aethermesh-install-check/bin/python -m pip install --upgrade pip
+          /tmp/aethermesh-install-check/bin/python -m pip install dist/*.whl
+          /tmp/aethermesh-install-check/bin/aethermesh-core --help

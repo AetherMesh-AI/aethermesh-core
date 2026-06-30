@@ -40,7 +40,9 @@ def build_message_log_document(
             "node_ids": list(simulation.nodes),
             "job_ids": [job.job_id for job in jobs],
         },
-        "messages": [_message_to_document_entry(message) for message in simulation.messages],
+        "messages": [
+            _message_to_document_entry(message) for message in simulation.messages
+        ],
     }
 
 
@@ -100,7 +102,9 @@ def build_dispatch_message_log_document(
             "assignment_count": len(assignments),
             "node_ids": [node.node_id for node in nodes],
             "job_ids": [job.job_id for job in jobs],
-            "assigned_node_ids": sorted({assignment.node_id for assignment in assignments}),
+            "assigned_node_ids": sorted(
+                {assignment.node_id for assignment in assignments}
+            ),
         },
         "messages": [_message_to_document_entry(message) for message in messages],
     }
@@ -175,7 +179,9 @@ def load_worker_emitted_messages(path: str | Path) -> list[MeshMessage]:
     document = _load_message_log_document(path)
     metadata = document.get("metadata")
     if not isinstance(metadata, dict):
-        raise MessageLogPersistenceError("message log JSON field 'metadata' must be an object")
+        raise MessageLogPersistenceError(
+            "message log JSON field 'metadata' must be an object"
+        )
     replayed_message_count = metadata.get("replayed_message_count")
     if not isinstance(replayed_message_count, int) or replayed_message_count < 0:
         raise MessageLogPersistenceError(
@@ -188,7 +194,9 @@ def load_worker_emitted_messages(path: str | Path) -> list[MeshMessage]:
         )
 
     emitted: list[MeshMessage] = []
-    for index, entry in enumerate(entries[replayed_message_count:], replayed_message_count):
+    for index, entry in enumerate(
+        entries[replayed_message_count:], replayed_message_count
+    ):
         message = _message_from_document_entry(entry, index)
         if message.message_type not in {"job_result_reported", "contribution_recorded"}:
             raise MessageLogPersistenceError(
@@ -205,7 +213,9 @@ def write_message_log(path: str | Path, document: dict[str, Any]) -> None:
     try:
         atomic_write_json(log_path, document)
     except (OSError, TypeError, ValueError) as exc:
-        raise MessageLogPersistenceError(f"could not write message log file: {exc}") from exc
+        raise MessageLogPersistenceError(
+            f"could not write message log file: {exc}"
+        ) from exc
 
 
 def _load_message_log_document(path: str | Path) -> dict[str, Any]:
@@ -217,9 +227,13 @@ def _load_message_log_document(path: str | Path) -> dict[str, Any]:
         with log_path.open("r", encoding="utf-8") as handle:
             document = json.load(handle)
     except json.JSONDecodeError as exc:
-        raise MessageLogPersistenceError(f"message log JSON is malformed: {exc.msg}") from exc
+        raise MessageLogPersistenceError(
+            f"message log JSON is malformed: {exc.msg}"
+        ) from exc
     except OSError as exc:
-        raise MessageLogPersistenceError(f"could not read message log file: {exc}") from exc
+        raise MessageLogPersistenceError(
+            f"could not read message log file: {exc}"
+        ) from exc
 
     if not isinstance(document, dict):
         raise MessageLogPersistenceError("message log JSON must be an object")
@@ -227,7 +241,9 @@ def _load_message_log_document(path: str | Path) -> dict[str, Any]:
         raise MessageLogPersistenceError("message log JSON must contain version 1")
     entries = document.get("messages")
     if not isinstance(entries, list):
-        raise MessageLogPersistenceError("message log JSON field 'messages' must be a list")
+        raise MessageLogPersistenceError(
+            "message log JSON field 'messages' must be a list"
+        )
     return document
 
 
@@ -246,4 +262,6 @@ def _message_from_document_entry(entry: Any, index: int) -> MeshMessage:
     try:
         return message_from_mapping(entry)
     except ValueError as exc:
-        raise MessageLogPersistenceError(f"message log entry {index} is invalid: {exc}") from exc
+        raise MessageLogPersistenceError(
+            f"message log entry {index} is invalid: {exc}"
+        ) from exc

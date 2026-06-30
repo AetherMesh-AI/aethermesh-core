@@ -34,7 +34,11 @@ class PeerRegistryTests(unittest.TestCase):
                                 "message_type": "job_assigned",
                                 "sender_node_id": "local-scheduler",
                                 "recipient_node_id": "node-b",
-                                "payload": {"job_id": "echo-1", "job_type": "echo", "payload": {}},
+                                "payload": {
+                                    "job_id": "echo-1",
+                                    "job_type": "echo",
+                                    "payload": {},
+                                },
                                 "correlation_id": "echo-1",
                             },
                             {

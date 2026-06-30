@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any, cast
 
 from aethermesh_core.ledger import (
     ContributionLedger,
@@ -142,10 +143,12 @@ class ContributionLedgerTests(unittest.TestCase):
             status="completed",
             output="invalid units",
             error=None,
-            contribution_units="1",  # type: ignore[arg-type]
+            contribution_units=cast(Any, "1"),
         )
 
-        with self.assertRaisesRegex(ValueError, "contribution_units must be an integer"):
+        with self.assertRaisesRegex(
+            ValueError, "contribution_units must be an integer"
+        ):
             ledger.record(result)
 
     def test_contribution_record_round_trips_through_json_dict(self) -> None:
@@ -270,7 +273,9 @@ class ContributionLedgerTests(unittest.TestCase):
 
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), "{not json")
 
-    def test_existing_ledger_loader_rejects_missing_file_without_creating_it(self) -> None:
+    def test_existing_ledger_loader_rejects_missing_file_without_creating_it(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "ledger.json"
 

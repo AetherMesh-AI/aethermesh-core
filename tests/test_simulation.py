@@ -120,7 +120,9 @@ class LocalSimulationTests(unittest.TestCase):
 
     def test_assignments_route_by_declared_capability(self) -> None:
         jobs = [
-            Job(job_id="stats-1", job_type="text_stats", payload={"text": "hello mesh"}),
+            Job(
+                job_id="stats-1", job_type="text_stats", payload={"text": "hello mesh"}
+            ),
             Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
         ]
 
@@ -144,7 +146,9 @@ class LocalSimulationTests(unittest.TestCase):
             [["echo"], ["text_stats"]],
         )
 
-    def test_text_embed_flows_through_simulation_and_validation_accounting(self) -> None:
+    def test_text_embed_flows_through_simulation_and_validation_accounting(
+        self,
+    ) -> None:
         jobs = [
             Job(
                 job_id="embed-1",
@@ -155,9 +159,21 @@ class LocalSimulationTests(unittest.TestCase):
 
         result = run_local_simulation(["node-a"], jobs).to_dict()
 
-        self.assertEqual(result["assignments"], [{"job_id": "embed-1", "node_id": "node-a"}])
+        self.assertEqual(
+            result["assignments"], [{"job_id": "embed-1", "node_id": "node-a"}]
+        )
         self.assertEqual(result["results"][0]["output"]["vector"], [0, 2, 1, 0])
-        self.assertEqual(result["validations"], [{"job_id": "embed-1", "result_job_id": "embed-1", "valid": True, "reason": "ok"}])
+        self.assertEqual(
+            result["validations"],
+            [
+                {
+                    "job_id": "embed-1",
+                    "result_job_id": "embed-1",
+                    "valid": True,
+                    "reason": "ok",
+                }
+            ],
+        )
         self.assertEqual(result["totals"]["contribution_units"], 1)
 
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
@@ -208,7 +224,10 @@ class LocalSimulationTests(unittest.TestCase):
         result_dict = result.to_dict()
 
         self.assertTrue(
-            all(isinstance(assignment, JobAssignment) for assignment in result.assignments)
+            all(
+                isinstance(assignment, JobAssignment)
+                for assignment in result.assignments
+            )
         )
         self.assertEqual(
             result_dict["assignments"],
@@ -260,7 +279,13 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 1,
                     "heartbeat_count": 1,
                     "assigned_jobs": 2,
@@ -269,7 +294,13 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-b",
                     "status": "offline",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                     "assigned_jobs": 0,
@@ -278,7 +309,13 @@ class LocalSimulationTests(unittest.TestCase):
                 {
                     "node_id": "node-c",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                     "assigned_jobs": 1,
@@ -315,7 +352,9 @@ class LocalSimulationTests(unittest.TestCase):
                 },
             ],
         )
-        self.assertNotIn("node-b", [message["sender_node_id"] for message in heartbeat_messages])
+        self.assertNotIn(
+            "node-b", [message["sender_node_id"] for message in heartbeat_messages]
+        )
         self.assertEqual(
             result["messages"][0]["message_type"],
             "node_heartbeat",
@@ -430,7 +469,9 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["totals"]["unsupported_results"], 1)
         self.assertEqual(result["totals"]["contribution_units"], 1)
 
-    def test_invalid_completed_echo_result_is_visible_but_earns_zero_units(self) -> None:
+    def test_invalid_completed_echo_result_is_visible_but_earns_zero_units(
+        self,
+    ) -> None:
         jobs = [Job(job_id="echo-missing-message", job_type="echo", payload={})]
 
         result = run_local_simulation(["node-a"], jobs).to_dict()
@@ -452,7 +493,9 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["summaries"][0]["completed_jobs"], 1)
         self.assertEqual(result["summaries"][0]["contribution_units"], 0)
         self.assertEqual(result["messages"][3]["payload"]["valid"], False)
-        self.assertEqual(result["messages"][3]["payload"]["validation"], "missing_payload_message")
+        self.assertEqual(
+            result["messages"][3]["payload"]["validation"], "missing_payload_message"
+        )
         self.assertEqual(result["messages"][3]["payload"]["contribution_units"], 0)
         self.assertEqual(result["totals"]["completed_jobs"], 1)
         self.assertEqual(result["totals"]["valid_results"], 0)
@@ -460,7 +503,9 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["totals"]["contribution_units"], 0)
 
     def test_empty_node_list_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ValueError, "node_ids must contain at least one node"):
+        with self.assertRaisesRegex(
+            ValueError, "node_ids must contain at least one node"
+        ):
             run_local_simulation([], [Job(job_id="echo-1", job_type="echo")])
 
     def test_text_stats_contribution_is_gated_by_validation(self) -> None:

@@ -23,7 +23,9 @@ class LocalTransportTests(unittest.TestCase):
                     {
                         "version": 1,
                         "messages": [
-                            _message_entry("msg-0001", "node-a", None, "node_heartbeat"),
+                            _message_entry(
+                                "msg-0001", "node-a", None, "node_heartbeat"
+                            ),
                             _message_entry("msg-0002", "scheduler", "node-b"),
                             _message_entry("msg-0003", "scheduler", "node-a"),
                             _message_entry("msg-0004", "scheduler", "node-b"),
@@ -56,8 +58,13 @@ class LocalTransportTests(unittest.TestCase):
         self.assertEqual(first_b, second_b)
         self.assertEqual(node_a["version"], 1)
         self.assertEqual(node_a["node_id"], "node-a")
-        self.assertEqual([message["message_id"] for message in node_a["messages"]], ["msg-0003"])
-        self.assertEqual([message["message_id"] for message in node_b["messages"]], ["msg-0002", "msg-0004"])
+        self.assertEqual(
+            [message["message_id"] for message in node_a["messages"]], ["msg-0003"]
+        )
+        self.assertEqual(
+            [message["message_id"] for message in node_b["messages"]],
+            ["msg-0002", "msg-0004"],
+        )
 
     def test_load_rejects_wrong_node_inbox(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -79,7 +86,10 @@ class LocalTransportTests(unittest.TestCase):
             with self.assertRaisesRegex(LocalTransportError, "malformed"):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
-            path.write_text(json.dumps({"version": 2, "node_id": "node-a", "messages": []}), encoding="utf-8")
+            path.write_text(
+                json.dumps({"version": 2, "node_id": "node-a", "messages": []}),
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(LocalTransportError, "version 1"):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
@@ -105,7 +115,9 @@ class LocalTransportTests(unittest.TestCase):
 
             document["messages"] = [_message("msg-0002", "node-b").to_dict()]
             path.write_text(json.dumps(document), encoding="utf-8")
-            with self.assertRaisesRegex(LocalTransportError, "recipient_node_id must be node-a"):
+            with self.assertRaisesRegex(
+                LocalTransportError, "recipient_node_id must be node-a"
+            ):
                 load_local_inbox(transport_dir=temp_dir, node_id="node-a")
 
 
@@ -115,7 +127,11 @@ def _message(message_id: str, recipient: str) -> MeshMessage:
         message_type="job_assigned",
         sender_node_id="scheduler",
         recipient_node_id=recipient,
-        payload={"job_id": message_id, "job_type": "echo", "payload": {"message": message_id}},
+        payload={
+            "job_id": message_id,
+            "job_type": "echo",
+            "payload": {"message": message_id},
+        },
         correlation_id=message_id,
     )
 
@@ -129,7 +145,11 @@ def _message_entry(
     payload = (
         {"node_id": sender}
         if message_type == "node_heartbeat"
-        else {"job_id": message_id, "job_type": "echo", "payload": {"message": message_id}}
+        else {
+            "job_id": message_id,
+            "job_type": "echo",
+            "payload": {"message": message_id},
+        }
     )
     return {
         "message_id": message_id,

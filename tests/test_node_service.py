@@ -232,10 +232,10 @@ class LocalNodeServiceTests(unittest.TestCase):
             ["msg-0001", "msg-0002", "msg-0003"],
         )
 
-    def test_seeded_processed_message_ids_skip_assignment_without_contribution(self) -> None:
-        service, bus, ledger = _service(
-            "node-a", processed_message_ids=["msg-0001"]
-        )
+    def test_seeded_processed_message_ids_skip_assignment_without_contribution(
+        self,
+    ) -> None:
+        service, bus, ledger = _service("node-a", processed_message_ids=["msg-0001"])
         bus.send(
             _assignment(
                 message_id="msg-0001",
@@ -263,7 +263,9 @@ class LocalNodeServiceTests(unittest.TestCase):
 
         result = service.process_inbox()
 
-        self.assertEqual([assignment.message_id for assignment in result.processed], ["msg-0002"])
+        self.assertEqual(
+            [assignment.message_id for assignment in result.processed], ["msg-0002"]
+        )
         self.assertEqual(result.ignored_message_ids, ["msg-0001"])
         self.assertEqual(result.skipped_processed_message_ids, ["msg-0001"])
         self.assertEqual(result.processed_message_ids, ["msg-0001", "msg-0002"])
@@ -301,7 +303,10 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.contribution_record.job_type, "echo")
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
         self.assertEqual(processed.emitted_messages[1].payload["valid"], False)
-        self.assertEqual(processed.emitted_messages[1].payload["validation"], "missing_payload_message")
+        self.assertEqual(
+            processed.emitted_messages[1].payload["validation"],
+            "missing_payload_message",
+        )
 
 
 def _service(

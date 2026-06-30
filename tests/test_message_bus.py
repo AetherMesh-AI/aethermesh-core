@@ -1,4 +1,5 @@
 import unittest
+from typing import Any, cast
 
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
@@ -80,7 +81,7 @@ class LocalMessageBusTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     ValueError, "node_id must be a non-empty string"
                 ):
-                    bus.register_node(node_id)  # type: ignore[arg-type]
+                    bus.register_node(cast(Any, node_id))
 
         bus.register_node("node-a")
         with self.assertRaisesRegex(ValueError, "already registered: node-a"):

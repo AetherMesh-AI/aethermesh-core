@@ -57,14 +57,31 @@ class NodeStateTests(unittest.TestCase):
             state_path = Path(temp_dir) / "node-state.json"
             state_path.write_text(json.dumps({"version": 1}), encoding="utf-8")
 
-            with self.assertRaisesRegex(NodeStatePersistenceError, "missing required field"):
+            with self.assertRaisesRegex(
+                NodeStatePersistenceError, "missing required field"
+            ):
                 load_node_processing_state(state_path, expected_node_id="node-a")
 
     def test_wrong_field_types_are_rejected(self) -> None:
         cases = [
-            {"version": 1, "node_id": 7, "processed_message_ids": [], "processed_assignment_count": 0},
-            {"version": 1, "node_id": "node-a", "processed_message_ids": "msg-1", "processed_assignment_count": 0},
-            {"version": 1, "node_id": "node-a", "processed_message_ids": ["msg-1"], "processed_assignment_count": "1"},
+            {
+                "version": 1,
+                "node_id": 7,
+                "processed_message_ids": [],
+                "processed_assignment_count": 0,
+            },
+            {
+                "version": 1,
+                "node_id": "node-a",
+                "processed_message_ids": "msg-1",
+                "processed_assignment_count": 0,
+            },
+            {
+                "version": 1,
+                "node_id": "node-a",
+                "processed_message_ids": ["msg-1"],
+                "processed_assignment_count": "1",
+            },
         ]
         for document in cases:
             with self.subTest(document=document):
@@ -73,7 +90,9 @@ class NodeStateTests(unittest.TestCase):
                     state_path.write_text(json.dumps(document), encoding="utf-8")
 
                     with self.assertRaises(NodeStatePersistenceError):
-                        load_node_processing_state(state_path, expected_node_id="node-a")
+                        load_node_processing_state(
+                            state_path, expected_node_id="node-a"
+                        )
 
     def test_duplicate_processed_ids_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

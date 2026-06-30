@@ -24,14 +24,26 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 0,
                     "heartbeat_count": 0,
                 },
@@ -42,7 +54,9 @@ class NodeRegistryTests(unittest.TestCase):
         registry = NodeRegistry()
 
         registry.register(ScheduledNode("node-a", NodeStatus.OFFLINE, ("echo",)))
-        registry.register(ScheduledNode("node-b", NodeStatus.AVAILABLE, ("text_stats",)))
+        registry.register(
+            ScheduledNode("node-b", NodeStatus.AVAILABLE, ("text_stats",))
+        )
 
         self.assertEqual(
             registry.scheduled_nodes(),
@@ -65,7 +79,9 @@ class NodeRegistryTests(unittest.TestCase):
 
         for node_id in ("", "   "):
             with self.subTest(node_id=repr(node_id)):
-                with self.assertRaisesRegex(ValueError, "node_id must be a non-empty string"):
+                with self.assertRaisesRegex(
+                    ValueError, "node_id must be a non-empty string"
+                ):
                     registry.register(node_id)
 
     def test_rejects_duplicate_node_ids(self) -> None:
@@ -112,14 +128,26 @@ class NodeRegistryTests(unittest.TestCase):
                 {
                     "node_id": "node-a",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 3,
                     "heartbeat_count": 2,
                 },
                 {
                     "node_id": "node-b",
                     "status": "available",
-                    "capabilities": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
                     "heartbeat_sequence": 2,
                     "heartbeat_count": 1,
                 },

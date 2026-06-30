@@ -17,12 +17,16 @@ from aethermesh_core.validation import validate_job_result
 
 
 class ReceiptTests(unittest.TestCase):
-    def test_build_receipt_document_uses_processed_assignment_audit_fields(self) -> None:
+    def test_build_receipt_document_uses_processed_assignment_audit_fields(
+        self,
+    ) -> None:
         assignment = _processed_assignment(
             message_id="msg-0003",
             correlation_id="echo-1",
             job=Job("echo-1", "echo", {"message": "hello mesh"}),
-            result=JobResult("echo-1", "local-node-a", "completed", "hello mesh", None, 1),
+            result=JobResult(
+                "echo-1", "local-node-a", "completed", "hello mesh", None, 1
+            ),
             result_message_id="msg-0004",
             contribution_message_id="msg-0005",
         )
@@ -66,11 +70,15 @@ class ReceiptTests(unittest.TestCase):
 
         receipt = build_receipt_document([assignment])["receipts"][0]
 
-        self.assertEqual(receipt["validation"], {"valid": False, "reason": "output_mismatch"})
+        self.assertEqual(
+            receipt["validation"], {"valid": False, "reason": "output_mismatch"}
+        )
         self.assertEqual(receipt["credited_units"], 0)
         self.assertEqual(receipt["contribution_message_id"], "msg-0005")
 
-    def test_receipts_sort_deterministically_and_keep_compact_dict_summary(self) -> None:
+    def test_receipts_sort_deterministically_and_keep_compact_dict_summary(
+        self,
+    ) -> None:
         first = _processed_assignment(
             message_id="msg-0007",
             correlation_id="text-stats-1",
@@ -79,7 +87,11 @@ class ReceiptTests(unittest.TestCase):
                 "text-stats-1",
                 "local-node-b",
                 "completed",
-                {"word_count": 4, "line_count": 2, "normalized_preview": "hello mesh hello node"},
+                {
+                    "word_count": 4,
+                    "line_count": 2,
+                    "normalized_preview": "hello mesh hello node",
+                },
                 None,
                 1,
             ),
@@ -90,7 +102,9 @@ class ReceiptTests(unittest.TestCase):
             message_id="msg-0003",
             correlation_id="echo-1",
             job=Job("echo-1", "echo", {"message": "hello mesh"}),
-            result=JobResult("echo-1", "local-node-a", "completed", "hello mesh", None, 1),
+            result=JobResult(
+                "echo-1", "local-node-a", "completed", "hello mesh", None, 1
+            ),
             result_message_id="msg-0004",
             contribution_message_id="msg-0005",
         )
@@ -103,7 +117,11 @@ class ReceiptTests(unittest.TestCase):
         )
         self.assertEqual(
             document["receipts"][1]["output_summary"],
-            {"line_count": 2, "normalized_preview": "hello mesh hello node", "word_count": 4},
+            {
+                "line_count": 2,
+                "normalized_preview": "hello mesh hello node",
+                "word_count": 4,
+            },
         )
 
     def test_existing_receipts_are_merged_by_assignment_id_for_reruns(self) -> None:
@@ -111,7 +129,9 @@ class ReceiptTests(unittest.TestCase):
             message_id="msg-0003",
             correlation_id="echo-1",
             job=Job("echo-1", "echo", {"message": "hello mesh"}),
-            result=JobResult("echo-1", "local-node-a", "completed", "hello mesh", None, 1),
+            result=JobResult(
+                "echo-1", "local-node-a", "completed", "hello mesh", None, 1
+            ),
             result_message_id="msg-0004",
             contribution_message_id="msg-0005",
         )
@@ -147,7 +167,9 @@ def _processed_assignment(
     contribution_message_id: str,
 ) -> ProcessedAssignment:
     validation = validate_job_result(job, result)
-    accounted_result = result if validation.valid else replace(result, contribution_units=0)
+    accounted_result = (
+        result if validation.valid else replace(result, contribution_units=0)
+    )
     record = ContributionLedger().record(
         accounted_result,
         validation_valid=validation.valid,
@@ -175,7 +197,10 @@ def _processed_assignment(
                 message_type="contribution_recorded",
                 sender_node_id="local-ledger",
                 recipient_node_id=result.node_id,
-                payload={"job_id": result.job_id, "contribution_units": record.contribution_units},
+                payload={
+                    "job_id": result.job_id,
+                    "contribution_units": record.contribution_units,
+                },
                 correlation_id=correlation_id,
             ),
         ],

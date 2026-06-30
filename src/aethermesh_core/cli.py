@@ -276,11 +276,15 @@ def run_demo(
     identity_path: str | None = None,
 ) -> dict[str, object]:
     if node_id and identity_path:
-        raise IdentityPersistenceError("--node-id and --identity-path are mutually exclusive")
+        raise IdentityPersistenceError(
+            "--node-id and --identity-path are mutually exclusive"
+        )
     if identity_path is not None:
         identity = load_or_create_identity(identity_path)
     else:
-        identity = NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
+        identity = (
+            NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
+        )
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
     result_dict = result.to_dict()
@@ -288,7 +292,9 @@ def run_demo(
         return result_dict
 
     validation = validate_job_result(job, result)
-    record_result = result if validation.valid else replace(result, contribution_units=0)
+    record_result = (
+        result if validation.valid else replace(result, contribution_units=0)
+    )
     if ledger_path is None:
         ledger = ContributionLedger()
         ledger.record(
@@ -455,7 +461,9 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
     available_node_ids = [
         node.node_id for node in batch.nodes if node.status.value == "available"
     ]
-    offline_node_ids = [node.node_id for node in batch.nodes if node.status.value == "offline"]
+    offline_node_ids = [
+        node.node_id for node in batch.nodes if node.status.value == "offline"
+    ]
 
     # Validate existing resumable inputs before overwriting any flow artifacts.
     load_ledger_document(ledger_path)
@@ -508,15 +516,19 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
                 "ledger_summary": node_payload.get("ledger_summary"),
             }
         )
-        emitted_messages_by_node[node_id] = load_worker_emitted_messages(worker_message_log_path)
+        emitted_messages_by_node[node_id] = load_worker_emitted_messages(
+            worker_message_log_path
+        )
 
     ledger_summary = summarize_ledger(str(ledger_path))
     processed_node_ids = [str(result["node_id"]) for result in per_node_results]
     processed_assignment_count = sum(
-        int(result["processed_assignment_count"]) for result in per_node_results
+        _require_int_result_field(result, "processed_assignment_count")
+        for result in per_node_results
     )
     skipped_processed_assignment_count = sum(
-        int(result["skipped_processed_assignment_count"]) for result in per_node_results
+        _require_int_result_field(result, "skipped_processed_assignment_count")
+        for result in per_node_results
     )
     flow_message_log_document = build_flow_message_log_document(
         dispatch_messages=load_message_log_messages(dispatch_message_log_path),
@@ -557,13 +569,21 @@ def run_local_flow(manifest_path: str, output_dir: str) -> dict[str, object]:
         "processed_assignment_count": processed_assignment_count,
         "skipped_processed_assignment_count": skipped_processed_assignment_count,
         "ignored_message_count": sum(
-            int(result["ignored_message_count"]) for result in per_node_results
+            _require_int_result_field(result, "ignored_message_count")
+            for result in per_node_results
         ),
         "total_contribution_units": ledger_summary["total_contribution_units"],
         "ledger_summary": ledger_summary,
         "dispatch_summary": dispatch_payload,
         "node_results": per_node_results,
     }
+
+
+def _require_int_result_field(result: dict[str, object], field_name: str) -> int:
+    value = result.get(field_name)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"node result field must be an integer: {field_name}")
+    return value
 
 
 def _node_artifact_path(directory: Path, node_id: str) -> Path:
@@ -612,14 +632,20 @@ def _process_local_inbox(
     if (request.message_log_path is None) == (request.transport_dir is None):
         raise ValueError("provide exactly one of --message-log-path or --transport-dir")
     node_state = (
-        load_node_processing_state(request.node_state_path, expected_node_id=request.node_id)
+        load_node_processing_state(
+            request.node_state_path, expected_node_id=request.node_id
+        )
         if request.node_state_path is not None
         else None
     )
     if request.transport_dir is not None:
-        messages = load_local_inbox(transport_dir=request.transport_dir, node_id=request.node_id)
+        messages = load_local_inbox(
+            transport_dir=request.transport_dir, node_id=request.node_id
+        )
         source_message_path = str(
-            Path(request.transport_dir) / "inboxes" / f"{_node_artifact_filename(request.node_id)}.json"
+            Path(request.transport_dir)
+            / "inboxes"
+            / f"{_node_artifact_filename(request.node_id)}.json"
         )
     else:
         if request.message_log_path is None:
@@ -632,7 +658,9 @@ def _process_local_inbox(
         else (ContributionLedger(), {})
     )
     message_bus = LocalMessageBus()
-    for registered_node_id in _node_ids_from_replayed_messages(messages, request.node_id):
+    for registered_node_id in _node_ids_from_replayed_messages(
+        messages, request.node_id
+    ):
         message_bus.register_node(registered_node_id)
     for message in messages:
         message_bus.send(message)
@@ -689,7 +717,9 @@ def _emitted_messages_from_inbox_result(
     ]
 
 
-def _node_ids_from_replayed_messages(messages: Sequence[object], node_id: str) -> list[str]:
+def _node_ids_from_replayed_messages(
+    messages: Sequence[object], node_id: str
+) -> list[str]:
     node_ids = {node_id, "local-ledger"}
     for message in messages:
         sender = getattr(message, "sender_node_id")

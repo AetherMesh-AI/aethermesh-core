@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aethermesh_core.message_log import MessageLogPersistenceError, load_message_log_messages
+from aethermesh_core.message_log import (
+    MessageLogPersistenceError,
+    load_message_log_messages,
+)
 from aethermesh_core.messages import MeshMessage
 
 
@@ -53,7 +56,10 @@ def peer_summary_document(message_log_path: str | Path) -> dict[str, object]:
         heartbeat = _parse_heartbeat(message)
         current = peers.get(heartbeat.node_id)
         heartbeat_count = 1 if current is None else current.heartbeat_count + 1
-        if current is None or heartbeat.last_heartbeat_sequence > current.last_heartbeat_sequence:
+        if (
+            current is None
+            or heartbeat.last_heartbeat_sequence > current.last_heartbeat_sequence
+        ):
             peers[heartbeat.node_id] = PeerSummary(
                 node_id=heartbeat.node_id,
                 status=heartbeat.status,

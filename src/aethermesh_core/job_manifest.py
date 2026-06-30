@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.models import Job
-from aethermesh_core.scheduler import DEFAULT_LOCAL_CAPABILITIES, NodeStatus, ScheduledNode
+from aethermesh_core.scheduler import (
+    DEFAULT_LOCAL_CAPABILITIES,
+    NodeStatus,
+    ScheduledNode,
+)
 
 
 class ManifestError(ValueError):
@@ -87,7 +91,9 @@ def _parse_node_entry(entry: Any, index: int) -> ScheduledNode:
 
     node_id = entry.get("node_id")
     if not isinstance(node_id, str) or not node_id.strip():
-        raise ManifestError(f"manifest nodes[{index}].node_id must be a non-empty string")
+        raise ManifestError(
+            f"manifest nodes[{index}].node_id must be a non-empty string"
+        )
 
     raw_status = entry.get("status", NodeStatus.AVAILABLE.value)
     if not isinstance(raw_status, str):
@@ -148,7 +154,9 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
 
     job_type = entry.get("job_type")
     if not isinstance(job_type, str) or not job_type.strip():
-        raise ManifestError(f"manifest jobs[{index}].job_type must be a non-empty string")
+        raise ManifestError(
+            f"manifest jobs[{index}].job_type must be a non-empty string"
+        )
 
     payload = entry.get("payload", {})
     if not isinstance(payload, dict):

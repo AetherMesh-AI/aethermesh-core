@@ -1,4 +1,5 @@
 import unittest
+from typing import Any, cast
 
 from aethermesh_core.messages import MeshMessage, SUPPORTED_MESSAGE_TYPES
 
@@ -26,7 +27,9 @@ class MeshMessageTests(unittest.TestCase):
             },
         )
 
-    def test_supported_message_types_are_limited_to_initial_local_mesh_types(self) -> None:
+    def test_supported_message_types_are_limited_to_initial_local_mesh_types(
+        self,
+    ) -> None:
         self.assertEqual(
             SUPPORTED_MESSAGE_TYPES,
             frozenset(
@@ -69,9 +72,17 @@ class MeshMessageTests(unittest.TestCase):
 
     def test_required_string_fields_must_be_non_empty(self) -> None:
         invalid_messages = [
-            {"message_id": "", "message_type": "job_assigned", "sender_node_id": "node-a"},
+            {
+                "message_id": "",
+                "message_type": "job_assigned",
+                "sender_node_id": "node-a",
+            },
             {"message_id": "msg-0001", "message_type": "", "sender_node_id": "node-a"},
-            {"message_id": "msg-0001", "message_type": "job_assigned", "sender_node_id": ""},
+            {
+                "message_id": "msg-0001",
+                "message_type": "job_assigned",
+                "sender_node_id": "",
+            },
             {
                 "message_id": "msg-0001",
                 "message_type": "job_assigned",
@@ -104,7 +115,7 @@ class MeshMessageTests(unittest.TestCase):
                 message_type="job_assigned",
                 sender_node_id="node-a",
                 recipient_node_id=None,
-                payload=[],  # type: ignore[arg-type]
+                payload=cast(Any, []),
                 correlation_id=None,
             )
 

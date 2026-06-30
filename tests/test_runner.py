@@ -100,10 +100,14 @@ class LocalRunnerTests(unittest.TestCase):
 
         self.assertEqual(missing.status, "failed")
         self.assertEqual(missing.contribution_units, 0)
-        self.assertEqual(missing.error, "text_stats payload requires string field: text")
+        self.assertEqual(
+            missing.error, "text_stats payload requires string field: text"
+        )
         self.assertEqual(non_string.status, "failed")
         self.assertEqual(non_string.contribution_units, 0)
-        self.assertEqual(non_string.error, "text_stats payload requires string field: text")
+        self.assertEqual(
+            non_string.error, "text_stats payload requires string field: text"
+        )
 
     def test_keyword_extract_completes_with_deterministic_output(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
@@ -135,13 +139,18 @@ class LocalRunnerTests(unittest.TestCase):
         )
         self.assertEqual(result.contribution_units, 1)
 
-    def test_keyword_extract_sorting_limit_and_stopwords_are_deterministic(self) -> None:
+    def test_keyword_extract_sorting_limit_and_stopwords_are_deterministic(
+        self,
+    ) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
             Job(
                 job_id="keyword-sort",
                 job_type="keyword_extract",
-                payload={"text": "The beta alpha beta, gamma alpha beta and delta", "limit": 3},
+                payload={
+                    "text": "The beta alpha beta, gamma alpha beta and delta",
+                    "limit": 3,
+                },
             )
         )
 
@@ -161,7 +170,11 @@ class LocalRunnerTests(unittest.TestCase):
     def test_keyword_extract_uses_default_limit(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
-            Job(job_id="keyword-default", job_type="keyword_extract", payload={"text": "one two three"})
+            Job(
+                job_id="keyword-default",
+                job_type="keyword_extract",
+                payload={"text": "one two three"},
+            )
         )
 
         self.assertEqual(result.status, "completed")
@@ -173,9 +186,21 @@ class LocalRunnerTests(unittest.TestCase):
         cases = [
             Job(job_id="missing", job_type="keyword_extract", payload={}),
             Job(job_id="blank", job_type="keyword_extract", payload={"text": "  "}),
-            Job(job_id="non-int-limit", job_type="keyword_extract", payload={"text": "hello", "limit": "5"}),
-            Job(job_id="zero-limit", job_type="keyword_extract", payload={"text": "hello", "limit": 0}),
-            Job(job_id="large-limit", job_type="keyword_extract", payload={"text": "hello", "limit": 51}),
+            Job(
+                job_id="non-int-limit",
+                job_type="keyword_extract",
+                payload={"text": "hello", "limit": "5"},
+            ),
+            Job(
+                job_id="zero-limit",
+                job_type="keyword_extract",
+                payload={"text": "hello", "limit": 0},
+            ),
+            Job(
+                job_id="large-limit",
+                job_type="keyword_extract",
+                payload={"text": "hello", "limit": 51},
+            ),
         ]
 
         for job in cases:
@@ -185,7 +210,11 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertIsNone(result.output)
                 self.assertEqual(result.contribution_units, 0)
                 self.assertIsInstance(result.error, str)
-                self.assertTrue(result.error.startswith("keyword_extract payload requires"))
+                assert result.error is not None
+                self.assertTrue(
+                    result.error.startswith("keyword_extract payload requires")
+                )
+
     def test_text_chunk_completes_with_deterministic_output(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         result = runner.run(
@@ -212,10 +241,14 @@ class LocalRunnerTests(unittest.TestCase):
 
     def test_text_chunk_empty_text_returns_zero_chunks(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
-        result = runner.run(Job(job_id="chunk-empty", job_type="text_chunk", payload={"text": ""}))
+        result = runner.run(
+            Job(job_id="chunk-empty", job_type="text_chunk", payload={"text": ""})
+        )
 
         self.assertEqual(result.status, "completed")
-        self.assertEqual(result.output, {"chunks": [], "chunk_count": 0, "character_count": 0})
+        self.assertEqual(
+            result.output, {"chunks": [], "chunk_count": 0, "character_count": 0}
+        )
         self.assertEqual(result.contribution_units, 1)
 
     def test_text_chunk_preserves_whitespace_and_long_words(self) -> None:
@@ -246,7 +279,9 @@ class LocalRunnerTests(unittest.TestCase):
     def test_text_chunk_uses_default_max_chars(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         text = "x" * 121
-        result = runner.run(Job(job_id="chunk-default", job_type="text_chunk", payload={"text": text}))
+        result = runner.run(
+            Job(job_id="chunk-default", job_type="text_chunk", payload={"text": text})
+        )
 
         self.assertEqual(result.status, "completed")
         self.assertEqual(result.output["chunk_count"], 2)
@@ -259,10 +294,26 @@ class LocalRunnerTests(unittest.TestCase):
         cases = [
             Job(job_id="missing", job_type="text_chunk", payload={}),
             Job(job_id="non-string", job_type="text_chunk", payload={"text": 123}),
-            Job(job_id="non-int-max", job_type="text_chunk", payload={"text": "hello", "max_chars": "5"}),
-            Job(job_id="bool-max", job_type="text_chunk", payload={"text": "hello", "max_chars": True}),
-            Job(job_id="zero-max", job_type="text_chunk", payload={"text": "hello", "max_chars": 0}),
-            Job(job_id="large-max", job_type="text_chunk", payload={"text": "hello", "max_chars": 1001}),
+            Job(
+                job_id="non-int-max",
+                job_type="text_chunk",
+                payload={"text": "hello", "max_chars": "5"},
+            ),
+            Job(
+                job_id="bool-max",
+                job_type="text_chunk",
+                payload={"text": "hello", "max_chars": True},
+            ),
+            Job(
+                job_id="zero-max",
+                job_type="text_chunk",
+                payload={"text": "hello", "max_chars": 0},
+            ),
+            Job(
+                job_id="large-max",
+                job_type="text_chunk",
+                payload={"text": "hello", "max_chars": 1001},
+            ),
         ]
 
         for job in cases:
@@ -282,7 +333,10 @@ class LocalRunnerTests(unittest.TestCase):
             Job(
                 job_id="embed-1",
                 job_type="text_embed",
-                payload={"text": "AetherMesh nodes process useful local work for the mesh.", "dimensions": 8},
+                payload={
+                    "text": "AetherMesh nodes process useful local work for the mesh.",
+                    "dimensions": 8,
+                },
             )
         )
 
@@ -300,7 +354,13 @@ class LocalRunnerTests(unittest.TestCase):
 
     def test_text_embed_uses_default_dimensions(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
-        result = runner.run(Job(job_id="embed-default", job_type="text_embed", payload={"text": "one two three"}))
+        result = runner.run(
+            Job(
+                job_id="embed-default",
+                job_type="text_embed",
+                payload={"text": "one two three"},
+            )
+        )
 
         self.assertEqual(result.status, "completed")
         self.assertEqual(
@@ -320,10 +380,26 @@ class LocalRunnerTests(unittest.TestCase):
             Job(job_id="missing", job_type="text_embed", payload={}),
             Job(job_id="blank", job_type="text_embed", payload={"text": "  "}),
             Job(job_id="non-string", job_type="text_embed", payload={"text": 123}),
-            Job(job_id="non-int-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": "8"}),
-            Job(job_id="bool-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": True}),
-            Job(job_id="small-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 1}),
-            Job(job_id="large-dimensions", job_type="text_embed", payload={"text": "hello", "dimensions": 65}),
+            Job(
+                job_id="non-int-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": "8"},
+            ),
+            Job(
+                job_id="bool-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": True},
+            ),
+            Job(
+                job_id="small-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": 1},
+            ),
+            Job(
+                job_id="large-dimensions",
+                job_type="text_embed",
+                payload={"text": "hello", "dimensions": 65},
+            ),
         ]
 
         for job in cases:
@@ -333,7 +409,9 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertIsNone(result.output)
                 self.assertEqual(result.contribution_units, 0)
                 self.assertIsInstance(result.error, str)
-                self.assertTrue(str(result.error).startswith("text_embed payload requires"))
+                self.assertTrue(
+                    str(result.error).startswith("text_embed payload requires")
+                )
 
 
 if __name__ == "__main__":

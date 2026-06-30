@@ -108,7 +108,9 @@ class ContributionLedger:
         """
 
         units = _accounted_units(result)
-        message = result.error if result.error is not None else _string_output(result.output)
+        message = (
+            result.error if result.error is not None else _string_output(result.output)
+        )
         record = ContributionRecord(
             node_id=result.node_id,
             job_id=result.job_id,
@@ -131,7 +133,9 @@ class ContributionLedger:
             completed_job_count=sum(
                 1 for record in node_records if record.status == "completed"
             ),
-            failed_job_count=sum(1 for record in node_records if record.status == "failed"),
+            failed_job_count=sum(
+                1 for record in node_records if record.status == "failed"
+            ),
             total_result_count=len(node_records),
             total_contribution_units=sum(
                 record.contribution_units for record in node_records
@@ -219,7 +223,9 @@ def load_ledger_document(path: str | Path) -> tuple[ContributionLedger, dict[str
         raise LedgerPersistenceError("ledger JSON must be an object")
     ledger = ContributionLedger.from_document(document)
     extras = {
-        key: value for key, value in document.items() if key not in {"version", "records"}
+        key: value
+        for key, value in document.items()
+        if key not in {"version", "records"}
     }
     return ledger, extras
 
