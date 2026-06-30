@@ -19,6 +19,7 @@ class CliTests(unittest.TestCase):
             "simulate-local",
             "run-local-batch",
             "dispatch-local-batch",
+            "dispatch-local-peers",
             "run-local-flow",
             "audit-local-flow",
             "ledger-summary",
@@ -65,6 +66,22 @@ class CliTests(unittest.TestCase):
         self.assertEqual(dispatch.command, "dispatch-local-batch")
         self.assertEqual(dispatch.manifest, "manifest.json")
         self.assertEqual(dispatch.message_log_path, "dispatch.json")
+
+        peer_dispatch = parser.parse_args(
+            [
+                "dispatch-local-peers",
+                "--peer-message-log-path",
+                "peers.json",
+                "--manifest",
+                "manifest.json",
+                "--message-log-path",
+                "dispatch.json",
+            ]
+        )
+        self.assertEqual(peer_dispatch.command, "dispatch-local-peers")
+        self.assertEqual(peer_dispatch.peer_message_log_path, "peers.json")
+        self.assertEqual(peer_dispatch.manifest, "manifest.json")
+        self.assertEqual(peer_dispatch.message_log_path, "dispatch.json")
 
         flow = parser.parse_args(
             ["run-local-flow", "--manifest", "manifest.json", "--output-dir", "out"]
@@ -157,7 +174,7 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-local-peers,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-local-peers,run-local-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-local-peers Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
@@ -166,6 +183,7 @@ class CliTests(unittest.TestCase):
                 "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
                 "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
+                "dispatch-local-peers": "usage: aethermesh-core dispatch-local-peers [-h] --peer-message-log-path PEER_MESSAGE_LOG_PATH --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --peer-message-log-path PEER_MESSAGE_LOG_PATH Path to an existing version 1 message log with node heartbeats. --manifest MANIFEST Path to a version 1 local job manifest whose jobs should be dispatched. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
                 "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts.",
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
                 "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
@@ -2905,6 +2923,224 @@ class CliTests(unittest.TestCase):
                 ),
                 ["local-node-a.json"],
             )
+
+    def test_dispatch_local_peers_uses_heartbeat_peers_and_job_only_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            peers_path = root / "peers.json"
+            manifest_path = root / "jobs.json"
+            output_path = root / "dispatch.json"
+            peers_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["text_stats"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 2,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0003",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-c",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-c",
+                                    "status": "offline",
+                                    "heartbeat_sequence": 3,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["echo", "text_stats"],
+                                },
+                                "correlation_id": None,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello"},
+                            },
+                            {
+                                "job_id": "stats-1",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh"},
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "dispatch-local-peers",
+                        "--peer-message-log-path",
+                        str(peers_path),
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+
+            payload = json.loads(stdout.getvalue())
+            output_document = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertEqual(payload["command"], "dispatch-local-peers")
+        self.assertEqual(payload["assigned_node_ids"], ["node-a", "node-b"])
+        self.assertEqual(
+            payload["assignments"],
+            [
+                {"job_id": "echo-1", "node_id": "node-a"},
+                {"job_id": "stats-1", "node_id": "node-b"},
+            ],
+        )
+        self.assertEqual(output_document["metadata"]["source"], "dispatch-local-peers")
+        self.assertEqual(
+            [message["message_type"] for message in output_document["messages"]],
+            ["node_heartbeat", "node_heartbeat", "job_assigned", "job_assigned"],
+        )
+
+    def test_dispatch_local_peers_expected_errors_do_not_overwrite_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            peers_path = root / "peers.json"
+            manifest_path = root / "jobs.json"
+            output_path = root / "dispatch.json"
+            original_output = '{"keep": true}'
+            peers_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "jobs": [
+                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            output_path.write_text(original_output, encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "dispatch-local-peers",
+                        "--peer-message-log-path",
+                        str(peers_path),
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+            output_contents = output_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("job_id=stats-1 job_type=text_stats", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertEqual(output_contents, original_output)
+
+    def test_dispatch_local_peers_missing_peer_log_fails_without_creating_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "jobs.json"
+            output_path = root / "dispatch.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "jobs": [
+                            {"job_id": "echo-1", "job_type": "echo", "payload": {}}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "dispatch-local-peers",
+                        "--peer-message-log-path",
+                        str(root / "missing-peers.json"),
+                        "--manifest",
+                        str(manifest_path),
+                        "--message-log-path",
+                        str(output_path),
+                    ]
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("message log file does not exist", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertFalse(output_path.exists())
 
 
 if __name__ == "__main__":

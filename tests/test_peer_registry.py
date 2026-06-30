@@ -3,7 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    peer_summary_document,
+    scheduled_nodes_from_heartbeat_log,
+)
+from aethermesh_core.scheduler import NodeStatus
 
 
 class PeerRegistryTests(unittest.TestCase):
@@ -240,6 +245,70 @@ class PeerRegistryTests(unittest.TestCase):
                     with self.assertRaises(PeerRegistryError) as cm:
                         peer_summary_document(log_path)
                     self.assertEqual(str(cm.exception), expected_message)
+
+    def test_scheduled_nodes_from_heartbeat_log_preserves_latest_sorted_peers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            log_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "messages": [
+                            {
+                                "message_id": "msg-0001",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-b",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-b",
+                                    "status": "available",
+                                    "heartbeat_sequence": 1,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0002",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "offline",
+                                    "heartbeat_sequence": 2,
+                                    "heartbeat_count": 1,
+                                    "capabilities": ["text_stats", "echo"],
+                                },
+                                "correlation_id": None,
+                            },
+                            {
+                                "message_id": "msg-0003",
+                                "message_type": "node_heartbeat",
+                                "sender_node_id": "node-a",
+                                "recipient_node_id": None,
+                                "payload": {
+                                    "node_id": "node-a",
+                                    "status": "available",
+                                    "heartbeat_sequence": 4,
+                                    "heartbeat_count": 2,
+                                    "capabilities": ["text_stats"],
+                                },
+                                "correlation_id": None,
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            nodes = scheduled_nodes_from_heartbeat_log(log_path)
+
+        self.assertEqual([node.node_id for node in nodes], ["node-a", "node-b"])
+        self.assertEqual(nodes[0].status, NodeStatus.AVAILABLE)
+        self.assertEqual(nodes[0].capabilities, ("text_stats",))
+        self.assertEqual(nodes[1].status, NodeStatus.AVAILABLE)
+        self.assertEqual(nodes[1].capabilities, ("echo",))
 
 
 if __name__ == "__main__":

@@ -14,7 +14,11 @@ from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
-from aethermesh_core.job_manifest import ManifestError, load_job_manifest
+from aethermesh_core.job_manifest import (
+    ManifestError,
+    load_job_manifest,
+    load_job_manifest_jobs,
+)
 from aethermesh_core.ledger import (
     ContributionLedger,
     LedgerPersistenceError,
@@ -48,7 +52,11 @@ from aethermesh_core.node_state import (
     load_node_processing_state,
     save_node_processing_state,
 )
-from aethermesh_core.peer_registry import PeerRegistryError, peer_summary_document
+from aethermesh_core.peer_registry import (
+    PeerRegistryError,
+    peer_summary_document,
+    scheduled_nodes_from_heartbeat_log,
+)
 from aethermesh_core.receipts import (
     ReceiptPersistenceError,
     build_receipt_document,
@@ -139,6 +147,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a version 1 local job-batch JSON manifest.",
     )
     dispatch.add_argument(
+        "--message-log-path",
+        required=True,
+        help="Path to write the version 1 assignment-only local message log.",
+    )
+
+    peer_dispatch = subcommands.add_parser(
+        "dispatch-local-peers",
+        help="Write local dispatch messages using heartbeat-discovered peers.",
+    )
+    peer_dispatch.add_argument(
+        "--peer-message-log-path",
+        required=True,
+        help="Path to an existing version 1 message log with node heartbeats.",
+    )
+    peer_dispatch.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 local job manifest whose jobs should be dispatched.",
+    )
+    peer_dispatch.add_argument(
         "--message-log-path",
         required=True,
         help="Path to write the version 1 assignment-only local message log.",
@@ -429,6 +457,36 @@ def dispatch_local_batch_command(
     )
     write_message_log(message_log_path, message_log_document)
     return dispatch.to_dict()
+
+
+def dispatch_local_peers_command(
+    peer_message_log_path: str,
+    manifest_path: str,
+    message_log_path: str,
+) -> dict[str, object]:
+    """Dispatch manifest jobs to nodes discovered from heartbeat messages."""
+
+    nodes = scheduled_nodes_from_heartbeat_log(peer_message_log_path)
+    jobs = load_job_manifest_jobs(manifest_path)
+    dispatch = dispatch_local_batch(
+        manifest_path=manifest_path,
+        message_log_path=message_log_path,
+        nodes=nodes,
+        jobs=jobs,
+    )
+    message_log_document = build_dispatch_message_log_document(
+        messages=dispatch.messages,
+        jobs=dispatch.jobs,
+        nodes=dispatch.nodes,
+        assignments=dispatch.assignments,
+        manifest_path=manifest_path,
+        source="dispatch-local-peers",
+    )
+    write_message_log(message_log_path, message_log_document)
+    payload = dispatch.to_dict()
+    payload["command"] = "dispatch-local-peers"
+    payload["peer_message_log_path"] = peer_message_log_path
+    return payload
 
 
 def summarize_ledger(ledger_path: str) -> dict[str, object]:
@@ -833,6 +891,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         except ValueError as exc:
             print(f"error: local batch dispatch failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "dispatch-local-peers":
+        try:
+            payload = dispatch_local_peers_command(
+                args.peer_message_log_path, args.manifest, args.message_log_path
+            )
+        except (ManifestError, PeerRegistryError, MessageLogPersistenceError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            print(f"error: local peer dispatch failed: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0

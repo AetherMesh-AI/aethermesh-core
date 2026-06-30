@@ -88,13 +88,14 @@ def build_dispatch_message_log_document(
     nodes: list[ScheduledNode],
     assignments: list[JobAssignment],
     manifest_path: str | Path,
+    source: str = "dispatch-local-batch",
 ) -> dict[str, Any]:
     """Build a deterministic version 1 assignment-only dispatch document."""
 
     return {
         "version": 1,
         "metadata": {
-            "source": "dispatch-local-batch",
+            "source": source,
             "manifest_path": str(manifest_path),
             "message_count": len(messages),
             "node_count": len(nodes),

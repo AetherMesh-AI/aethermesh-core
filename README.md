@@ -134,6 +134,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-
 
 The dispatch log contains deterministic `node_heartbeat` messages for available nodes and `job_assigned` messages for scheduled jobs. Heartbeat payloads include each available node's manifest capabilities. Use `process-local-inbox` to consume the dispatch log later for one node and record validation-gated contribution.
 
+Dispatch jobs to peers discovered from an existing local heartbeat message log instead of from manifest `nodes`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli dispatch-local-peers --peer-message-log-path ./local-peers.json --manifest examples/local-batch.json --message-log-path ./local-peer-dispatch.json
+```
+
+This remains local message-log discovery only. The command reads jobs from the manifest, builds the scheduling roster from latest `node_heartbeat` messages, ignores offline peers for assignment, and writes the same assignment-only dispatch log shape used by local inbox processing.
+
 To test the file-backed local transport seam, materialize addressed dispatch messages into per-node inbox files and have a node consume only its own inbox:
 
 ```bash

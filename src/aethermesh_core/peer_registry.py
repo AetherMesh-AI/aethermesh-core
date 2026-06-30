@@ -11,6 +11,7 @@ from aethermesh_core.message_log import (
     load_message_log_messages,
 )
 from aethermesh_core.messages import MeshMessage
+from aethermesh_core.scheduler import NodeStatus, ScheduledNode
 
 
 class PeerRegistryError(ValueError):
@@ -79,6 +80,50 @@ def peer_summary_document(message_log_path: str | Path) -> dict[str, object]:
     return {
         "peers": [peers[node_id].to_dict() for node_id in sorted(peers)],
     }
+
+
+def scheduled_nodes_from_heartbeat_log(
+    message_log_path: str | Path,
+) -> list[ScheduledNode]:
+    """Build deterministic scheduler nodes from latest local heartbeats.
+
+    The input message log is read-only. Returned nodes are sorted by node id so a
+    repeated dispatch from the same heartbeat log produces stable assignment
+    ordering independent of the original message ordering.
+    """
+
+    document = peer_summary_document(message_log_path)
+    raw_peers = document["peers"]
+    if not isinstance(raw_peers, list):
+        raise PeerRegistryError("peer summary peers must be a list")
+
+    nodes: list[ScheduledNode] = []
+    for peer in raw_peers:
+        if not isinstance(peer, dict):
+            raise PeerRegistryError("peer summary entries must be objects")
+        node_id = peer.get("node_id")
+        raw_status = peer.get("status")
+        raw_capabilities = peer.get("capabilities")
+        if not isinstance(node_id, str) or node_id == "":
+            raise PeerRegistryError("peer node_id must be a non-empty string")
+        if not isinstance(raw_status, str):
+            raise PeerRegistryError(f"peer {node_id} status must be a string")
+        try:
+            status = NodeStatus(raw_status)
+        except ValueError as exc:
+            supported = ", ".join(status.value for status in NodeStatus)
+            raise PeerRegistryError(
+                f"peer {node_id} status must be one of: {supported}"
+            ) from exc
+        capabilities = _parse_capabilities(raw_capabilities, f"peer {node_id}")
+        nodes.append(
+            ScheduledNode(
+                node_id=node_id,
+                status=status,
+                capabilities=tuple(capabilities),
+            )
+        )
+    return nodes
 
 
 def _parse_heartbeat(message: MeshMessage) -> PeerSummary:
