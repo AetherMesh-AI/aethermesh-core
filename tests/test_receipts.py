@@ -473,7 +473,9 @@ def _processed_assignment(
     contribution_message_id: str,
 ) -> ProcessedAssignment:
     validation = validate_job_result(job, result)
-    credited_units = score_validated_contribution(job, result) if validation.valid else 0
+    credited_units = (
+        score_validated_contribution(job, result) if validation.valid else 0
+    )
     accounted_result = replace(result, contribution_units=credited_units)
     record = ContributionLedger().record(
         accounted_result,
