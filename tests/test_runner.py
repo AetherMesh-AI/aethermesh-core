@@ -510,6 +510,139 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertTrue(
                     str(result.error).startswith("text_embed payload requires")
                 )
+    def test_extractive_summary_completes_with_deterministic_output(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="summary-1",
+                job_type="extractive_summary",
+                payload={
+                    "text": "Alpha mesh helps nodes. Beta mesh mesh validates work. Gamma work work supports nodes! Tiny. Delta work reports local work.",
+                    "max_sentences": 2,
+                },
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(
+            result.output,
+            {
+                "summary": "Beta mesh mesh validates work. Gamma work work supports nodes!",
+                "sentences": [
+                    {
+                        "index": 1,
+                        "text": "Beta mesh mesh validates work.",
+                        "score": 13,
+                        "token_count": 5,
+                    },
+                    {
+                        "index": 2,
+                        "text": "Gamma work work supports nodes!",
+                        "score": 14,
+                        "token_count": 5,
+                    },
+                ],
+                "sentence_count": 2,
+                "source_sentence_count": 5,
+                "character_count": 123,
+            },
+        )
+        self.assertEqual(result.contribution_units, 1)
+
+    def test_extractive_summary_uses_default_and_original_order_tie_breaks(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        result = runner.run(
+            Job(
+                job_id="summary-default",
+                job_type="extractive_summary",
+                payload={"text": "One alpha. Two beta. Three gamma. Four delta."},
+            )
+        )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output["sentence_count"], 3)
+        self.assertEqual(
+            [sentence["index"] for sentence in result.output["sentences"]],
+            [0, 1, 2],
+        )
+        self.assertEqual(result.output["summary"], "One alpha. Two beta. Three gamma.")
+
+    def test_extractive_summary_splits_on_newlines_and_is_deterministic(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        job = Job(
+            job_id="summary-newline",
+            job_type="extractive_summary",
+            payload={
+                "text": "First repeated alpha\nSecond repeated repeated beta\nThird gamma.",
+                "max_sentences": 2,
+            },
+        )
+
+        first = runner.run(job)
+        second = runner.run(job)
+
+        self.assertEqual(first.output, second.output)
+        self.assertEqual(
+            first.output["summary"],
+            "First repeated alpha Second repeated repeated beta",
+        )
+        self.assertEqual(first.output["source_sentence_count"], 3)
+
+    def test_extractive_summary_accepts_min_and_max_sentence_limits(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        for max_sentences in (1, 10):
+            with self.subTest(max_sentences=max_sentences):
+                result = runner.run(
+                    Job(
+                        job_id=f"summary-boundary-{max_sentences}",
+                        job_type="extractive_summary",
+                        payload={"text": "Alpha. Beta. Gamma.", "max_sentences": max_sentences},
+                    )
+                )
+                self.assertEqual(result.status, "completed")
+                self.assertLessEqual(result.output["sentence_count"], max_sentences)
+
+    def test_extractive_summary_malformed_payload_fails_predictably(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+        cases = [
+            Job(job_id="missing", job_type="extractive_summary", payload={}),
+            Job(job_id="blank", job_type="extractive_summary", payload={"text": "  "}),
+            Job(job_id="non-string", job_type="extractive_summary", payload={"text": 123}),
+            Job(
+                job_id="zero-max-sentences",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": 0},
+            ),
+            Job(
+                job_id="large-max-sentences",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": 11},
+            ),
+            Job(
+                job_id="float-max-sentences",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": 1.5},
+            ),
+            Job(
+                job_id="string-max-sentences",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": "2"},
+            ),
+            Job(
+                job_id="bool-max-sentences",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": True},
+            ),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                result = runner.run(job)
+                self.assertEqual(result.status, "failed")
+                self.assertIsNone(result.output)
+                self.assertEqual(result.contribution_units, 0)
+                self.assertIsInstance(result.error, str)
+                self.assertTrue(str(result.error).startswith("extractive_summary payload requires"))
 
 
 if __name__ == "__main__":

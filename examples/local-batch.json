@@ -39,6 +39,14 @@
         "text": "AetherMesh nodes prepare deterministic local feature vectors.",
         "dimensions": 8
       }
+    },
+    {
+      "job_id": "extractive-summary-1",
+      "job_type": "extractive_summary",
+      "payload": {
+        "text": "AetherMesh nodes run local useful work. Local work reports deterministic outputs. Deterministic outputs make validation and contribution accounting auditable.",
+        "max_sentences": 2
+      }
     }
   ]
 }

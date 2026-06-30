@@ -55,6 +55,7 @@ class LocalSchedulerTests(unittest.TestCase):
         assignments = LocalScheduler([node]).assign_jobs(
             [
                 Job(job_id="echo-1", job_type="echo"),
+                Job(job_id="summary-1", job_type="extractive_summary"),
                 Job(job_id="keyword-1", job_type="keyword_extract"),
                 Job(job_id="chunk-1", job_type="text_chunk"),
                 Job(job_id="embed-1", job_type="text_embed"),
@@ -63,7 +64,7 @@ class LocalSchedulerTests(unittest.TestCase):
         )
         self.assertEqual(
             [assignment.node_id for assignment in assignments],
-            ["node-a", "node-a", "node-a", "node-a", "node-a"],
+            ["node-a", "node-a", "node-a", "node-a", "node-a", "node-a"],
         )
 
     def test_skips_offline_nodes_even_when_capable(self) -> None:
@@ -121,6 +122,7 @@ class LocalSchedulerTests(unittest.TestCase):
             [
                 Job(job_id="echo-1", job_type="echo"),
                 Job(job_id="stats-1", job_type="text_stats"),
+                Job(job_id="summary-1", job_type="extractive_summary"),
                 Job(job_id="keyword-1", job_type="keyword_extract"),
                 Job(job_id="chunk-1", job_type="text_chunk"),
                 Job(job_id="embed-1", job_type="text_embed"),
@@ -129,7 +131,23 @@ class LocalSchedulerTests(unittest.TestCase):
 
         self.assertEqual(
             [assignment.node_id for assignment in assignments],
-            ["node-a", "node-b", "node-a", "node-b", "node-a"],
+            ["node-a", "node-b", "node-a", "node-b", "node-a", "node-b"],
+        )
+
+    def test_routes_extractive_summary_by_declared_capability(self) -> None:
+        scheduler = LocalScheduler(
+            [
+                ScheduledNode("node-a", capabilities=("echo", "text_stats")),
+                ScheduledNode("node-b", capabilities=("extractive_summary",)),
+            ]
+        )
+
+        assignments = scheduler.assign_jobs(
+            [Job(job_id="summary-1", job_type="extractive_summary")]
+        )
+
+        self.assertEqual(
+            assignments[0].to_dict(), {"job_id": "summary-1", "node_id": "node-b"}
         )
 
     def test_routes_keyword_extract_by_declared_capability(self) -> None:

@@ -627,6 +627,142 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "result_not_completed")
+    def test_completed_extractive_summary_result_with_matching_output_is_valid(self) -> None:
+        validation = validate_job_result(
+            Job(
+                job_id="summary-1",
+                job_type="extractive_summary",
+                payload={
+                    "text": "AetherMesh nodes run local useful work. Local work reports deterministic outputs. Deterministic outputs make validation and contribution accounting auditable.",
+                    "max_sentences": 2,
+                },
+            ),
+            JobResult(
+                job_id="summary-1",
+                node_id="node-a",
+                status="completed",
+                output={
+                    "summary": "Local work reports deterministic outputs. Deterministic outputs make validation and contribution accounting auditable.",
+                    "sentences": [
+                        {
+                            "index": 1,
+                            "text": "Local work reports deterministic outputs.",
+                            "score": 9,
+                            "token_count": 5,
+                        },
+                        {
+                            "index": 2,
+                            "text": "Deterministic outputs make validation and contribution accounting auditable.",
+                            "score": 9,
+                            "token_count": 8,
+                        },
+                    ],
+                    "sentence_count": 2,
+                    "source_sentence_count": 3,
+                    "character_count": 158,
+                },
+                error=None,
+                contribution_units=1,
+            ),
+        )
+
+        self.assertTrue(validation.valid)
+        self.assertEqual(validation.reason, "ok")
+
+    def test_extractive_summary_rejects_changed_output(self) -> None:
+        job = Job(
+            job_id="summary-1",
+            job_type="extractive_summary",
+            payload={"text": "Alpha beta. Gamma gamma beta.", "max_sentences": 1},
+        )
+        valid_output = {
+            "summary": "Gamma gamma beta.",
+            "sentences": [
+                {"index": 1, "text": "Gamma gamma beta.", "score": 6, "token_count": 3}
+            ],
+            "sentence_count": 1,
+            "source_sentence_count": 2,
+            "character_count": 29,
+        }
+        cases = [
+            ("changed_summary", {**valid_output, "summary": "Alpha beta."}),
+            (
+                "changed_metadata",
+                {
+                    **valid_output,
+                    "sentences": [
+                        {"index": 1, "text": "Gamma gamma beta.", "score": 4, "token_count": 3}
+                    ],
+                },
+            ),
+            ("changed_counts", {**valid_output, "sentence_count": 2}),
+            ("malformed_output", ["Gamma gamma beta."]),
+        ]
+
+        for name, output in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="summary-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_extractive_summary_malformed_payload_is_invalid(self) -> None:
+        cases = [
+            Job(job_id="summary-missing", job_type="extractive_summary", payload={}),
+            Job(job_id="summary-blank", job_type="extractive_summary", payload={"text": "  "}),
+            Job(job_id="summary-non-string", job_type="extractive_summary", payload={"text": 123}),
+            Job(
+                job_id="summary-bool-max",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": True},
+            ),
+            Job(
+                job_id="summary-large-max",
+                job_type="extractive_summary",
+                payload={"text": "hello", "max_sentences": 11},
+            ),
+        ]
+
+        for job in cases:
+            with self.subTest(job_id=job.job_id):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id=job.job_id,
+                        node_id="node-a",
+                        status="completed",
+                        output=None,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, "malformed_extractive_summary_payload")
+
+    def test_failed_extractive_summary_result_earns_zero_credit(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="summary-1", job_type="extractive_summary", payload={"text": "alpha"}),
+            JobResult(
+                job_id="summary-1",
+                node_id="node-a",
+                status="failed",
+                output=None,
+                error="extractive_summary payload requires non-empty string field: text",
+                contribution_units=0,
+            ),
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_not_completed")
 
 
 if __name__ == "__main__":

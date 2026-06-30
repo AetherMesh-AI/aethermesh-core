@@ -177,6 +177,42 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(result["totals"]["contribution_units"], 3)
 
+    def test_extractive_summary_flows_through_simulation_and_validation_accounting(
+        self,
+    ) -> None:
+        jobs = [
+            Job(
+                job_id="summary-1",
+                job_type="extractive_summary",
+                payload={
+                    "text": "AetherMesh nodes run local useful work. Local work reports deterministic outputs. Deterministic outputs make validation and contribution accounting auditable.",
+                    "max_sentences": 2,
+                },
+            )
+        ]
+
+        result = run_local_simulation(["node-a"], jobs).to_dict()
+
+        self.assertEqual(
+            result["assignments"], [{"job_id": "summary-1", "node_id": "node-a"}]
+        )
+        self.assertEqual(
+            result["results"][0]["output"]["summary"],
+            "Local work reports deterministic outputs. Deterministic outputs make validation and contribution accounting auditable.",
+        )
+        self.assertEqual(
+            result["validations"],
+            [
+                {
+                    "job_id": "summary-1",
+                    "result_job_id": "summary-1",
+                    "valid": True,
+                    "reason": "ok",
+                }
+            ],
+        )
+        self.assertEqual(result["totals"]["contribution_units"], 2)
+
     def test_jobs_are_executed_by_node_service_inbox_processing(self) -> None:
         calls: list[str] = []
         original_process_inbox = LocalNodeService.process_inbox
@@ -282,6 +318,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
@@ -297,6 +334,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "status": "offline",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
@@ -312,6 +350,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",

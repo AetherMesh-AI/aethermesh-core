@@ -2,6 +2,7 @@ import unittest
 
 from aethermesh_core.contribution import (
     ECHO_CONTRIBUTION_UNITS,
+    EXTRACTIVE_SUMMARY_MAX_UNITS,
     KEYWORD_EXTRACT_MAX_UNITS,
     TEXT_CHUNK_MAX_UNITS,
     TEXT_EMBED_MAX_UNITS,
@@ -94,6 +95,34 @@ class ContributionScoringTests(unittest.TestCase):
         self.assertEqual(
             score_validated_contribution(capped_job, capped_result),
             TEXT_EMBED_MAX_UNITS,
+        )
+
+    def test_extractive_summary_scores_by_capped_selected_sentence_buckets(self) -> None:
+        job, result = _run(
+            Job(
+                "summary",
+                "extractive_summary",
+                {
+                    "text": "Alpha beta. Beta gamma. Gamma delta. Delta epsilon.",
+                    "max_sentences": 3,
+                },
+            )
+        )
+        capped_job, capped_result = _run(
+            Job(
+                "summary-cap",
+                "extractive_summary",
+                {
+                    "text": " ".join(f"Sentence {index} term." for index in range(10)),
+                    "max_sentences": 10,
+                },
+            )
+        )
+
+        self.assertEqual(score_validated_contribution(job, result), 3)
+        self.assertEqual(
+            score_validated_contribution(capped_job, capped_result),
+            EXTRACTIVE_SUMMARY_MAX_UNITS,
         )
 
     def test_invalid_failed_unsupported_mismatched_or_malformed_results_score_zero(
@@ -208,6 +237,43 @@ class ContributionScoringTests(unittest.TestCase):
                     "node-a",
                     "completed",
                     {"token_count": 1, "dimensions": 2, "vector": [1]},
+                    None,
+                    1,
+                ),
+            ),
+            (
+                Job("summary", "extractive_summary", {}),
+                JobResult("summary", "node-a", "completed", [], None, 1),
+            ),
+            (
+                Job("summary", "extractive_summary", {}),
+                JobResult(
+                    "summary",
+                    "node-a",
+                    "completed",
+                    {"summary": 123, "sentences": [], "sentence_count": 0, "source_sentence_count": 0, "character_count": 0},
+                    None,
+                    1,
+                ),
+            ),
+            (
+                Job("summary", "extractive_summary", {}),
+                JobResult(
+                    "summary",
+                    "node-a",
+                    "completed",
+                    {"summary": "", "sentences": [], "sentence_count": 1, "source_sentence_count": 1, "character_count": 1},
+                    None,
+                    1,
+                ),
+            ),
+            (
+                Job("summary", "extractive_summary", {}),
+                JobResult(
+                    "summary",
+                    "node-a",
+                    "completed",
+                    {"summary": "x", "sentences": [{"index": 0, "text": "x", "score": True, "token_count": 1}], "sentence_count": 1, "source_sentence_count": 1, "character_count": 1},
                     None,
                     1,
                 ),

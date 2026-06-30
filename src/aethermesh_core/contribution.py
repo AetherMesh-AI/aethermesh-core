@@ -22,6 +22,9 @@ TEXT_EMBED_TOKENS_PER_UNIT = 10
 TEXT_EMBED_DIMENSIONS_PER_UNIT = 16
 TEXT_EMBED_MAX_UNITS = 6
 
+EXTRACTIVE_SUMMARY_SENTENCES_PER_UNIT = 2
+EXTRACTIVE_SUMMARY_MAX_UNITS = 5
+
 
 def score_validated_contribution(job: Job, result: JobResult) -> int:
     """Return capped integer contribution units for one validated local result.
@@ -45,6 +48,8 @@ def score_validated_contribution(job: Job, result: JobResult) -> int:
         return _score_text_chunk(result.output)
     if job.job_type == "text_embed":
         return _score_text_embed(result.output)
+    if job.job_type == "extractive_summary":
+        return _score_extractive_summary(result.output)
     return 0
 
 
@@ -101,6 +106,43 @@ def _score_text_embed(output: Any) -> int:
     token_units = _ceil_div(cast(int, token_count), TEXT_EMBED_TOKENS_PER_UNIT)
     dimension_units = _ceil_div(cast(int, dimensions), TEXT_EMBED_DIMENSIONS_PER_UNIT)
     return _cap_units(1 + token_units + dimension_units, TEXT_EMBED_MAX_UNITS)
+
+
+def _score_extractive_summary(output: Any) -> int:
+    if not isinstance(output, dict):
+        return 0
+    summary = output.get("summary")
+    sentences = output.get("sentences")
+    sentence_count = output.get("sentence_count")
+    source_sentence_count = output.get("source_sentence_count")
+    character_count = output.get("character_count")
+    if not isinstance(summary, str) or not isinstance(sentences, list):
+        return 0
+    if not _non_negative_int(sentence_count) or not _non_negative_int(
+        source_sentence_count
+    ):
+        return 0
+    if not _non_negative_int(character_count):
+        return 0
+    if len(sentences) != sentence_count or cast(int, sentence_count) > cast(
+        int, source_sentence_count
+    ):
+        return 0
+    for sentence in sentences:
+        if not isinstance(sentence, dict):
+            return 0
+        if not _non_negative_int(sentence.get("index")):
+            return 0
+        if not isinstance(sentence.get("text"), str):
+            return 0
+        if not _non_negative_int(sentence.get("score")):
+            return 0
+        if not _non_negative_int(sentence.get("token_count")):
+            return 0
+    bucket_units = _ceil_div(
+        cast(int, sentence_count), EXTRACTIVE_SUMMARY_SENTENCES_PER_UNIT
+    )
+    return _cap_units(1 + bucket_units, EXTRACTIVE_SUMMARY_MAX_UNITS)
 
 
 def _ceil_div(value: int, bucket_size: int) -> int:

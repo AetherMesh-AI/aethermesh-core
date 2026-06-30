@@ -7,6 +7,7 @@ from typing import Any
 
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.runner import (
+    build_extractive_summary_output,
     build_keyword_extract_output,
     build_text_chunk_output,
     build_text_embed_output,
@@ -40,6 +41,7 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
 
     if job.job_type not in {
         "echo",
+        "extractive_summary",
         "keyword_extract",
         "text_chunk",
         "text_embed",
@@ -110,6 +112,20 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
             expected_output = build_text_embed_output(job.payload)
         except ValueError:
             return _invalid(job, result, "malformed_text_embed_payload")
+        if result.output != expected_output:
+            return _invalid(job, result, "output_mismatch")
+        return ValidationResult(
+            job_id=job.job_id,
+            result_job_id=result.job_id,
+            valid=True,
+            reason="ok",
+        )
+
+    if job.job_type == "extractive_summary":
+        try:
+            expected_output = build_extractive_summary_output(job.payload)
+        except ValueError:
+            return _invalid(job, result, "malformed_extractive_summary_payload")
         if result.output != expected_output:
             return _invalid(job, result, "output_mismatch")
         return ValidationResult(

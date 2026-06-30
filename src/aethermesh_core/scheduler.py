@@ -13,6 +13,7 @@ class NoAvailableNodesError(ValueError):
 
 DEFAULT_LOCAL_CAPABILITIES = (
     "echo",
+    "extractive_summary",
     "keyword_extract",
     "text_chunk",
     "text_embed",

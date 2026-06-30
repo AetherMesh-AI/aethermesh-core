@@ -26,6 +26,7 @@ class NodeRegistryTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
@@ -39,6 +40,7 @@ class NodeRegistryTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
@@ -130,6 +132,7 @@ class NodeRegistryTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",
@@ -143,6 +146,7 @@ class NodeRegistryTests(unittest.TestCase):
                     "status": "available",
                     "capabilities": [
                         "echo",
+                        "extractive_summary",
                         "keyword_extract",
                         "text_chunk",
                         "text_embed",

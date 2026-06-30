@@ -18,6 +18,7 @@ class LocalRunner:
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"
     SUPPORTED_TEXT_CHUNK_JOB_TYPE = "text_chunk"
     SUPPORTED_TEXT_EMBED_JOB_TYPE = "text_embed"
+    SUPPORTED_EXTRACTIVE_SUMMARY_JOB_TYPE = "extractive_summary"
 
     def __init__(self, identity: NodeIdentity) -> None:
         self.identity = identity
@@ -63,6 +64,9 @@ class LocalRunner:
 
         if job.job_type == self.SUPPORTED_TEXT_EMBED_JOB_TYPE:
             return self._run_payload_builder(job, build_text_embed_output)
+
+        if job.job_type == self.SUPPORTED_EXTRACTIVE_SUMMARY_JOB_TYPE:
+            return self._run_payload_builder(job, build_extractive_summary_output)
 
         return JobResult(
             job_id=job.job_id,
@@ -130,6 +134,10 @@ _KEYWORD_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 TEXT_EMBED_DEFAULT_DIMENSIONS = 8
 TEXT_EMBED_MIN_DIMENSIONS = 2
 TEXT_EMBED_MAX_DIMENSIONS = 64
+EXTRACTIVE_SUMMARY_DEFAULT_MAX_SENTENCES = 3
+EXTRACTIVE_SUMMARY_MIN_SENTENCES = 1
+EXTRACTIVE_SUMMARY_MAX_SENTENCES = 10
+_SUMMARY_SENTENCE_BOUNDARY_PATTERN = re.compile(r"[.!?]+|\n+")
 
 
 def build_keyword_extract_output(payload: dict[str, Any]) -> dict[str, object]:
@@ -203,6 +211,89 @@ def build_text_embed_output(payload: dict[str, Any]) -> dict[str, object]:
         "unique_terms": len(counts),
         "vector": vector,
     }
+
+
+def build_extractive_summary_output(payload: dict[str, Any]) -> dict[str, object]:
+    """Build a deterministic local extractive summary for input text."""
+
+    text = payload.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError(
+            "extractive_summary payload requires non-empty string field: text"
+        )
+
+    max_sentences = payload.get(
+        "max_sentences", EXTRACTIVE_SUMMARY_DEFAULT_MAX_SENTENCES
+    )
+    if (
+        not isinstance(max_sentences, int)
+        or isinstance(max_sentences, bool)
+        or max_sentences < EXTRACTIVE_SUMMARY_MIN_SENTENCES
+        or max_sentences > EXTRACTIVE_SUMMARY_MAX_SENTENCES
+    ):
+        raise ValueError(
+            "extractive_summary payload requires integer field: "
+            f"max_sentences between {EXTRACTIVE_SUMMARY_MIN_SENTENCES} "
+            f"and {EXTRACTIVE_SUMMARY_MAX_SENTENCES}"
+        )
+
+    source_text = text.strip()
+    candidates = _split_summary_sentences(source_text)
+    source_tokens = [
+        token
+        for token in _KEYWORD_TOKEN_PATTERN.findall(source_text.lower())
+        if token not in KEYWORD_EXTRACT_STOPWORDS
+    ]
+    source_counts = Counter(source_tokens)
+
+    scored_sentences: list[dict[str, int | str]] = []
+    for index, sentence_text in enumerate(candidates):
+        tokens = _KEYWORD_TOKEN_PATTERN.findall(sentence_text.lower())
+        scoring_tokens = [
+            token for token in tokens if token not in KEYWORD_EXTRACT_STOPWORDS
+        ]
+        score = sum(source_counts[token] for token in scoring_tokens)
+        if len(tokens) < 3:
+            score = max(0, score - 1)
+        scored_sentences.append(
+            {
+                "index": index,
+                "text": sentence_text,
+                "score": score,
+                "token_count": len(tokens),
+            }
+        )
+
+    selected = sorted(
+        sorted(
+            scored_sentences,
+            key=lambda item: (-int(item["score"]), int(item["index"])),
+        )[:max_sentences],
+        key=lambda item: int(item["index"]),
+    )
+
+    return {
+        "summary": " ".join(str(sentence["text"]) for sentence in selected),
+        "sentences": selected,
+        "sentence_count": len(selected),
+        "source_sentence_count": len(candidates),
+        "character_count": len(source_text),
+    }
+
+
+def _split_summary_sentences(text: str) -> list[str]:
+    candidates: list[str] = []
+    start = 0
+    for match in _SUMMARY_SENTENCE_BOUNDARY_PATTERN.finditer(text):
+        end = match.end()
+        candidate = " ".join(text[start:end].split())
+        if candidate:
+            candidates.append(candidate)
+        start = end
+    trailing = " ".join(text[start:].split())
+    if trailing:
+        candidates.append(trailing)
+    return candidates
 
 
 TEXT_CHUNK_DEFAULT_MAX_CHARS = 120
