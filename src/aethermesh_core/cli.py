@@ -32,6 +32,7 @@ from aethermesh_core.local_transport import (
     load_local_inbox,
     materialize_local_inboxes,
     write_local_inbox,
+    write_local_outbox,
 )
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
@@ -79,6 +80,7 @@ class InboxReplayRequest:
     ledger_path: str | None = None
     output_message_log_path: str | None = None
     node_state_path: str | None = None
+    write_transport_outbox: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -299,6 +301,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--node-state-path",
         default=None,
         help="Opt in to JSON-file-backed local processed-assignment state for resume/idempotency.",
+    )
+    inbox.add_argument(
+        "--write-transport-outbox",
+        action="store_true",
+        help="Opt in to writing emitted worker messages to this node's local transport outbox.",
     )
 
     return parser
@@ -707,6 +714,7 @@ def process_local_inbox(
     ledger_path: str | None = None,
     output_message_log_path: str | None = None,
     node_state_path: str | None = None,
+    write_transport_outbox: bool = False,
 ) -> dict[str, object]:
     """Replay a saved local message log or local transport inbox for one node."""
 
@@ -720,6 +728,7 @@ def process_local_inbox(
             ledger_path=ledger_path,
             output_message_log_path=output_message_log_path,
             node_state_path=node_state_path,
+            write_transport_outbox=write_transport_outbox,
         )
     )
     return payload
@@ -732,6 +741,8 @@ def _process_local_inbox(
 
     if (request.message_log_path is None) == (request.transport_dir is None):
         raise ValueError("provide exactly one of --message-log-path or --transport-dir")
+    if request.write_transport_outbox and request.transport_dir is None:
+        raise ValueError("--write-transport-outbox requires --transport-dir")
     node_state = (
         load_node_processing_state(
             request.node_state_path, expected_node_id=request.node_id
@@ -744,9 +755,7 @@ def _process_local_inbox(
             transport_dir=request.transport_dir, node_id=request.node_id
         )
         source_message_path = str(
-            Path(request.transport_dir)
-            / "inboxes"
-            / f"{_node_artifact_filename(request.node_id)}.json"
+            local_inbox_path(request.transport_dir, request.node_id)
         )
     else:
         if request.message_log_path is None:
@@ -779,8 +788,8 @@ def _process_local_inbox(
     if request.ledger_path is not None:
         save_ledger_document(request.ledger_path, ledger, extra_fields)
     payload = _inbox_process_result_to_dict(inbox_result, ledger, request.ledger_path)
+    emitted_messages = _emitted_messages_from_inbox_result(inbox_result)
     if request.output_message_log_path is not None:
-        emitted_messages = _emitted_messages_from_inbox_result(inbox_result)
         output_document = build_replayed_message_log_document(
             replayed_messages=messages,
             emitted_messages=emitted_messages,
@@ -793,6 +802,23 @@ def _process_local_inbox(
         write_message_log(request.output_message_log_path, output_document)
         payload["output_message_log_path"] = request.output_message_log_path
         payload["final_message_count"] = len(messages) + len(emitted_messages)
+    if request.write_transport_outbox:
+        if request.transport_dir is None:
+            raise ValueError("--write-transport-outbox requires --transport-dir")
+        outbox_messages = [
+            message
+            for message in emitted_messages
+            if message.sender_node_id == request.node_id
+        ]
+        outbox_path = write_local_outbox(
+            transport_dir=request.transport_dir,
+            node_id=request.node_id,
+            source_inbox_path=source_message_path,
+            processed_assignment_count=len(inbox_result.processed),
+            messages=outbox_messages,
+        )
+        payload["transport_outbox_path"] = str(outbox_path)
+        payload["transport_outbox_message_count"] = len(outbox_messages)
     if request.node_state_path is not None and node_state is not None:
         updated_state = LocalNodeProcessingState(
             node_id=request.node_id,
@@ -1038,6 +1064,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ledger_path=args.ledger_path,
                 output_message_log_path=args.output_message_log_path,
                 node_state_path=args.node_state_path,
+                write_transport_outbox=args.write_transport_outbox,
             )
         except (
             MessageLogPersistenceError,

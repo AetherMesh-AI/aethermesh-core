@@ -4,12 +4,15 @@ import unittest
 from pathlib import Path
 
 
+import aethermesh_core.local_transport as local_transport
 from aethermesh_core.local_transport import (
     LocalTransportError,
     load_local_inbox,
     local_inbox_path,
+    local_outbox_path,
     materialize_local_inboxes,
     write_local_inbox,
+    write_local_outbox,
 )
 from aethermesh_core.messages import MeshMessage
 
@@ -288,6 +291,89 @@ class LocalTransportTests(unittest.TestCase):
                         write_local_inbox(transport_dir=temp_dir, **kwargs)
                     self.assertEqual(str(cm.exception), expected_message)
 
+    def test_outbox_path_quotes_node_ids_and_writes_document_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            node_id = "node/a b?c"
+            source_inbox_path = local_inbox_path(temp_dir, node_id)
+            message = _emitted_message("msg-result", node_id)
+
+            path = write_local_outbox(
+                transport_dir=temp_dir,
+                node_id=node_id,
+                source_inbox_path=source_inbox_path,
+                processed_assignment_count=1,
+                messages=[message],
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(path.name, "node%2Fa%20b%3Fc.json")
+        self.assertEqual(path.parent.name, "outboxes")
+        self.assertEqual(
+            str(local_outbox_path(temp_dir, "node-._~")),
+            str(Path(temp_dir) / "outboxes" / "node-._~.json"),
+        )
+        self.assertEqual(
+            document,
+            {
+                "version": 1,
+                "node_id": node_id,
+                "source_inbox_path": str(source_inbox_path),
+                "processed_assignment_count": 1,
+                "messages": [message.to_dict()],
+            },
+        )
+
+    def test_write_local_outbox_rejects_malformed_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            duplicate = _emitted_message("msg-0001", "node-a")
+            wrong_sender = _emitted_message("msg-0002", "node-b")
+            cases = [
+                ({"node_id": "", "messages": []}, "node_id must be a non-empty string"),
+                (
+                    {"node_id": "node-a", "messages": [duplicate, duplicate]},
+                    "duplicate message_id in local transport outbox: msg-0001",
+                ),
+                (
+                    {"node_id": "node-a", "messages": [wrong_sender]},
+                    "local transport outbox entry 0 sender_node_id must be node-a",
+                ),
+            ]
+            for kwargs, expected_message in cases:
+                with self.subTest(expected_message=expected_message):
+                    with self.assertRaises(LocalTransportError) as cm:
+                        write_local_outbox(
+                            transport_dir=temp_dir,
+                            source_inbox_path="inbox.json",
+                            processed_assignment_count=0,
+                            **kwargs,
+                        )
+                    self.assertEqual(str(cm.exception), expected_message)
+
+    def test_write_local_outbox_failed_write_preserves_existing_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            node_id = "node-a"
+            path = local_outbox_path(temp_dir, node_id)
+            path.parent.mkdir(parents=True)
+            original = json.dumps({"version": 1, "keep": True})
+            path.write_text(original, encoding="utf-8")
+            message = _emitted_message("msg-0001", node_id)
+            original_writer = local_transport.atomic_write_json
+            local_transport.atomic_write_json = _failing_atomic_write_json
+            try:
+                with self.assertRaisesRegex(LocalTransportError, "could not write"):
+                    write_local_outbox(
+                        transport_dir=temp_dir,
+                        node_id=node_id,
+                        source_inbox_path="inbox.json",
+                        processed_assignment_count=1,
+                        messages=[message],
+                    )
+            finally:
+                local_transport.atomic_write_json = original_writer
+            preserved = path.read_text(encoding="utf-8")
+
+        self.assertEqual(preserved, original)
+
 
 def _message(message_id: str, recipient: str) -> MeshMessage:
     return MeshMessage(
@@ -302,6 +388,21 @@ def _message(message_id: str, recipient: str) -> MeshMessage:
         },
         correlation_id=message_id,
     )
+
+
+def _emitted_message(message_id: str, sender: str) -> MeshMessage:
+    return MeshMessage(
+        message_id=message_id,
+        message_type="job_result_reported",
+        sender_node_id=sender,
+        recipient_node_id="scheduler",
+        payload={"job_id": message_id, "status": "completed"},
+        correlation_id=message_id,
+    )
+
+
+def _failing_atomic_write_json(path: Path, document: dict[str, object]) -> None:
+    raise OSError("simulated write failure")
 
 
 def _message_entry(
