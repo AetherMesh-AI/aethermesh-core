@@ -119,14 +119,7 @@ def peer_roster_document(message_log_paths: Sequence[str | Path]) -> dict[str, o
     sorted_node_ids = sorted(selected)
     return {
         "version": 1,
-        "nodes": [
-            {
-                "node_id": node_id,
-                "status": selected[node_id].status,
-                "capabilities": list(selected[node_id].capabilities),
-            }
-            for node_id in sorted_node_ids
-        ],
+        "nodes": [_peer_roster_node_entry(selected[node_id]) for node_id in sorted_node_ids],
         "metadata": {
             "source_message_log_paths": [str(path) for path in message_log_paths],
             "peer_count": len(selected),
@@ -137,6 +130,16 @@ def peer_roster_document(message_log_paths: Sequence[str | Path]) -> dict[str, o
             },
         },
     }
+
+
+def _peer_roster_node_entry(peer: PeerSummary) -> dict[str, object]:
+    entry: dict[str, object] = {
+        "node_id": peer.node_id,
+        "status": peer.status,
+    }
+    if peer.capabilities:
+        entry["capabilities"] = list(peer.capabilities)
+    return entry
 
 
 def _parse_heartbeat(message: MeshMessage) -> PeerSummary:

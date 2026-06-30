@@ -370,6 +370,39 @@ class PeerRegistryTests(unittest.TestCase):
             self.fail("metadata must be a dictionary")
         self.assertEqual(metadata.get("heartbeat_counts_by_node"), {"node-a": 3})
 
+    def test_peer_roster_omits_empty_capabilities_for_manifest_compatibility(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "messages.json"
+            _write_message_log(
+                log_path,
+                [
+                    {
+                        "message_id": "msg-0001",
+                        "message_type": "node_heartbeat",
+                        "sender_node_id": "node-a",
+                        "recipient_node_id": None,
+                        "payload": {
+                            "node_id": "node-a",
+                            "status": "available",
+                            "heartbeat_sequence": 1,
+                        },
+                        "correlation_id": None,
+                    }
+                ],
+            )
+
+            payload = peer_roster_document([log_path])
+
+        self.assertEqual(
+            payload["nodes"],
+            [
+                {
+                    "node_id": "node-a",
+                    "status": "available",
+                }
+            ],
+        )
+
     def test_peer_roster_invalid_heartbeat_fails_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "messages.json"

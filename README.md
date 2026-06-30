@@ -151,6 +151,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli peer-summ
 
 This is local message-log peer discovery only: it summarizes recorded `node_heartbeat` messages into deterministic JSON and does not imply real networking, production peer discovery, or wall-clock health monitoring.
 
+Build a manifest-compatible local peer roster from one or more existing heartbeat message logs:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli build-peer-roster --message-log-path ./local-dispatch.json --output-path ./local-peer-roster.json
+```
+
+The roster command is read-only with respect to its source logs. It merges duplicate heartbeat entries by node id, uses the highest heartbeat sequence with later input logs winning ties, prints deterministic JSON, and only writes the optional output path after every source log validates successfully. Heartbeats from older logs without capability metadata omit `capabilities` in the roster entry so the node object remains compatible with the local manifest schema's default capabilities behavior.
+
 Replay a saved local message log into an in-memory bus and process exactly one node's assigned inbox work:
 
 ```bash
