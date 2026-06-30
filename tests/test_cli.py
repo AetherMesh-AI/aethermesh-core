@@ -2924,7 +2924,9 @@ class CliTests(unittest.TestCase):
                 ["local-node-a.json"],
             )
 
-    def test_dispatch_local_peers_uses_heartbeat_peers_and_job_only_manifest(self) -> None:
+    def test_dispatch_local_peers_uses_heartbeat_peers_and_job_only_manifest(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             peers_path = root / "peers.json"
@@ -3074,7 +3076,11 @@ class CliTests(unittest.TestCase):
                     {
                         "version": 1,
                         "jobs": [
-                            {"job_id": "stats-1", "job_type": "text_stats", "payload": {}}
+                            {
+                                "job_id": "stats-1",
+                                "job_type": "text_stats",
+                                "payload": {},
+                            }
                         ],
                     }
                 ),
@@ -3104,7 +3110,9 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(output_contents, original_output)
 
-    def test_dispatch_local_peers_missing_peer_log_fails_without_creating_output(self) -> None:
+    def test_dispatch_local_peers_missing_peer_log_fails_without_creating_output(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             manifest_path = root / "jobs.json"

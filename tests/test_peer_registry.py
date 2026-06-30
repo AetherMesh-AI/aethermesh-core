@@ -246,7 +246,9 @@ class PeerRegistryTests(unittest.TestCase):
                         peer_summary_document(log_path)
                     self.assertEqual(str(cm.exception), expected_message)
 
-    def test_scheduled_nodes_from_heartbeat_log_preserves_latest_sorted_peers(self) -> None:
+    def test_scheduled_nodes_from_heartbeat_log_preserves_latest_sorted_peers(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "messages.json"
             log_path.write_text(
