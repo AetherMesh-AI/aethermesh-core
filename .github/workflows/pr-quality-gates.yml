@@ -71,7 +71,7 @@ jobs:
           python -m pip install -e ".[dev,ui]" pytest mutmut
       - name: mutation score >= 95%
         run: |
-          mutmut run --max-children 4
+          python scripts/mutmut_early_fail.py --minimum 95 --max-children 4
           python scripts/ci_quality_gates.py mutation-score --minimum 95
 
   ruff-check:
