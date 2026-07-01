@@ -1,22 +1,22 @@
 function platformNotes(platform = process.platform) {
   if (platform === 'darwin') {
     return {
-      pythonSetup: 'Use an existing Python 3.11+ install or install from python.org/Homebrew after user approval.',
+      runtime: 'Normal builds bundle a signed/notarized aethermesh-node runtime sidecar inside the .app resources.',
       packaging: 'Builds macOS .app and .dmg artifacts. Notarization is a release-signing step, not performed by dev builds.',
-      permissions: 'No admin permissions are required for the app-managed virtual environment.',
+      permissions: 'No admin permissions, system Python install, global pip install, or PATH mutation is required by default.',
     };
   }
   if (platform === 'win32') {
     return {
-      pythonSetup: 'Use py/python when present; otherwise show setup guidance before using winget or python.org installers.',
+      runtime: 'Normal builds bundle aethermesh-node.exe inside the app resources.',
       packaging: 'Builds NSIS .exe installers.',
-      permissions: 'No global pip install or admin install is performed by default.',
+      permissions: 'No global Python install, global pip install, or PATH mutation is performed by default.',
     };
   }
   return {
-    pythonSetup: 'Use python3.11/python3.12 when present; otherwise guide the user to their distro package manager.',
+    runtime: 'Normal builds bundle an aethermesh-node sidecar binary inside the app resources.',
     packaging: 'Builds AppImage and deb artifacts.',
-    permissions: 'The API remains localhost-only and the venv lives in XDG/app data storage.',
+    permissions: 'The API remains localhost-only; no system Python install, global pip install, or PATH mutation is required.',
   };
 }
 

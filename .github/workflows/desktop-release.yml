@@ -1,0 +1,90 @@
+name: Desktop Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  desktop-build:
+    name: Desktop ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-14
+            target_platform: darwin
+            target_arch: arm64
+            electron_platform: mac
+            electron_arch_flag: --arm64
+          - name: macOS x64
+            os: macos-13
+            target_platform: darwin
+            target_arch: x64
+            electron_platform: mac
+            electron_arch_flag: --x64
+          - name: Windows x64
+            os: windows-latest
+            target_platform: win32
+            target_arch: x64
+            electron_platform: win
+            electron_arch_flag: --x64
+          - name: Linux x64
+            os: ubuntu-24.04
+            target_platform: linux
+            target_arch: x64
+            electron_platform: linux
+            electron_arch_flag: --x64
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            target_platform: linux
+            target_arch: arm64
+            electron_platform: linux
+            electron_arch_flag: --arm64
+    env:
+      AETHERMESH_TARGET_PLATFORM: ${{ matrix.target_platform }}
+      AETHERMESH_TARGET_ARCH: ${{ matrix.target_arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Python runtime build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ui]" pyinstaller
+      - name: Install desktop dependencies
+        run: npm install
+      - name: Run desktop tests
+        run: npm run test:desktop
+      - name: Build AetherMesh runtime sidecar
+        run: npm run runtime:build
+      - name: Copy runtime sidecar into Electron resources
+        run: npm run runtime:copy
+      - name: Build desktop installer
+        run: npx electron-builder --config desktop/electron-builder.json --${{ matrix.electron_platform }} ${{ matrix.electron_arch_flag }} --publish never
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aethermesh-desktop-${{ matrix.target_platform }}-${{ matrix.target_arch }}
+          path: |
+            dist/desktop/**
+            dist/runtime/**
+      - name: Attach artifacts to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "AetherMesh Desktop release"
+          find dist/desktop dist/runtime -type f -print0 | xargs -0 gh release upload "$GITHUB_REF_NAME" --clobber

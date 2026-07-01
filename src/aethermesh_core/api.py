@@ -37,14 +37,21 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def health() -> dict[str, Any]:
         return runtime_service.health()
 
+    @app.get("/status")
     @app.get("/api/status")
     def status() -> dict[str, Any]:
         return runtime_service.get_node_status()
 
+    @app.get("/version")
+    def version() -> dict[str, Any]:
+        return runtime_service.package_info()
+
+    @app.get("/node")
     @app.get("/api/node")
     def node() -> dict[str, Any]:
         return runtime_service.get_node_status()
 
+    @app.get("/peers")
     @app.get("/api/peers")
     def peers() -> dict[str, Any]:
         return runtime_service.list_peers()
@@ -53,6 +60,7 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def jobs() -> dict[str, Any]:
         return runtime_service.list_jobs()
 
+    @app.get("/capabilities")
     @app.get("/api/capabilities")
     def capabilities() -> dict[str, Any]:
         return runtime_service.list_capabilities()
@@ -65,6 +73,7 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def network() -> dict[str, Any]:
         return runtime_service.network_health()
 
+    @app.get("/logs")
     @app.get("/api/logs")
     def logs() -> dict[str, Any]:
         return runtime_service.recent_logs()
@@ -72,6 +81,16 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     @app.get("/api/events")
     def events() -> dict[str, Any]:
         return runtime_service.recent_logs()
+
+    @app.post("/shutdown")
+    def shutdown() -> dict[str, Any]:
+        app.state.shutdown_requested = True
+        return {"shutdown_requested": True, "restart_requested": False}
+
+    @app.post("/restart")
+    def restart() -> dict[str, Any]:
+        app.state.restart_requested = True
+        return {"shutdown_requested": True, "restart_requested": True}
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard() -> str:

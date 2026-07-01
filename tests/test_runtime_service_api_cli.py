@@ -41,14 +41,22 @@ async def _fetch_api_payloads(api_app: FastAPI) -> dict[str, Any]:
         return {
             "health": (await client.get("/health")).json(),
             "status": (await client.get("/api/status")).json(),
+            "status_alias": (await client.get("/status")).json(),
+            "version_alias": (await client.get("/version")).json(),
             "node": (await client.get("/api/node")).json(),
+            "node_alias": (await client.get("/node")).json(),
             "peers": (await client.get("/api/peers")).json(),
+            "peers_alias": (await client.get("/peers")).json(),
             "jobs": (await client.get("/api/jobs")).json(),
             "capabilities": (await client.get("/api/capabilities")).json(),
+            "capabilities_alias": (await client.get("/capabilities")).json(),
             "package": (await client.get("/api/package")).json(),
             "network": (await client.get("/api/network")).json(),
             "logs": (await client.get("/api/logs")).json(),
+            "logs_alias": (await client.get("/logs")).json(),
             "events": (await client.get("/api/events")).json(),
+            "shutdown": (await client.post("/shutdown")).json(),
+            "restart": (await client.post("/restart")).json(),
             "html": (await client.get("/")).text,
         }
 
@@ -390,12 +398,19 @@ class ApiTests(unittest.TestCase):
             payloads = asyncio.run(_fetch_api_payloads(create_app(service)))
 
             self.assertEqual(payloads["health"]["ok"], True)
+            self.assertEqual(payloads["status_alias"], payloads["status"])
+            self.assertEqual(
+                payloads["version_alias"]["version"], payloads["status"]["version"]
+            )
             self.assertEqual(
                 payloads["status"]["node_id"], service.get_node_status()["node_id"]
             )
+            self.assertEqual(payloads["node"], payloads["node_alias"])
             self.assertEqual(payloads["node"]["status"], "stopped")
+            self.assertEqual(payloads["peers"], payloads["peers_alias"])
             self.assertEqual(payloads["peers"]["peers"], [])
             self.assertEqual(payloads["jobs"]["current"], [])
+            self.assertEqual(payloads["capabilities"], payloads["capabilities_alias"])
             self.assertEqual(
                 payloads["capabilities"]["capabilities"],
                 ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
@@ -404,8 +419,11 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(payloads["package"]["source"], "installed")
             self.assertEqual(payloads["network"]["status"], "local_only")
             self.assertTrue(payloads["network"]["localhost_only"])
+            self.assertEqual(payloads["logs"], payloads["logs_alias"])
             self.assertIn("events", payloads["logs"])
             self.assertIn("events", payloads["events"])
+            self.assertEqual(payloads["shutdown"]["shutdown_requested"], True)
+            self.assertEqual(payloads["restart"]["restart_requested"], True)
             self.assertIn("AetherMesh Local Node", payloads["html"])
             self.assertIn("/api/status", payloads["html"])
             self.assertIn("textContent", payloads["html"])

@@ -3,7 +3,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   packageName: 'aethermesh[ui]',
   githubUrl: 'https://github.com/AetherMesh-AI/aethermesh-core/releases/latest/download/aethermesh-0.1.0a0-py3-none-any.whl',
   localPath: '',
-  autoUpdateOnLaunch: true,
+  autoUpdateOnLaunch: false,
 });
 
 function normalizePackageSettings(settings = {}) {

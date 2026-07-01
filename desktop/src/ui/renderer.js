@@ -29,7 +29,8 @@ function setBootstrap(state) {
   bootstrapState = state || {};
   setRows(els.bootstrap, [
     ['Desktop status', bootstrapState.status],
-    ['Python', bootstrapState.python?.versionOutput || bootstrapState.python?.executable || 'checking'],
+    ['Runtime', bootstrapState.runtime?.command || 'checking'],
+    ['Runtime mode', bootstrapState.runtime?.mode || 'bundled'],
     ['Process', bootstrapState.process?.status || 'stopped'],
     ['Storage', bootstrapState.storage?.home || 'pending'],
     ['Error', bootstrapState.error || 'none'],
@@ -68,8 +69,8 @@ async function refreshDashboard() {
     ['Source', state.package?.source || dashboard.package.source],
   ]);
   setRows(els.settings, [
-    ['Package source', state.package?.source || 'github'],
-    ['Auto-update on launch', 'on'],
+    ['Runtime source', state.runtime?.mode || 'bundled'],
+    ['Package updates', 'manual app/runtime updates'],
     ['Keep node running after close', 'off'],
     ['API bind', `${dashboard.status.api.host}:${dashboard.status.api.port}`],
     ['Advanced logs', 'off'],

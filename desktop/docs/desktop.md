@@ -1,24 +1,35 @@
 # AetherMesh Desktop MVP
 
-AetherMesh Desktop is a small Electron launcher around the existing local web/API architecture.
+AetherMesh Desktop is an Electron launcher with a bundled AetherMesh runtime sidecar.
 
 ## Why Electron
 
-The repo does not currently contain a JavaScript/React/Vite web app to wrap, and the existing UI is a FastAPI-served local dashboard. Electron is the smallest practical cross-platform path here because it can ship a packaged HTML/CSS/JS shell while supervising the existing Python CLI/API process. This avoids adding Rust/Tauri setup before the UI surface is large enough to benefit from it.
+The repo does not currently contain a JavaScript/React/Vite web app to wrap, and the existing UI/API boundary is already localhost-oriented. Electron is the smallest practical cross-platform path here because it can ship a packaged HTML/CSS/JS shell while supervising a bundled node runtime process.
 
 The desktop app remains a controller/viewer:
 
 ```text
 AetherMesh Desktop
   -> packaged HTML/CSS/JS dashboard
-  -> app-managed Python detection + venv
-  -> installs/updates aethermesh[ui]
-  -> runs aethermesh init
-  -> supervises aethermesh node start --host 127.0.0.1 --port 7280
+  -> bundled runtime sidecar in app resources
+  -> runs aethermesh-node init
+  -> supervises aethermesh-node node start --host 127.0.0.1 --port 7280
   -> reads local API JSON endpoints
 ```
 
 The UI is not the node process.
+
+## Runtime sidecar
+
+Production desktop builds do not ask normal users to install Python, open a terminal, or run pip. The installer includes a platform-specific runtime binary:
+
+- macOS: `aethermesh-node`
+- Windows: `aethermesh-node.exe`
+- Linux: `aethermesh-node`
+
+The runtime is built from the Python package with PyInstaller and copied into Electron resources under `runtime/`. The Electron main process resolves that bundled binary in packaged builds and starts it directly.
+
+Python detection, venv creation, and package install helpers remain in the source tree as development/repair fallback utilities only. They are not the normal user startup path.
 
 ## Storage
 
@@ -30,25 +41,20 @@ The launcher uses per-user app storage:
 
 Inside that folder it keeps:
 
-- `venv/` private Python environment
 - `logs/` launcher/node logs
 - `config/desktop-settings.json`
-- `metadata/install-status.json`
 - `metadata/process-state.json`
+- local node data owned by the bundled runtime via `AETHERMESH_HOME`
 
-## Python and package bootstrap
+## Startup flow
 
-Startup flow:
-
-1. Detect Python 3.11+ from normal platform executables.
-2. If no usable Python is found, show a UI error instead of installing anything silently.
-3. Create the private app-managed venv.
-4. Install/update `aethermesh[ui]` into that venv.
-5. Run `aethermesh init`.
-6. Start `aethermesh node start --host 127.0.0.1 --port 7280`.
-7. Read dashboard data from the local API.
-
-The default package source is the latest GitHub release wheel. Settings support PyPI and local development paths as well.
+1. Resolve bundled runtime sidecar from app resources.
+2. Create app data directories.
+3. Reconnect to an already-running local API if one is reachable.
+4. Otherwise run `aethermesh-node init`.
+5. Start `aethermesh-node node start --host 127.0.0.1 --port 7280`.
+6. Wait for the local API to become reachable.
+7. Load dashboard data from the local API.
 
 ## Development commands
 
@@ -58,12 +64,16 @@ From the repo root:
 npm install
 npm run test:desktop
 npm run desktop:dev
+npm run runtime:build
+npm run runtime:copy
 npm run desktop:build
 npm run desktop:build:mac
 npm run desktop:build:win
 npm run desktop:build:linux
 npm run desktop:clean
 ```
+
+Development mode can run against `AETHERMESH_RUNTIME_PATH=/path/to/aethermesh-node` or fall back to the local `aethermesh` command when no sidecar has been built yet.
 
 ## Packaging targets
 
@@ -73,18 +83,21 @@ Electron Builder is configured for:
 - Windows NSIS `.exe`
 - Linux `AppImage` and `.deb`
 
-Dev builds are unsigned. Release signing, Windows reputation handling, macOS notarization, and Linux distro-specific dependency notes belong in the release pipeline.
+The release workflow builds the sidecar and desktop app per platform/architecture matrix and attaches artifacts to tagged GitHub releases.
 
 ## Security defaults
 
 - No Docker.
 - No curl/bash remote script execution.
-- No silent global Python or global pip installs.
-- No admin/root privileges by default.
+- No silent system Python install.
+- No global pip install.
+- No PATH mutation by default.
 - Local API binds to `127.0.0.1` by default.
 - No telemetry.
 - No centralized AetherMesh infrastructure.
 
 ## Current MVP limits
 
-This is the smallest launcher that proves the full local flow. It does not yet bundle a portable Python runtime. If Python 3.11+ is missing, it surfaces a setup error and leaves installation to the user until a signed bundled runtime strategy is added.
+- Runtime sidecars are built with PyInstaller, not signed app-update infrastructure yet.
+- Normal app/runtime updates are manual release downloads for now.
+- Optional terminal CLI exposure is intentionally deferred; future versions can add a safe shim/symlink button.

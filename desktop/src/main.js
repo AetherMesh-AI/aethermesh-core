@@ -1,18 +1,14 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
 
 const { LocalApiClient } = require('./bootstrap/apiClient');
-const { buildPackageInstallCommand, normalizePackageSettings } = require('./bootstrap/packageInstaller');
-const { detectPython } = require('./bootstrap/python');
+const { normalizePackageSettings } = require('./bootstrap/packageInstaller');
+const { resolveRuntimeCommand } = require('./bootstrap/runtime');
 const { getDefaultAetherMeshHome, getAetherMeshPaths } = require('./bootstrap/storage');
 const { NodeSupervisor } = require('./bootstrap/supervisor');
-const { buildCreateVenvCommand, getVenvPythonPath } = require('./bootstrap/venv');
 const { platformNotes } = require('./platform');
 
-const execFileAsync = promisify(execFile);
 const apiHost = '127.0.0.1';
 const apiPort = 7280;
 const apiClient = new LocalApiClient({ baseUrl: `http://${apiHost}:${apiPort}` });
@@ -22,8 +18,9 @@ let supervisor;
 let bootstrapState = {
   status: 'idle',
   error: null,
-  python: { usable: false },
-  package: { installed: false },
+  runtime: { mode: 'bundled', command: null, available: false },
+  python: { usable: false, mode: 'developer-fallback' },
+  package: { installed: true, source: 'bundled-runtime' },
   storage: {},
   process: { status: 'stopped' },
   logs: [],
@@ -47,48 +44,36 @@ function createWindow() {
 
 async function bootstrap() {
   try {
-    updateBootstrap({ status: 'checking-python', error: null });
+    updateBootstrap({ status: 'checking-runtime', error: null });
     const home = getDefaultAetherMeshHome();
     const paths = getAetherMeshPaths(home);
-    fs.mkdirSync(paths.logsDir, { recursive: true });
-    fs.mkdirSync(paths.configDir, { recursive: true });
-    fs.mkdirSync(paths.metadataDir, { recursive: true });
-    updateBootstrap({ storage: paths });
-
-    const python = await detectPython();
-    updateBootstrap({ python });
-    if (!python.usable) {
-      updateBootstrap({
-        status: 'python-missing',
-        error: 'Python 3.11+ was not found. Install Python or configure a bundled runtime before continuing.',
-      });
-      return;
-    }
-
-    updateBootstrap({ status: 'creating-venv' });
-    const venvPython = getVenvPythonPath(paths.venvDir);
-    if (!fs.existsSync(venvPython)) {
-      await runLogged(buildCreateVenvCommand(python.executable, paths.venvDir));
-    }
-
-    updateBootstrap({ status: 'installing-package' });
+    ensureStorage(paths);
     const settings = readSettings(paths);
-    const [installCommand, installArgs] = buildPackageInstallCommand(
-      venvPython,
-      settings.package,
-      { update: Boolean(settings.package.autoUpdateOnLaunch) },
-    );
-    await runLogged([installCommand, installArgs]);
-    await writeInstallStatus(paths, venvPython, settings.package);
-    updateBootstrap({ package: { installed: true, source: settings.package.source } });
+    updateBootstrap({ storage: paths, package: { installed: true, source: 'bundled-runtime' } });
 
-    await startNode(paths, settings);
+    const runtimeCommand = getRuntimeCommand();
+    updateBootstrap({
+      runtime: {
+        mode: app.isPackaged ? 'bundled' : 'development',
+        command: runtimeCommand,
+        available: true,
+      },
+      status: 'runtime-ready',
+    });
+
+    await startNode(paths, settings, runtimeCommand);
   } catch (error) {
     updateBootstrap({ status: 'error', error: error.message });
   }
 }
 
-async function startNode(paths, settings = readSettings(paths)) {
+function ensureStorage(paths) {
+  fs.mkdirSync(paths.logsDir, { recursive: true });
+  fs.mkdirSync(paths.configDir, { recursive: true });
+  fs.mkdirSync(paths.metadataDir, { recursive: true });
+}
+
+async function startNode(paths, settings = readSettings(paths), runtimeCommand = getRuntimeCommand()) {
   updateBootstrap({ status: 'starting-node' });
   const health = await apiClient.health();
   if (health.reachable) {
@@ -99,9 +84,8 @@ async function startNode(paths, settings = readSettings(paths)) {
     });
     return;
   }
-  const command = getAetherMeshCommand(paths.venvDir);
   supervisor = new NodeSupervisor({
-    aethermeshCommand: command,
+    aethermeshCommand: runtimeCommand,
     env: {
       ...process.env,
       AETHERMESH_HOME: paths.home,
@@ -131,17 +115,25 @@ function stopNode(keepRunning = false) {
   updateBootstrap({ process: supervisor ? supervisor.state : { status: 'stopped' }, logs: supervisor ? supervisor.logs : [] });
 }
 
-function getAetherMeshCommand(venvDir) {
-  if (process.platform === 'win32') {
-    return path.join(venvDir, 'Scripts', 'aethermesh.exe');
-  }
-  return path.join(venvDir, 'bin', 'aethermesh');
+function getRuntimeCommand() {
+  return resolveRuntimeCommand({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appRoot: path.resolve(__dirname, '..', '..'),
+    platform: process.platform,
+    arch: process.arch,
+    env: process.env,
+  });
 }
 
 function readSettings(paths) {
   const settingsPath = path.join(paths.configDir, 'desktop-settings.json');
   const defaults = {
-    package: normalizePackageSettings({}),
+    runtime: {
+      source: 'bundled',
+      allowDeveloperPythonFallback: !app.isPackaged,
+    },
+    package: normalizePackageSettings({ autoUpdateOnLaunch: false }),
     api: { host: apiHost, port: apiPort },
     keepNodeRunningAfterClose: false,
     advancedLogs: false,
@@ -151,22 +143,6 @@ function readSettings(paths) {
     return defaults;
   }
   return { ...defaults, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
-}
-
-async function writeInstallStatus(paths, venvPython, packageSettings) {
-  const status = {
-    installedAt: new Date().toISOString(),
-    venvPython,
-    package: packageSettings,
-  };
-  fs.writeFileSync(paths.installStatusPath, `${JSON.stringify(status, null, 2)}\n`);
-}
-
-async function runLogged([command, args]) {
-  appendBootstrapLog(`$ ${command} ${args.join(' ')}`);
-  const { stdout, stderr } = await execFileAsync(command, args, { maxBuffer: 1024 * 1024 * 10 });
-  if (stdout) appendBootstrapLog(stdout.trimEnd());
-  if (stderr) appendBootstrapLog(stderr.trimEnd());
 }
 
 function appendBootstrapLog(message) {
@@ -189,6 +165,7 @@ ipcMain.handle('aethermesh:get-dashboard', async () => apiClient.dashboardSnapsh
 ipcMain.handle('aethermesh:get-health', async () => apiClient.health());
 ipcMain.handle('aethermesh:start-node', async () => {
   const paths = getAetherMeshPaths(getDefaultAetherMeshHome());
+  ensureStorage(paths);
   if (!supervisor || supervisor.state.status !== 'running') {
     await startNode(paths);
   }
@@ -218,3 +195,5 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+
+module.exports = { appendBootstrapLog };

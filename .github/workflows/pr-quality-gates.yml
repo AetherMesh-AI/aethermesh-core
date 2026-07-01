@@ -110,6 +110,31 @@ jobs:
       - name: desktop bootstrap tests pass
         run: npm run test:desktop
 
+  desktop-runtime-sidecar:
+    name: Desktop Runtime Sidecar
+    runs-on: ubuntu-latest
+    env:
+      AETHERMESH_TARGET_PLATFORM: linux
+      AETHERMESH_TARGET_ARCH: x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: install runtime build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[ui]" pyinstaller
+      - name: install desktop dependencies
+        run: npm install
+      - name: build runtime sidecar
+        run: npm run runtime:build
+      - name: runtime sidecar responds
+        run: dist/runtime/linux-x64/aethermesh-node --help
+
   duplicate-code:
     name: Duplicate Code
     runs-on: ubuntu-latest

@@ -2,7 +2,7 @@ const { spawn: defaultSpawn } = require('node:child_process');
 
 class NodeSupervisor {
   constructor({
-    aethermeshCommand = 'aethermesh',
+    aethermeshCommand = 'aethermesh-node',
     env = process.env,
     spawn = defaultSpawn,
   } = {}) {

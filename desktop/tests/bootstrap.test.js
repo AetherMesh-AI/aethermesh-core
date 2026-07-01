@@ -21,6 +21,10 @@ const {
 } = require('../src/bootstrap/venv');
 const { NodeSupervisor } = require('../src/bootstrap/supervisor');
 const { LocalApiClient } = require('../src/bootstrap/apiClient');
+const {
+  getRuntimeExecutableName,
+  resolveRuntimeCommand,
+} = require('../src/bootstrap/runtime');
 
 test('platform storage paths are per-user and app-managed', () => {
   assert.equal(
@@ -85,13 +89,72 @@ test('venv commands stay inside the app-managed environment', () => {
   );
 });
 
+test('runtime resolver uses bundled sidecar in packaged app and dev fallback only outside production', () => {
+  assert.equal(getRuntimeExecutableName('darwin'), 'aethermesh-node');
+  assert.equal(getRuntimeExecutableName('linux'), 'aethermesh-node');
+  assert.equal(getRuntimeExecutableName('win32'), 'aethermesh-node.exe');
+
+  assert.equal(
+    resolveRuntimeCommand({
+      isPackaged: true,
+      resourcesPath: '/Applications/AetherMesh.app/Contents/Resources',
+      platform: 'darwin',
+      arch: 'arm64',
+      existsSync: () => true,
+    }),
+    path.join('/Applications/AetherMesh.app/Contents/Resources', 'runtime', 'aethermesh-node'),
+  );
+  assert.equal(
+    resolveRuntimeCommand({
+      isPackaged: true,
+      resourcesPath: 'C:/Program Files/AetherMesh/resources',
+      platform: 'win32',
+      arch: 'x64',
+      existsSync: () => true,
+    }),
+    path.join('C:/Program Files/AetherMesh/resources', 'runtime', 'aethermesh-node.exe'),
+  );
+  assert.throws(
+    () => resolveRuntimeCommand({
+      isPackaged: true,
+      resourcesPath: '/missing',
+      platform: 'linux',
+      arch: 'x64',
+      existsSync: () => false,
+    }),
+    /bundled AetherMesh runtime is missing/,
+  );
+  assert.equal(
+    resolveRuntimeCommand({
+      isPackaged: false,
+      appRoot: '/repo',
+      platform: 'linux',
+      arch: 'x64',
+      env: { AETHERMESH_RUNTIME_PATH: '/tmp/aethermesh-node' },
+      existsSync: () => false,
+    }),
+    '/tmp/aethermesh-node',
+  );
+  assert.equal(
+    resolveRuntimeCommand({
+      isPackaged: false,
+      appRoot: '/repo',
+      platform: 'linux',
+      arch: 'x64',
+      env: {},
+      existsSync: () => false,
+    }),
+    'aethermesh',
+  );
+});
+
 test('package install command supports pypi github and local development sources', () => {
   assert.deepEqual(normalizePackageSettings({}), {
     source: 'github',
     packageName: 'aethermesh[ui]',
     githubUrl: 'https://github.com/AetherMesh-AI/aethermesh-core/releases/latest/download/aethermesh-0.1.0a0-py3-none-any.whl',
     localPath: '',
-    autoUpdateOnLaunch: true,
+    autoUpdateOnLaunch: false,
   });
   assert.deepEqual(
     buildPackageInstallCommand('/venv/bin/python', { source: 'pypi', packageName: 'aethermesh[ui]' }, { update: false }),
@@ -115,7 +178,6 @@ test('supervisor runs init before node API start and captures logs', async () =>
   const calls = [];
   const children = [];
   const supervisor = new NodeSupervisor({
-    aethermeshCommand: 'aethermesh',
     env: { AETHERMESH_HOME: '/tmp/AetherMesh' },
     spawn: (command, args, options) => {
       calls.push({ command, args, env: options.env });
@@ -132,6 +194,7 @@ test('supervisor runs init before node API start and captures logs', async () =>
   children[1].stdout.emit('data', Buffer.from('api started\n'));
   await startPromise;
 
+  assert.deepEqual(calls.map((call) => call.command), ['aethermesh-node', 'aethermesh-node']);
   assert.deepEqual(calls.map((call) => call.args), [
     ['init'],
     ['node', 'start', '--host', '127.0.0.1', '--port', '7280'],
