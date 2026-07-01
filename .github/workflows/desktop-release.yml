@@ -3,16 +3,60 @@ name: Desktop Release
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_VERSION: 0.2.0-alpha
+
 jobs:
+  prepare-release:
+    name: Prepare GitHub release
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      release_name: ${{ steps.metadata.outputs.release_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Create release source archive
+        run: |
+          mkdir -p dist/source
+          git archive --format=tar.gz --prefix=aethermesh-${RELEASE_VERSION}/ -o dist/source/aethermesh-${RELEASE_VERSION}-source.tar.gz "${{ github.sha }}"
+      - name: Prepare release metadata
+        id: metadata
+        run: python scripts/release_metadata.py prepare --release-version "$RELEASE_VERSION" --source-archive "dist/source/aethermesh-${RELEASE_VERSION}-source.tar.gz" --notes-path release-notes.md
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          RELEASE_NAME: ${{ steps.metadata.outputs.release_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --notes-file release-notes.md --target "${{ github.sha }}" --latest
+          else
+            gh release create "$RELEASE_TAG" --title "$RELEASE_NAME" --notes-file release-notes.md --target "${{ github.sha }}" --latest
+          fi
+          find dist/source -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
+      - name: Upload source archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aethermesh-source
+          path: dist/source/aethermesh-0.2.0-alpha-source.tar.gz
+
   desktop-build:
     name: Desktop ${{ matrix.name }}
+    needs: prepare-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -24,12 +68,6 @@ jobs:
             target_arch: arm64
             electron_platform: mac
             electron_arch_flag: --arm64
-          - name: macOS x64
-            os: macos-13
-            target_platform: darwin
-            target_arch: x64
-            electron_platform: mac
-            electron_arch_flag: --x64
           - name: Windows x64
             os: windows-latest
             target_platform: win32
@@ -59,13 +97,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Create release source archive
-        run: |
-          mkdir -p dist/source
-          git archive --format=tar.gz --prefix=aethermesh-0.2.0-alpha/ -o dist/source/aethermesh-0.2.0-alpha-source.tar.gz "$GITHUB_SHA"
-      - name: Prepare release metadata
-        id: metadata
-        run: python scripts/release_metadata.py prepare --release-version 0.2.0-alpha --source-archive dist/source/aethermesh-0.2.0-alpha-source.tar.gz --notes-path release-notes.md
       - name: Install Python runtime build dependencies
         run: |
           python -m pip install --upgrade pip
@@ -87,15 +118,10 @@ jobs:
           path: |
             dist/desktop/**
             dist/runtime/**
-            dist/source/**
       - name: Attach artifacts to GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
         shell: bash
         run: |
-          RELEASE_TAG="${{ steps.metadata.outputs.release_tag }}"
-          RELEASE_NAME="${{ steps.metadata.outputs.release_name }}"
-          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --title "$RELEASE_NAME" --notes-file release-notes.md --target "$GITHUB_SHA" --latest || true
-          gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --notes-file release-notes.md --target "$GITHUB_SHA" --latest
-          find dist/desktop dist/runtime dist/source -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
+          find dist/desktop dist/runtime -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
