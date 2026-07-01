@@ -65,13 +65,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install package and mutation tools
+      - name: Install mutation testing dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev,ui]" pytest mutmut
       - name: mutation score >= 95%
         run: |
-          python scripts/mutmut_early_fail.py --minimum 95 --max-children 4
+          python scripts/mutmut_early_fail.py --minimum 95 --max-children "$(nproc)"
           python scripts/ci_quality_gates.py mutation-score --minimum 95
 
   ruff-check:
