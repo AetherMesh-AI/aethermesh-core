@@ -10,7 +10,7 @@ import subprocess
 from collections.abc import Sequence
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-MUTMUT_STATUS_RE = re.compile(r"(?P<done>\d+)\s*/\s*(?P<total>\d+)")
+MUTMUT_STATUS_RE = re.compile(r"(?P<done>\d+)\s*/\s*(?P<total>\d+)(?=\s+🎉)")
 COUNT_RE = {
     "killed": re.compile(r"(?:🎉|killed)\s*(?P<count>\d+)", re.IGNORECASE),
     "timeout": re.compile(r"(?:⏰|timeout)\s*(?P<count>\d+)", re.IGNORECASE),
