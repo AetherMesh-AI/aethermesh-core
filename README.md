@@ -135,6 +135,31 @@ When uncertain, prioritize work that moves the prototype toward the persistent g
 
 Each addition should be small, validated, and useful on its own.
 
+## Installable CLI and local UI
+
+Install the package with the local UI/API dependencies during development:
+
+```bash
+python -m pip install -e ".[dev,ui]"
+```
+
+The package exposes a first-class `aethermesh` command for normal local use:
+
+```bash
+aethermesh --version
+aethermesh init
+aethermesh status
+aethermesh node status
+aethermesh node start
+aethermesh peers
+aethermesh jobs
+aethermesh ui
+```
+
+`aethermesh init` creates local config, identity, data, and log files under `~/.aethermesh` by default. Set `AETHERMESH_HOME=/path/to/local-home` to isolate a dev or test node. `aethermesh node start` and `aethermesh ui` bind the local FastAPI dashboard/API to `127.0.0.1:7280` by default and do not expose LAN admin behavior.
+
+See [docs/ui-and-cli.md](docs/ui-and-cli.md) for the CLI/API/UI architecture, localhost security note, and future Tauri desktop wrapper plan.
+
 ## Run locally
 
 Run one local demo node job from the repository root without installing anything:
@@ -256,6 +281,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli audit-loc
 ```
 
 The audit command reads the dispatch log, flow log, ledger, and receipts, verifies that receipts reference assignment/result/contribution messages and that credited receipt units match ledger totals, then prints deterministic JSON counts. Missing, malformed, unsupported-version, or inconsistent artifacts return a concise nonzero CLI error without rewriting the artifact directory.
+
+Replay local assignment and result logs through an independent validator artifact without running workers or mutating the input logs/ledger:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli validate-local-results --assignment-log-path /tmp/aethermesh-local-flow/dispatch-message-log.json --result-log-path /tmp/aethermesh-local-flow/flow-message-log.json --validation-log-path /tmp/aethermesh-local-flow/validation-message-log.json
+```
+
+The validation replay command reads `job_assigned` and `job_result_reported` messages, matches them by correlation/job id, rebuilds the assigned job and reported result, recomputes `validate_job_result`, and writes a version 1 `local_validation_report` with deterministic `job_result_validated` entries. It refuses to overwrite an existing validation report and returns a concise nonzero error for malformed logs, missing assignments, duplicate assignment keys, duplicate result claims, or absent required payload fields. Invalid worker results are recorded in the report with `valid: false` instead of crashing the command.
 
 To make repeated local inbox replays resumable for one node, pass `--node-state-path`:
 
