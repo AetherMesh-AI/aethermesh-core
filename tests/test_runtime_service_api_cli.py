@@ -7,7 +7,6 @@ import tempfile
 import time
 import types
 import unittest
-from importlib import metadata
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -41,11 +40,22 @@ async def _fetch_api_payloads(api_app: FastAPI) -> dict[str, Any]:
         return {
             "health": (await client.get("/health")).json(),
             "status": (await client.get("/api/status")).json(),
+            "status_alias": (await client.get("/status")).json(),
+            "version_alias": (await client.get("/version")).json(),
             "node": (await client.get("/api/node")).json(),
+            "node_alias": (await client.get("/node")).json(),
             "peers": (await client.get("/api/peers")).json(),
+            "peers_alias": (await client.get("/peers")).json(),
             "jobs": (await client.get("/api/jobs")).json(),
+            "capabilities": (await client.get("/api/capabilities")).json(),
+            "capabilities_alias": (await client.get("/capabilities")).json(),
+            "package": (await client.get("/api/package")).json(),
+            "network": (await client.get("/api/network")).json(),
             "logs": (await client.get("/api/logs")).json(),
+            "logs_alias": (await client.get("/logs")).json(),
             "events": (await client.get("/api/events")).json(),
+            "shutdown": (await client.post("/shutdown")).json(),
+            "restart": (await client.post("/restart")).json(),
             "html": (await client.get("/")).text,
         }
 
@@ -100,6 +110,9 @@ class RuntimeServiceTests(unittest.TestCase):
                     "api",
                     "peer_count",
                     "job_counts",
+                    "capabilities",
+                    "package",
+                    "network_health",
                     "system",
                 },
             )
@@ -157,6 +170,34 @@ class RuntimeServiceTests(unittest.TestCase):
                     "note": "No peer discovery source is configured for the local daemon yet.",
                 },
             )
+            self.assertEqual(
+                service.list_capabilities(),
+                {
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
+                    "advertised": False,
+                    "note": "Local prototype capabilities are available but not advertised to a live network yet.",
+                },
+            )
+            self.assertEqual(
+                service.network_health(),
+                {
+                    "status": "local_only",
+                    "peer_count": 0,
+                    "api_reachable": True,
+                    "localhost_only": True,
+                    "note": "Public peer networking is not configured for this local prototype.",
+                },
+            )
+            package = service.package_info()
+            self.assertEqual(package["name"], "aethermesh")
+            self.assertIn("version", package)
+            self.assertEqual(package["source"], "installed")
             self.assertEqual(
                 service.list_jobs(),
                 {
@@ -294,9 +335,7 @@ class RuntimeServiceTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(_default_home(), Path.home() / ".aethermesh")
 
-        with patch("aethermesh_core.runtime_service.metadata.version") as version:
-            version.side_effect = metadata.PackageNotFoundError
-            self.assertEqual(_package_version(), "0.1.0")
+        self.assertEqual(_package_version(), "0.2.0-alpha")
 
         sysconf_calls: list[str] = []
 
@@ -356,14 +395,32 @@ class ApiTests(unittest.TestCase):
             payloads = asyncio.run(_fetch_api_payloads(create_app(service)))
 
             self.assertEqual(payloads["health"]["ok"], True)
+            self.assertEqual(payloads["status_alias"], payloads["status"])
+            self.assertEqual(
+                payloads["version_alias"]["version"], payloads["status"]["version"]
+            )
             self.assertEqual(
                 payloads["status"]["node_id"], service.get_node_status()["node_id"]
             )
+            self.assertEqual(payloads["node"], payloads["node_alias"])
             self.assertEqual(payloads["node"]["status"], "stopped")
+            self.assertEqual(payloads["peers"], payloads["peers_alias"])
             self.assertEqual(payloads["peers"]["peers"], [])
             self.assertEqual(payloads["jobs"]["current"], [])
+            self.assertEqual(payloads["capabilities"], payloads["capabilities_alias"])
+            self.assertEqual(
+                payloads["capabilities"]["capabilities"],
+                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+            )
+            self.assertEqual(payloads["package"]["name"], "aethermesh")
+            self.assertEqual(payloads["package"]["source"], "installed")
+            self.assertEqual(payloads["network"]["status"], "local_only")
+            self.assertTrue(payloads["network"]["localhost_only"])
+            self.assertEqual(payloads["logs"], payloads["logs_alias"])
             self.assertIn("events", payloads["logs"])
             self.assertIn("events", payloads["events"])
+            self.assertEqual(payloads["shutdown"]["shutdown_requested"], True)
+            self.assertEqual(payloads["restart"]["restart_requested"], True)
             self.assertIn("AetherMesh Local Node", payloads["html"])
             self.assertIn("/api/status", payloads["html"])
             self.assertIn("textContent", payloads["html"])
@@ -391,7 +448,7 @@ class ApiTests(unittest.TestCase):
 
             api = create_app(service)
             self.assertEqual(api.title, "AetherMesh Local Node API")
-            self.assertEqual(api.version, "0.1.0")
+            self.assertEqual(api.version, "0.2.0-alpha")
             self.assertIs(api.router.lifespan_context, _lifespan)
 
     def test_lifespan_uses_same_runtime_service(self) -> None:
@@ -413,7 +470,7 @@ class AppCliTests(unittest.TestCase):
 
             version = runner.invoke(app_cli.app, ["--version"])
             self.assertEqual(version.exit_code, 0)
-            self.assertIn("0.1.0", version.output)
+            self.assertIn("0.2.0-alpha", version.output)
 
             init = runner.invoke(app_cli.app, ["init"])
             self.assertEqual(init.exit_code, 0)
@@ -449,10 +506,10 @@ class AppCliTests(unittest.TestCase):
 
             def to_dict(self) -> dict[str, object]:
                 return {
-                    "release_tag": "v0.1.1-alpha-abc123",
-                    "release_name": "0.1.1-alpha (abc123)",
+                    "release_tag": "v0.2.0-alpha-abc123",
+                    "release_name": "0.2.0-alpha - (...bc123)",
                     "release_url": "https://github.example/release",
-                    "wheel_name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "wheel_name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "wheel_url": "https://github.example/aethermesh.whl",
                     "sha256": "abc123",
                     "expected_sha256": "abc123",
@@ -468,7 +525,7 @@ class AppCliTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, result.output)
         updater.assert_called_once_with(dry_run=True, release_url=None)
-        self.assertIn("v0.1.1-alpha-abc123", result.output)
+        self.assertIn("v0.2.0-alpha-abc123", result.output)
         self.assertIn("verified", result.output)
         self.assertIn("not installed", result.output)
 

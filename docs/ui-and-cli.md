@@ -94,10 +94,21 @@ Current routes:
 
 ```text
 GET /health
+GET /status
+GET /version
+GET /node
+GET /peers
+GET /capabilities
+GET /logs
+POST /shutdown
+POST /restart
 GET /api/status
 GET /api/node
 GET /api/peers
 GET /api/jobs
+GET /api/capabilities
+GET /api/package
+GET /api/network
 GET /api/logs
 GET /api/events
 GET /
@@ -121,21 +132,29 @@ The first dashboard is intentionally plain. It shows:
 - basic system information and data-path disk space
 - recent local runtime events
 
-The dashboard reads JSON from `/api/status`, `/api/peers`, `/api/jobs`, and `/api/logs`.
+The dashboard reads JSON from `/api/status`, `/api/peers`, `/api/jobs`, `/api/capabilities`, `/api/package`, `/api/network`, and `/api/logs`. Desktop-friendly aliases such as `/status`, `/node`, `/peers`, `/capabilities`, and `/logs` are available for the packaged app.
 
 ## Security default
 
 The API binds to `127.0.0.1` by default. Do not expose it to the LAN until the project adds explicit operator intent, authentication, authorization, and safer admin controls. The current implementation is for local status and development only.
 
-## Future Tauri desktop path
+## Desktop launcher
 
-The likely desktop path is Tauri:
+The desktop MVP lives under `desktop/` and uses Electron because this repo is currently Python-first with a FastAPI-served local dashboard rather than an existing React/Vite app. Normal users do not install Python or run pip. Release builds bundle a PyInstaller-built `aethermesh-node` runtime sidecar inside Electron resources, then the shell runs `aethermesh-node init`, supervises `aethermesh-node node start --host 127.0.0.1 --port 7280`, and reads local API routes from the packaged UI.
 
-1. Keep the Python package as the real AetherMesh node.
-2. Treat the desktop app as a UI shell.
-3. First desktop version can require `aethermesh` to already be installed and can launch or connect to `http://127.0.0.1:7280`.
-4. Later desktop versions can bundle the Python backend as a sidecar process.
-5. The UI should keep using the local HTTP API, not direct imports from node internals.
-6. Desktop packaging should preserve the localhost-only default and make any LAN/admin exposure explicit.
+Desktop commands:
 
-This keeps the core node reusable for CLI, API, dashboard, and future desktop wrappers without duplicating node logic.
+```bash
+npm install
+npm run test:desktop
+npm run desktop:dev
+npm run runtime:build
+npm run runtime:copy
+npm run desktop:build
+npm run desktop:build:mac
+npm run desktop:build:win
+npm run desktop:build:linux
+npm run desktop:clean
+```
+
+See [../desktop/docs/desktop.md](../desktop/docs/desktop.md) for packaging, storage, and troubleshooting notes.

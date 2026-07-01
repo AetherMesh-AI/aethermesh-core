@@ -15,14 +15,14 @@ class ReleaseMetadataTests(unittest.TestCase):
             second = root / "src" / "aethermesh_core" / "__init__.py"
             second.parent.mkdir(parents=True)
             first.write_text("[project]\nname = 'aethermesh'\n", encoding="utf-8")
-            second.write_text("__version__ = '0.1.0a0'\n", encoding="utf-8")
+            second.write_text("__version__ = '0.2.0a0'\n", encoding="utf-8")
 
             digest = release_metadata.source_files_sha256(root, [second, first])
 
         expected = hashlib.sha256()
         for rel, content in [
             ("pyproject.toml", b"[project]\nname = 'aethermesh'\n"),
-            ("src/aethermesh_core/__init__.py", b"__version__ = '0.1.0a0'\n"),
+            ("src/aethermesh_core/__init__.py", b"__version__ = '0.2.0a0'\n"),
         ]:
             expected.update(rel.encode("utf-8"))
             expected.update(b"\0")
@@ -30,12 +30,26 @@ class ReleaseMetadataTests(unittest.TestCase):
             expected.update(b"\0")
         self.assertEqual(digest, expected.hexdigest())
 
-    def test_release_tag_and_name_use_alpha_version_and_source_hash(self) -> None:
+    def test_source_archive_sha256_hashes_actual_archive_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = Path(temp_dir) / "source.tar.gz"
+            archive.write_bytes(b"actual release source archive")
+
+            digest = release_metadata.source_archive_sha256(archive)
+
+        self.assertEqual(
+            digest,
+            hashlib.sha256(b"actual release source archive").hexdigest(),
+        )
+
+    def test_release_tag_and_name_use_alpha_version_and_source_hash_suffix(
+        self,
+    ) -> None:
         metadata = release_metadata.build_release_metadata(
-            release_version="0.1.1-alpha",
+            release_version="0.2.0-alpha",
             source_sha256="abcdef1234567890",
             head_sha="feedfacecafebeef",
-            previous_tag="v0.1.1-alpha-oldhash",
+            previous_tag="v0.2.0-alpha-oldhash",
             commits=[
                 release_metadata.Commit(
                     sha="feedfacecafebeef",
@@ -45,16 +59,16 @@ class ReleaseMetadataTests(unittest.TestCase):
             ],
         )
 
-        self.assertEqual(metadata.tag, "v0.1.1-alpha-abcdef123456")
-        self.assertEqual(metadata.name, "0.1.1-alpha (abcdef1234567890)")
-        self.assertIn("Previous release tag: `v0.1.1-alpha-oldhash`", metadata.notes)
+        self.assertEqual(metadata.tag, "v0.2.0-alpha-abcdef123456")
+        self.assertEqual(metadata.name, "0.2.0-alpha - (...67890)")
+        self.assertIn("Previous release tag: `v0.2.0-alpha-oldhash`", metadata.notes)
         self.assertIn("- `feedfac` feat: add release automation (Miyu)", metadata.notes)
         self.assertNotIn("early", metadata.name.lower())
         self.assertNotIn("early", metadata.notes.lower())
 
     def test_first_release_notes_include_full_commit_list_marker(self) -> None:
         metadata = release_metadata.build_release_metadata(
-            release_version="0.1.1-alpha",
+            release_version="0.2.0-alpha",
             source_sha256="abc123",
             head_sha="2222222222222222",
             previous_tag=None,

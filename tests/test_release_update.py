@@ -11,16 +11,16 @@ class ReleaseUpdateTests(unittest.TestCase):
         wheel_bytes = b"wheel bytes"
         checksum = hashlib.sha256(wheel_bytes).hexdigest()
         release = {
-            "tag_name": "v0.1.1-alpha-abc123",
-            "name": "0.1.1-alpha (abc123)",
-            "html_url": "https://github.example/releases/tag/v0.1.1-alpha-abc123",
+            "tag_name": "v0.2.0-alpha-abc123",
+            "name": "0.2.0-alpha - (...bc123)",
+            "html_url": "https://github.example/releases/tag/v0.2.0-alpha-abc123",
             "assets": [
                 {
-                    "name": "aethermesh-0.1.0a0.tar.gz",
+                    "name": "aethermesh-0.2.0a0.tar.gz",
                     "browser_download_url": "https://github.example/aethermesh.tar.gz",
                 },
                 {
-                    "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "browser_download_url": "https://github.example/aethermesh.whl",
                 },
                 {
@@ -31,12 +31,12 @@ class ReleaseUpdateTests(unittest.TestCase):
         }
 
         plan = release_update.build_update_plan(
-            release, f"{checksum}  aethermesh-0.1.0a0-py3-none-any.whl\n"
+            release, f"{checksum}  aethermesh-0.2.0a0-py3-none-any.whl\n"
         )
 
-        self.assertEqual(plan.release_tag, "v0.1.1-alpha-abc123")
-        self.assertEqual(plan.release_name, "0.1.1-alpha (abc123)")
-        self.assertEqual(plan.wheel_name, "aethermesh-0.1.0a0-py3-none-any.whl")
+        self.assertEqual(plan.release_tag, "v0.2.0-alpha-abc123")
+        self.assertEqual(plan.release_name, "0.2.0-alpha - (...bc123)")
+        self.assertEqual(plan.wheel_name, "aethermesh-0.2.0a0-py3-none-any.whl")
         self.assertEqual(plan.wheel_url, "https://github.example/aethermesh.whl")
         self.assertEqual(plan.expected_sha256, checksum)
 
@@ -53,12 +53,12 @@ class ReleaseUpdateTests(unittest.TestCase):
         checksum = hashlib.sha256(wheel_bytes).hexdigest()
         calls: list[tuple[str, object]] = []
         release_json = {
-            "tag_name": "v0.1.1-alpha-abc123",
-            "name": "0.1.1-alpha (abc123)",
-            "html_url": "https://github.example/releases/tag/v0.1.1-alpha-abc123",
+            "tag_name": "v0.2.0-alpha-abc123",
+            "name": "0.2.0-alpha - (...bc123)",
+            "html_url": "https://github.example/releases/tag/v0.2.0-alpha-abc123",
             "assets": [
                 {
-                    "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "browser_download_url": "https://github.example/aethermesh.whl",
                 },
                 {
@@ -75,7 +75,7 @@ class ReleaseUpdateTests(unittest.TestCase):
         def fetch_bytes(url: str) -> bytes:
             calls.append(("bytes", url))
             if url.endswith("SHA256SUMS.txt"):
-                return f"{checksum}  aethermesh-0.1.0a0-py3-none-any.whl\n".encode()
+                return f"{checksum}  aethermesh-0.2.0a0-py3-none-any.whl\n".encode()
             return wheel_bytes
 
         def install_wheel(path: Path) -> None:
@@ -88,8 +88,8 @@ class ReleaseUpdateTests(unittest.TestCase):
             install_wheel=install_wheel,
         )
 
-        self.assertEqual(result.release_tag, "v0.1.1-alpha-abc123")
-        self.assertEqual(result.wheel_name, "aethermesh-0.1.0a0-py3-none-any.whl")
+        self.assertEqual(result.release_tag, "v0.2.0-alpha-abc123")
+        self.assertEqual(result.wheel_name, "aethermesh-0.2.0a0-py3-none-any.whl")
         self.assertEqual(result.installed, True)
         self.assertEqual(result.sha256, checksum)
         self.assertEqual(
@@ -98,16 +98,16 @@ class ReleaseUpdateTests(unittest.TestCase):
                 ("json", release_update.DEFAULT_LATEST_RELEASE_URL),
                 ("bytes", "https://github.example/SHA256SUMS.txt"),
                 ("bytes", "https://github.example/aethermesh.whl"),
-                ("install", "aethermesh-0.1.0a0-py3-none-any.whl"),
+                ("install", "aethermesh-0.2.0a0-py3-none-any.whl"),
             ],
         )
 
     def test_update_from_latest_release_rejects_checksum_mismatch(self) -> None:
         release_json = {
-            "tag_name": "v0.1.1-alpha-abc123",
+            "tag_name": "v0.2.0-alpha-abc123",
             "assets": [
                 {
-                    "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "browser_download_url": "https://github.example/aethermesh.whl",
                 },
                 {
@@ -119,7 +119,7 @@ class ReleaseUpdateTests(unittest.TestCase):
 
         def fetch_bytes(url: str) -> bytes:
             if url.endswith("SHA256SUMS.txt"):
-                return f"{'0' * 64}  aethermesh-0.1.0a0-py3-none-any.whl\n".encode()
+                return f"{'0' * 64}  aethermesh-0.2.0a0-py3-none-any.whl\n".encode()
             return b"different wheel"
 
         with self.assertRaisesRegex(release_update.ReleaseUpdateError, "checksum"):
@@ -134,10 +134,10 @@ class ReleaseUpdateTests(unittest.TestCase):
         checksum = hashlib.sha256(wheel_bytes).hexdigest()
         installed: list[str] = []
         release_json = {
-            "tag_name": "v0.1.1-alpha-abc123",
+            "tag_name": "v0.2.0-alpha-abc123",
             "assets": [
                 {
-                    "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "browser_download_url": "https://github.example/aethermesh.whl",
                 },
                 {
@@ -149,7 +149,7 @@ class ReleaseUpdateTests(unittest.TestCase):
 
         def fetch_bytes(url: str) -> bytes:
             if url.endswith("SHA256SUMS.txt"):
-                return f"{checksum}  aethermesh-0.1.0a0-py3-none-any.whl\n".encode()
+                return f"{checksum}  aethermesh-0.2.0a0-py3-none-any.whl\n".encode()
             return wheel_bytes
 
         result = release_update.update_from_latest_release(
@@ -165,8 +165,8 @@ class ReleaseUpdateTests(unittest.TestCase):
 
     def test_update_result_to_dict_returns_json_ready_payload(self) -> None:
         result = release_update.ReleaseUpdateResult(
-            release_tag="v0.1.1-alpha-abc123",
-            release_name="0.1.1-alpha (abc123)",
+            release_tag="v0.2.0-alpha-abc123",
+            release_name="0.2.0-alpha - (...bc123)",
             release_url=None,
             wheel_name="aethermesh.whl",
             wheel_url="https://github.example/aethermesh.whl",
@@ -178,8 +178,8 @@ class ReleaseUpdateTests(unittest.TestCase):
         self.assertEqual(
             result.to_dict(),
             {
-                "release_tag": "v0.1.1-alpha-abc123",
-                "release_name": "0.1.1-alpha (abc123)",
+                "release_tag": "v0.2.0-alpha-abc123",
+                "release_name": "0.2.0-alpha - (...bc123)",
                 "release_url": None,
                 "wheel_name": "aethermesh.whl",
                 "wheel_url": "https://github.example/aethermesh.whl",
@@ -198,7 +198,7 @@ class ReleaseUpdateTests(unittest.TestCase):
                     "ignored",
                     {"name": "ignored.txt"},
                     {
-                        "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                        "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                         "browser_download_url": "https://github.example/aethermesh.whl",
                     },
                 ]
@@ -220,10 +220,10 @@ class ReleaseUpdateTests(unittest.TestCase):
     ) -> None:
         wheel_bytes = b"fake wheel"
         release_json = {
-            "tag_name": "v0.1.1-alpha-abc123",
+            "tag_name": "v0.2.0-alpha-abc123",
             "assets": [
                 {
-                    "name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "browser_download_url": "https://github.example/aethermesh.whl",
                 }
             ],
@@ -244,7 +244,7 @@ class ReleaseUpdateTests(unittest.TestCase):
 
         fetch_json.assert_called_once_with(release_update.DEFAULT_LATEST_RELEASE_URL)
         fetch_bytes.assert_called_once_with("https://github.example/aethermesh.whl")
-        self.assertEqual(installed, ["aethermesh-0.1.0a0-py3-none-any.whl"])
+        self.assertEqual(installed, ["aethermesh-0.2.0a0-py3-none-any.whl"])
         self.assertEqual(result.installed, True)
 
     def test_fetch_json_rejects_invalid_and_non_object_json(self) -> None:

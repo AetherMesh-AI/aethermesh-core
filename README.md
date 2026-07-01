@@ -161,7 +161,7 @@ aethermesh ui
 
 `aethermesh update` downloads the newest GitHub release wheel, verifies it against `SHA256SUMS.txt` when present, and upgrades the local install with `pip`; use `--dry-run` to verify the release without installing it.
 
-See [docs/ui-and-cli.md](docs/ui-and-cli.md) for the CLI/API/UI architecture, localhost security note, and future Tauri desktop wrapper plan.
+See [docs/ui-and-cli.md](docs/ui-and-cli.md) for the CLI/API/UI architecture and localhost security note. See [desktop/docs/desktop.md](desktop/docs/desktop.md) for the Electron desktop launcher, bootstrap flow, and packaging commands.
 
 ## Run locally
 
