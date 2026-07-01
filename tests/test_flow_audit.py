@@ -488,6 +488,38 @@ class FlowAuditTamperTests(unittest.TestCase):
                 after = _artifact_contents(output_dir)
             self.assertEqual(after, before)
 
+    def test_audit_local_flow_rejects_tampered_result_hashes(self) -> None:
+        cases: list[tuple[FlowTamper, str]] = [
+            (
+                lambda output_dir: _set_receipt_field(
+                    output_dir, 0, "result_hash", "0" * 64
+                ),
+                "result.result_hash mismatch",
+            ),
+            (
+                lambda output_dir: _tamper_result_output_without_rehash(output_dir),
+                "result.recomputed_hash mismatch",
+            ),
+            (
+                lambda output_dir: _set_ledger_record_field(
+                    output_dir, 0, "result_hash", "0" * 64
+                ),
+                "receipt contribution claims do not match ledger records",
+            ),
+        ]
+        for tamper, match in cases:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                manifest_path = _write_manifest(Path(temp_dir))
+                output_dir = Path(temp_dir) / "flow"
+                run_local_flow(str(manifest_path), str(output_dir))
+                tamper(output_dir)
+                before = _artifact_contents(output_dir)
+                with self.subTest(match=match):
+                    with self.assertRaisesRegex(FlowAuditError, match):
+                        audit_local_flow(output_dir)
+                after = _artifact_contents(output_dir)
+            self.assertEqual(after, before)
+
 
 def _sample_receipt() -> dict[str, object]:
     return {
@@ -622,6 +654,26 @@ def _duplicate_flow_message(output_dir: Path, message_type: str, job_id: str) ->
     messages = document["messages"]
     assert isinstance(messages, list)
     messages.append(dict(_find_message(document, message_type, "job_id", job_id)))
+    _write_json(path, document)
+
+
+def _tamper_result_output_without_rehash(output_dir: Path) -> None:
+    _set_flow_message_payload(
+        output_dir, "job_result_reported", "echo-1", "output", "tampered"
+    )
+    _set_receipt_field(output_dir, 0, "output_summary", {"value": "tampered"})
+
+
+def _set_ledger_record_field(
+    output_dir: Path, index: int, field_name: str, value: object
+) -> None:
+    path = output_dir / "ledger.json"
+    document = _load_json(path)
+    records = document["records"]
+    assert isinstance(records, list)
+    record = records[index]
+    assert isinstance(record, dict)
+    record[field_name] = value
     _write_json(path, document)
 
 

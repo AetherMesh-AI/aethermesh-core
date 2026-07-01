@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from aethermesh_core.models import Job
 from aethermesh_core.node_service import LocalNodeService
+from aethermesh_core.result_hash import result_hash_from_fields
 from aethermesh_core.scheduler import JobAssignment, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 
@@ -113,6 +114,13 @@ class LocalSimulationTests(unittest.TestCase):
                     "output": "one",
                     "error": None,
                     "contribution_units": 1,
+                    "result_hash": result_hash_from_fields(
+                        job_id="echo-1",
+                        node_id="node-a",
+                        status="completed",
+                        output="one",
+                        error=None,
+                    ),
                 },
                 {
                     "job_id": "echo-1",

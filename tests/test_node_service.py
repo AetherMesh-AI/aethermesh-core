@@ -5,6 +5,7 @@ from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import NodeIdentity
 from aethermesh_core.node_service import LocalNodeService
+from aethermesh_core.result_hash import result_hash
 from aethermesh_core.runner import LocalRunner
 
 
@@ -53,7 +54,11 @@ class LocalNodeServiceTests(unittest.TestCase):
                 "output": "hello mesh",
                 "error": None,
                 "contribution_units": 1,
+                "result_hash": result_hash(processed.result),
             },
+        )
+        self.assertEqual(
+            processed.contribution_record.result_hash, result_hash(processed.result)
         )
         self.assertEqual(
             processed.emitted_messages[1].payload,

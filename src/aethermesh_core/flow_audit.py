@@ -10,6 +10,7 @@ from aethermesh_core.ledger import load_existing_ledger_document
 from aethermesh_core.message_log import load_message_log_messages
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.receipts import _output_summary, load_receipt_document_if_exists
+from aethermesh_core.result_hash import result_hash_from_fields
 
 
 class FlowAuditError(ValueError):
@@ -222,6 +223,25 @@ def _assert_result_message_matches_receipt(
         receipt["output_summary"],
         _output_summary(message.payload.get("output")),
     )
+    _assert_equal(
+        context,
+        "result.result_hash",
+        receipt["result_hash"],
+        message.payload.get("result_hash"),
+    )
+    recomputed_hash = result_hash_from_fields(
+        job_id=message.payload["job_id"],
+        node_id=message.sender_node_id,
+        status=message.payload["status"],
+        output=message.payload.get("output"),
+        error=message.payload.get("error"),
+    )
+    _assert_equal(
+        context,
+        "result.recomputed_hash",
+        message.payload.get("result_hash"),
+        recomputed_hash,
+    )
 
 
 def _assert_contribution_message_matches_receipt(
@@ -343,6 +363,7 @@ def _ledger_claim_from_receipt(receipt: dict[str, Any]) -> tuple[Any, ...]:
         validation["valid"],
         validation["reason"],
         receipt["job_type"],
+        receipt["result_hash"],
     )
 
 
@@ -355,6 +376,7 @@ def _ledger_claim_from_record(record: dict[str, Any]) -> tuple[Any, ...]:
         record.get("validation_valid"),
         record.get("validation_reason"),
         record.get("job_type"),
+        record.get("result_hash"),
     )
 
 
@@ -370,10 +392,14 @@ def _ledger_mismatch_detail(
 
 
 def _format_claim(claim: tuple[Any, ...]) -> str:
-    node_id, job_id, status, units, valid, reason, job_type = claim
+    if len(claim) == 7:
+        node_id, job_id, status, units, valid, reason, job_type = claim
+        result_hash = None
+    else:
+        node_id, job_id, status, units, valid, reason, job_type, result_hash = claim
     return (
         f"node={node_id} job={job_id} status={status} units={units} "
-        f"valid={valid} reason={reason!r} job_type={job_type}"
+        f"valid={valid} reason={reason!r} job_type={job_type} result_hash={result_hash}"
     )
 
 

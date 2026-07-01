@@ -10,6 +10,7 @@ from aethermesh_core.ledger import ContributionLedger, ContributionRecord
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.result_hash import result_hash as canonical_result_hash
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.validation import ValidationResult, validate_job_result
 
@@ -105,6 +106,7 @@ class LocalNodeService:
             score_validated_contribution(job, result) if validation.valid else 0
         )
         accounted_result = replace(result, contribution_units=credited_units)
+        result_hash = canonical_result_hash(accounted_result)
         record = self.ledger.record(
             accounted_result,
             validation_valid=validation.valid,
@@ -122,6 +124,7 @@ class LocalNodeService:
                 "output": accounted_result.output,
                 "error": accounted_result.error,
                 "contribution_units": accounted_result.contribution_units,
+                "result_hash": result_hash,
             },
             correlation_id=message.correlation_id or job.job_id,
         )
