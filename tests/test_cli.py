@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from aethermesh_core.cli import build_parser, main
 from aethermesh_core.message_log import write_message_log
@@ -265,7 +266,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             subparser_help,
             {
-                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to an ephemeral id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
+                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to a deterministic machine id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
                 "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
                 "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
@@ -1194,6 +1195,23 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["output"], "hello mesh")
         self.assertNotIn("validation", payload)
         self.assertNotIn("ledger_summary", payload)
+
+    def test_run_demo_defaults_to_deterministic_machine_node_id(self) -> None:
+        stdout = io.StringIO()
+
+        with (
+            patch(
+                "aethermesh_core.cli.deterministic_machine_node_id",
+                return_value="local-stable-machine",
+            ),
+            contextlib.redirect_stdout(stdout),
+        ):
+            exit_code = main(["run-demo", "--message", "hello mesh"])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["node_id"], "local-stable-machine")
+        self.assertEqual(payload["output"], "hello mesh")
 
     def test_run_demo_identity_path_creates_and_reuses_node_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
