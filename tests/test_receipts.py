@@ -48,6 +48,7 @@ class ReceiptTests(unittest.TestCase):
                     "assignment_message_id": "msg-0003",
                     "correlation_id": "echo-1",
                     "result_message_id": "msg-0004",
+                    "validation_message_id": "validation-msg-0004",
                     "contribution_message_id": "msg-0005",
                     "result_status": "completed",
                     "validation": {"valid": True, "reason": "ok"},
@@ -320,6 +321,7 @@ class ReceiptTests(unittest.TestCase):
             "node_id",
             "assignment_message_id",
             "result_message_id",
+            "validation_message_id",
             "result_status",
         ):
             bad = dict(receipt)
@@ -497,6 +499,23 @@ def _processed_assignment(
                 sender_node_id=result.node_id,
                 recipient_node_id="local-ledger",
                 payload={"job_id": result.job_id, "status": result.status},
+                correlation_id=correlation_id,
+            ),
+            MeshMessage(
+                message_id=f"validation-{result_message_id}",
+                message_type="job_validated",
+                sender_node_id=result.node_id,
+                recipient_node_id="local-ledger",
+                payload={
+                    "job_id": result.job_id,
+                    "node_id": result.node_id,
+                    "assignment_message_id": message_id,
+                    "result_message_id": result_message_id,
+                    "validator_id": result.node_id,
+                    "valid": validation.valid,
+                    "reason": validation.reason,
+                    "contribution_units_after_validation": record.contribution_units,
+                },
                 correlation_id=correlation_id,
             ),
             MeshMessage(

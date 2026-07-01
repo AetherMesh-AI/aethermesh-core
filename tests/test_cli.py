@@ -260,7 +260,7 @@ class CliTests(unittest.TestCase):
             payload["results"][1]["output"]["normalized_preview"],
             "hello mesh hello node",
         )
-        self.assertEqual(len(payload["messages"]), 17)
+        self.assertEqual(len(payload["messages"]), 22)
         self.assertEqual(payload["messages"][0]["message_id"], "msg-0001")
         self.assertEqual(payload["messages"][0]["message_type"], "node_heartbeat")
         self.assertEqual(payload["messages"][0]["correlation_id"], None)
@@ -279,8 +279,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["messages"][2]["correlation_id"], "echo-1")
         self.assertEqual(payload["messages"][2]["recipient_node_id"], "local-node-a")
         self.assertEqual(payload["messages"][3]["message_type"], "job_result_reported")
+        self.assertEqual(payload["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            payload["messages"][4]["message_type"], "contribution_recorded"
+            payload["messages"][5]["message_type"], "contribution_recorded"
         )
         self.assertEqual(payload["validations"][0]["valid"], True)
         self.assertEqual(
@@ -686,22 +687,23 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["message_log_path"], str(message_log_path))
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(persisted["metadata"]["manifest_path"], str(manifest_path))
-        self.assertEqual(persisted["metadata"]["message_count"], 8)
+        self.assertEqual(persisted["metadata"]["message_count"], 10)
         self.assertEqual(persisted["metadata"]["job_count"], 2)
         self.assertEqual(persisted["metadata"]["completed_count"], 2)
         self.assertEqual(persisted["metadata"]["failed_count"], 0)
         self.assertEqual(persisted["metadata"]["total_contribution_units"], 3)
         self.assertEqual(
             [message["message_id"] for message in persisted["messages"]],
-            [f"msg-{index:04d}" for index in range(1, 9)],
+            [f"msg-{index:04d}" for index in range(1, 11)],
         )
         self.assertEqual(persisted["messages"][0]["message_type"], "node_heartbeat")
         self.assertEqual(persisted["messages"][2]["message_type"], "job_assigned")
         self.assertEqual(
             persisted["messages"][3]["message_type"], "job_result_reported"
         )
+        self.assertEqual(persisted["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            persisted["messages"][4]["message_type"], "contribution_recorded"
+            persisted["messages"][5]["message_type"], "contribution_recorded"
         )
 
     def test_run_local_batch_message_log_write_error_returns_nonzero(self) -> None:
@@ -2023,30 +2025,42 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["command"], "process-local-inbox")
         self.assertEqual(payload["node_id"], "local-node-a")
         self.assertEqual(payload["processed_assignment_count"], 2)
-        self.assertEqual(payload["ignored_message_ids"], ["msg-0005", "msg-0011"])
+        self.assertEqual(payload["ignored_message_ids"], ["msg-0006", "msg-0014"])
         self.assertEqual(
             payload["emitted_messages"],
             [
                 {
-                    "id": "msg-0012",
+                    "id": "msg-0015",
                     "type": "job_result_reported",
                     "sender": "local-node-a",
                     "recipient": "local-ledger",
                 },
                 {
-                    "id": "msg-0013",
+                    "id": "msg-0016",
+                    "type": "job_validated",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0017",
                     "type": "contribution_recorded",
                     "sender": "local-ledger",
                     "recipient": "local-node-a",
                 },
                 {
-                    "id": "msg-0014",
+                    "id": "msg-0018",
                     "type": "job_result_reported",
                     "sender": "local-node-a",
                     "recipient": "local-ledger",
                 },
                 {
-                    "id": "msg-0015",
+                    "id": "msg-0019",
+                    "type": "job_validated",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0020",
                     "type": "contribution_recorded",
                     "sender": "local-ledger",
                     "recipient": "local-node-a",
@@ -2161,7 +2175,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             payload["output_message_log_path"], str(output_message_log_path)
         )
-        self.assertEqual(payload["final_message_count"], 5)
+        self.assertEqual(payload["final_message_count"], 6)
         self.assertEqual(payload["processed_assignment_count"], 1)
         self.assertEqual(payload["ignored_message_ids"], ["msg-0003"])
         self.assertEqual(persisted["version"], 1)
@@ -2171,18 +2185,19 @@ class CliTests(unittest.TestCase):
             persisted["metadata"]["source_message_log_path"], str(message_log_path)
         )
         self.assertEqual(persisted["metadata"]["ledger_path"], str(ledger_path))
-        self.assertEqual(persisted["metadata"]["message_count"], 5)
+        self.assertEqual(persisted["metadata"]["message_count"], 6)
         self.assertEqual(persisted["metadata"]["replayed_message_count"], 3)
-        self.assertEqual(persisted["metadata"]["emitted_message_count"], 2)
+        self.assertEqual(persisted["metadata"]["emitted_message_count"], 3)
         self.assertEqual(
             [message["message_id"] for message in persisted["messages"]],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005", "msg-0006"],
         )
         self.assertEqual(
             persisted["messages"][3]["message_type"], "job_result_reported"
         )
+        self.assertEqual(persisted["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            persisted["messages"][4]["message_type"], "contribution_recorded"
+            persisted["messages"][5]["message_type"], "contribution_recorded"
         )
 
     def test_process_local_inbox_output_message_log_ordering_is_deterministic(
@@ -2259,7 +2274,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first["messages"], second["messages"])
         self.assertEqual(
             [message["message_id"] for message in first["messages"]],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005", "msg-0006"],
+            [
+                "msg-0001",
+                "msg-0002",
+                "msg-0003",
+                "msg-0004",
+                "msg-0005",
+                "msg-0006",
+                "msg-0007",
+                "msg-0008",
+            ],
         )
 
     def test_process_local_inbox_unknown_node_returns_zero_without_ledger(self) -> None:
@@ -2613,8 +2637,8 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("transport_inbox_count", payload)
         self.assertNotIn("transport_inbox_paths", payload)
         self.assertEqual(payload["receipt_count"], 6)
-        self.assertEqual(payload["flow_message_count"], 20)
-        self.assertEqual(payload["flow_emitted_message_count"], 12)
+        self.assertEqual(payload["flow_message_count"], 26)
+        self.assertEqual(payload["flow_emitted_message_count"], 18)
         self.assertEqual(payload["ledger_summary"]["record_count"], 6)
         self.assertEqual(len(payload["node_results"]), 2)
         self.assertTrue(dispatch_exists)
@@ -2642,7 +2666,8 @@ class CliTests(unittest.TestCase):
                 "assignment_message_id": "msg-0003",
                 "correlation_id": "echo-1",
                 "result_message_id": "msg-0009",
-                "contribution_message_id": "msg-0010",
+                "validation_message_id": "msg-0010",
+                "contribution_message_id": "msg-0011",
                 "result_status": "completed",
                 "validation": {"valid": True, "reason": "ok"},
                 "credited_units": 1,
@@ -2672,8 +2697,8 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log["metadata"]["source"], "run-local-flow")
         self.assertEqual(flow_log["metadata"]["manifest_path"], str(manifest_path))
         self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 8)
-        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 12)
-        self.assertEqual(flow_log["metadata"]["message_count"], 20)
+        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 18)
+        self.assertEqual(flow_log["metadata"]["message_count"], 26)
         self.assertEqual(
             flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"]
         )
@@ -2692,16 +2717,22 @@ class CliTests(unittest.TestCase):
                 "job_assigned",
                 "job_assigned",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
             ],
         )
@@ -3001,7 +3032,7 @@ class CliTests(unittest.TestCase):
             payload["counts"],
             {
                 "dispatch_messages": 2,
-                "flow_messages": 4,
+                "flow_messages": 5,
                 "receipts": 1,
                 "ledger_records": 1,
                 "total_contribution_units": 1,

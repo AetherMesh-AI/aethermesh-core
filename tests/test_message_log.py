@@ -54,7 +54,7 @@ class MessageLogTests(unittest.TestCase):
             {
                 "source": "run-local-batch",
                 "manifest_path": "examples/local-batch.json",
-                "message_count": 8,
+                "message_count": 10,
                 "node_count": 2,
                 "job_count": 2,
                 "completed_count": 2,
@@ -67,7 +67,7 @@ class MessageLogTests(unittest.TestCase):
         )
         self.assertEqual(
             [message["message_id"] for message in first_document["messages"]],
-            [f"msg-{index:04d}" for index in range(1, 9)],
+            [f"msg-{index:04d}" for index in range(1, 11)],
         )
         self.assertEqual(
             first_document["messages"][0]["message_type"], "node_heartbeat"
@@ -76,8 +76,9 @@ class MessageLogTests(unittest.TestCase):
         self.assertEqual(
             first_document["messages"][3]["message_type"], "job_result_reported"
         )
+        self.assertEqual(first_document["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            first_document["messages"][4]["message_type"], "contribution_recorded"
+            first_document["messages"][5]["message_type"], "contribution_recorded"
         )
         self.assertEqual(first_document["messages"][2]["correlation_id"], "echo-1")
 
@@ -222,7 +223,7 @@ class MessageLogTests(unittest.TestCase):
         emitted_messages_by_node = {
             "local-node-b": [
                 MeshMessage(
-                    message_id="msg-0004",
+                    message_id="msg-0005",
                     message_type="job_result_reported",
                     sender_node_id="local-node-b",
                     recipient_node_id="local-ledger",
@@ -241,6 +242,14 @@ class MessageLogTests(unittest.TestCase):
                 ),
                 MeshMessage(
                     message_id="msg-0003",
+                    message_type="job_validated",
+                    sender_node_id="local-node-a",
+                    recipient_node_id="local-ledger",
+                    payload={"job_id": "echo-1", "node_id": "local-node-a"},
+                    correlation_id="echo-1",
+                ),
+                MeshMessage(
+                    message_id="msg-0004",
                     message_type="contribution_recorded",
                     sender_node_id="local-ledger",
                     recipient_node_id="local-node-a",
@@ -288,13 +297,13 @@ class MessageLogTests(unittest.TestCase):
                 "skipped_processed_assignment_count": 0,
                 "total_contribution_units": 2,
                 "dispatch_message_count": 1,
-                "emitted_message_count": 3,
-                "message_count": 4,
+                "emitted_message_count": 4,
+                "message_count": 5,
             },
         )
         self.assertEqual(
             [message["message_id"] for message in document["messages"]],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
         )
 
     def test_build_flow_message_log_document_treats_missing_node_as_empty(self) -> None:

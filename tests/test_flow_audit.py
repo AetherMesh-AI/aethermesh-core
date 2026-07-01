@@ -33,7 +33,7 @@ class FlowAuditTests(unittest.TestCase):
                 },
                 "counts": {
                     "dispatch_messages": 4,
-                    "flow_messages": 8,
+                    "flow_messages": 10,
                     "receipts": 2,
                     "ledger_records": 2,
                     "total_contribution_units": 3,
@@ -76,7 +76,8 @@ class FlowAuditTests(unittest.TestCase):
             before = _artifact_contents(output_dir)
 
             with self.assertRaisesRegex(
-                FlowAuditError, "contribution.contribution_units mismatch"
+                FlowAuditError,
+                "validation.contribution_units_after_validation mismatch",
             ):
                 audit_local_flow(output_dir)
 
@@ -99,9 +100,7 @@ class FlowAuditTests(unittest.TestCase):
             )
             before = _artifact_contents(output_dir)
 
-            with self.assertRaisesRegex(
-                FlowAuditError, "contribution.validation mismatch"
-            ):
+            with self.assertRaisesRegex(FlowAuditError, "validation.reason mismatch"):
                 audit_local_flow(output_dir)
 
             after = _artifact_contents(output_dir)
@@ -234,7 +233,7 @@ class FlowAuditTamperTests(unittest.TestCase):
                 lambda output_dir: _set_flow_message_payload(
                     output_dir, "contribution_recorded", "echo-1", "job_id", "other-job"
                 ),
-                "receipt entry 0 job=echo-1 node=local-node-a contribution_recorded message_id not found in flow log: msg-0006",
+                "receipt entry 0 job=echo-1 node=local-node-a contribution_recorded message_id not found in flow log: msg-0007",
             ),
             (
                 lambda output_dir: _set_flow_message_payload(

@@ -41,6 +41,7 @@ class MeshMessageTests(unittest.TestCase):
                     "node_heartbeat",
                     "job_assigned",
                     "job_result_reported",
+                    "job_validated",
                     "contribution_recorded",
                 }
             ),
