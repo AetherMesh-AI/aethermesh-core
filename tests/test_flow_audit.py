@@ -6,7 +6,15 @@ from pathlib import Path
 
 
 from aethermesh_core.cli import run_local_flow
-from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
+from aethermesh_core.flow_audit import (
+    FlowAuditError,
+    _assert_assignment_matches_receipt,
+    _assert_contribution_message_matches_receipt,
+    _assert_result_message_matches_receipt,
+    _assert_validation_message_matches_receipt,
+    audit_local_flow,
+)
+from aethermesh_core.messages import MeshMessage
 
 
 class FlowAuditTests(unittest.TestCase):
@@ -180,6 +188,218 @@ class FlowAuditTests(unittest.TestCase):
         self.assertIn("missing node=local-node-a job=echo-1", str(cm.exception))
         self.assertEqual(after, before)
 
+    def test_cross_artifact_assertion_error_messages_name_each_field(self) -> None:
+        receipt = _sample_receipt()
+        context = "receipt entry 0 job=echo-1 node=local-node-a"
+        cases: list[tuple[Callable[[], None], str]] = [
+            (
+                lambda: _assert_assignment_matches_receipt(
+                    context,
+                    receipt,
+                    {"job_id": "other-job", "job_type": "echo"},
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a assignment.job_id mismatch: receipt='echo-1' artifact='other-job'",
+            ),
+            (
+                lambda: _assert_assignment_matches_receipt(
+                    context,
+                    receipt,
+                    {"job_id": "echo-1", "job_type": "text_stats"},
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a assignment.job_type mismatch: receipt='echo' artifact='text_stats'",
+            ),
+            (
+                lambda: _assert_result_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_result_reported", payload={"job_id": "other-job"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a result.job_id mismatch: receipt='echo-1' artifact='other-job'",
+            ),
+            (
+                lambda: _assert_result_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_result_reported", sender_node_id="local-node-b"
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a result.node_id mismatch: receipt='local-node-a' artifact='local-node-b'",
+            ),
+            (
+                lambda: _assert_result_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_result_reported", payload={"status": "failed"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a result.status mismatch: receipt='completed' artifact='failed'",
+            ),
+            (
+                lambda: _assert_result_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_validated"),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a result_message_id references job_validated, expected job_result_reported",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_validated", payload={"job_id": "other-job"}),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.job_id mismatch: receipt='echo-1' artifact='other-job'",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_validated", payload={"node_id": "local-node-b"}
+                    ),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.node_id mismatch: receipt='local-node-a' artifact='local-node-b'",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_validated", payload={"assignment_message_id": "other"}
+                    ),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.assignment_message_id mismatch: receipt='msg-0003' artifact='other'",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_validated", payload={"result_message_id": "other"}
+                    ),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.result_message_id mismatch: receipt='msg-0005' artifact='other'",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_validated", payload={"valid": False}),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.valid mismatch: receipt=True artifact=False",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_validated", payload={"reason": "bad"}),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.reason mismatch: receipt='ok' artifact='bad'",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "job_validated",
+                        payload={"contribution_units_after_validation": 99},
+                    ),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation.contribution_units_after_validation mismatch: receipt=1 artifact=99",
+            ),
+            (
+                lambda: _assert_validation_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_result_reported"),
+                    "msg-0005",
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a validation_message_id references job_result_reported, expected job_validated",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "contribution_recorded", payload={"job_id": "other-job"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.job_id mismatch: receipt='echo-1' artifact='other-job'",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "contribution_recorded", payload={"node_id": "local-node-b"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.node_id mismatch: receipt='local-node-a' artifact='local-node-b'",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "contribution_recorded", payload={"status": "failed"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.status mismatch: receipt='completed' artifact='failed'",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("contribution_recorded", payload={"valid": False}),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.valid mismatch: receipt=True artifact=False",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "contribution_recorded", payload={"validation": "bad"}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.validation mismatch: receipt='ok' artifact='bad'",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message(
+                        "contribution_recorded", payload={"contribution_units": 99}
+                    ),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution.contribution_units mismatch: receipt=1 artifact=99",
+            ),
+            (
+                lambda: _assert_contribution_message_matches_receipt(
+                    context,
+                    receipt,
+                    _sample_message("job_validated"),
+                ),
+                "receipt entry 0 job=echo-1 node=local-node-a contribution_message_id references job_validated, expected contribution_recorded",
+            ),
+        ]
+        for call, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                with self.assertRaises(FlowAuditError) as cm:
+                    call()
+                self.assertEqual(str(cm.exception), expected_message)
+
 
 FlowTamper = Callable[[Path], None]
 
@@ -267,6 +487,66 @@ class FlowAuditTamperTests(unittest.TestCase):
                     self.assertEqual(str(cm.exception), match)
                 after = _artifact_contents(output_dir)
             self.assertEqual(after, before)
+
+
+def _sample_receipt() -> dict[str, object]:
+    return {
+        "assignment_message_id": "msg-0003",
+        "result_message_id": "msg-0005",
+        "validation_message_id": "msg-0006",
+        "contribution_message_id": "msg-0007",
+        "job_id": "echo-1",
+        "job_type": "echo",
+        "node_id": "local-node-a",
+        "result_status": "completed",
+        "credited_units": 1,
+        "output_summary": {"message": "hello mesh"},
+        "validation": {"valid": True, "reason": "ok"},
+    }
+
+
+def _sample_message(
+    message_type: str,
+    *,
+    sender_node_id: str = "local-node-a",
+    payload: dict[str, object] | None = None,
+) -> MeshMessage:
+    base_payload: dict[str, object]
+    if message_type == "job_validated":
+        base_payload = {
+            "job_id": "echo-1",
+            "node_id": "local-node-a",
+            "assignment_message_id": "msg-0003",
+            "result_message_id": "msg-0005",
+            "valid": True,
+            "reason": "ok",
+            "contribution_units_after_validation": 1,
+        }
+    elif message_type == "contribution_recorded":
+        base_payload = {
+            "job_id": "echo-1",
+            "node_id": "local-node-a",
+            "status": "completed",
+            "valid": True,
+            "validation": "ok",
+            "contribution_units": 1,
+        }
+    else:
+        base_payload = {
+            "job_id": "echo-1",
+            "status": "completed",
+            "output": {"message": "hello mesh"},
+        }
+    if payload is not None:
+        base_payload.update(payload)
+    return MeshMessage(
+        message_id="msg-0005",
+        message_type=message_type,
+        sender_node_id=sender_node_id,
+        recipient_node_id="local-ledger",
+        payload=base_payload,
+        correlation_id="echo-1",
+    )
 
 
 def _write_json(path: Path, document: dict[str, object]) -> None:
