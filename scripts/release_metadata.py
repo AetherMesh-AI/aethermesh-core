@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Build deterministic GitHub release metadata for main-branch package builds."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_SOURCE_PATHS = ("README.md", "pyproject.toml", "src")
+ALPHA_RELEASE_TAG_PATTERN = "v*-alpha-*"
+
+
+@dataclass(frozen=True)
+class Commit:
+    sha: str
+    subject: str
+    author: str
+
+
+@dataclass(frozen=True)
+class ReleaseMetadata:
+    tag: str
+    name: str
+    notes: str
+    source_sha256: str
+    head_sha: str
+    previous_tag: str | None
+
+
+def run_git(args: list[str], *, root: Path = ROOT) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(result.stdout)
+    return result.stdout.strip()
+
+
+def package_source_files(root: Path = ROOT) -> list[Path]:
+    output = run_git(["ls-files", "--", *PACKAGE_SOURCE_PATHS], root=root)
+    paths = [root / line for line in output.splitlines() if line.strip()]
+    return sorted(path for path in paths if path.is_file())
+
+
+def source_files_sha256(root: Path, paths: list[Path]) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for path in sorted(paths, key=lambda item: item.relative_to(root).as_posix()):
+        relative_path = path.relative_to(root).as_posix()
+        digest.update(relative_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def head_sha(root: Path = ROOT) -> str:
+    return run_git(["rev-parse", "HEAD"], root=root)
+
+
+def previous_alpha_release_tag(
+    root: Path = ROOT, *, exclude_tag: str | None = None
+) -> str | None:
+    output = run_git(
+        [
+            "tag",
+            "--merged",
+            "HEAD",
+            "--sort=-creatordate",
+            "--list",
+            ALPHA_RELEASE_TAG_PATTERN,
+        ],
+        root=root,
+    )
+    for line in output.splitlines():
+        tag = line.strip()
+        if tag and tag != exclude_tag:
+            return tag
+    return None
+
+
+def commits_since(previous_tag: str | None, *, root: Path = ROOT) -> list[Commit]:
+    revision = f"{previous_tag}..HEAD" if previous_tag else "HEAD"
+    output = run_git(
+        ["log", "--reverse", "--pretty=format:%H%x00%s%x00%an", revision], root=root
+    )
+    commits: list[Commit] = []
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        sha, subject, author = line.split("\x00", 2)
+        commits.append(Commit(sha=sha, subject=subject, author=author))
+    return commits
+
+
+def format_release_notes(
+    *,
+    release_version: str,
+    source_sha256: str,
+    head_sha: str,
+    previous_tag: str | None,
+    commits: list[Commit],
+) -> str:
+    lines = [
+        f"# {release_version}",
+        "",
+        f"Source files SHA-256: `{source_sha256}`",
+        f"Built commit: `{head_sha}`",
+    ]
+    if previous_tag:
+        lines.append(f"Previous release tag: `{previous_tag}`")
+        lines.append(f"Commit range: `{previous_tag}..{head_sha}`")
+    else:
+        lines.append("Previous release tag: none")
+        lines.append("Commit range: full history")
+    lines.extend(["", "## Commits"])
+    if commits:
+        for commit in commits:
+            lines.append(f"- `{commit.sha[:7]}` {commit.subject} ({commit.author})")
+    else:
+        lines.append("- No commits since the previous release tag.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def build_release_metadata(
+    *,
+    release_version: str,
+    source_sha256: str,
+    head_sha: str,
+    previous_tag: str | None,
+    commits: list[Commit],
+) -> ReleaseMetadata:
+    short_source_sha = source_sha256[:12]
+    return ReleaseMetadata(
+        tag=f"v{release_version}-{short_source_sha}",
+        name=f"{release_version} ({source_sha256})",
+        notes=format_release_notes(
+            release_version=release_version,
+            source_sha256=source_sha256,
+            head_sha=head_sha,
+            previous_tag=previous_tag,
+            commits=commits,
+        ),
+        source_sha256=source_sha256,
+        head_sha=head_sha,
+        previous_tag=previous_tag,
+    )
+
+
+def prepare_release(
+    *,
+    release_version: str,
+    notes_path: Path,
+    root: Path = ROOT,
+) -> ReleaseMetadata:
+    source_sha256 = source_files_sha256(root, package_source_files(root))
+    current_head = head_sha(root)
+    current_tag = f"v{release_version}-{source_sha256[:12]}"
+    previous_tag = previous_alpha_release_tag(root, exclude_tag=current_tag)
+    metadata = build_release_metadata(
+        release_version=release_version,
+        source_sha256=source_sha256,
+        head_sha=current_head,
+        previous_tag=previous_tag,
+        commits=commits_since(previous_tag, root=root),
+    )
+    notes_path.write_text(metadata.notes, encoding="utf-8")
+    return metadata
+
+
+def write_github_outputs(metadata: ReleaseMetadata) -> None:
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with Path(output_path).open("a", encoding="utf-8") as handle:
+        handle.write(f"release_tag={metadata.tag}\n")
+        handle.write(f"release_name={metadata.name}\n")
+        handle.write(f"source_sha256={metadata.source_sha256}\n")
+        handle.write(f"head_sha={metadata.head_sha}\n")
+        handle.write(f"previous_tag={metadata.previous_tag or ''}\n")
+
+
+def command_prepare(args: argparse.Namespace) -> int:
+    metadata = prepare_release(
+        release_version=args.release_version,
+        notes_path=Path(args.notes_path),
+    )
+    write_github_outputs(metadata)
+    print(
+        json.dumps(
+            {
+                "release_tag": metadata.tag,
+                "release_name": metadata.name,
+                "source_sha256": metadata.source_sha256,
+                "head_sha": metadata.head_sha,
+                "previous_tag": metadata.previous_tag,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    prepare = subparsers.add_parser("prepare")
+    prepare.add_argument("--release-version", default="0.1.1-alpha")
+    prepare.add_argument("--notes-path", default="release-notes.md")
+    prepare.set_defaults(func=command_prepare)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    return int(args.func(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

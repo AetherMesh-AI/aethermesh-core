@@ -173,6 +173,7 @@ def command_workflow_security(_: argparse.Namespace) -> int:
         rel = path.relative_to(ROOT)
         text = path.read_text(encoding="utf-8")
         lowered = text.lower()
+        is_pr_workflow = "pull_request:" in lowered
         if "pull_request_target:" in lowered:
             violations.append(
                 f"{rel}: pull_request_target is not allowed for PR checks"
@@ -181,13 +182,13 @@ def command_workflow_security(_: argparse.Namespace) -> int:
             violations.append(f"{rel}: permissions: write-all is not allowed")
         for line_number, line in enumerate(text.splitlines(), 1):
             stripped = line.strip().lower()
-            if re.match(r"[a-z-]+:\s*write(?:\s|$)", stripped):
+            if is_pr_workflow and re.match(r"[a-z-]+:\s*write(?:\s|$)", stripped):
                 violations.append(
                     f"{rel}:{line_number}: write permission is not allowed in PR workflows: {line.strip()}"
                 )
         if re.search(r"curl\b[^\n|]*\|\s*(?:sh|bash)\b", text):
             violations.append(f"{rel}: curl-to-shell install pattern is not allowed")
-        if "${{ secrets." in text and "pull_request:" in lowered:
+        if "${{ secrets." in text and is_pr_workflow:
             violations.append(f"{rel}: PR workflows must not expose repository secrets")
         for line_number, line in enumerate(text.splitlines(), 1):
             stripped = line.strip()

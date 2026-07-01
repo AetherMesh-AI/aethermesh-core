@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aethermesh"
-version = "0.1.0"
+version = "0.1.0a0"
 description = "Minimal local AetherMesh Core prototype."
 readme = "README.md"
 requires-python = ">=3.11"
