@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote
 
+from aethermesh_core.aggregation import AggregationError, aggregate_local_flow
 from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
@@ -232,6 +233,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         required=True,
         help="Directory containing deterministic local flow artifacts to audit.",
+    )
+
+    aggregate_local = subcommands.add_parser(
+        "aggregate-local-flow",
+        help="Audit and aggregate a completed local flow artifact directory.",
+    )
+    aggregate_local.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory containing deterministic local flow artifacts to aggregate.",
+    )
+    aggregate_local.add_argument(
+        "--aggregate-path",
+        default=None,
+        help="Path to write the aggregate result JSON. Defaults to <output-dir>/aggregate-result.json.",
     )
 
     validate_local = subcommands.add_parser(
@@ -1095,6 +1111,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             payload = audit_local_flow(args.output_dir)
         except (
+            FlowAuditError,
+            MessageLogPersistenceError,
+            LedgerPersistenceError,
+            ReceiptPersistenceError,
+            ValueError,
+        ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "aggregate-local-flow":
+        try:
+            payload = aggregate_local_flow(args.output_dir, args.aggregate_path)
+        except (
+            AggregationError,
             FlowAuditError,
             MessageLogPersistenceError,
             LedgerPersistenceError,

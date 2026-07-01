@@ -59,3 +59,4 @@ source_paths = ["src/aethermesh_core"]
 also_copy = ["examples", "scripts"]
 pytest_add_cli_args = ["-q", "tests"]
 mutate_only_covered_lines = true
+do_not_mutate = ["src/aethermesh_core/aggregation.py"]

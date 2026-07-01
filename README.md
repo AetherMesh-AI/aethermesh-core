@@ -282,6 +282,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli audit-loc
 
 The audit command reads the dispatch log, flow log, ledger, and receipts, verifies that receipts reference assignment/result/contribution messages and that credited receipt units match ledger totals, then prints deterministic JSON counts. Missing, malformed, unsupported-version, or inconsistent artifacts return a concise nonzero CLI error without rewriting the artifact directory.
 
+Aggregate an audited local flow into a deterministic versioned result artifact:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli aggregate-local-flow --output-dir /tmp/aethermesh-local-flow
+```
+
+This writes `/tmp/aethermesh-local-flow/aggregate-result.json` with receipt-backed, validation-passing credited results plus audit metadata; it is a local Aggregator seam, not rewards or payout logic.
+
 Replay local assignment and result logs through an independent validator artifact without running workers or mutating the input logs/ledger:
 
 ```bash
