@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -85,7 +86,9 @@ def validate_local_results(
                 f"correlation_id={key[0]!r} job_id={key[1]!r}"
             )
         result = _result_from_message(result_message)
-        validation = validate_job_result(assigned_job, result)
+        validation = validate_job_result(
+            assigned_job, _result_for_output_validation(result)
+        )
         validations.append(
             {
                 "message_type": "job_result_validated",
@@ -128,6 +131,21 @@ def _assignment_key(correlation_id: str | None, job_id: str) -> AssignmentKey:
 def _sort_key(key: AssignmentKey) -> tuple[str, str]:
     correlation_id, job_id = key
     return ("" if correlation_id is None else correlation_id, job_id)
+
+
+def _result_for_output_validation(result: JobResult) -> JobResult:
+    """Normalize credited local result messages back to runner-result shape.
+
+    Worker result messages carry validation-gated contribution credit, which can
+    be greater than the runner's pre-accounting ``1`` unit for valid completed
+    jobs. ``validate_job_result`` validates runner output shape, so replay must
+    not mark a correct output invalid solely because the message contains the
+    credited contribution units written by the local flow.
+    """
+
+    if result.status == "completed":
+        return replace(result, contribution_units=1)
+    return result
 
 
 def _job_from_assignment(message: MeshMessage) -> Job:

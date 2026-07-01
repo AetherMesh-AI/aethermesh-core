@@ -102,6 +102,104 @@ class LocalValidationReplayTests(unittest.TestCase):
         self.assertEqual(report["validations"][0]["valid"], False)
         self.assertEqual(report["validations"][0]["reason"], "output_mismatch")
 
+    def test_valid_scored_result_units_do_not_make_replay_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assignment_path = temp_path / "dispatch.json"
+            result_path = temp_path / "flow.json"
+            validation_path = temp_path / "validation.json"
+            write_message_log(
+                assignment_path,
+                _message_log(
+                    [
+                        MeshMessage(
+                            message_id="msg-0001",
+                            message_type="job_assigned",
+                            sender_node_id="local-scheduler",
+                            recipient_node_id="node-a",
+                            payload={
+                                "job_id": "job-a",
+                                "job_type": "text_stats",
+                                "payload": {"text": "hello mesh"},
+                            },
+                            correlation_id="job-a",
+                        )
+                    ]
+                ),
+            )
+            write_message_log(
+                result_path,
+                _message_log(
+                    [
+                        _result_with_payload(
+                            "msg-0002",
+                            {
+                                "job_id": "job-a",
+                                "status": "completed",
+                                "success": True,
+                                "output": {
+                                    "character_count": 10,
+                                    "word_count": 2,
+                                    "line_count": 1,
+                                    "normalized_preview": "hello mesh",
+                                },
+                                "error": None,
+                                "contribution_units": 2,
+                            },
+                        )
+                    ]
+                ),
+            )
+
+            report = validate_local_results(
+                assignment_log_path=assignment_path,
+                result_log_path=result_path,
+                validation_log_path=validation_path,
+            )
+
+        self.assertEqual(report["summary"]["valid_results"], 1)
+        self.assertEqual(report["summary"]["invalid_results"], 0)
+        self.assertEqual(report["validations"][0]["reason"], "ok")
+
+    def test_failed_result_stays_invalid_during_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assignment_path = temp_path / "dispatch.json"
+            result_path = temp_path / "flow.json"
+            validation_path = temp_path / "validation.json"
+            write_message_log(
+                assignment_path,
+                _message_log([_assignment("msg-0001", "job-a", "expected", "node-a")]),
+            )
+            write_message_log(
+                result_path,
+                _message_log(
+                    [
+                        _result_with_payload(
+                            "msg-0002",
+                            {
+                                "job_id": "job-a",
+                                "status": "failed",
+                                "success": False,
+                                "output": None,
+                                "error": "worker failed",
+                                "contribution_units": 0,
+                            },
+                        )
+                    ]
+                ),
+            )
+
+            report = validate_local_results(
+                assignment_log_path=assignment_path,
+                result_log_path=result_path,
+                validation_log_path=validation_path,
+            )
+
+        self.assertEqual(report["summary"]["valid_results"], 0)
+        self.assertEqual(report["summary"]["invalid_results"], 1)
+        self.assertEqual(report["validations"][0]["reason"], "result_not_completed")
+
     def test_missing_assignment_duplicate_collisions_and_no_overwrite_fail(
         self,
     ) -> None:
