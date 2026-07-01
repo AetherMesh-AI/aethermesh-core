@@ -153,10 +153,13 @@ aethermesh node status
 aethermesh node start
 aethermesh peers
 aethermesh jobs
+aethermesh update --dry-run
 aethermesh ui
 ```
 
 `aethermesh init` creates local config, identity, data, and log files under `~/.aethermesh` by default. Set `AETHERMESH_HOME=/path/to/local-home` to isolate a dev or test node. `aethermesh node start` and `aethermesh ui` bind the local FastAPI dashboard/API to `127.0.0.1:7280` by default and do not expose LAN admin behavior.
+
+`aethermesh update` downloads the newest GitHub release wheel, verifies it against `SHA256SUMS.txt` when present, and upgrades the local install with `pip`; use `--dry-run` to verify the release without installing it.
 
 See [docs/ui-and-cli.md](docs/ui-and-cli.md) for the CLI/API/UI architecture, localhost security note, and future Tauri desktop wrapper plan.
 
