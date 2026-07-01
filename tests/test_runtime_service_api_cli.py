@@ -296,6 +296,40 @@ class RuntimeServiceTests(unittest.TestCase):
         with patch("aethermesh_core.runtime_service.metadata.version") as version:
             version.side_effect = metadata.PackageNotFoundError
             self.assertEqual(_package_version(), "0.1.0")
+
+        sysconf_calls: list[str] = []
+
+        def fake_sysconf(name: str) -> int:
+            sysconf_calls.append(name)
+            return {"SC_PAGE_SIZE": 4096, "SC_PHYS_PAGES": 12345}[name]
+
+        with (
+            patch(
+                "aethermesh_core.runtime_service.os.sysconf_names",
+                {"SC_PAGE_SIZE": 1, "SC_PHYS_PAGES": 2},
+            ),
+            patch(
+                "aethermesh_core.runtime_service.os.sysconf", side_effect=fake_sysconf
+            ),
+        ):
+            self.assertEqual(_memory_total_bytes(), 4096 * 12345)
+        self.assertEqual(sysconf_calls, ["SC_PAGE_SIZE", "SC_PHYS_PAGES"])
+
+        for partial_names in [
+            {"SC_PAGE_SIZE": 1},
+            {"SC_PHYS_PAGES": 2},
+        ]:
+            with self.subTest(partial_names=partial_names):
+                with (
+                    patch(
+                        "aethermesh_core.runtime_service.os.sysconf_names",
+                        partial_names,
+                    ),
+                    patch("aethermesh_core.runtime_service.os.sysconf") as sysconf,
+                ):
+                    self.assertIsNone(_memory_total_bytes())
+                    sysconf.assert_not_called()
+
         with patch(
             "aethermesh_core.runtime_service.os.kill", side_effect=PermissionError
         ):
