@@ -23,6 +23,7 @@
   },
   "linux": {
     "target": ["AppImage", "deb"],
-    "category": "Development"
+    "category": "Development",
+    "maintainer": "AetherMesh AI <releases@aethermesh.ai>"
   }
 }
