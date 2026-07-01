@@ -36,6 +36,10 @@ from aethermesh_core.local_transport import (
     write_local_inbox,
     write_local_outbox,
 )
+from aethermesh_core.local_validation import (
+    LocalValidationError,
+    validate_local_results,
+)
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
     MessageLogPersistenceError,
@@ -244,6 +248,26 @@ def build_parser() -> argparse.ArgumentParser:
         "--aggregate-path",
         default=None,
         help="Path to write the aggregate result JSON. Defaults to <output-dir>/aggregate-result.json.",
+    )
+
+    validate_local = subcommands.add_parser(
+        "validate-local-results",
+        help="Replay local assignment/result logs and write a validation report.",
+    )
+    validate_local.add_argument(
+        "--assignment-log-path",
+        required=True,
+        help="Path to an existing version 1 dispatch/assignment message log.",
+    )
+    validate_local.add_argument(
+        "--result-log-path",
+        required=True,
+        help="Path to an existing version 1 worker/result message log.",
+    )
+    validate_local.add_argument(
+        "--validation-log-path",
+        required=True,
+        help="New path to write the deterministic local validation report.",
     )
 
     ledger_summary = subcommands.add_parser(
@@ -1109,6 +1133,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             ReceiptPersistenceError,
             ValueError,
         ) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "validate-local-results":
+        try:
+            payload = validate_local_results(
+                assignment_log_path=args.assignment_log_path,
+                result_log_path=args.result_log_path,
+                validation_log_path=args.validation_log_path,
+            )
+        except LocalValidationError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))

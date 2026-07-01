@@ -71,6 +71,7 @@ from aethermesh_core.receipts import (
     _remove_temp_file as remove_receipt_temp,
     write_receipt_document,
 )
+from aethermesh_core.result_hash import result_hash_from_fields
 from aethermesh_core.scheduler import ScheduledJob, _coerce_job
 from aethermesh_core.validation import validate_job_result
 from scripts import ci_quality_gates
@@ -277,12 +278,25 @@ class QualityGateEdgeCoverageTests(unittest.TestCase):
             )
 
     def test_receipt_defensive_branches(self) -> None:
+        result_hash = result_hash_from_fields(
+            job_id="job",
+            node_id="node-a",
+            status="completed",
+            output={"z": "value"},
+            error=None,
+        )
         result_msg = MeshMessage(
             "r",
             "job_result_reported",
             "node-a",
             "local-ledger",
-            {"job_id": "job", "status": "completed", "output": {"z": "value"}},
+            {
+                "job_id": "job",
+                "status": "completed",
+                "output": {"z": "value"},
+                "error": None,
+                "result_hash": result_hash,
+            },
             "job",
         )
         contribution_msg = MeshMessage(
@@ -309,6 +323,7 @@ class QualityGateEdgeCoverageTests(unittest.TestCase):
             "result_message_id": "r",
             "contribution_message_id": "c",
             "result_status": "completed",
+            "result_hash": result_hash,
             "validation": {"valid": True, "reason": "ok"},
             "credited_units": 1,
             "output_summary": {"z": "value"},

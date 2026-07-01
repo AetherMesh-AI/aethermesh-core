@@ -117,7 +117,9 @@ def _full_extra_checks() -> list[Check]:
         Check("bandit", ("bandit", "-q", "-r", "src")),
         Check("pip audit", _python("scripts/ci_quality_gates.py", "dependency-audit")),
         Check("build", _python("-m", "build")),
-        Check("mutation", ("mutmut", "run", "--max-children", "4")),
+        Check(
+            "mutation", _python("scripts/mutmut_early_fail.py", "--max-children", "4")
+        ),
         Check(
             "mutation score",
             _python("scripts/ci_quality_gates.py", "mutation-score", "--minimum", "95"),

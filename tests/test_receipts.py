@@ -10,6 +10,7 @@ from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.node_service import ProcessedAssignment
+from aethermesh_core.result_hash import result_hash
 from aethermesh_core.receipts import (
     build_receipt_document,
     ReceiptPersistenceError,
@@ -33,6 +34,7 @@ class ReceiptTests(unittest.TestCase):
             result_message_id="msg-0004",
             contribution_message_id="msg-0005",
         )
+        expected_hash = result_hash(assignment.result)
 
         document = build_receipt_document([assignment])
 
@@ -50,6 +52,7 @@ class ReceiptTests(unittest.TestCase):
                     "result_message_id": "msg-0004",
                     "contribution_message_id": "msg-0005",
                     "result_status": "completed",
+                    "result_hash": expected_hash,
                     "validation": {"valid": True, "reason": "ok"},
                     "credited_units": 1,
                     "output_summary": {"value": "hello mesh"},
@@ -348,6 +351,10 @@ class ReceiptTests(unittest.TestCase):
         bad = dict(receipt)
         bad["output_summary"] = []
         cases.append({**valid, "receipts": [bad]})
+        for bad_hash in (7, "a" * 63, "A" * 64, "g" * 64):
+            bad = dict(receipt)
+            bad["result_hash"] = bad_hash
+            cases.append({**valid, "receipts": [bad]})
 
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "receipts.json"

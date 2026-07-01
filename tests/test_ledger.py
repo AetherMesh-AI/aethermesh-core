@@ -14,6 +14,7 @@ from aethermesh_core.ledger import (
     save_ledger_document,
 )
 from aethermesh_core.models import JobResult
+from aethermesh_core.result_hash import result_hash
 
 
 class ContributionLedgerTests(unittest.TestCase):
@@ -39,6 +40,7 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertIsNone(record.validation_valid)
         self.assertIsNone(record.validation_reason)
         self.assertIsNone(record.job_type)
+        self.assertEqual(record.result_hash, result_hash(result))
         self.assertEqual(summary.node_id, "node-a")
         self.assertEqual(summary.completed_job_count, 1)
         self.assertEqual(summary.failed_job_count, 0)
@@ -162,11 +164,29 @@ class ContributionLedgerTests(unittest.TestCase):
             validation_valid=True,
             validation_reason="ok",
             job_type="echo",
+            result_hash="a" * 64,
         )
 
         decoded = ContributionRecord.from_dict(json.loads(json.dumps(record.to_dict())))
 
         self.assertEqual(decoded, record)
+
+    def test_contribution_record_rejects_invalid_result_hash(self) -> None:
+        valid = ContributionRecord(
+            node_id="node-a",
+            job_id="job-1",
+            status="completed",
+            contribution_units=1,
+            message="hello mesh",
+            result_hash="a" * 64,
+        ).to_dict()
+        for bad_hash in (7, "a" * 63, "A" * 64, "g" * 64):
+            with self.subTest(bad_hash=bad_hash):
+                payload = {**valid, "result_hash": bad_hash}
+                with self.assertRaisesRegex(
+                    LedgerPersistenceError, "lowercase SHA-256 hex digest"
+                ):
+                    ContributionRecord.from_dict(payload)
 
     def test_legacy_contribution_record_without_validation_metadata_loads(self) -> None:
         payload = {
@@ -187,6 +207,7 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertIsNone(record.validation_valid)
         self.assertIsNone(record.validation_reason)
         self.assertIsNone(record.job_type)
+        self.assertIsNone(record.result_hash)
 
     def test_record_persists_validation_metadata_when_supplied(self) -> None:
         ledger = ContributionLedger()
@@ -213,6 +234,11 @@ class ContributionLedgerTests(unittest.TestCase):
                 "status": "completed",
                 "contribution_units": 0,
                 "message": "unexpected",
+                "result_hash": result_hash(
+                    JobResult(
+                        "job-invalid", "node-a", "completed", "unexpected", None, 0
+                    )
+                ),
                 "validation_valid": False,
                 "validation_reason": "output_mismatch",
                 "job_type": "echo",
@@ -343,9 +369,14 @@ class ContributionLedgerTests(unittest.TestCase):
             )
             raw = ledger_path.read_text(encoding="utf-8")
 
+            expected_hash = result_hash(
+                JobResult("job-1", "node-a", "completed", "hello mesh", None, 1)
+            )
             self.assertEqual(
                 raw,
-                '{\n  "a_note": "kept",\n  "records": [\n    {\n      "contribution_units": 1,\n      "job_id": "job-1",\n      "job_type": null,\n      "message": "hello mesh",\n      "node_id": "node-a",\n      "status": "completed",\n      "validation_reason": null,\n      "validation_valid": null\n    }\n  ],\n  "version": 1,\n  "z_future": true\n}\n',
+                '{\n  "a_note": "kept",\n  "records": [\n    {\n      "contribution_units": 1,\n      "job_id": "job-1",\n      "job_type": null,\n      "message": "hello mesh",\n      "node_id": "node-a",\n      "result_hash": "'
+                + expected_hash
+                + '",\n      "status": "completed",\n      "validation_reason": null,\n      "validation_valid": null\n    }\n  ],\n  "version": 1,\n  "z_future": true\n}\n',
             )
             self.assertEqual(
                 sorted(path.name for path in ledger_path.parent.iterdir()),

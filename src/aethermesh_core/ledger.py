@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.models import JobResult
+from aethermesh_core.result_hash import result_hash as canonical_result_hash
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class ContributionRecord:
     validation_valid: bool | None = None
     validation_reason: str | None = None
     job_type: str | None = None
+    result_hash: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the record into a JSON-compatible dictionary."""
@@ -58,6 +60,9 @@ class ContributionRecord:
             raise LedgerPersistenceError(
                 "ledger record field 'job_type' must be a string or null"
             )
+        result_hash = payload.get("result_hash")
+        if result_hash is not None:
+            _require_result_hash("result_hash", result_hash)
         return cls(
             node_id=payload["node_id"],
             job_id=payload["job_id"],
@@ -67,6 +72,7 @@ class ContributionRecord:
             validation_valid=validation_valid,
             validation_reason=validation_reason,
             job_type=job_type,
+            result_hash=result_hash,
         )
 
 
@@ -120,6 +126,7 @@ class ContributionLedger:
             validation_valid=validation_valid,
             validation_reason=validation_reason,
             job_type=job_type,
+            result_hash=canonical_result_hash(result),
         )
         self._records.append(record)
         return record
@@ -297,6 +304,19 @@ def _require_record_field(
     if not isinstance(value, expected_type) or isinstance(value, bool):
         raise LedgerPersistenceError(
             f"ledger record field '{field_name}' must be {expected_type.__name__}"
+        )
+
+
+def _require_result_hash(field_name: str, value: object) -> None:
+    if not isinstance(value, str) or len(value) != 64:
+        raise LedgerPersistenceError(
+            f"ledger record field '{field_name}' must be a lowercase SHA-256 hex digest"
+        )
+    if value.lower() != value or any(
+        character not in "0123456789abcdef" for character in value
+    ):
+        raise LedgerPersistenceError(
+            f"ledger record field '{field_name}' must be a lowercase SHA-256 hex digest"
         )
 
 
