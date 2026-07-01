@@ -228,9 +228,13 @@ def load_worker_emitted_messages(path: str | Path) -> list[MeshMessage]:
         entries[replayed_message_count:], replayed_message_count
     ):
         message = _message_from_document_entry(entry, index)
-        if message.message_type not in {"job_result_reported", "contribution_recorded"}:
+        if message.message_type not in {
+            "job_result_reported",
+            "job_validated",
+            "contribution_recorded",
+        }:
             raise MessageLogPersistenceError(
-                "worker emitted message log entries must be job_result_reported or contribution_recorded"
+                "worker emitted message log entries must be job_result_reported, job_validated, or contribution_recorded"
             )
         emitted.append(message)
     return emitted

@@ -820,23 +820,23 @@ class LocalTransportCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(processed["processed_assignment_count"], 1)
         self.assertEqual(processed["transport_outbox_path"], str(outbox_path))
-        self.assertEqual(processed["transport_outbox_message_count"], 1)
+        self.assertEqual(processed["transport_outbox_message_count"], 2)
         self.assertEqual(outbox["version"], 1)
         self.assertEqual(outbox["node_id"], "local-node-a")
         self.assertEqual(outbox["source_inbox_path"], str(inbox_path))
         self.assertEqual(outbox["processed_assignment_count"], 1)
         self.assertEqual(
             [message["message_type"] for message in outbox["messages"]],
-            ["job_result_reported"],
+            ["job_result_reported", "job_validated"],
         )
         self.assertEqual(
             [message["sender_node_id"] for message in outbox["messages"]],
-            ["local-node-a"],
+            ["local-node-a", "local-node-a"],
         )
         self.assertNotIn(
             "msg-assign-1", [message["message_id"] for message in outbox["messages"]]
         )
-        self.assertEqual(len(worker_log["messages"]), 3)
+        self.assertEqual(len(worker_log["messages"]), 4)
 
     def test_collect_local_outboxes_cli_collects_worker_outbox(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1034,10 +1034,10 @@ class LocalTransportCliTests(unittest.TestCase):
 
         self.assertEqual(outputs[-1]["outbox_count"], 1)
         self.assertEqual(outputs[-1]["node_ids"], ["local-node-a"])
-        self.assertEqual(outputs[-1]["message_count"], 1)
+        self.assertEqual(outputs[-1]["message_count"], 2)
         self.assertEqual(
             [message["message_type"] for message in collected["messages"]],
-            ["job_result_reported"],
+            ["job_result_reported", "job_validated"],
         )
 
     def test_write_transport_outbox_rejects_message_log_input(self) -> None:

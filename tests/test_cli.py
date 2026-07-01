@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 
 from aethermesh_core.cli import build_parser, main
+from aethermesh_core.message_log import write_message_log
+from aethermesh_core.messages import MeshMessage
 
 
 class CliTests(unittest.TestCase):
@@ -24,6 +26,8 @@ class CliTests(unittest.TestCase):
             "run-local-transport-flow",
             "run-peer-transport-flow",
             "audit-local-flow",
+            "aggregate-local-flow",
+            "validate-local-results",
             "ledger-summary",
             "peer-summary",
             "announce-local-node",
@@ -132,6 +136,35 @@ class CliTests(unittest.TestCase):
         self.assertEqual(audit.command, "audit-local-flow")
         self.assertEqual(audit.output_dir, "out")
 
+        aggregate = parser.parse_args(
+            [
+                "aggregate-local-flow",
+                "--output-dir",
+                "out",
+                "--aggregate-path",
+                "aggregate.json",
+            ]
+        )
+        self.assertEqual(aggregate.command, "aggregate-local-flow")
+        self.assertEqual(aggregate.output_dir, "out")
+        self.assertEqual(aggregate.aggregate_path, "aggregate.json")
+
+        validation = parser.parse_args(
+            [
+                "validate-local-results",
+                "--assignment-log-path",
+                "dispatch.json",
+                "--result-log-path",
+                "flow.json",
+                "--validation-log-path",
+                "validation.json",
+            ]
+        )
+        self.assertEqual(validation.command, "validate-local-results")
+        self.assertEqual(validation.assignment_log_path, "dispatch.json")
+        self.assertEqual(validation.result_log_path, "flow.json")
+        self.assertEqual(validation.validation_log_path, "validation.json")
+
         ledger = parser.parse_args(["ledger-summary", "--ledger-path", "ledger.json"])
         self.assertEqual(ledger.command, "ledger-summary")
         self.assertEqual(ledger.ledger_path, "ledger.json")
@@ -227,7 +260,7 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. aggregate-local-flow Audit and aggregate a completed local flow artifact directory. validate-local-results Replay local assignment/result logs and write a validation report. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
@@ -241,6 +274,8 @@ class CliTests(unittest.TestCase):
                 "run-local-transport-flow": "usage: aethermesh-core run-local-transport-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts. --transport-dir TRANSPORT_DIR Override the default file-backed local transport directory.",
                 "run-peer-transport-flow": "usage: aethermesh-core run-peer-transport-flow [-h] --peer-log-path PEER_LOG_PATH --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --peer-log-path PEER_LOG_PATH Path to an existing version 1 local heartbeat peer message log. --manifest MANIFEST Path to a version 1 manifest whose jobs should be run. --output-dir OUTPUT_DIR Directory for deterministic local peer transport artifacts. --transport-dir TRANSPORT_DIR Override the default file-backed local transport directory.",
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
+                "aggregate-local-flow": "usage: aethermesh-core aggregate-local-flow [-h] --output-dir OUTPUT_DIR [--aggregate-path AGGREGATE_PATH] options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to aggregate. --aggregate-path AGGREGATE_PATH Path to write the aggregate result JSON. Defaults to <output-dir>/aggregate-result.json.",
+                "validate-local-results": "usage: aethermesh-core validate-local-results [-h] --assignment-log-path ASSIGNMENT_LOG_PATH --result-log-path RESULT_LOG_PATH --validation-log-path VALIDATION_LOG_PATH options: -h, --help show this help message and exit --assignment-log-path ASSIGNMENT_LOG_PATH Path to an existing version 1 dispatch/assignment message log. --result-log-path RESULT_LOG_PATH Path to an existing version 1 worker/result message log. --validation-log-path VALIDATION_LOG_PATH New path to write the deterministic local validation report.",
                 "ledger-summary": "usage: aethermesh-core ledger-summary [-h] --ledger-path LEDGER_PATH options: -h, --help show this help message and exit --ledger-path LEDGER_PATH Path to an existing version 1 local contribution ledger JSON file.",
                 "peer-summary": "usage: aethermesh-core peer-summary [-h] --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --message-log-path MESSAGE_LOG_PATH Path to an existing version 1 local message log.",
                 "announce-local-node": "usage: aethermesh-core announce-local-node [-h] --node-id NODE_ID --message-log-path MESSAGE_LOG_PATH [--status {available,offline}] [--capability CAPABILITY] options: -h, --help show this help message and exit --node-id NODE_ID Local node id to announce. --message-log-path MESSAGE_LOG_PATH New path to write the version 1 local announcement message log. --status {available,offline} Local node status to announce. Defaults to available. --capability CAPABILITY Capability to announce. May be supplied multiple times; defaults to local capabilities.",
@@ -253,6 +288,92 @@ class CliTests(unittest.TestCase):
     @staticmethod
     def _normalize_parser_help(text: str) -> str:
         return " ".join(text.split()).replace("run- local", "run-local")
+
+    def test_validate_local_results_cli_writes_report_and_reports_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assignment_path = temp_path / "dispatch.json"
+            result_path = temp_path / "flow.json"
+            validation_path = temp_path / "validation.json"
+            write_message_log(
+                assignment_path,
+                {
+                    "version": 1,
+                    "metadata": {"message_count": 1},
+                    "messages": [
+                        MeshMessage(
+                            message_id="msg-0001",
+                            message_type="job_assigned",
+                            sender_node_id="local-scheduler",
+                            recipient_node_id="node-a",
+                            payload={
+                                "job_id": "job-a",
+                                "job_type": "echo",
+                                "payload": {"message": "hello"},
+                            },
+                            correlation_id="job-a",
+                        ).to_dict()
+                    ],
+                },
+            )
+            write_message_log(
+                result_path,
+                {
+                    "version": 1,
+                    "metadata": {"message_count": 1},
+                    "messages": [
+                        MeshMessage(
+                            message_id="msg-0002",
+                            message_type="job_result_reported",
+                            sender_node_id="node-a",
+                            recipient_node_id="local-ledger",
+                            payload={
+                                "job_id": "job-a",
+                                "status": "completed",
+                                "output": "hello",
+                                "error": None,
+                                "contribution_units": 1,
+                            },
+                            correlation_id="job-a",
+                        ).to_dict()
+                    ],
+                },
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "validate-local-results",
+                        "--assignment-log-path",
+                        str(assignment_path),
+                        "--result-log-path",
+                        str(result_path),
+                        "--validation-log-path",
+                        str(validation_path),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["summary"]["valid_results"], 1)
+            self.assertTrue(validation_path.exists())
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    [
+                        "validate-local-results",
+                        "--assignment-log-path",
+                        str(assignment_path),
+                        "--result-log-path",
+                        str(result_path),
+                        "--validation-log-path",
+                        str(validation_path),
+                    ]
+                )
+            self.assertEqual(exit_code, 1)
+            self.assertIn("already exists", stderr.getvalue())
 
     def test_simulate_local_prints_deterministic_json_shape(self) -> None:
         stdout = io.StringIO()
@@ -281,7 +402,7 @@ class CliTests(unittest.TestCase):
             payload["results"][1]["output"]["normalized_preview"],
             "hello mesh hello node",
         )
-        self.assertEqual(len(payload["messages"]), 17)
+        self.assertEqual(len(payload["messages"]), 22)
         self.assertEqual(payload["messages"][0]["message_id"], "msg-0001")
         self.assertEqual(payload["messages"][0]["message_type"], "node_heartbeat")
         self.assertEqual(payload["messages"][0]["correlation_id"], None)
@@ -300,8 +421,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["messages"][2]["correlation_id"], "echo-1")
         self.assertEqual(payload["messages"][2]["recipient_node_id"], "local-node-a")
         self.assertEqual(payload["messages"][3]["message_type"], "job_result_reported")
+        self.assertEqual(payload["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            payload["messages"][4]["message_type"], "contribution_recorded"
+            payload["messages"][5]["message_type"], "contribution_recorded"
         )
         self.assertEqual(payload["validations"][0]["valid"], True)
         self.assertEqual(
@@ -707,22 +829,23 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["message_log_path"], str(message_log_path))
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(persisted["metadata"]["manifest_path"], str(manifest_path))
-        self.assertEqual(persisted["metadata"]["message_count"], 8)
+        self.assertEqual(persisted["metadata"]["message_count"], 10)
         self.assertEqual(persisted["metadata"]["job_count"], 2)
         self.assertEqual(persisted["metadata"]["completed_count"], 2)
         self.assertEqual(persisted["metadata"]["failed_count"], 0)
         self.assertEqual(persisted["metadata"]["total_contribution_units"], 3)
         self.assertEqual(
             [message["message_id"] for message in persisted["messages"]],
-            [f"msg-{index:04d}" for index in range(1, 9)],
+            [f"msg-{index:04d}" for index in range(1, 11)],
         )
         self.assertEqual(persisted["messages"][0]["message_type"], "node_heartbeat")
         self.assertEqual(persisted["messages"][2]["message_type"], "job_assigned")
         self.assertEqual(
             persisted["messages"][3]["message_type"], "job_result_reported"
         )
+        self.assertEqual(persisted["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            persisted["messages"][4]["message_type"], "contribution_recorded"
+            persisted["messages"][5]["message_type"], "contribution_recorded"
         )
 
     def test_run_local_batch_message_log_write_error_returns_nonzero(self) -> None:
@@ -2044,30 +2167,42 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["command"], "process-local-inbox")
         self.assertEqual(payload["node_id"], "local-node-a")
         self.assertEqual(payload["processed_assignment_count"], 2)
-        self.assertEqual(payload["ignored_message_ids"], ["msg-0005", "msg-0011"])
+        self.assertEqual(payload["ignored_message_ids"], ["msg-0006", "msg-0014"])
         self.assertEqual(
             payload["emitted_messages"],
             [
                 {
-                    "id": "msg-0012",
+                    "id": "msg-0015",
                     "type": "job_result_reported",
                     "sender": "local-node-a",
                     "recipient": "local-ledger",
                 },
                 {
-                    "id": "msg-0013",
+                    "id": "msg-0016",
+                    "type": "job_validated",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0017",
                     "type": "contribution_recorded",
                     "sender": "local-ledger",
                     "recipient": "local-node-a",
                 },
                 {
-                    "id": "msg-0014",
+                    "id": "msg-0018",
                     "type": "job_result_reported",
                     "sender": "local-node-a",
                     "recipient": "local-ledger",
                 },
                 {
-                    "id": "msg-0015",
+                    "id": "msg-0019",
+                    "type": "job_validated",
+                    "sender": "local-node-a",
+                    "recipient": "local-ledger",
+                },
+                {
+                    "id": "msg-0020",
                     "type": "contribution_recorded",
                     "sender": "local-ledger",
                     "recipient": "local-node-a",
@@ -2182,7 +2317,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             payload["output_message_log_path"], str(output_message_log_path)
         )
-        self.assertEqual(payload["final_message_count"], 5)
+        self.assertEqual(payload["final_message_count"], 6)
         self.assertEqual(payload["processed_assignment_count"], 1)
         self.assertEqual(payload["ignored_message_ids"], ["msg-0003"])
         self.assertEqual(persisted["version"], 1)
@@ -2192,18 +2327,19 @@ class CliTests(unittest.TestCase):
             persisted["metadata"]["source_message_log_path"], str(message_log_path)
         )
         self.assertEqual(persisted["metadata"]["ledger_path"], str(ledger_path))
-        self.assertEqual(persisted["metadata"]["message_count"], 5)
+        self.assertEqual(persisted["metadata"]["message_count"], 6)
         self.assertEqual(persisted["metadata"]["replayed_message_count"], 3)
-        self.assertEqual(persisted["metadata"]["emitted_message_count"], 2)
+        self.assertEqual(persisted["metadata"]["emitted_message_count"], 3)
         self.assertEqual(
             [message["message_id"] for message in persisted["messages"]],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005", "msg-0006"],
         )
         self.assertEqual(
             persisted["messages"][3]["message_type"], "job_result_reported"
         )
+        self.assertEqual(persisted["messages"][4]["message_type"], "job_validated")
         self.assertEqual(
-            persisted["messages"][4]["message_type"], "contribution_recorded"
+            persisted["messages"][5]["message_type"], "contribution_recorded"
         )
 
     def test_process_local_inbox_output_message_log_ordering_is_deterministic(
@@ -2280,7 +2416,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first["messages"], second["messages"])
         self.assertEqual(
             [message["message_id"] for message in first["messages"]],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005", "msg-0006"],
+            [
+                "msg-0001",
+                "msg-0002",
+                "msg-0003",
+                "msg-0004",
+                "msg-0005",
+                "msg-0006",
+                "msg-0007",
+                "msg-0008",
+            ],
         )
 
     def test_process_local_inbox_unknown_node_returns_zero_without_ledger(self) -> None:
@@ -2634,8 +2779,8 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("transport_inbox_count", payload)
         self.assertNotIn("transport_inbox_paths", payload)
         self.assertEqual(payload["receipt_count"], 6)
-        self.assertEqual(payload["flow_message_count"], 20)
-        self.assertEqual(payload["flow_emitted_message_count"], 12)
+        self.assertEqual(payload["flow_message_count"], 26)
+        self.assertEqual(payload["flow_emitted_message_count"], 18)
         self.assertEqual(payload["ledger_summary"]["record_count"], 6)
         self.assertEqual(len(payload["node_results"]), 2)
         self.assertTrue(dispatch_exists)
@@ -2654,6 +2799,8 @@ class CliTests(unittest.TestCase):
             [receipt["assignment_message_id"] for receipt in receipts["receipts"]],
             ["msg-0003", "msg-0005", "msg-0006", "msg-0007", "msg-0008", "msg-0004"],
         )
+        first_receipt_hash = receipts["receipts"][0]["result_hash"]
+        self.assertRegex(first_receipt_hash, r"^[0-9a-f]{64}$")
         self.assertEqual(
             receipts["receipts"][0],
             {
@@ -2663,8 +2810,10 @@ class CliTests(unittest.TestCase):
                 "assignment_message_id": "msg-0003",
                 "correlation_id": "echo-1",
                 "result_message_id": "msg-0009",
-                "contribution_message_id": "msg-0010",
+                "validation_message_id": "msg-0010",
+                "contribution_message_id": "msg-0011",
                 "result_status": "completed",
+                "result_hash": first_receipt_hash,
                 "validation": {"valid": True, "reason": "ok"},
                 "credited_units": 1,
                 "output_summary": {"value": "hello mesh"},
@@ -2693,8 +2842,8 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow_log["metadata"]["source"], "run-local-flow")
         self.assertEqual(flow_log["metadata"]["manifest_path"], str(manifest_path))
         self.assertEqual(flow_log["metadata"]["dispatch_message_count"], 8)
-        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 12)
-        self.assertEqual(flow_log["metadata"]["message_count"], 20)
+        self.assertEqual(flow_log["metadata"]["emitted_message_count"], 18)
+        self.assertEqual(flow_log["metadata"]["message_count"], 26)
         self.assertEqual(
             flow_log["metadata"]["available_node_ids"], ["local-node-a", "local-node-c"]
         )
@@ -2713,16 +2862,22 @@ class CliTests(unittest.TestCase):
                 "job_assigned",
                 "job_assigned",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
             ],
         )
@@ -3022,7 +3177,7 @@ class CliTests(unittest.TestCase):
             payload["counts"],
             {
                 "dispatch_messages": 2,
-                "flow_messages": 4,
+                "flow_messages": 5,
                 "receipts": 1,
                 "ledger_records": 1,
                 "total_contribution_units": 1,
@@ -3046,6 +3201,81 @@ class CliTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("error:", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_aggregate_local_flow_writes_artifact_and_prints_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "manifest.json"
+            output_dir = root / "flow"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "nodes": ["local-node-a"],
+                        "jobs": [
+                            {
+                                "job_id": "echo-1",
+                                "job_type": "echo",
+                                "payload": {"message": "hello mesh"},
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(
+                    main(
+                        [
+                            "run-local-flow",
+                            "--manifest",
+                            str(manifest_path),
+                            "--output-dir",
+                            str(output_dir),
+                        ]
+                    ),
+                    0,
+                )
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    ["aggregate-local-flow", "--output-dir", str(output_dir)]
+                )
+            payload = json.loads(stdout.getvalue())
+            aggregate_path = output_dir / "aggregate-result.json"
+            aggregate_exists = aggregate_path.exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertEqual(stdout.getvalue(), json.dumps(payload, sort_keys=True) + "\n")
+        self.assertEqual(payload["command"], "aggregate-local-flow")
+        self.assertEqual(payload["aggregate_path"], str(aggregate_path))
+        self.assertEqual(payload["counts"]["accepted_results"], 1)
+        self.assertTrue(aggregate_exists)
+
+    def test_aggregate_local_flow_audit_failure_returns_nonzero_without_writing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "flow"
+            output_dir.mkdir()
+            aggregate_path = output_dir / "aggregate-result.json"
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                exit_code = main(
+                    ["aggregate-local-flow", "--output-dir", str(output_dir)]
+                )
+            aggregate_exists = aggregate_path.exists()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("error:", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertFalse(aggregate_exists)
 
     def test_cli_json_stdout_is_sorted_for_core_commands(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from aethermesh_core.models import Job
 from aethermesh_core.node_service import LocalNodeService
+from aethermesh_core.result_hash import result_hash_from_fields
 from aethermesh_core.scheduler import JobAssignment, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 
@@ -32,7 +33,7 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(
             [message["message_id"] for message in result["messages"]],
-            [f"msg-{index:04d}" for index in range(1, 12)],
+            [f"msg-{index:04d}" for index in range(1, 15)],
         )
         self.assertEqual(
             [message["message_type"] for message in result["messages"]],
@@ -41,12 +42,15 @@ class LocalSimulationTests(unittest.TestCase):
                 "node_heartbeat",
                 "job_assigned",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_assigned",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
                 "job_assigned",
                 "job_result_reported",
+                "job_validated",
                 "contribution_recorded",
             ],
         )
@@ -58,9 +62,12 @@ class LocalSimulationTests(unittest.TestCase):
                 "echo-1",
                 "echo-1",
                 "echo-1",
+                "echo-1",
                 "echo-2",
                 "echo-2",
                 "echo-2",
+                "echo-2",
+                "echo-3",
                 "echo-3",
                 "echo-3",
                 "echo-3",
@@ -85,14 +92,14 @@ class LocalSimulationTests(unittest.TestCase):
         )
         self.assertEqual(
             [message["sender_node_id"] for message in result["messages"][2:5]],
-            ["local-scheduler", "node-a", "local-ledger"],
+            ["local-scheduler", "node-a", "node-a"],
         )
         self.assertEqual(
             [message["recipient_node_id"] for message in result["messages"][2:5]],
-            ["node-a", "local-ledger", "node-a"],
+            ["node-a", "local-ledger", "local-ledger"],
         )
         self.assertEqual(
-            [message["payload"] for message in result["messages"][2:5]],
+            [message["payload"] for message in result["messages"][2:6]],
             [
                 {
                     "job_id": "echo-1",
@@ -107,6 +114,23 @@ class LocalSimulationTests(unittest.TestCase):
                     "output": "one",
                     "error": None,
                     "contribution_units": 1,
+                    "result_hash": result_hash_from_fields(
+                        job_id="echo-1",
+                        node_id="node-a",
+                        status="completed",
+                        output="one",
+                        error=None,
+                    ),
+                },
+                {
+                    "job_id": "echo-1",
+                    "node_id": "node-a",
+                    "assignment_message_id": "msg-0003",
+                    "result_message_id": "msg-0004",
+                    "validator_id": "node-a",
+                    "valid": True,
+                    "reason": "ok",
+                    "contribution_units_after_validation": 1,
                 },
                 {
                     "job_id": "echo-1",
@@ -253,10 +277,10 @@ class LocalSimulationTests(unittest.TestCase):
                 "node-b",
                 "local-scheduler",
                 "node-a",
+                "node-a",
                 "local-ledger",
                 "local-scheduler",
                 "node-b",
-                "local-ledger",
             ],
         )
 
@@ -543,9 +567,11 @@ class LocalSimulationTests(unittest.TestCase):
         self.assertEqual(result["summaries"][0]["contribution_units"], 0)
         self.assertEqual(result["messages"][3]["payload"]["valid"], False)
         self.assertEqual(
-            result["messages"][3]["payload"]["validation"], "missing_payload_message"
+            result["messages"][3]["payload"]["reason"], "missing_payload_message"
         )
-        self.assertEqual(result["messages"][3]["payload"]["contribution_units"], 0)
+        self.assertEqual(
+            result["messages"][3]["payload"]["contribution_units_after_validation"], 0
+        )
         self.assertEqual(result["totals"]["completed_jobs"], 1)
         self.assertEqual(result["totals"]["valid_results"], 0)
         self.assertEqual(result["totals"]["invalid_results"], 1)

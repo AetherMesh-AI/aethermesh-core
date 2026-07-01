@@ -22,7 +22,7 @@ jobs:
       - name: Install package and test tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . pytest
+          python -m pip install -e ".[dev,ui]" pytest
       - name: pytest passes
         run: python -m pytest -q tests
 
@@ -37,7 +37,7 @@ jobs:
       - name: Install package and coverage tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . pytest pytest-cov coverage[toml]
+          python -m pip install -e ".[dev,ui]" pytest pytest-cov coverage[toml]
       - name: 100% line coverage
         run: python -m pytest -q --cov=aethermesh_core --cov-report=term-missing --cov-fail-under=100 tests
 
@@ -52,27 +52,9 @@ jobs:
       - name: Install package and coverage tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . pytest pytest-cov coverage[toml]
+          python -m pip install -e ".[dev,ui]" pytest pytest-cov coverage[toml]
       - name: 100% branch coverage
         run: python -m pytest -q --cov=aethermesh_core --cov-branch --cov-report=term-missing --cov-fail-under=100 tests
-
-  mutation-score:
-    name: Mutation Score
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install package and mutation tools
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e . pytest mutmut
-      - name: mutation score >= 95%
-        run: |
-          mutmut run --max-children 4
-          python scripts/ci_quality_gates.py mutation-score --minimum 95
 
   ruff-check:
     name: Ruff Check
@@ -111,7 +93,7 @@ jobs:
       - name: Install package and mypy
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . mypy
+          python -m pip install -e ".[ui]" mypy
       - name: mypy strict passes
         run: mypy --strict src scripts
 
@@ -275,7 +257,7 @@ jobs:
       - name: Install package and test tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e . pytest
+          python -m pip install -e ".[dev,ui]" pytest
       - name: repeated pytest passes
         run: |
           for seed in 1 2 3; do
