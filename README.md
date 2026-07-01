@@ -334,15 +334,15 @@ Run the unit tests without installing anything:
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The demo is local-only. It creates an in-memory node identity, executes the built-in `echo` job, and prints one JSON result. When ledger output is requested, contribution units are assigned through the same validation-gated prototype scorer; rewards and token economics are out of scope.
+The demo is local-only. By default it derives a deterministic `local-...` node id from stable machine identifiers, executes the built-in `echo` job, and prints one JSON result. When ledger output is requested, contribution units are assigned through the same validation-gated prototype scorer; rewards and token economics are out of scope.
 
-To reuse the same local demo node id across runs, pass `--identity-path` instead of `--node-id`:
+To pin the same local demo node id in a portable JSON file, pass `--identity-path` instead of `--node-id`:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-demo --identity-path ./local-node.json --message "hello mesh"
 ```
 
-When the identity file is missing, the demo creates a minimal version 1 local-only JSON identity with a generated `local-...` node id. Later runs reuse the same node id. `--node-id` and `--identity-path` are mutually exclusive.
+When the identity file is missing, the demo creates a minimal version 1 local-only JSON identity using the same deterministic machine-derived `local-...` node id. Later runs reuse the persisted node id. `--node-id` and `--identity-path` are mutually exclusive.
 
 To also print a local in-memory contribution summary for the demo result, add `--include-ledger`. This preserves the default single-result JSON output unless the ledger summary is explicitly requested. Ledger credit is recorded through the same local validation gate and the extended output includes the validation outcome.
 

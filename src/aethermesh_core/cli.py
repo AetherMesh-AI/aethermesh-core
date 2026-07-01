@@ -14,7 +14,11 @@ from aethermesh_core.aggregation import AggregationError, aggregate_local_flow
 from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.dispatch import dispatch_local_batch
 from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
-from aethermesh_core.identity import IdentityPersistenceError, load_or_create_identity
+from aethermesh_core.identity import (
+    IdentityPersistenceError,
+    deterministic_machine_node_id,
+    load_or_create_identity,
+)
 from aethermesh_core.job_manifest import (
     ManifestError,
     load_job_manifest,
@@ -99,7 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument(
         "--node-id",
         default=None,
-        help="Node id to use for the demo. Defaults to an ephemeral id.",
+        help="Node id to use for the demo. Defaults to a deterministic machine id.",
     )
     demo.add_argument(
         "--identity-path",
@@ -432,8 +436,8 @@ def run_demo(
     if identity_path is not None:
         identity = load_or_create_identity(identity_path)
     else:
-        identity = (
-            NodeIdentity(node_id=node_id) if node_id else NodeIdentity.ephemeral()
+        identity = NodeIdentity(
+            node_id=node_id if node_id else deterministic_machine_node_id()
         )
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
