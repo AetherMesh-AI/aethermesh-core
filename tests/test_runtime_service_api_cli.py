@@ -129,6 +129,11 @@ class RuntimeServiceTests(unittest.TestCase):
             config = json.loads((Path(temp_dir) / "config.json").read_text())
             self.assertEqual(config["version"], 1)
             self.assertEqual(config["node"]["node_id"], status["node_id"])
+            self.assertEqual(config["node"]["status"], "local_only")
+            self.assertEqual(config["paths"]["home"], str(Path(temp_dir)))
+            self.assertEqual(config["paths"]["data_dir"], str(Path(temp_dir) / "data"))
+            self.assertEqual(config["paths"]["log_dir"], str(Path(temp_dir) / "logs"))
+            self.assertEqual(config["api"], {"host": "127.0.0.1", "port": 7280})
 
             with patch.object(
                 service, "_runtime_marker", return_value=(False, None, int(time.time()))
@@ -268,8 +273,14 @@ class RuntimeServiceTests(unittest.TestCase):
                 service.load_config()
 
         self.assertIsNone(_config_node_id({"node": []}))
+        self.assertEqual(_config_node_id({"node": {"node_id": "node-a"}}), "node-a")
+        self.assertIsNone(_config_node_id({"node": {"node_id": ""}}))
         self.assertEqual(_config_api_host({"api": {"host": 7}}), "127.0.0.1")
+        self.assertEqual(_config_api_host({"api": {"host": "localhost"}}), "localhost")
+        self.assertEqual(_config_api_host({}), "127.0.0.1")
         self.assertEqual(_config_api_port({"api": {"port": True}}), 7280)
+        self.assertEqual(_config_api_port({"api": {"port": 9999}}), 9999)
+        self.assertEqual(_config_api_port({}), 7280)
         self.assertEqual(
             _merge_config({"a": {"b": 2}, "c": 3}, {"a": {"d": 4}, "c": 0}),
             {"a": {"b": 2, "d": 4}, "c": 3},
@@ -443,6 +454,66 @@ class AppCliTests(unittest.TestCase):
             self.assertIn("Value", status_output)
             self.assertIn("node_id", status_output)
             self.assertNotIn("http://", status_output)
+
+            with app_cli.console.capture() as api_status_capture:
+                app_cli._print_status(
+                    {
+                        "node_id": "node-a",
+                        "status": "running",
+                        "version": "9.9.9",
+                        "uptime_seconds": 42,
+                        "config_path": "/tmp/aethermesh/config.json",
+                        "data_dir": "/tmp/aethermesh/data",
+                        "peer_count": 3,
+                        "api": {"host": "localhost", "port": 9999},
+                    }
+                )
+            api_status_output = api_status_capture.get()
+            for expected in [
+                "node-a",
+                "running",
+                "9.9.9",
+                "42",
+                "/tmp/aethermesh/config.json",
+                "/tmp/aethermesh/data",
+                "3",
+                "http://localhost:9999",
+            ]:
+                self.assertIn(expected, api_status_output)
+
+            class FakeTable:
+                def __init__(self, title: str) -> None:
+                    self.title = title
+                    self.columns: list[str] = []
+                    self.rows: list[tuple[str, ...]] = []
+
+                def add_column(self, name: str) -> None:
+                    self.columns.append(name)
+
+                def add_row(self, *values: str) -> None:
+                    self.rows.append(values)
+
+            printed: list[FakeTable] = []
+            with (
+                patch.object(app_cli, "Table", FakeTable),
+                patch.object(app_cli.console, "print", side_effect=printed.append),
+            ):
+                app_cli._print_status(
+                    {
+                        "node_id": "node-a",
+                        "status": "running",
+                        "version": "9.9.9",
+                        "uptime_seconds": 42,
+                        "config_path": "/tmp/aethermesh/config.json",
+                        "data_dir": "/tmp/aethermesh/data",
+                        "peer_count": 3,
+                        "api": {"host": "localhost", "port": 9999},
+                    }
+                )
+            self.assertEqual(len(printed), 1)
+            self.assertEqual(printed[0].title, "AetherMesh Node Status")
+            self.assertEqual(printed[0].columns, ["Field", "Value"])
+            self.assertEqual(printed[0].rows[-1], ("api", "http://localhost:9999"))
 
     def test_serve_uses_uvicorn_and_reports_missing_ui_dependencies(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

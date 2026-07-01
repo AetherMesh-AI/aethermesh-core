@@ -6,6 +6,10 @@ from unittest import mock
 
 from aethermesh_core.local_validation import (
     LocalValidationError,
+    _job_from_assignment,
+    _required_non_empty_string,
+    _result_from_message,
+    _sort_key,
     validate_local_results,
 )
 from aethermesh_core.message_log import write_message_log
@@ -391,6 +395,91 @@ class LocalValidationReplayTests(unittest.TestCase):
 
         self.assertEqual(report["validations"][0]["correlation_id"], None)
         self.assertEqual(report["summary"]["valid_results"], 1)
+
+    def test_validation_helpers_preserve_message_context_and_payload_shape(
+        self,
+    ) -> None:
+        assignment = _assignment("msg-0001", "job-a", "expected", "node-a")
+        job = _job_from_assignment(assignment)
+        self.assertEqual(job.job_id, "job-a")
+        self.assertEqual(job.job_type, "echo")
+        self.assertEqual(job.payload, {"message": "expected"})
+
+        result_message = _result("msg-0002", "job-a", "expected", "node-a")
+        result = _result_from_message(result_message)
+        self.assertEqual(result.job_id, "job-a")
+        self.assertEqual(result.node_id, "node-a")
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output, "expected")
+        self.assertIsNone(result.error)
+        self.assertEqual(result.contribution_units, 1)
+        self.assertEqual(_sort_key((None, "job-b")), ("", "job-b"))
+        self.assertEqual(_sort_key(("corr-a", "job-b")), ("corr-a", "job-b"))
+
+        with self.assertRaisesRegex(
+            LocalValidationError,
+            "job_assigned payload field 'job_id' must be a non-empty string",
+        ):
+            _job_from_assignment(
+                MeshMessage(
+                    message_id="msg-bad-assignment",
+                    message_type="job_assigned",
+                    sender_node_id="local-scheduler",
+                    recipient_node_id="node-a",
+                    payload={"job_type": "echo", "payload": {}},
+                    correlation_id="job-a",
+                )
+            )
+        with self.assertRaisesRegex(
+            LocalValidationError,
+            "job_result_reported payload field 'job_id' must be a non-empty string",
+        ):
+            _result_from_message(
+                MeshMessage(
+                    message_id="msg-bad-result",
+                    message_type="job_result_reported",
+                    sender_node_id="node-a",
+                    recipient_node_id="local-scheduler",
+                    payload={
+                        "status": "completed",
+                        "output": "expected",
+                        "error": None,
+                        "contribution_units": 1,
+                    },
+                    correlation_id="job-a",
+                )
+            )
+
+        for payload, field, message_type in [
+            ({"job_type": "echo", "payload": {}}, "job_id", "job_assigned"),
+            ({"job_id": "job-a", "payload": {}}, "job_type", "job_assigned"),
+            (
+                {
+                    "status": "completed",
+                    "output": "expected",
+                    "error": None,
+                    "contribution_units": 1,
+                },
+                "job_id",
+                "job_result_reported",
+            ),
+            (
+                {
+                    "job_id": "job-a",
+                    "output": "expected",
+                    "error": None,
+                    "contribution_units": 1,
+                },
+                "status",
+                "job_result_reported",
+            ),
+        ]:
+            with self.subTest(field=field, message_type=message_type):
+                with self.assertRaisesRegex(
+                    LocalValidationError,
+                    f"{message_type} payload field '{field}' must be a non-empty string",
+                ):
+                    _required_non_empty_string(payload, field, message_type)
 
 
 def _message_log(messages: list[MeshMessage]) -> dict[str, object]:
