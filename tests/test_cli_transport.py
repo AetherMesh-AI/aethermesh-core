@@ -10,6 +10,301 @@ from aethermesh_core.cli import main
 
 
 class LocalTransportCliTests(unittest.TestCase):
+    def _write_manifest(self, path: Path, jobs: list[dict[str, object]]) -> None:
+        path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "nodes": ["manifest-node-ignored"],
+                    "jobs": jobs,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def _write_peer_log(self, path: Path, peers: list[dict[str, object]]) -> None:
+        path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "messages": [
+                        {
+                            "message_id": f"msg-{index:04d}",
+                            "message_type": "node_heartbeat",
+                            "sender_node_id": str(peer["node_id"]),
+                            "recipient_node_id": None,
+                            "payload": {
+                                "node_id": peer["node_id"],
+                                "status": peer.get("status", "available"),
+                                "heartbeat_sequence": index,
+                                "heartbeat_count": 1,
+                                "capabilities": peer.get("capabilities", ["echo"]),
+                            },
+                            "correlation_id": None,
+                        }
+                        for index, peer in enumerate(peers, 1)
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_run_peer_transport_flow_happy_path_uses_peer_roster_and_audits(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+            peer_log_path = Path(temp_dir) / "peers.json"
+            output_dir = Path(temp_dir) / "flow"
+            self._write_manifest(
+                manifest_path,
+                [
+                    {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "peer one"},
+                    },
+                    {
+                        "job_id": "echo-2",
+                        "job_type": "echo",
+                        "payload": {"message": "peer two"},
+                    },
+                ],
+            )
+            self._write_peer_log(
+                peer_log_path,
+                [
+                    {"node_id": "peer-a", "capabilities": ["echo"]},
+                    {"node_id": "peer-b", "capabilities": ["echo"]},
+                ],
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-peer-transport-flow",
+                        "--peer-log-path",
+                        str(peer_log_path),
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            audit_stdout = io.StringIO()
+            with contextlib.redirect_stdout(audit_stdout):
+                audit_exit = main(["audit-local-flow", "--output-dir", str(output_dir)])
+            payload = json.loads(stdout.getvalue())
+            audit_payload = json.loads(audit_stdout.getvalue())
+            flow_log = json.loads(
+                (output_dir / "flow-message-log.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(audit_exit, 0)
+        self.assertEqual(payload["command"], "run-peer-transport-flow")
+        self.assertEqual(payload["peer_log_path"], str(peer_log_path))
+        self.assertEqual(payload["roster_source"], "heartbeat_peer_log")
+        self.assertEqual(payload["available_node_ids"], ["peer-a", "peer-b"])
+        self.assertEqual(payload["processed_node_ids"], ["peer-a", "peer-b"])
+        self.assertEqual(payload["processed_assignment_count"], 2)
+        self.assertEqual(payload["transport_inbox_count"], 2)
+        self.assertEqual(audit_payload["ok"], True)
+        self.assertEqual(flow_log["metadata"]["source"], "run-peer-transport-flow")
+        self.assertEqual(flow_log["metadata"]["peer_log_path"], str(peer_log_path))
+
+    def test_run_peer_transport_flow_skips_offline_peer(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+            peer_log_path = Path(temp_dir) / "peers.json"
+            output_dir = Path(temp_dir) / "flow"
+            self._write_manifest(
+                manifest_path,
+                [
+                    {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "online only"},
+                    }
+                ],
+            )
+            self._write_peer_log(
+                peer_log_path,
+                [
+                    {
+                        "node_id": "peer-a",
+                        "status": "available",
+                        "capabilities": ["echo"],
+                    },
+                    {
+                        "node_id": "peer-b",
+                        "status": "offline",
+                        "capabilities": ["echo"],
+                    },
+                ],
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-peer-transport-flow",
+                        "--peer-log-path",
+                        str(peer_log_path),
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            offline_inbox_exists = (
+                output_dir / "transport" / "inboxes" / "peer-b.json"
+            ).exists()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["available_node_ids"], ["peer-a"])
+        self.assertEqual(payload["offline_node_ids"], ["peer-b"])
+        self.assertEqual(payload["processed_node_ids"], ["peer-a"])
+        self.assertFalse(offline_inbox_exists)
+
+    def test_run_peer_transport_flow_routes_by_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = Path(temp_dir) / "manifest.json"
+            peer_log_path = Path(temp_dir) / "peers.json"
+            output_dir = Path(temp_dir) / "flow"
+            self._write_manifest(
+                manifest_path,
+                [
+                    {
+                        "job_id": "stats-1",
+                        "job_type": "text_stats",
+                        "payload": {"text": "a b"},
+                    },
+                    {
+                        "job_id": "echo-1",
+                        "job_type": "echo",
+                        "payload": {"message": "e"},
+                    },
+                ],
+            )
+            self._write_peer_log(
+                peer_log_path,
+                [
+                    {"node_id": "echo-peer", "capabilities": ["echo"]},
+                    {"node_id": "stats-peer", "capabilities": ["text_stats"]},
+                ],
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(
+                    [
+                        "run-peer-transport-flow",
+                        "--peer-log-path",
+                        str(peer_log_path),
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(output_dir),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["dispatch_summary"]["assignments"],
+            [
+                {"job_id": "stats-1", "node_id": "stats-peer"},
+                {"job_id": "echo-1", "node_id": "echo-peer"},
+            ],
+        )
+
+    def test_run_peer_transport_flow_failures_do_not_create_output_artifacts(
+        self,
+    ) -> None:
+        cases = [
+            ("empty peer log", {"version": 1, "messages": []}, "no heartbeat peers"),
+            ("malformed peer log", "not-json", "message log JSON is malformed"),
+            (
+                "all offline",
+                None,
+                "no available nodes for local job assignment",
+            ),
+            (
+                "no capable peer",
+                None,
+                "no available capable node",
+            ),
+        ]
+        for name, peer_document, expected_error in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temp_dir:
+                manifest_path = Path(temp_dir) / "manifest.json"
+                peer_log_path = Path(temp_dir) / "peers.json"
+                output_dir = Path(temp_dir) / "flow"
+                self._write_manifest(
+                    manifest_path,
+                    [
+                        {
+                            "job_id": "echo-1",
+                            "job_type": "echo",
+                            "payload": {"message": "x"},
+                        }
+                    ],
+                )
+                if peer_document == "not-json":
+                    peer_log_path.write_text("not-json", encoding="utf-8")
+                elif peer_document is not None:
+                    peer_log_path.write_text(
+                        json.dumps(peer_document), encoding="utf-8"
+                    )
+                elif name == "all offline":
+                    self._write_peer_log(
+                        peer_log_path,
+                        [
+                            {
+                                "node_id": "peer-a",
+                                "status": "offline",
+                                "capabilities": ["echo"],
+                            }
+                        ],
+                    )
+                else:
+                    self._write_peer_log(
+                        peer_log_path,
+                        [
+                            {
+                                "node_id": "peer-a",
+                                "status": "available",
+                                "capabilities": ["text_stats"],
+                            }
+                        ],
+                    )
+
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with (
+                    contextlib.redirect_stdout(stdout),
+                    contextlib.redirect_stderr(stderr),
+                ):
+                    exit_code = main(
+                        [
+                            "run-peer-transport-flow",
+                            "--peer-log-path",
+                            str(peer_log_path),
+                            "--manifest",
+                            str(manifest_path),
+                            "--output-dir",
+                            str(output_dir),
+                        ]
+                    )
+
+                self.assertEqual(exit_code, 1)
+                self.assertEqual(stdout.getvalue(), "")
+                self.assertIn(expected_error, stderr.getvalue())
+                self.assertFalse(output_dir.exists())
+
     def test_run_local_transport_flow_uses_default_transport_dir_and_audits(
         self,
     ) -> None:

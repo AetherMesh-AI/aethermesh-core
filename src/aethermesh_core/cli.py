@@ -73,7 +73,7 @@ from aethermesh_core.receipts import (
     write_receipt_document,
 )
 from aethermesh_core.runner import LocalRunner
-from aethermesh_core.scheduler import NodeStatus
+from aethermesh_core.scheduler import LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
 
@@ -220,6 +220,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for deterministic local flow artifacts.",
     )
     local_transport_flow.add_argument(
+        "--transport-dir",
+        default=None,
+        help="Override the default file-backed local transport directory.",
+    )
+
+    peer_transport_flow = subcommands.add_parser(
+        "run-peer-transport-flow",
+        help=(
+            "Run local file transport using heartbeat-discovered peers as the "
+            "worker roster."
+        ),
+    )
+    peer_transport_flow.add_argument(
+        "--peer-log-path",
+        required=True,
+        help="Path to an existing version 1 local heartbeat peer message log.",
+    )
+    peer_transport_flow.add_argument(
+        "--manifest",
+        required=True,
+        help="Path to a version 1 manifest whose jobs should be run.",
+    )
+    peer_transport_flow.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory for deterministic local peer transport artifacts.",
+    )
+    peer_transport_flow.add_argument(
         "--transport-dir",
         default=None,
         help="Override the default file-backed local transport directory.",
@@ -599,6 +627,64 @@ def run_local_flow(
     """Run dispatch and all available local worker inboxes as one local flow."""
 
     batch = load_job_manifest(manifest_path)
+    return _run_local_flow_with_roster(
+        manifest_path=manifest_path,
+        jobs=batch.jobs,
+        nodes=batch.nodes,
+        output_dir=output_dir,
+        transport_dir=transport_dir,
+        command="run-local-flow",
+    )
+
+
+def run_local_transport_flow(
+    manifest_path: str, output_dir: str, transport_dir: str | None = None
+) -> dict[str, object]:
+    """Run the existing local flow with file-backed transport enabled."""
+
+    effective_transport_dir = transport_dir or str(Path(output_dir) / "transport")
+    return run_local_flow(
+        manifest_path=manifest_path,
+        output_dir=output_dir,
+        transport_dir=effective_transport_dir,
+    )
+
+
+def run_peer_transport_flow(
+    peer_log_path: str,
+    manifest_path: str,
+    output_dir: str,
+    transport_dir: str | None = None,
+) -> dict[str, object]:
+    """Run local file transport with workers discovered from heartbeat peers."""
+
+    nodes = scheduled_nodes_from_peer_log(peer_log_path)
+    jobs = load_manifest_jobs(manifest_path)
+    # Validate the peer roster can actually receive the manifest jobs before any
+    # output directory or artifact path is created or overwritten.
+    LocalScheduler(nodes).assign_jobs(jobs)
+    effective_transport_dir = transport_dir or str(Path(output_dir) / "transport")
+    return _run_local_flow_with_roster(
+        manifest_path=manifest_path,
+        jobs=jobs,
+        nodes=nodes,
+        output_dir=output_dir,
+        transport_dir=effective_transport_dir,
+        command="run-peer-transport-flow",
+        peer_log_path=peer_log_path,
+    )
+
+
+def _run_local_flow_with_roster(
+    *,
+    manifest_path: str,
+    jobs: list[Job],
+    nodes: list[ScheduledNode],
+    output_dir: str,
+    transport_dir: str | None,
+    command: str,
+    peer_log_path: str | None = None,
+) -> dict[str, object]:
     output_path = Path(output_dir)
     try:
         output_path.mkdir(parents=True, exist_ok=True)
@@ -613,10 +699,10 @@ def run_local_flow(
     worker_log_dir = output_path / "worker-message-logs"
 
     available_node_ids = [
-        node.node_id for node in batch.nodes if node.status.value == "available"
+        node.node_id for node in nodes if node.status.value == "available"
     ]
     offline_node_ids = [
-        node.node_id for node in batch.nodes if node.status.value == "offline"
+        node.node_id for node in nodes if node.status.value == "offline"
     ]
 
     # Validate existing resumable inputs before overwriting any flow artifacts.
@@ -627,9 +713,32 @@ def run_local_flow(
             _node_artifact_path(node_state_dir, node_id), expected_node_id=node_id
         )
 
-    dispatch_payload = dispatch_local_batch_command(
-        manifest_path, str(dispatch_message_log_path)
+    dispatch = dispatch_local_batch(
+        manifest_path=manifest_path,
+        message_log_path=str(dispatch_message_log_path),
+        nodes=nodes,
+        jobs=jobs,
+        command=(
+            "dispatch-peer-batch"
+            if command == "run-peer-transport-flow"
+            else "dispatch-local-batch"
+        ),
+        peer_log_path=peer_log_path,
     )
+    message_log_document = build_dispatch_message_log_document(
+        messages=dispatch.messages,
+        jobs=dispatch.jobs,
+        nodes=dispatch.nodes,
+        assignments=dispatch.assignments,
+        manifest_path=manifest_path,
+    )
+    if peer_log_path is not None:
+        message_log_document["metadata"]["source"] = "dispatch-peer-batch"
+        message_log_document["metadata"]["peer_log_path"] = peer_log_path
+        message_log_document["metadata"]["roster_source"] = "heartbeat_peer_log"
+    write_message_log(dispatch_message_log_path, message_log_document)
+    dispatch_payload = dispatch.to_dict()
+
     transport_payload: dict[str, object] | None = None
     if transport_dir is not None:
         transport_payload = materialize_local_inboxes(
@@ -717,6 +826,8 @@ def run_local_flow(
         processed_assignment_count=processed_assignment_count,
         skipped_processed_assignment_count=skipped_processed_assignment_count,
         total_contribution_units=int(str(ledger_summary["total_contribution_units"])),
+        source=command,
+        peer_log_path=peer_log_path,
     )
     write_message_log(flow_message_log_path, flow_message_log_document)
     receipt_document = build_receipt_document(
@@ -725,7 +836,7 @@ def run_local_flow(
     )
     write_receipt_document(receipts_path, receipt_document)
     result: dict[str, object] = {
-        "command": "run-local-flow",
+        "command": command,
         "manifest_path": manifest_path,
         "output_dir": output_dir,
         "dispatch_message_log_path": str(dispatch_message_log_path),
@@ -751,6 +862,9 @@ def run_local_flow(
         "dispatch_summary": dispatch_payload,
         "node_results": per_node_results,
     }
+    if peer_log_path is not None:
+        result["peer_log_path"] = peer_log_path
+        result["roster_source"] = "heartbeat_peer_log"
     if transport_payload is not None:
         transport_inbox_paths = transport_payload.get("inbox_paths", {})
         if not isinstance(transport_inbox_paths, dict):
@@ -764,19 +878,6 @@ def run_local_flow(
             if node_id in transport_inbox_paths
         }
     return result
-
-
-def run_local_transport_flow(
-    manifest_path: str, output_dir: str, transport_dir: str | None = None
-) -> dict[str, object]:
-    """Run the existing local flow with file-backed transport enabled."""
-
-    effective_transport_dir = transport_dir or str(Path(output_dir) / "transport")
-    return run_local_flow(
-        manifest_path=manifest_path,
-        output_dir=output_dir,
-        transport_dir=effective_transport_dir,
-    )
 
 
 def _require_int_result_field(result: dict[str, object], field_name: str) -> int:
@@ -1001,6 +1102,7 @@ def _inbox_process_result_to_dict(
 
 FlowCommandError = (
     ManifestError,
+    PeerRegistryError,
     MessageLogPersistenceError,
     LocalTransportError,
     LedgerPersistenceError,
@@ -1103,6 +1205,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_json_command(
             lambda: run_local_transport_flow(
                 args.manifest, args.output_dir, args.transport_dir
+            ),
+            FlowCommandError,
+        )
+
+    if args.command == "run-peer-transport-flow":
+        return _run_json_command(
+            lambda: run_peer_transport_flow(
+                args.peer_log_path, args.manifest, args.output_dir, args.transport_dir
             ),
             FlowCommandError,
         )

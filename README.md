@@ -274,6 +274,14 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-local
 
 This writes the same core flow artifacts plus `transport/inboxes/<node-id>.json` for available nodes with assignments. The command remains local-only: it proves the transport seam without sockets, daemons, distributed consensus, or production networking.
 
+Run the peer-derived local transport flow when worker nodes should come from an existing local heartbeat message log while jobs still come from the manifest:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli run-peer-transport-flow --peer-log-path examples/peer-heartbeats.json --manifest examples/local-batch.json --output-dir /tmp/aethermesh-peer-transport-flow
+```
+
+This reuses the same dispatch, file-backed inboxes, per-node processing, ledger, receipts, and audit artifacts as the local transport flow, but derives the worker roster from `node_heartbeat` peer records instead of manifest `nodes`. The peer log is local file/message-log discovery only: available peers with matching capabilities can receive work, offline or incapable peers do not, and this does not claim production decentralization, public networking, consensus, rewards, or real-time liveness.
+
 Audit an existing local flow artifact directory without modifying it:
 
 ```bash
