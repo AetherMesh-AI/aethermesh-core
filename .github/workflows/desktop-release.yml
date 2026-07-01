@@ -124,7 +124,23 @@ jobs:
           RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
         shell: bash
         run: |
-          {
-            find dist/desktop -maxdepth 1 -type f -print0
-            find "dist/runtime/${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" -maxdepth 1 -type f -print0
-          } | xargs -0 gh release upload "$RELEASE_TAG" --clobber
+          mkdir -p dist/release-upload
+          find dist/desktop -maxdepth 1 -type f \( \
+            -name '*.AppImage' -o \
+            -name '*.deb' -o \
+            -name '*.dmg' -o \
+            -name '*.exe' -o \
+            -name '*.blockmap' -o \
+            -name 'latest*.yml' \
+          \) -exec cp {} dist/release-upload/ \;
+          runtime_file=$(find "dist/runtime/${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" -maxdepth 1 -type f -name 'aethermesh-node*' | head -n 1)
+          if [ -z "$runtime_file" ]; then
+            echo "missing runtime sidecar for ${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" >&2
+            exit 1
+          fi
+          runtime_ext=""
+          case "$runtime_file" in
+            *.exe) runtime_ext=".exe" ;;
+          esac
+          cp "$runtime_file" "dist/release-upload/aethermesh-node-${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}${runtime_ext}"
+          find dist/release-upload -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
