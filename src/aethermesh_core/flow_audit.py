@@ -61,6 +61,18 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         )
         _assert_result_message_matches_receipt(context, receipt, result_message)
 
+        validation_message_id = receipt["validation_message_id"]
+        validation_message = _find_flow_message_for_receipt(
+            context,
+            flow_messages,
+            receipt,
+            message_id=validation_message_id,
+            message_type="job_validated",
+        )
+        _assert_validation_message_matches_receipt(
+            context, receipt, validation_message, result_message_id
+        )
+
         contribution_message_id = receipt.get("contribution_message_id")
         if (
             not isinstance(contribution_message_id, str)
@@ -76,6 +88,13 @@ def audit_local_flow(output_dir: str | Path) -> dict[str, Any]:
         )
         _assert_contribution_message_matches_receipt(
             context, receipt, contribution_message
+        )
+        _assert_message_order(
+            context,
+            flow_messages,
+            result_message,
+            validation_message,
+            contribution_message,
         )
         expected_ledger_claims[_ledger_claim_from_receipt(receipt)] += 1
 
@@ -146,6 +165,8 @@ def _find_flow_message_for_receipt(
             return False
         if message_type == "job_result_reported":
             return bool(message.sender_node_id == receipt["node_id"])
+        if message_type == "job_validated":
+            return bool(message.payload.get("node_id") == receipt["node_id"])
         if message_type == "contribution_recorded":
             return bool(message.payload.get("node_id") == receipt["node_id"])
         return False
@@ -261,6 +282,75 @@ def _assert_contribution_message_matches_receipt(
         receipt["credited_units"],
         message.payload.get("contribution_units"),
     )
+
+
+def _assert_validation_message_matches_receipt(
+    context: str, receipt: dict[str, Any], message: MeshMessage, result_message_id: str
+) -> None:
+    if message.message_type != "job_validated":
+        raise FlowAuditError(
+            f"{context} validation_message_id references {message.message_type}, expected job_validated"
+        )
+    validation = receipt["validation"]
+    _assert_equal(
+        context, "validation.job_id", receipt["job_id"], message.payload.get("job_id")
+    )
+    _assert_equal(
+        context,
+        "validation.node_id",
+        receipt["node_id"],
+        message.payload.get("node_id"),
+    )
+    _assert_equal(
+        context,
+        "validation.assignment_message_id",
+        receipt["assignment_message_id"],
+        message.payload.get("assignment_message_id"),
+    )
+    _assert_equal(
+        context,
+        "validation.result_message_id",
+        result_message_id,
+        message.payload.get("result_message_id"),
+    )
+    _assert_equal(
+        context, "validation.valid", validation["valid"], message.payload.get("valid")
+    )
+    _assert_equal(
+        context,
+        "validation.reason",
+        validation["reason"],
+        message.payload.get("reason"),
+    )
+    _assert_equal(
+        context,
+        "validation.contribution_units_after_validation",
+        receipt["credited_units"],
+        message.payload.get("contribution_units_after_validation"),
+    )
+
+
+def _assert_message_order(
+    context: str,
+    flow_messages: list[MeshMessage],
+    result_message: MeshMessage,
+    validation_message: MeshMessage,
+    contribution_message: MeshMessage,
+) -> None:
+    result_index = _message_index(flow_messages, result_message)
+    validation_index = _message_index(flow_messages, validation_message)
+    contribution_index = _message_index(flow_messages, contribution_message)
+    if not result_index < validation_index < contribution_index:
+        raise FlowAuditError(
+            f"{context} message order mismatch: expected job_result_reported before job_validated before contribution_recorded"
+        )
+
+
+def _message_index(messages: list[MeshMessage], target: MeshMessage) -> int:
+    for index, message in enumerate(messages):
+        if message is target:
+            return index
+    raise FlowAuditError("matched flow message disappeared during audit")
 
 
 def _ledger_claim_from_receipt(receipt: dict[str, Any]) -> tuple[Any, ...]:

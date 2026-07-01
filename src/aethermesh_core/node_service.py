@@ -128,6 +128,21 @@ class LocalNodeService:
             },
             correlation_id=message.correlation_id or job.job_id,
         )
+        validation_message = self._send_message(
+            message_type="job_validated",
+            recipient_node_id=self.ledger_node_id,
+            payload={
+                "job_id": accounted_result.job_id,
+                "node_id": accounted_result.node_id,
+                "assignment_message_id": message.message_id,
+                "result_message_id": result_message.message_id,
+                "validator_id": self.identity.node_id,
+                "valid": validation.valid,
+                "reason": validation.reason,
+                "contribution_units_after_validation": credited_units,
+            },
+            correlation_id=message.correlation_id or job.job_id,
+        )
         contribution_message = self._send_message(
             message_type="contribution_recorded",
             recipient_node_id=self.identity.node_id,
@@ -149,7 +164,7 @@ class LocalNodeService:
             result=accounted_result,
             validation=validation,
             contribution_record=record,
-            emitted_messages=[result_message, contribution_message],
+            emitted_messages=[result_message, validation_message, contribution_message],
         )
 
     def _send_message(
@@ -165,7 +180,7 @@ class LocalNodeService:
             message_type=message_type,
             sender_node_id=(
                 self.identity.node_id
-                if message_type == "job_result_reported"
+                if message_type in {"job_result_reported", "job_validated"}
                 else self.ledger_node_id
             ),
             recipient_node_id=recipient_node_id,

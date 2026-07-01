@@ -107,6 +107,7 @@ def _receipt_from_processed_assignment(
     assignment: ProcessedAssignment,
 ) -> dict[str, Any]:
     result_message = _single_emitted_message(assignment, "job_result_reported")
+    validation_message = _single_emitted_message(assignment, "job_validated")
     contribution_message = _single_emitted_message(assignment, "contribution_recorded")
     credited_units = assignment.contribution_record.contribution_units
     return {
@@ -116,6 +117,7 @@ def _receipt_from_processed_assignment(
         "assignment_message_id": assignment.message_id,
         "correlation_id": assignment.correlation_id,
         "result_message_id": result_message.message_id,
+        "validation_message_id": validation_message.message_id,
         "contribution_message_id": contribution_message.message_id,
         "result_status": assignment.result.status,
         "result_hash": assignment.contribution_record.result_hash,
@@ -196,6 +198,7 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
             "node_id",
             "assignment_message_id",
             "result_message_id",
+            "validation_message_id",
             "result_status",
             "result_hash",
         ):

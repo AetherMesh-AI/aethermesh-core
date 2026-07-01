@@ -39,11 +39,11 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 1)
         self.assertEqual(
             [message.message_type for message in processed.emitted_messages],
-            ["job_result_reported", "contribution_recorded"],
+            ["job_result_reported", "job_validated", "contribution_recorded"],
         )
         self.assertEqual(
             [message.correlation_id for message in processed.emitted_messages],
-            ["echo-1", "echo-1"],
+            ["echo-1", "echo-1", "echo-1"],
         )
         self.assertEqual(
             processed.emitted_messages[0].payload,
@@ -62,6 +62,19 @@ class LocalNodeServiceTests(unittest.TestCase):
         )
         self.assertEqual(
             processed.emitted_messages[1].payload,
+            {
+                "job_id": "echo-1",
+                "node_id": "node-a",
+                "assignment_message_id": "msg-0001",
+                "result_message_id": "msg-0002",
+                "validator_id": "node-a",
+                "valid": True,
+                "reason": "ok",
+                "contribution_units_after_validation": 1,
+            },
+        )
+        self.assertEqual(
+            processed.emitted_messages[2].payload,
             {
                 "job_id": "echo-1",
                 "node_id": "node-a",
@@ -212,7 +225,7 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.contribution_record.contribution_units, 0)
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
         self.assertEqual(
-            processed.emitted_messages[1].payload["contribution_units"],
+            processed.emitted_messages[2].payload["contribution_units"],
             0,
         )
 
@@ -277,7 +290,7 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(ledger.summary_for_node("node-a").total_result_count, 1)
         self.assertEqual(
             [message.message_id for message in bus.log()],
-            ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004", "msg-0005"],
         )
 
     def test_repeated_process_inbox_does_not_double_record_contribution(self) -> None:
@@ -306,7 +319,7 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(summary.total_contribution_units, 1)
         self.assertEqual(
             [message.message_id for message in bus.log()],
-            ["msg-0001", "msg-0002", "msg-0003"],
+            ["msg-0001", "msg-0002", "msg-0003", "msg-0004"],
         )
 
     def test_seeded_processed_message_ids_skip_assignment_without_contribution(
@@ -370,7 +383,7 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.job.payload, {})
         self.assertEqual(
             [message.correlation_id for message in processed.emitted_messages],
-            ["malformed-msg-0001", "malformed-msg-0001"],
+            ["malformed-msg-0001", "malformed-msg-0001", "malformed-msg-0001"],
         )
 
     def test_contribution_is_recorded_only_after_validation(self) -> None:
@@ -402,9 +415,9 @@ class LocalNodeServiceTests(unittest.TestCase):
         )
         self.assertEqual(processed.contribution_record.job_type, "echo")
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
-        self.assertEqual(processed.emitted_messages[1].payload["valid"], False)
+        self.assertEqual(processed.emitted_messages[2].payload["valid"], False)
         self.assertEqual(
-            processed.emitted_messages[1].payload["validation"],
+            processed.emitted_messages[2].payload["validation"],
             "missing_payload_message",
         )
 
