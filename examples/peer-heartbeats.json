@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "messages": [
+    {
+      "message_id": "msg-0001",
+      "message_type": "node_heartbeat",
+      "sender_node_id": "local-node-a",
+      "recipient_node_id": null,
+      "payload": {
+        "node_id": "local-node-a",
+        "status": "available",
+        "heartbeat_sequence": 1,
+        "heartbeat_count": 1,
+        "capabilities": ["echo", "text_stats", "keyword_extract", "text_chunk", "text_embed", "text_retrieve"]
+      },
+      "correlation_id": null
+    },
+    {
+      "message_id": "msg-0002",
+      "message_type": "node_heartbeat",
+      "sender_node_id": "local-node-b",
+      "recipient_node_id": null,
+      "payload": {
+        "node_id": "local-node-b",
+        "status": "available",
+        "heartbeat_sequence": 1,
+        "heartbeat_count": 1,
+        "capabilities": ["echo", "text_stats", "keyword_extract", "text_chunk", "text_embed", "text_retrieve"]
+      },
+      "correlation_id": null
+    },
+    {
+      "message_id": "msg-0003",
+      "message_type": "node_heartbeat",
+      "sender_node_id": "local-node-offline",
+      "recipient_node_id": null,
+      "payload": {
+        "node_id": "local-node-offline",
+        "status": "offline",
+        "heartbeat_sequence": 1,
+        "heartbeat_count": 1,
+        "capabilities": ["echo"]
+      },
+      "correlation_id": null
+    }
+  ]
+}

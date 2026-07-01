@@ -148,6 +148,8 @@ def build_flow_message_log_document(
     processed_assignment_count: int,
     skipped_processed_assignment_count: int,
     total_contribution_units: int,
+    source: str = "run-local-flow",
+    peer_log_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic version 1 run-level local flow message log."""
 
@@ -157,28 +159,32 @@ def build_flow_message_log_document(
         for message in emitted_messages_by_node.get(node_id, [])
     ]
     messages = [*dispatch_messages, *emitted_messages]
+    metadata: dict[str, Any] = {
+        "source": source,
+        "manifest_path": str(manifest_path),
+        "dispatch_message_log_path": str(dispatch_message_log_path),
+        "ledger_path": str(ledger_path),
+        "worker_message_log_paths": {
+            node_id: str(worker_message_log_paths[node_id])
+            for node_id in available_node_ids
+            if node_id in worker_message_log_paths
+        },
+        "available_node_ids": list(available_node_ids),
+        "offline_node_ids": list(offline_node_ids),
+        "processed_node_ids": list(processed_node_ids),
+        "processed_assignment_count": processed_assignment_count,
+        "skipped_processed_assignment_count": skipped_processed_assignment_count,
+        "total_contribution_units": total_contribution_units,
+        "dispatch_message_count": len(dispatch_messages),
+        "emitted_message_count": len(emitted_messages),
+        "message_count": len(messages),
+    }
+    if peer_log_path is not None:
+        metadata["peer_log_path"] = str(peer_log_path)
+        metadata["roster_source"] = "heartbeat_peer_log"
     return {
         "version": 1,
-        "metadata": {
-            "source": "run-local-flow",
-            "manifest_path": str(manifest_path),
-            "dispatch_message_log_path": str(dispatch_message_log_path),
-            "ledger_path": str(ledger_path),
-            "worker_message_log_paths": {
-                node_id: str(worker_message_log_paths[node_id])
-                for node_id in available_node_ids
-                if node_id in worker_message_log_paths
-            },
-            "available_node_ids": list(available_node_ids),
-            "offline_node_ids": list(offline_node_ids),
-            "processed_node_ids": list(processed_node_ids),
-            "processed_assignment_count": processed_assignment_count,
-            "skipped_processed_assignment_count": skipped_processed_assignment_count,
-            "total_contribution_units": total_contribution_units,
-            "dispatch_message_count": len(dispatch_messages),
-            "emitted_message_count": len(emitted_messages),
-            "message_count": len(messages),
-        },
+        "metadata": metadata,
         "messages": [_message_to_document_entry(message) for message in messages],
     }
 
