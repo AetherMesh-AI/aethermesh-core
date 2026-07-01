@@ -135,6 +135,31 @@ When uncertain, prioritize work that moves the prototype toward the persistent g
 
 Each addition should be small, validated, and useful on its own.
 
+## Installable CLI and local UI
+
+Install the package with the local UI/API dependencies during development:
+
+```bash
+python -m pip install -e ".[dev,ui]"
+```
+
+The package exposes a first-class `aethermesh` command for normal local use:
+
+```bash
+aethermesh --version
+aethermesh init
+aethermesh status
+aethermesh node status
+aethermesh node start
+aethermesh peers
+aethermesh jobs
+aethermesh ui
+```
+
+`aethermesh init` creates local config, identity, data, and log files under `~/.aethermesh` by default. Set `AETHERMESH_HOME=/path/to/local-home` to isolate a dev or test node. `aethermesh node start` and `aethermesh ui` bind the local FastAPI dashboard/API to `127.0.0.1:7280` by default and do not expose LAN admin behavior.
+
+See [docs/ui-and-cli.md](docs/ui-and-cli.md) for the CLI/API/UI architecture, localhost security note, and future Tauri desktop wrapper plan.
+
 ## Run locally
 
 Run one local demo node job from the repository root without installing anything:

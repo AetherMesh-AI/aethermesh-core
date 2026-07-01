@@ -14,3 +14,4 @@ dist/
 # Graphify local cache/host-specific metadata
 graphify-out/cache/
 graphify-out/.graphify_root
+.DS_Store
