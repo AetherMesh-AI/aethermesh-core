@@ -65,6 +65,12 @@ def source_files_sha256(root: Path, paths: list[Path]) -> str:
     return digest.hexdigest()
 
 
+def source_archive_sha256(source_archive: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(source_archive.read_bytes()).hexdigest()
+
+
 def head_sha(root: Path = ROOT) -> str:
     return run_git(["rev-parse", "HEAD"], root=root)
 
@@ -145,7 +151,7 @@ def build_release_metadata(
     short_source_sha = source_sha256[:12]
     return ReleaseMetadata(
         tag=f"v{release_version}-{short_source_sha}",
-        name=f"{release_version} ({source_sha256})",
+        name=f"{release_version} - (...{source_sha256[-5:]})",
         notes=format_release_notes(
             release_version=release_version,
             source_sha256=source_sha256,
@@ -164,8 +170,13 @@ def prepare_release(
     release_version: str,
     notes_path: Path,
     root: Path = ROOT,
+    source_archive: Path | None = None,
 ) -> ReleaseMetadata:
-    source_sha256 = source_files_sha256(root, package_source_files(root))
+    source_sha256 = (
+        source_archive_sha256(source_archive)
+        if source_archive is not None
+        else source_files_sha256(root, package_source_files(root))
+    )
     current_head = head_sha(root)
     current_tag = f"v{release_version}-{source_sha256[:12]}"
     previous_tag = previous_alpha_release_tag(root, exclude_tag=current_tag)
@@ -196,6 +207,7 @@ def command_prepare(args: argparse.Namespace) -> int:
     metadata = prepare_release(
         release_version=args.release_version,
         notes_path=Path(args.notes_path),
+        source_archive=Path(args.source_archive) if args.source_archive else None,
     )
     write_github_outputs(metadata)
     print(
@@ -217,8 +229,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     prepare = subparsers.add_parser("prepare")
-    prepare.add_argument("--release-version", default="0.1.1-alpha")
+    prepare.add_argument("--release-version", default="0.2.0-alpha")
     prepare.add_argument("--notes-path", default="release-notes.md")
+    prepare.add_argument("--source-archive")
     prepare.set_defaults(func=command_prepare)
     return parser
 

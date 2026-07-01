@@ -388,9 +388,9 @@ class CliTests(unittest.TestCase):
         class FakeUpdateResult:
             def to_dict(self) -> dict[str, object]:
                 return {
-                    "release_tag": "v0.1.1-alpha-abc123",
-                    "release_name": "0.1.1-alpha (abc123)",
-                    "wheel_name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "release_tag": "v0.2.0-alpha-abc123",
+                    "release_name": "0.2.0-alpha - (...bc123)",
+                    "wheel_name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "sha256": "abc123",
                     "installed": False,
                 }
@@ -406,7 +406,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         updater.assert_called_once_with(dry_run=True, release_url=None)
         payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["release_tag"], "v0.1.1-alpha-abc123")
+        self.assertEqual(payload["release_tag"], "v0.2.0-alpha-abc123")
         self.assertEqual(payload["installed"], False)
 
         stderr = io.StringIO()

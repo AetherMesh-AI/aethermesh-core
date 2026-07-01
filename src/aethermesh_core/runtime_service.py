@@ -14,7 +14,6 @@ import platform
 import shutil
 import time
 from dataclasses import dataclass
-from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +30,7 @@ DEFAULT_LOCAL_CAPABILITIES = (
     "text_embed",
     "text_stats",
 )
+PUBLIC_VERSION = "0.2.0-alpha"
 
 
 class RuntimeServiceError(ValueError):
@@ -364,12 +364,7 @@ def _pid_is_alive(pid: int) -> bool:
 
 
 def _package_version() -> str:
-    for package_name in ("aethermesh", "aethermesh-core"):
-        try:
-            return metadata.version(package_name)
-        except metadata.PackageNotFoundError:
-            continue
-    return "0.1.0"
+    return PUBLIC_VERSION
 
 
 def _memory_total_bytes() -> int | None:

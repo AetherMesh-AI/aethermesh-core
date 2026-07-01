@@ -7,7 +7,6 @@ import tempfile
 import time
 import types
 import unittest
-from importlib import metadata
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -336,9 +335,7 @@ class RuntimeServiceTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(_default_home(), Path.home() / ".aethermesh")
 
-        with patch("aethermesh_core.runtime_service.metadata.version") as version:
-            version.side_effect = metadata.PackageNotFoundError
-            self.assertEqual(_package_version(), "0.1.0")
+        self.assertEqual(_package_version(), "0.2.0-alpha")
 
         sysconf_calls: list[str] = []
 
@@ -451,7 +448,7 @@ class ApiTests(unittest.TestCase):
 
             api = create_app(service)
             self.assertEqual(api.title, "AetherMesh Local Node API")
-            self.assertEqual(api.version, "0.1.0")
+            self.assertEqual(api.version, "0.2.0-alpha")
             self.assertIs(api.router.lifespan_context, _lifespan)
 
     def test_lifespan_uses_same_runtime_service(self) -> None:
@@ -473,7 +470,7 @@ class AppCliTests(unittest.TestCase):
 
             version = runner.invoke(app_cli.app, ["--version"])
             self.assertEqual(version.exit_code, 0)
-            self.assertIn("0.1.0", version.output)
+            self.assertIn("0.2.0-alpha", version.output)
 
             init = runner.invoke(app_cli.app, ["init"])
             self.assertEqual(init.exit_code, 0)
@@ -509,10 +506,10 @@ class AppCliTests(unittest.TestCase):
 
             def to_dict(self) -> dict[str, object]:
                 return {
-                    "release_tag": "v0.1.1-alpha-abc123",
-                    "release_name": "0.1.1-alpha (abc123)",
+                    "release_tag": "v0.2.0-alpha-abc123",
+                    "release_name": "0.2.0-alpha - (...bc123)",
                     "release_url": "https://github.example/release",
-                    "wheel_name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "wheel_name": "aethermesh-0.2.0a0-py3-none-any.whl",
                     "wheel_url": "https://github.example/aethermesh.whl",
                     "sha256": "abc123",
                     "expected_sha256": "abc123",
@@ -528,7 +525,7 @@ class AppCliTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, result.output)
         updater.assert_called_once_with(dry_run=True, release_url=None)
-        self.assertIn("v0.1.1-alpha-abc123", result.output)
+        self.assertIn("v0.2.0-alpha-abc123", result.output)
         self.assertIn("verified", result.output)
         self.assertIn("not installed", result.output)
 

@@ -28,7 +28,7 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     runtime_service = service or NodeRuntimeService.default()
     app = FastAPI(
         title="AetherMesh Local Node API",
-        version="0.1.0",
+        version="0.2.0-alpha",
         lifespan=_lifespan,
     )
     app.state.service = runtime_service

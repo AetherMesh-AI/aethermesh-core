@@ -27,7 +27,7 @@ from aethermesh_core.simulation import (
 )
 from aethermesh_core.validation import ValidationResult, validate_job_result
 
-__version__ = "0.1.0"
+__version__ = "0.2.0-alpha"
 
 __all__ = [
     "ContributionLedger",

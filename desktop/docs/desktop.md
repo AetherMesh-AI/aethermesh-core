@@ -83,7 +83,13 @@ Electron Builder is configured for:
 - Windows NSIS `.exe`
 - Linux `AppImage` and `.deb`
 
-The release workflow builds the sidecar and desktop app per platform/architecture matrix and attaches artifacts to tagged GitHub releases.
+The release workflow builds the sidecar and desktop app per platform/architecture matrix and attaches artifacts to tagged GitHub releases. Release names use the actual source archive hash suffix:
+
+```text
+0.2.0-alpha - (...<last 5 chars of source archive sha256>)
+```
+
+GitHub releases are created/edited with `--latest` so the newest release is marked current/latest when GitHub supports it.
 
 ## Security defaults
 
