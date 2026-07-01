@@ -171,6 +171,23 @@ class ContributionLedgerTests(unittest.TestCase):
 
         self.assertEqual(decoded, record)
 
+    def test_contribution_record_rejects_invalid_result_hash(self) -> None:
+        valid = ContributionRecord(
+            node_id="node-a",
+            job_id="job-1",
+            status="completed",
+            contribution_units=1,
+            message="hello mesh",
+            result_hash="a" * 64,
+        ).to_dict()
+        for bad_hash in (7, "a" * 63, "A" * 64, "g" * 64):
+            with self.subTest(bad_hash=bad_hash):
+                payload = {**valid, "result_hash": bad_hash}
+                with self.assertRaisesRegex(
+                    LedgerPersistenceError, "lowercase SHA-256 hex digest"
+                ):
+                    ContributionRecord.from_dict(payload)
+
     def test_legacy_contribution_record_without_validation_metadata_loads(self) -> None:
         payload = {
             "node_id": "node-a",
