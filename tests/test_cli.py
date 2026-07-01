@@ -9,6 +9,7 @@ from unittest.mock import patch
 from aethermesh_core.cli import build_parser, main
 from aethermesh_core.message_log import write_message_log
 from aethermesh_core.messages import MeshMessage
+from aethermesh_core.release_update import ReleaseUpdateError
 
 
 class CliTests(unittest.TestCase):
@@ -35,6 +36,7 @@ class CliTests(unittest.TestCase):
             "materialize-local-inboxes",
             "collect-local-outboxes",
             "process-local-inbox",
+            "update",
         ]:
             self.assertIn(command, help_text)
 
@@ -250,6 +252,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual(inbox.node_state_path, "node-state.json")
         self.assertEqual(inbox.write_transport_outbox, True)
 
+        update = parser.parse_args(["update", "--dry-run"])
+        self.assertEqual(update.command, "update")
+        self.assertEqual(update.dry_run, True)
+        self.assertEqual(update.release_url, None)
+
     def test_build_parser_help_snapshots_stay_stable(self) -> None:
         parser = build_parser()
         subparsers_action = next(
@@ -261,13 +268,14 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. aggregate-local-flow Audit and aggregate a completed local flow artifact directory. validate-local-results Replay local assignment/result logs and write a validation report. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. update Install the latest AetherMesh wheel from the newest GitHub release. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. aggregate-local-flow Audit and aggregate a completed local flow artifact directory. validate-local-results Replay local assignment/result logs and write a validation report. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
             {
                 "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to a deterministic machine id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
                 "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
+                "update": "usage: aethermesh-core update [-h] [--dry-run] [--release-url RELEASE_URL] options: -h, --help show this help message and exit --dry-run Download and verify the latest release wheel without installing it. --release-url RELEASE_URL Override the GitHub latest-release API URL for update discovery.",
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
                 "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
                 "dispatch-peer-batch": "usage: aethermesh-core dispatch-peer-batch [-h] --peer-log-path PEER_LOG_PATH --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --peer-log-path PEER_LOG_PATH Path to an existing version 1 local heartbeat message log. --manifest MANIFEST Path to a version 1 manifest whose jobs should be dispatched. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
@@ -375,6 +383,42 @@ class CliTests(unittest.TestCase):
                 )
             self.assertEqual(exit_code, 1)
             self.assertIn("already exists", stderr.getvalue())
+
+    def test_update_cli_prints_release_update_result_and_reports_errors(self) -> None:
+        class FakeUpdateResult:
+            def to_dict(self) -> dict[str, object]:
+                return {
+                    "release_tag": "v0.1.1-alpha-abc123",
+                    "release_name": "0.1.1-alpha (abc123)",
+                    "wheel_name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "sha256": "abc123",
+                    "installed": False,
+                }
+
+        stdout = io.StringIO()
+        with patch(
+            "aethermesh_core.cli.update_from_latest_release",
+            return_value=FakeUpdateResult(),
+        ) as updater:
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["update", "--dry-run"])
+
+        self.assertEqual(exit_code, 0)
+        updater.assert_called_once_with(dry_run=True, release_url=None)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["release_tag"], "v0.1.1-alpha-abc123")
+        self.assertEqual(payload["installed"], False)
+
+        stderr = io.StringIO()
+        with patch(
+            "aethermesh_core.cli.update_from_latest_release",
+            side_effect=ReleaseUpdateError("network sad"),
+        ):
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(["update"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("network sad", stderr.getvalue())
 
     def test_simulate_local_prints_deterministic_json_shape(self) -> None:
         stdout = io.StringIO()

@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 
 from aethermesh_core import app_cli
 from aethermesh_core.api import _lifespan, create_app
+from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
     RuntimeServiceError,
@@ -440,6 +441,55 @@ class AppCliTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertIn("127.0.0.1", result.output)
             self.assertIn("7280", result.output)
+
+    def test_cli_update_installs_latest_release_and_reports_errors(self) -> None:
+        class FakeUpdateResult:
+            def __init__(self, *, installed: bool) -> None:
+                self.installed = installed
+
+            def to_dict(self) -> dict[str, object]:
+                return {
+                    "release_tag": "v0.1.1-alpha-abc123",
+                    "release_name": "0.1.1-alpha (abc123)",
+                    "release_url": "https://github.example/release",
+                    "wheel_name": "aethermesh-0.1.0a0-py3-none-any.whl",
+                    "wheel_url": "https://github.example/aethermesh.whl",
+                    "sha256": "abc123",
+                    "expected_sha256": "abc123",
+                    "installed": self.installed,
+                }
+
+        runner = CliRunner()
+        with patch(
+            "aethermesh_core.app_cli.update_from_latest_release",
+            return_value=FakeUpdateResult(installed=False),
+        ) as updater:
+            result = runner.invoke(app_cli.app, ["update", "--dry-run"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        updater.assert_called_once_with(dry_run=True, release_url=None)
+        self.assertIn("v0.1.1-alpha-abc123", result.output)
+        self.assertIn("verified", result.output)
+        self.assertIn("not installed", result.output)
+
+        with patch(
+            "aethermesh_core.app_cli.update_from_latest_release",
+            return_value=FakeUpdateResult(installed=True),
+        ) as updater:
+            result = runner.invoke(app_cli.app, ["update"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        updater.assert_called_once_with(dry_run=False, release_url=None)
+        self.assertIn("Installed latest AetherMesh release", result.output)
+
+        with patch(
+            "aethermesh_core.app_cli.update_from_latest_release",
+            side_effect=ReleaseUpdateError("network sad"),
+        ):
+            result = runner.invoke(app_cli.app, ["update"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("network sad", result.output)
 
     def test_cli_warning_and_table_branches_are_exercised(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

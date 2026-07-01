@@ -76,6 +76,10 @@ from aethermesh_core.receipts import (
     load_receipt_document_if_exists,
     write_receipt_document,
 )
+from aethermesh_core.release_update import (
+    ReleaseUpdateError,
+    update_from_latest_release,
+)
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
@@ -129,6 +133,21 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands.add_parser(
         "simulate-local",
         help="Run a deterministic local multi-node simulation and print JSON.",
+    )
+
+    update = subcommands.add_parser(
+        "update",
+        help="Install the latest AetherMesh wheel from the newest GitHub release.",
+    )
+    update.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Download and verify the latest release wheel without installing it.",
+    )
+    update.add_argument(
+        "--release-url",
+        default=None,
+        help="Override the GitHub latest-release API URL for update discovery.",
     )
 
     batch = subcommands.add_parser(
@@ -1148,6 +1167,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "simulate-local":
         print(json.dumps(run_default_local_simulation(), sort_keys=True))
+        return 0
+
+    if args.command == "update":
+        try:
+            payload = update_from_latest_release(
+                dry_run=args.dry_run, release_url=args.release_url
+            ).to_dict()
+        except ReleaseUpdateError as exc:
+            print(f"error: update failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
         return 0
 
     if args.command == "run-local-batch":

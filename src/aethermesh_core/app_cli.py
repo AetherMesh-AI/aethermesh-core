@@ -10,6 +10,10 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from aethermesh_core.release_update import (
+    ReleaseUpdateError,
+    update_from_latest_release,
+)
 from aethermesh_core.runtime_service import (
     DEFAULT_API_HOST,
     DEFAULT_API_PORT,
@@ -129,6 +133,33 @@ def jobs() -> None:
     if not payload["failed"]:
         console.print("No failed jobs.")
     console.print(payload["note"])
+
+
+@app.command()
+def update(
+    dry_run: Annotated[
+        bool,
+        typer.Option(help="Download and verify the latest release without installing."),
+    ] = False,
+    release_url: Annotated[
+        str | None,
+        typer.Option(help="Override the GitHub latest-release API URL."),
+    ] = None,
+) -> None:
+    """Install the latest AetherMesh wheel from the newest GitHub release."""
+
+    try:
+        result = update_from_latest_release(dry_run=dry_run, release_url=release_url)
+    except ReleaseUpdateError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    payload = result.to_dict()
+    console.print(f"Release: {payload['release_tag']}")
+    console.print(f"Wheel:   {payload['wheel_name']}")
+    console.print(f"SHA256:  {payload['sha256']} verified")
+    if payload["installed"]:
+        console.print("Installed latest AetherMesh release.")
+    else:
+        console.print("Dry run complete; wheel verified but not installed.")
 
 
 @app.command()
