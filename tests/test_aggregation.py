@@ -61,7 +61,7 @@ class LocalFlowAggregationTests(unittest.TestCase):
                     "output_summary": {"value": "hello mesh"},
                     "assignment_message_id": "msg-0003",
                     "result_message_id": "msg-0005",
-                    "contribution_message_id": "msg-0006",
+                    "contribution_message_id": "msg-0007",
                 },
                 {
                     "job_id": "text-stats-1",
@@ -79,7 +79,7 @@ class LocalFlowAggregationTests(unittest.TestCase):
                     },
                     "assignment_message_id": "msg-0004",
                     "result_message_id": "msg-0005",
-                    "contribution_message_id": "msg-0006",
+                    "contribution_message_id": "msg-0007",
                 },
             ],
         )
