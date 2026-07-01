@@ -1,0 +1,21 @@
+{
+  "name": "aethermesh-desktop-workspace",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Desktop launcher workspace for AetherMesh.",
+  "author": "AetherMesh AI",
+  "main": "desktop/src/main.js",
+  "scripts": {
+    "desktop:dev": "electron desktop/src/main.js",
+    "desktop:build": "electron-builder --config desktop/electron-builder.json",
+    "desktop:build:mac": "electron-builder --mac --config desktop/electron-builder.json",
+    "desktop:build:win": "electron-builder --win --config desktop/electron-builder.json",
+    "desktop:build:linux": "electron-builder --linux --config desktop/electron-builder.json",
+    "desktop:clean": "node desktop/scripts/clean.js",
+    "test:desktop": "node --test desktop/tests/*.test.js"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.0.12"
+  }
+}

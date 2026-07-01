@@ -1,0 +1,22 @@
+{
+  "appId": "ai.aethermesh.desktop",
+  "productName": "AetherMesh",
+  "directories": {
+    "output": "dist/desktop"
+  },
+  "files": [
+    "desktop/src/**/*",
+    "desktop/package.json"
+  ],
+  "mac": {
+    "target": ["dmg", "dir"],
+    "category": "public.app-category.developer-tools"
+  },
+  "win": {
+    "target": ["nsis"]
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Development"
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AetherMesh Desktop</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">AetherMesh Desktop</p>
+      <h1>Local node launcher</h1>
+      <p class="muted">Bootstraps Python, manages a private venv, starts the local API, and keeps the UI separate from the node process.</p>
+    </div>
+    <div class="actions">
+      <button id="refresh">Refresh</button>
+      <button id="start">Start</button>
+      <button id="stop" class="secondary">Stop</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card"><h2>Node status</h2><dl id="node-status"></dl></section>
+    <section class="card"><h2>Bootstrap</h2><dl id="bootstrap-status"></dl></section>
+    <section class="card"><h2>Package</h2><dl id="package-status"></dl></section>
+    <section class="card"><h2>Local API</h2><dl id="api-status"></dl></section>
+    <section class="card"><h2>Peers</h2><div id="peer-list" class="list muted">No peers loaded.</div></section>
+    <section class="card"><h2>Capabilities</h2><div id="capability-list" class="chips"></div></section>
+    <section class="card wide"><h2>Logs</h2><pre id="logs">Waiting for bootstrap...</pre></section>
+    <section class="card wide"><h2>Settings</h2><dl id="settings"></dl></section>
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

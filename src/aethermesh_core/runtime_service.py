@@ -24,6 +24,13 @@ from aethermesh_core.json_io import atomic_write_json
 CONFIG_SCHEMA_VERSION = 1
 DEFAULT_API_HOST = "127.0.0.1"
 DEFAULT_API_PORT = 7280
+DEFAULT_LOCAL_CAPABILITIES = (
+    "echo",
+    "keyword_extract",
+    "text_chunk",
+    "text_embed",
+    "text_stats",
+)
 
 
 class RuntimeServiceError(ValueError):
@@ -148,6 +155,9 @@ class NodeRuntimeService:
                 "completed": len(jobs["completed"]),
                 "failed": len(jobs["failed"]),
             },
+            "capabilities": self.list_capabilities()["capabilities"],
+            "package": self.package_info(),
+            "network_health": self.network_health(),
             "system": self.system_info(),
         }
 
@@ -183,6 +193,38 @@ class NodeRuntimeService:
             "peer_count": 0,
             "peers": [],
             "note": "No peer discovery source is configured for the local daemon yet.",
+        }
+
+    def list_capabilities(self) -> dict[str, Any]:
+        """Return local prototype capabilities exposed to desktop/API frontends."""
+
+        return {
+            "capabilities": list(DEFAULT_LOCAL_CAPABILITIES),
+            "advertised": False,
+            "note": "Local prototype capabilities are available but not advertised to a live network yet.",
+        }
+
+    def package_info(self) -> dict[str, Any]:
+        """Return installed package metadata for launchers and local dashboards."""
+
+        return {
+            "name": "aethermesh",
+            "version": _package_version(),
+            "source": "installed",
+        }
+
+    def network_health(self) -> dict[str, Any]:
+        """Return honest local-only network health for UI frontends."""
+
+        config = self.load_config()
+        peers = self.list_peers()
+        host = _config_api_host(config)
+        return {
+            "status": "local_only",
+            "peer_count": peers["peer_count"],
+            "api_reachable": True,
+            "localhost_only": host in {"127.0.0.1", "localhost"},
+            "note": "Public peer networking is not configured for this local prototype.",
         }
 
     def list_jobs(self) -> dict[str, Any]:

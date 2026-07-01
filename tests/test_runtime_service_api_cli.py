@@ -44,6 +44,9 @@ async def _fetch_api_payloads(api_app: FastAPI) -> dict[str, Any]:
             "node": (await client.get("/api/node")).json(),
             "peers": (await client.get("/api/peers")).json(),
             "jobs": (await client.get("/api/jobs")).json(),
+            "capabilities": (await client.get("/api/capabilities")).json(),
+            "package": (await client.get("/api/package")).json(),
+            "network": (await client.get("/api/network")).json(),
             "logs": (await client.get("/api/logs")).json(),
             "events": (await client.get("/api/events")).json(),
             "html": (await client.get("/")).text,
@@ -100,6 +103,9 @@ class RuntimeServiceTests(unittest.TestCase):
                     "api",
                     "peer_count",
                     "job_counts",
+                    "capabilities",
+                    "package",
+                    "network_health",
                     "system",
                 },
             )
@@ -157,6 +163,34 @@ class RuntimeServiceTests(unittest.TestCase):
                     "note": "No peer discovery source is configured for the local daemon yet.",
                 },
             )
+            self.assertEqual(
+                service.list_capabilities(),
+                {
+                    "capabilities": [
+                        "echo",
+                        "keyword_extract",
+                        "text_chunk",
+                        "text_embed",
+                        "text_stats",
+                    ],
+                    "advertised": False,
+                    "note": "Local prototype capabilities are available but not advertised to a live network yet.",
+                },
+            )
+            self.assertEqual(
+                service.network_health(),
+                {
+                    "status": "local_only",
+                    "peer_count": 0,
+                    "api_reachable": True,
+                    "localhost_only": True,
+                    "note": "Public peer networking is not configured for this local prototype.",
+                },
+            )
+            package = service.package_info()
+            self.assertEqual(package["name"], "aethermesh")
+            self.assertIn("version", package)
+            self.assertEqual(package["source"], "installed")
             self.assertEqual(
                 service.list_jobs(),
                 {
@@ -362,6 +396,14 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(payloads["node"]["status"], "stopped")
             self.assertEqual(payloads["peers"]["peers"], [])
             self.assertEqual(payloads["jobs"]["current"], [])
+            self.assertEqual(
+                payloads["capabilities"]["capabilities"],
+                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+            )
+            self.assertEqual(payloads["package"]["name"], "aethermesh")
+            self.assertEqual(payloads["package"]["source"], "installed")
+            self.assertEqual(payloads["network"]["status"], "local_only")
+            self.assertTrue(payloads["network"]["localhost_only"])
             self.assertIn("events", payloads["logs"])
             self.assertIn("events", payloads["events"])
             self.assertIn("AetherMesh Local Node", payloads["html"])

@@ -53,6 +53,18 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def jobs() -> dict[str, Any]:
         return runtime_service.list_jobs()
 
+    @app.get("/api/capabilities")
+    def capabilities() -> dict[str, Any]:
+        return runtime_service.list_capabilities()
+
+    @app.get("/api/package")
+    def package() -> dict[str, Any]:
+        return runtime_service.package_info()
+
+    @app.get("/api/network")
+    def network() -> dict[str, Any]:
+        return runtime_service.network_health()
+
     @app.get("/api/logs")
     def logs() -> dict[str, Any]:
         return runtime_service.recent_logs()

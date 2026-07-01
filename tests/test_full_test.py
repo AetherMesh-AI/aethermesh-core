@@ -37,13 +37,14 @@ class FullTestRunnerTests(unittest.TestCase):
                 "ruff check",
                 "ruff format",
                 "mypy",
+                "desktop tests",
                 "test integrity",
                 "dependency review",
                 "workflow security",
                 "PR size",
             ],
         )
-        self.assertEqual(checks[6].command[-2:], ("--base", "origin/main"))
+        self.assertEqual(checks[7].command[-2:], ("--base", "origin/main"))
 
     def test_full_mode_appends_slow_parity_checks(self) -> None:
         module = load_full_test_module()
@@ -52,7 +53,7 @@ class FullTestRunnerTests(unittest.TestCase):
 
         self.assertIn("mutation", [check.name for check in checks])
         self.assertIn("mutation score", [check.name for check in checks])
-        self.assertEqual(checks[6].command[-2:], ("--base", "upstream/main"))
+        self.assertEqual(checks[7].command[-2:], ("--base", "upstream/main"))
 
     def test_missing_required_tools_are_reported_before_running(self) -> None:
         module = load_full_test_module()

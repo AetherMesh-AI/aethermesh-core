@@ -127,15 +127,21 @@ The dashboard reads JSON from `/api/status`, `/api/peers`, `/api/jobs`, and `/ap
 
 The API binds to `127.0.0.1` by default. Do not expose it to the LAN until the project adds explicit operator intent, authentication, authorization, and safer admin controls. The current implementation is for local status and development only.
 
-## Future Tauri desktop path
+## Desktop launcher
 
-The likely desktop path is Tauri:
+The desktop MVP lives under `desktop/` and uses Electron because this repo is currently Python-first with a FastAPI-served local dashboard rather than an existing React/Vite app. The Electron shell keeps the same boundary described above: it bootstraps Python, creates an app-managed venv, installs `aethermesh[ui]`, runs `aethermesh init`, supervises `aethermesh node start --host 127.0.0.1 --port 7280`, and reads local API routes from the packaged UI.
 
-1. Keep the Python package as the real AetherMesh node.
-2. Treat the desktop app as a UI shell.
-3. First desktop version can require `aethermesh` to already be installed and can launch or connect to `http://127.0.0.1:7280`.
-4. Later desktop versions can bundle the Python backend as a sidecar process.
-5. The UI should keep using the local HTTP API, not direct imports from node internals.
-6. Desktop packaging should preserve the localhost-only default and make any LAN/admin exposure explicit.
+Desktop commands:
 
-This keeps the core node reusable for CLI, API, dashboard, and future desktop wrappers without duplicating node logic.
+```bash
+npm install
+npm run test:desktop
+npm run desktop:dev
+npm run desktop:build
+npm run desktop:build:mac
+npm run desktop:build:win
+npm run desktop:build:linux
+npm run desktop:clean
+```
+
+See [../desktop/docs/desktop.md](../desktop/docs/desktop.md) for packaging, storage, and troubleshooting notes.

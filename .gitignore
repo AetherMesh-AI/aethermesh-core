@@ -11,6 +11,10 @@ mutants/
 venv/
 build/
 dist/
+node_modules/
+npm-debug.log*
+desktop/out/
+desktop/.vite/
 *.egg-info/
 # Graphify local cache/host-specific metadata
 graphify-out/cache/

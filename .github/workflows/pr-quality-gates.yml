@@ -97,6 +97,19 @@ jobs:
       - name: mypy strict passes
         run: mypy --strict src scripts
 
+  desktop-tests:
+    name: Desktop Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: install desktop dependencies
+        run: npm install
+      - name: desktop bootstrap tests pass
+        run: npm run test:desktop
+
   duplicate-code:
     name: Duplicate Code
     runs-on: ubuntu-latest

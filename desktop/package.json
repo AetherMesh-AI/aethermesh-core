@@ -1,0 +1,6 @@
+{
+  "name": "aethermesh-desktop",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "main": "src/main.js"
+}

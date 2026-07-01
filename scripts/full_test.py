@@ -55,6 +55,7 @@ def _base_checks(base: str) -> list[Check]:
         Check("ruff check", ("ruff", "check", "src", "tests", "scripts")),
         Check("ruff format", ("ruff", "format", "--check", "src", "tests", "scripts")),
         Check("mypy", ("mypy", "--strict", "src", "scripts")),
+        Check("desktop tests", ("npm", "run", "test:desktop")),
         Check(
             "test integrity",
             _python("scripts/ci_quality_gates.py", "test-integrity"),
