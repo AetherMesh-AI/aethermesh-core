@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import types
 import unittest
 from importlib import metadata
@@ -57,21 +58,82 @@ class RuntimeServiceTests(unittest.TestCase):
             status = service.get_node_status()
 
             self.assertEqual(
+                set(initialized),
+                {
+                    "initialized",
+                    "node_id",
+                    "home",
+                    "config_path",
+                    "data_dir",
+                    "log_dir",
+                    "identity_path",
+                },
+            )
+            self.assertTrue(initialized["initialized"])
+            self.assertEqual(initialized["home"], str(Path(temp_dir)))
+            self.assertEqual(
                 initialized["config_path"], str(Path(temp_dir) / "config.json")
             )
+            self.assertEqual(initialized["data_dir"], str(Path(temp_dir) / "data"))
+            self.assertEqual(initialized["log_dir"], str(Path(temp_dir) / "logs"))
+            self.assertEqual(
+                initialized["identity_path"], str(Path(temp_dir) / "identity.json")
+            )
             self.assertTrue(Path(initialized["identity_path"]).exists())
+            self.assertEqual(
+                service.recent_logs(limit=1)["events"][0].split(" ", 1)[1],
+                "initialized local node data",
+            )
+            self.assertEqual(
+                set(status),
+                {
+                    "initialized",
+                    "node_id",
+                    "status",
+                    "version",
+                    "uptime_seconds",
+                    "pid",
+                    "config_path",
+                    "data_dir",
+                    "log_dir",
+                    "api",
+                    "peer_count",
+                    "job_counts",
+                    "system",
+                },
+            )
             self.assertTrue(status["initialized"])
             self.assertEqual(status["status"], "stopped")
+            self.assertIsNone(status["uptime_seconds"])
+            self.assertIsNone(status["pid"])
             self.assertEqual(status["api"]["host"], "127.0.0.1")
             self.assertEqual(status["api"]["port"], 7280)
+            self.assertTrue(status["api"]["localhost_only"])
             self.assertEqual(status["peer_count"], 0)
             self.assertEqual(
                 status["job_counts"], {"current": 0, "completed": 0, "failed": 0}
+            )
+            self.assertEqual(
+                set(status["system"]),
+                {
+                    "platform",
+                    "python_version",
+                    "cpu_count",
+                    "processor",
+                    "memory_total_bytes",
+                    "disk_data_path_total_bytes",
+                    "disk_data_path_free_bytes",
+                },
             )
 
             config = json.loads((Path(temp_dir) / "config.json").read_text())
             self.assertEqual(config["version"], 1)
             self.assertEqual(config["node"]["node_id"], status["node_id"])
+
+            with patch.object(
+                service, "_runtime_marker", return_value=(False, None, int(time.time()))
+            ):
+                self.assertIsNone(service.get_node_status()["uptime_seconds"])
 
     def test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work(
         self,
@@ -80,11 +142,25 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             service.initialize_local_node_data()
 
-            self.assertEqual(service.list_peers()["peers"], [])
-            self.assertEqual(service.list_peers()["bootstrap_status"], "not_configured")
-            self.assertEqual(service.list_jobs()["current"], [])
-            self.assertEqual(service.list_jobs()["completed"], [])
-            self.assertEqual(service.list_jobs()["failed"], [])
+            self.assertEqual(
+                service.list_peers(),
+                {
+                    "bootstrap_status": "not_configured",
+                    "peer_count": 0,
+                    "peers": [],
+                    "note": "No peer discovery source is configured for the local daemon yet.",
+                },
+            )
+            self.assertEqual(
+                service.list_jobs(),
+                {
+                    "current": [],
+                    "completed": [],
+                    "failed": [],
+                    "validation_status": "not_active",
+                    "note": "No persistent daemon job queue is active yet.",
+                },
+            )
             self.assertEqual(service.health()["ok"], True)
             self.assertEqual(service.health()["bind_host"], "127.0.0.1")
 
@@ -115,6 +191,15 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(config["api"], {"host": "localhost", "port": 9999})
             self.assertEqual(len(service.recent_logs(limit=2)["events"]), 2)
 
+            service.paths.events_path.write_text(
+                "\n".join(f"event-{index}" for index in range(101)) + "\n",
+                encoding="utf-8",
+            )
+            default_logs = service.recent_logs()["events"]
+            self.assertEqual(len(default_logs), 100)
+            self.assertEqual(default_logs[0], "event-1")
+            self.assertEqual(default_logs[-1], "event-100")
+
     def test_runtime_markers_cover_started_stopped_and_bad_marker_states(
         self,
     ) -> None:
@@ -142,6 +227,29 @@ class RuntimeServiceTests(unittest.TestCase):
                 json.dumps({"version": 1, "pid": 999999999}), encoding="utf-8"
             )
             self.assertEqual(service._runtime_marker(), (False, 999999999, None))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            nested_home = Path(temp_dir) / "nested" / "runtime"
+            service = NodeRuntimeService.from_home(nested_home)
+            initialized = service.initialize_local_node_data()
+            self.assertEqual(initialized["home"], str(nested_home))
+            self.assertTrue(service.paths.config_path.exists())
+            self.assertTrue(service.paths.identity_path.exists())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            nested_home = Path(temp_dir) / "nested" / "runtime"
+            service = NodeRuntimeService.from_home(nested_home)
+            service.mark_runtime_started()
+            self.assertTrue(service.paths.pid_path.exists())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            service.paths.home.mkdir(parents=True, exist_ok=True)
+            service._write_config(service._default_config(node_id="orphaned-config"))
+            self.assertFalse(service.paths.identity_path.exists())
+            status = service.start_node_runtime()
+            self.assertEqual(status["status"], "running")
+            self.assertTrue(service.paths.identity_path.exists())
 
     def test_config_errors_and_defaults_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -212,6 +320,33 @@ class ApiTests(unittest.TestCase):
             self.assertIn("events", payloads["events"])
             self.assertIn("AetherMesh Local Node", payloads["html"])
             self.assertIn("/api/status", payloads["html"])
+            self.assertIn("textContent", payloads["html"])
+            self.assertNotIn("innerHTML", payloads["html"])
+
+            self.assertEqual(
+                set(payloads["health"]),
+                {
+                    "ok",
+                    "service",
+                    "version",
+                    "status",
+                    "bind_host",
+                    "port",
+                    "config_path",
+                },
+            )
+            self.assertEqual(payloads["health"]["service"], "aethermesh-local-node")
+            self.assertEqual(payloads["health"]["status"], "stopped")
+            self.assertEqual(payloads["health"]["bind_host"], "127.0.0.1")
+            self.assertEqual(payloads["health"]["port"], 7280)
+            self.assertEqual(
+                payloads["health"]["config_path"], str(service.paths.config_path)
+            )
+
+            api = create_app(service)
+            self.assertEqual(api.title, "AetherMesh Local Node API")
+            self.assertEqual(api.version, "0.1.0")
+            self.assertIs(api.router.lifespan_context, _lifespan)
 
     def test_lifespan_uses_same_runtime_service(self) -> None:
         async def exercise() -> None:
@@ -300,29 +435,83 @@ class AppCliTests(unittest.TestCase):
                     "No current jobs", runner.invoke(app_cli.app, ["jobs"]).output
                 )
 
-            app_cli._print_status({"api": "not-a-dict"})
+            with app_cli.console.capture() as status_capture:
+                app_cli._print_status({"api": "not-a-dict"})
+            status_output = status_capture.get()
+            self.assertIn("AetherMesh Node Status", status_output)
+            self.assertIn("Field", status_output)
+            self.assertIn("Value", status_output)
+            self.assertIn("node_id", status_output)
+            self.assertNotIn("http://", status_output)
 
     def test_serve_uses_uvicorn_and_reports_missing_ui_dependencies(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             calls: dict[str, object] = {}
-            fake_uvicorn = types.SimpleNamespace(
-                run=lambda api, host, port, log_level: calls.update(
+            timer_calls: list[dict[str, object]] = []
+            browser_urls: list[str] = []
+
+            def fake_run(api: FastAPI, host: str, port: int, log_level: str) -> None:
+                self.assertIsInstance(api, FastAPI)
+                self.assertEqual(log_level, "info")
+                calls.update(
                     {"app": api, "host": host, "port": port, "log_level": log_level}
                 )
-            )
-            fake_timer = types.SimpleNamespace(start=lambda: None)
+
+            class FakeTimer:
+                def __init__(self, interval: float, function: object) -> None:
+                    self.interval = interval
+                    self.function = function
+
+                def start(self) -> None:
+                    self.assert_timer_shape()
+                    timer_calls.append(
+                        {"interval": self.interval, "function": self.function}
+                    )
+                    assert callable(self.function)
+                    self.function()
+
+                def assert_timer_shape(self) -> None:
+                    if self.interval != 0.8:
+                        raise AssertionError(self.interval)
+                    if not callable(self.function):
+                        raise AssertionError(self.function)
+
+            fake_uvicorn = types.SimpleNamespace(run=fake_run)
             with (
                 patch.dict(sys.modules, {"uvicorn": fake_uvicorn}),
                 patch.dict(os.environ, {"AETHERMESH_HOME": temp_dir}),
                 patch(
-                    "aethermesh_core.app_cli.threading.Timer", return_value=fake_timer
+                    "aethermesh_core.app_cli.threading.Timer",
+                    side_effect=lambda interval, function: FakeTimer(
+                        interval, function
+                    ),
+                ),
+                patch(
+                    "aethermesh_core.app_cli.webbrowser.open",
+                    side_effect=lambda url: browser_urls.append(url),
                 ),
             ):
-                app_cli._serve(host="0.0.0.0", port=7777, open_browser=True)
+                with app_cli.console.capture() as warning_capture:
+                    app_cli._serve(host="0.0.0.0", port=7777, open_browser=True)
+                self.assertIn(
+                    "Warning: non-localhost API binding is not the safe default.",
+                    warning_capture.get(),
+                )
                 self.assertEqual(calls["host"], "0.0.0.0")
                 self.assertEqual(calls["port"], 7777)
-                app_cli._serve(host="127.0.0.1", port=7280, open_browser=False)
+                self.assertEqual(calls["log_level"], "info")
+                self.assertEqual(len(timer_calls), 1)
+                self.assertEqual(timer_calls[0]["interval"], 0.8)
+                self.assertEqual(browser_urls, ["http://0.0.0.0:7777"])
+                with app_cli.console.capture() as localhost_capture:
+                    app_cli._serve(host="127.0.0.1", port=7280, open_browser=False)
+                self.assertNotIn("non-localhost", localhost_capture.get())
                 self.assertEqual(calls["host"], "127.0.0.1")
+                with app_cli.console.capture() as localhost_name_capture:
+                    app_cli._serve(host="localhost", port=7281, open_browser=False)
+                self.assertNotIn("non-localhost", localhost_name_capture.get())
+                self.assertEqual(calls["host"], "localhost")
+                self.assertEqual(calls["port"], 7281)
 
             with patch("aethermesh_core.app_cli._serve") as serve:
                 CliRunner(env={"AETHERMESH_HOME": temp_dir}).invoke(

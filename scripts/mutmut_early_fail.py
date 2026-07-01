@@ -7,6 +7,7 @@ import argparse
 import math
 import re
 import subprocess
+import time
 from collections.abc import Sequence
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -19,8 +20,10 @@ COUNT_RE = {
 }
 
 
-def parse_mutmut_progress(text: str) -> tuple[int | None, int | None, int]:
-    """Return (done, total, non_killed) from the latest mutmut progress text."""
+def parse_mutmut_counts(
+    text: str,
+) -> tuple[int | None, int | None, dict[str, int]]:
+    """Return latest mutmut progress counters from text."""
 
     clean = ANSI_RE.sub("", text)
     status_matches = list(MUTMUT_STATUS_RE.finditer(clean))
@@ -35,6 +38,13 @@ def parse_mutmut_progress(text: str) -> tuple[int | None, int | None, int]:
     for name, pattern in COUNT_RE.items():
         matches = list(pattern.finditer(clean))
         counts[name] = int(matches[-1].group("count")) if matches else 0
+    return done, total, counts
+
+
+def parse_mutmut_progress(text: str) -> tuple[int | None, int | None, int]:
+    """Return (done, total, non_killed) from the latest mutmut progress text."""
+
+    done, total, counts = parse_mutmut_counts(text)
     non_killed = counts["survived"] + counts["timeout"] + counts["suspicious"]
     return done, total, non_killed
 
@@ -44,6 +54,47 @@ def max_non_killed_for_score(total: int, minimum: float) -> int:
 
     required_killed = math.ceil(total * minimum / 100.0)
     return total - required_killed
+
+
+def format_duration(seconds: float | None) -> str:
+    """Format a duration compactly for progress logs."""
+
+    if seconds is None or seconds < 0:
+        return "unknown"
+    rounded = int(seconds + 0.5)
+    hours, remainder = divmod(rounded, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m{secs:02d}s"
+    if minutes:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
+
+
+def format_progress_line(
+    *,
+    done: int,
+    total: int,
+    counts: dict[str, int],
+    elapsed_seconds: float,
+) -> str:
+    """Build a stable mutmut progress line with speed and ETA."""
+
+    rate = done / elapsed_seconds if done > 0 and elapsed_seconds > 0 else 0.0
+    remaining = total - done
+    eta = remaining / rate if rate > 0 else None
+    width = 24
+    filled = min(width, max(0, round(width * done / total))) if total else 0
+    bar = "█" * filled + "░" * (width - filled)
+    return (
+        f"Mutants [{bar}] {done}/{total} "
+        f"🎉 {counts['killed']} "
+        f"⏰ {counts['timeout']} "
+        f"🤔 {counts['suspicious']} "
+        f"🙁 {counts['survived']} "
+        f"| Mut/s {rate:.2f} "
+        f"| Est. {format_duration(eta)}"
+    )
 
 
 def run_mutmut_with_early_failure(minimum: float, mutmut_args: Sequence[str]) -> int:
@@ -59,13 +110,35 @@ def run_mutmut_with_early_failure(minimum: float, mutmut_args: Sequence[str]) ->
         raise RuntimeError("mutmut stdout pipe was not created")
 
     tail = ""
+    start = time.monotonic()
+    last_progress_at = 0.0
+    last_progress_done: int | None = None
     while True:
         chunk = process.stdout.read(1)
         if chunk:
             print(chunk, end="", flush=True)
             tail = (tail + chunk)[-20_000:]
-            _done, total, non_killed = parse_mutmut_progress(tail)
+            done, total, counts = parse_mutmut_counts(tail)
+            non_killed = counts["survived"] + counts["timeout"] + counts["suspicious"]
             if total is not None:
+                now = time.monotonic()
+                if (
+                    done is not None
+                    and done != last_progress_done
+                    and now - last_progress_at >= 5.0
+                ):
+                    print(
+                        "\n"
+                        + format_progress_line(
+                            done=done,
+                            total=total,
+                            counts=counts,
+                            elapsed_seconds=now - start,
+                        ),
+                        flush=True,
+                    )
+                    last_progress_at = now
+                    last_progress_done = done
                 allowed = max_non_killed_for_score(total, minimum)
                 if non_killed > allowed:
                     print(

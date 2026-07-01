@@ -110,7 +110,15 @@ async function getJson(path) {
   return await response.json();
 }
 function dl(target, rows) {
-  document.getElementById(target).innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v ?? 'unknown'}</dd>`).join('');
+  const list = document.getElementById(target);
+  list.replaceChildren();
+  for (const [key, value] of rows) {
+    const term = document.createElement('dt');
+    term.textContent = key;
+    const description = document.createElement('dd');
+    description.textContent = value ?? 'unknown';
+    list.append(term, description);
+  }
 }
 async function refreshAll() {
   const [status, peers, jobs, logs] = await Promise.all([
