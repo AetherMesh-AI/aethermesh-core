@@ -47,12 +47,6 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --title "$RELEASE_NAME" --notes-file release-notes.md --target "${{ github.sha }}" --latest
           fi
-          find dist/source -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
-      - name: Upload source archive artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aethermesh-source
-          path: dist/source/aethermesh-0.2.0-alpha-source.tar.gz
 
   desktop-build:
     name: Desktop ${{ matrix.name }}
@@ -111,36 +105,45 @@ jobs:
         run: npm run runtime:copy
       - name: Build desktop installer
         run: npx electron-builder --config desktop/electron-builder.json --${{ matrix.electron_platform }} ${{ matrix.electron_arch_flag }} --publish never
+      - name: Stage desktop artifact
+        shell: bash
+        run: |
+          mkdir -p dist/release-upload
+          case "${AETHERMESH_TARGET_PLATFORM}" in
+            darwin)
+              artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.dmg' | head -n 1)
+              ;;
+            win32)
+              artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.exe' | head -n 1)
+              ;;
+            linux)
+              artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.deb' | head -n 1)
+              ;;
+            *)
+              echo "unsupported target platform: ${AETHERMESH_TARGET_PLATFORM}" >&2
+              exit 1
+              ;;
+          esac
+          if [ -z "$artifact" ]; then
+            echo "missing desktop artifact for ${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" >&2
+            find dist/desktop -maxdepth 1 -type f -print >&2
+            exit 1
+          fi
+          cp "$artifact" dist/release-upload/
+          artifact_count=$(find dist/release-upload -type f | wc -l | tr -d ' ')
+          if [ "$artifact_count" != "1" ]; then
+            echo "expected exactly one release artifact, found ${artifact_count}" >&2
+            find dist/release-upload -type f -print >&2
+            exit 1
+          fi
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: aethermesh-desktop-${{ matrix.target_platform }}-${{ matrix.target_arch }}
-          path: |
-            dist/desktop/**
-            dist/runtime/**
-      - name: Attach artifacts to GitHub release
+          path: dist/release-upload/*
+      - name: Attach artifact to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
         shell: bash
-        run: |
-          mkdir -p dist/release-upload
-          find dist/desktop -maxdepth 1 -type f \( \
-            -name '*.AppImage' -o \
-            -name '*.deb' -o \
-            -name '*.dmg' -o \
-            -name '*.exe' -o \
-            -name '*.blockmap' -o \
-            -name 'latest*.yml' \
-          \) -exec cp {} dist/release-upload/ \;
-          runtime_file=$(find "dist/runtime/${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" -maxdepth 1 -type f -name 'aethermesh-node*' | head -n 1)
-          if [ -z "$runtime_file" ]; then
-            echo "missing runtime sidecar for ${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}" >&2
-            exit 1
-          fi
-          runtime_ext=""
-          case "$runtime_file" in
-            *.exe) runtime_ext=".exe" ;;
-          esac
-          cp "$runtime_file" "dist/release-upload/aethermesh-node-${AETHERMESH_TARGET_PLATFORM}-${AETHERMESH_TARGET_ARCH}${runtime_ext}"
-          find dist/release-upload -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
+        run: find dist/release-upload -type f -print0 | xargs -0 gh release upload "$RELEASE_TAG" --clobber
