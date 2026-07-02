@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import threading
 import webbrowser
-from urllib.request import urlopen
+from contextlib import closing
 from typing import Annotated
 
 import typer
@@ -239,7 +240,7 @@ def _control_background_node(action: str) -> None:
     else:
         command = ["systemctl", "--user", action, "aethermesh-node.service"]
     try:
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        subprocess.run(command, check=True, capture_output=True, text=True)  # nosec B603
     except subprocess.CalledProcessError as exc:
         detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
         raise typer.BadParameter(
@@ -248,8 +249,12 @@ def _control_background_node(action: str) -> None:
 
 
 def _local_api_is_aethermesh(*, host: str, port: int) -> bool:
+    if host not in {"127.0.0.1", "localhost"}:
+        return False
     try:
-        with urlopen(f"http://{host}:{port}/health", timeout=0.5) as response:
+        with closing(http.client.HTTPConnection(host, port, timeout=0.5)) as connection:
+            connection.request("GET", "/health")
+            response = connection.getresponse()
             payload = json.loads(response.read().decode("utf-8"))
     except Exception:
         return False

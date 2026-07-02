@@ -584,19 +584,58 @@ class AppCliTests(unittest.TestCase):
             app_cli._control_background_node("start")
 
     def test_local_api_health_detection_handles_false_paths(self) -> None:
+        self.assertFalse(app_cli._local_api_is_aethermesh(host="0.0.0.0", port=7280))
         self.assertFalse(app_cli._local_api_is_aethermesh(host="127.0.0.1", port=1))
 
         class FakeResponse:
-            def __enter__(self) -> "FakeResponse":
-                return self
-
-            def __exit__(self, *_: object) -> None:
-                return None
+            def __init__(self, payload: bytes) -> None:
+                self._payload = payload
 
             def read(self) -> bytes:
-                return b'{"service":"not-aethermesh"}'
+                return self._payload
 
-        with patch("aethermesh_core.app_cli.urlopen", return_value=FakeResponse()):
+        class FakeConnection:
+            def __init__(self, host: str, port: int, timeout: float) -> None:
+                self.host = host
+                self.port = port
+                self.timeout = timeout
+                self.closed = False
+                self.payload = b'{"service":"not-aethermesh"}'
+
+            def request(self, method: str, target: str) -> None:
+                self.method = method
+                self.target = target
+
+            def getresponse(self) -> FakeResponse:
+                return FakeResponse(self.payload)
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake = FakeConnection("127.0.0.1", 7280, 0.5)
+        with patch(
+            "aethermesh_core.app_cli.http.client.HTTPConnection", return_value=fake
+        ):
+            self.assertFalse(
+                app_cli._local_api_is_aethermesh(host="127.0.0.1", port=7280)
+            )
+        self.assertEqual(fake.method, "GET")
+        self.assertEqual(fake.target, "/health")
+        self.assertTrue(fake.closed)
+
+        fake_ok = FakeConnection("127.0.0.1", 7280, 0.5)
+        fake_ok.payload = b'{"service":"aethermesh-local-node"}'
+        with patch(
+            "aethermesh_core.app_cli.http.client.HTTPConnection", return_value=fake_ok
+        ):
+            self.assertTrue(
+                app_cli._local_api_is_aethermesh(host="127.0.0.1", port=7280)
+            )
+
+        with patch(
+            "aethermesh_core.app_cli.http.client.HTTPConnection",
+            side_effect=OSError("no listener"),
+        ):
             self.assertFalse(
                 app_cli._local_api_is_aethermesh(host="127.0.0.1", port=7280)
             )
