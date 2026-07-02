@@ -1,0 +1,73 @@
+name: Node or workload proposal
+description: Propose a new node behavior, local job type, capability, validator, or transport seam.
+title: "workload: "
+labels: ["workload", "needs-triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Proposal summary
+      description: What node behavior, workload, validator, or transport behavior should be added?
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Proposal kind
+      multiple: true
+      options:
+        - node lifecycle
+        - node identity
+        - capability advertisement
+        - local job/workload
+        - result validation
+        - contribution accounting
+        - message transport/inbox
+        - routing decision
+        - expert-style job category
+        - validator role
+        - aggregator behavior
+    validations:
+      required: true
+  - type: textarea
+    id: inputs_outputs
+    attributes:
+      label: Inputs and outputs
+      description: Define the manifest/config/input shape and expected output shape.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: deterministic_behavior
+    attributes:
+      label: Deterministic local behavior
+      description: Explain how this can run repeatably in the local prototype without network services or hosted AI dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and contribution rules
+      description: How should results be validated? Should contribution units be recorded? If yes, what simple local-only rule applies?
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Test plan
+      description: What tests should prove this behavior?
+      placeholder: |
+        - Unit test ...
+        - CLI/manifest test ...
+        - Validation failure test ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This can work in the local-only prototype first.
+          required: true
+        - label: This does not require public peer discovery, consensus, payouts, or hosted model infrastructure to be useful.
+          required: true

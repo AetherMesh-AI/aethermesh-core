@@ -1,0 +1,76 @@
+name: Architecture proposal
+description: Propose a focused change to AER, REVA, routing, validation, or AEF direction.
+title: "arch: "
+labels: ["architecture", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for design changes, not generic feature requests. Please anchor proposals in the current persistent goal and keep the first implementation step small.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Architecture problem
+      description: What current limitation or design gap does this address?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Architecture area
+      multiple: true
+      options:
+        - AER routing
+        - REVA request flow
+        - Aether Expert Fabric
+        - expert replicas
+        - validator nodes
+        - aggregation/synthesis
+        - capability advertisements
+        - contribution measurement
+        - local transport
+        - public networking future-proofing
+        - security/trust boundaries
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed design
+      description: Describe the shape of the design and how it fits the existing prototype.
+    validations:
+      required: true
+  - type: textarea
+    id: first_step
+    attributes:
+      label: Smallest useful implementation step
+      description: What is the first small, validated PR this design should produce?
+      placeholder: Add a local-only ... with tests for ...
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How should this design be tested or proven locally?
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Tradeoffs and risks
+      description: Include complexity, security, migration, or future compatibility risks.
+    validations:
+      required: false
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: This proposal does not introduce tokenomics or reward economics before useful validated work exists.
+          required: true
+        - label: This proposal does not claim production decentralization before the prototype supports it.
+          required: true
+        - label: This proposal can be split into small, testable PRs.
+          required: true
