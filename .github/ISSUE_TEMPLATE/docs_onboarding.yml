@@ -1,0 +1,54 @@
+name: Docs or onboarding issue
+description: Improve setup, architecture explanation, local usage, or contributor guidance.
+title: "docs: "
+labels: ["documentation", "needs-triage"]
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: Documentation gap
+      description: What was confusing, missing, stale, or hard to follow?
+    validations:
+      required: true
+  - type: dropdown
+    id: docs_area
+    attributes:
+      label: Docs area
+      multiple: true
+      options:
+        - README
+        - architecture docs
+        - persistent goal
+        - CLI usage
+        - local node setup
+        - desktop launcher
+        - release/update flow
+        - contributor/agent notes
+        - examples/manifests
+        - CI/validation guidance
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_change
+    attributes:
+      label: Proposed docs change
+      description: Describe the specific wording, section, example, or diagram needed.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: How to know it is fixed
+      description: What should a new user or contributor be able to do after this docs change?
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: The docs should avoid unsupported claims about production decentralization, economics, or hosted AI behavior.
+          required: true
+        - label: The docs should stay aligned with docs/persistent-goal.md and docs/architecture.md.
+          required: true

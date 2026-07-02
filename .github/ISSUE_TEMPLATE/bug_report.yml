@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible AetherMesh Core bug.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping harden AetherMesh. Please keep reports concrete and reproducible.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and the user-visible impact.
+      placeholder: The local node ...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include exact commands, manifests, inputs, or UI steps.
+      placeholder: |
+        1. Run `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m aethermesh_core.cli ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should AetherMesh have done instead?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and output
+      description: Paste relevant output or logs. Redact secrets and local private paths.
+      render: shell
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - CLI
+        - local node runtime
+        - jobs/workloads
+        - validation
+        - contribution ledger
+        - message transport/inbox
+        - routing/AER
+        - desktop launcher
+        - packaging/release
+        - CI/quality gates
+        - docs
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, install mode, AETHERMESH_HOME if relevant, and package/version info.
+      placeholder: |
+        - OS:
+        - Python:
+        - Install mode: editable / wheel / release
+        - AetherMesh version or commit:
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation tried
+      description: Mention tests or commands you ran, if any.
+      placeholder: PYTHONDONTWRITEBYTECODE=1 python3 scripts/full_test.py --mode fast --base origin/main --keep-going
+    validations:
+      required: false

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: AetherMesh project direction
+    url: https://github.com/AetherMesh-AI/aethermesh-core/blob/main/docs/persistent-goal.md
+    about: Read the persistent goal before proposing broad architecture changes.
+  - name: Architecture map
+    url: https://github.com/AetherMesh-AI/aethermesh-core/blob/main/docs/architecture.md
+    about: Check the current AER, REVA, and AEF architecture notes before filing design proposals.
