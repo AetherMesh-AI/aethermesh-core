@@ -62,18 +62,31 @@ Inside the data folder it keeps:
 - `config/desktop-settings.json`
 - `metadata/runtime.json`
 - `metadata/runtime.previous.json` when a runtime update replaces an older runtime
+- `metadata/cli.json` for CLI shim status and verification metadata
 - local node data owned by the runtime via `AETHERMESH_HOME`
+
+## AetherMesh CLI
+
+On first run, the desktop app automatically installs a per-user `aethermesh` CLI shim. The shim points at the stable runtime path, so runtime updates automatically update what terminal users run. The app does not install a second independent binary and does not require admin/root permissions.
+
+- macOS/Linux CLI shim: `~/.local/bin/aethermesh`
+- Windows CMD shim: `%LOCALAPPDATA%/AetherMesh/bin/aethermesh.cmd`
+- Windows PowerShell shim: `%LOCALAPPDATA%/AetherMesh/bin/aethermesh.ps1`
+
+Users can repair, reinstall, or uninstall the CLI from the app. Uninstalling CLI wrappers does not remove the stable runtime, background node registration, user data, config, or node identity. See `desktop/docs/cli.md`.
 
 ## Startup flow
 
 1. Create per-user storage/log/runtime directories.
 2. Resolve the bundled runtime sidecar from app resources.
 3. Health-check `http://127.0.0.1:7280/health`.
-4. If healthy, reconnect the UI to the already-running node.
-5. If unhealthy and background mode is enabled, ask the OS background manager to start the registered node, then health-check again.
-6. If background mode is disabled, use the temporary supervised sidecar process.
-7. Check whether the stable runtime needs to be updated from the bundled runtime.
-8. Schedule periodic runtime update checks every 60 seconds.
+4. Copy/update the bundled runtime into the stable runtime path.
+5. Automatically install or repair the per-user `aethermesh` CLI shim.
+6. If healthy, reconnect the UI to the already-running node.
+7. If unhealthy and background mode is enabled, ask the OS background manager to start the registered node, then health-check again.
+8. If background mode is disabled, use the temporary supervised sidecar process.
+9. Check whether the stable runtime needs to be updated from the bundled runtime.
+10. Schedule periodic runtime update checks every 60 seconds.
 
 ## Runtime update behavior
 
@@ -93,9 +106,10 @@ When the bundled runtime is newer or has a different hash, the app:
 4. Atomically renames it over the stable runtime.
 5. Writes backup metadata for the previous runtime.
 6. Re-runs `aethermesh-node init`.
-7. Restarts the background node if background mode was enabled.
+7. Re-verifies the CLI shim metadata.
+8. Restarts the background node if background mode was enabled.
 
-Updates preserve config, data, node identity, keys, peers, and contribution data. Future gossip-triggered update checks should call this same update path.
+Updates preserve CLI shims, config, data, node identity, keys, peers, and contribution data. Future gossip-triggered update checks should call this same update path.
 
 ## Development commands
 
@@ -140,7 +154,9 @@ See `desktop/docs/background-node.md` for the platform-specific manual test plan
 - No curl/bash remote script execution.
 - No silent system Python install.
 - No global pip install.
-- No PATH mutation by default.
+- No system-wide CLI install by default.
+- Per-user CLI shim points at the stable runtime; it does not copy a second independent binary.
+- User PATH may be updated only through user-owned shell config or user-level Windows environment settings.
 - Local API binds to `127.0.0.1` by default.
 - No LAN/WAN API exposure by default.
 - No admin/root daemon by default.
@@ -150,6 +166,6 @@ See `desktop/docs/background-node.md` for the platform-specific manual test plan
 ## Deferred work
 
 - Developer ID signing and notarization for frictionless macOS first launch.
-- Optional terminal CLI exposure via an explicit future install action.
+- Optional system-wide terminal CLI exposure via an explicit future advanced install action.
 - Advanced admin/system-wide service mode.
 - Dynamic update check intervals driven by gossip/outdated-version signals.

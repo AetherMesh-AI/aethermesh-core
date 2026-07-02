@@ -5,7 +5,7 @@ AetherMesh Desktop supports two modes:
 - Temporary app-managed sidecar: the Electron app supervises the bundled runtime and stops it when the app closes.
 - Background OS-managed node: the bundled runtime is copied to a stable per-user runtime path and registered with the operating system.
 
-The packaged app must not install Python, pip install packages, install a global CLI, or create an admin/root system service by default.
+The packaged app must not install Python, pip install packages, copy a second independent CLI binary, or create an admin/root system service by default. It may install a per-user `aethermesh` shim that points at the stable runtime.
 
 ## Shared checks
 
@@ -21,8 +21,9 @@ The packaged app must not install Python, pip install packages, install a global
    - Windows: `%LOCALAPPDATA%\AetherMesh\runtime\aethermesh-node.exe`
    - Linux: `~/.local/share/aethermesh/runtime/aethermesh-node`
 6. Confirm runtime metadata exists under the AetherMesh metadata directory and includes version, sha256, source path, installed path, and installed timestamp.
-7. Confirm no global `aethermesh` or `aethermesh-node` shell command was installed unless it was already present before the test.
+7. Confirm no second independent CLI binary was copied; `aethermesh` should be a shim/wrapper pointing at the stable runtime target.
 8. Confirm app data, config, node identity, peer data, keys, and contribution data remain intact after runtime update checks.
+9. Open a new terminal and run `aethermesh --version`. If PATH was updated during this run, reopen the terminal first.
 
 ## macOS LaunchAgent
 

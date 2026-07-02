@@ -2,6 +2,7 @@ import asyncio
 import builtins
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -479,6 +480,7 @@ class AppCliTests(unittest.TestCase):
             for args, expected in [
                 (["status"], "stopped"),
                 (["node", "status"], "stopped"),
+                (["node", "stop"], "Marked foreground"),
                 (["peers"], "No peers discovered"),
                 (["jobs"], "No current jobs"),
             ]:
@@ -498,6 +500,106 @@ class AppCliTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertIn("127.0.0.1", result.output)
             self.assertIn("7280", result.output)
+
+    def test_cli_node_start_stop_delegate_to_background_manager(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings_dir = Path(temp_dir) / "config"
+            settings_dir.mkdir(parents=True)
+            (settings_dir / "desktop-settings.json").write_text(
+                json.dumps({"backgroundNodeEnabled": True}), encoding="utf-8"
+            )
+            calls: list[list[str]] = []
+
+            def fake_run(command: list[str], **_: object) -> object:
+                calls.append(command)
+                return types.SimpleNamespace(stdout="", stderr="")
+
+            runner = CliRunner(env={"AETHERMESH_HOME": temp_dir})
+            with (
+                patch("aethermesh_core.app_cli.sys_platform", return_value="linux"),
+                patch("aethermesh_core.app_cli.subprocess.run", side_effect=fake_run),
+            ):
+                start = runner.invoke(app_cli.app, ["node", "start"])
+                stop = runner.invoke(app_cli.app, ["node", "stop"])
+
+            self.assertEqual(start.exit_code, 0, start.output)
+            self.assertEqual(stop.exit_code, 0, stop.output)
+            self.assertEqual(
+                calls,
+                [
+                    ["systemctl", "--user", "start", "aethermesh-node.service"],
+                    ["systemctl", "--user", "stop", "aethermesh-node.service"],
+                ],
+            )
+
+    def test_cli_node_start_reuses_existing_local_api(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runner = CliRunner(env={"AETHERMESH_HOME": temp_dir})
+            with (
+                patch(
+                    "aethermesh_core.app_cli._local_api_is_aethermesh",
+                    return_value=True,
+                ),
+                patch("aethermesh_core.app_cli._serve") as serve,
+            ):
+                result = runner.invoke(app_cli.app, ["node", "start"])
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("already running", result.output)
+            serve.assert_not_called()
+
+    def test_background_control_helper_platforms_and_errors(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(command: list[str], **_: object) -> object:
+            calls.append(command)
+            return types.SimpleNamespace(stdout="", stderr="")
+
+        with patch("aethermesh_core.app_cli.subprocess.run", side_effect=fake_run):
+            with patch("aethermesh_core.app_cli.os.name", "nt"):
+                app_cli._control_background_node("start")
+                app_cli._control_background_node("stop")
+            with patch("aethermesh_core.app_cli.sys_platform", return_value="darwin"):
+                app_cli._control_background_node("start")
+                app_cli._control_background_node("stop")
+
+        self.assertEqual(calls[0], ["schtasks.exe", "/Run", "/TN", "AetherMesh Node"])
+        self.assertEqual(calls[1], ["schtasks.exe", "/End", "/TN", "AetherMesh Node"])
+        self.assertEqual(calls[2][:3], ["launchctl", "kickstart", "-k"])
+        self.assertEqual(calls[3][:3], ["launchctl", "kill", "TERM"])
+        self.assertIsInstance(app_cli.sys_platform(), str)
+
+        with self.assertRaisesRegex(
+            RuntimeServiceError, "unsupported background action"
+        ):
+            app_cli._control_background_node("restart")
+
+        failure = subprocess.CalledProcessError(
+            1, ["systemctl"], output="", stderr="nope"
+        )
+        with (
+            patch("aethermesh_core.app_cli.sys_platform", return_value="linux"),
+            patch("aethermesh_core.app_cli.subprocess.run", side_effect=failure),
+            self.assertRaisesRegex(Exception, "could not start background node: nope"),
+        ):
+            app_cli._control_background_node("start")
+
+    def test_local_api_health_detection_handles_false_paths(self) -> None:
+        self.assertFalse(app_cli._local_api_is_aethermesh(host="127.0.0.1", port=1))
+
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *_: object) -> None:
+                return None
+
+            def read(self) -> bytes:
+                return b'{"service":"not-aethermesh"}'
+
+        with patch("aethermesh_core.app_cli.urlopen", return_value=FakeResponse()):
+            self.assertFalse(
+                app_cli._local_api_is_aethermesh(host="127.0.0.1", port=7280)
+            )
 
     def test_cli_update_installs_latest_release_and_reports_errors(self) -> None:
         class FakeUpdateResult:

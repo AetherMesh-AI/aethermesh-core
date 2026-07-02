@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { BackgroundNodeManager, UPDATE_INTERVAL_MS } = require('./bootstrap/backgroundNodeManager');
+const { CliManager } = require('./bootstrap/cliManager');
 const { LocalApiClient } = require('./bootstrap/apiClient');
 const { shouldStopTemporaryNode } = require('./bootstrap/lifecycle');
 const { normalizePackageSettings } = require('./bootstrap/packageInstaller');
@@ -18,6 +19,7 @@ const apiClient = new LocalApiClient({ baseUrl: `http://${apiHost}:${apiPort}` }
 let mainWindow;
 let supervisor;
 let backgroundManager;
+let cliManager;
 let shutdownStarted = false;
 let bootstrapState = {
   status: 'idle',
@@ -28,6 +30,7 @@ let bootstrapState = {
   storage: {},
   process: { status: 'stopped', mode: 'temporary-app-managed' },
   background: { enabled: false, startAtLogin: false, status: 'disabled' },
+  cli: { installed: false, status: 'not installed', command: 'aethermesh' },
   update: { status: 'idle', lastCheck: null },
   logs: [],
 };
@@ -69,8 +72,15 @@ async function bootstrap() {
       status: 'runtime-ready',
     });
 
-    await reconcileStartupNode(paths, settings, runtimeCommand);
-    await checkRuntimeUpdates({ restart: settings.backgroundNodeEnabled, apply: settings.backgroundNodeEnabled });
+    let activeSettings = settings;
+    if (runtimeCommand && fs.existsSync(runtimeCommand)) {
+      const cliInstall = await ensureStableRuntimeAndCli(paths, settings);
+      activeSettings = cliInstall.settings;
+    } else {
+      updateBootstrap({ cli: { ...bootstrapState.cli, status: 'Broken', error: `stable runtime source is not a file: ${runtimeCommand}` } });
+    }
+    await reconcileStartupNode(paths, activeSettings, runtimeCommand);
+    await checkRuntimeUpdates({ restart: activeSettings.backgroundNodeEnabled, apply: true });
     scheduleRuntimeUpdateChecks(paths);
   } catch (error) {
     updateBootstrap({ status: 'error', error: error.message });
@@ -99,6 +109,37 @@ function createBackgroundManager(paths, runtimeCommand = getRuntimeCommand(), se
     healthCheck: () => apiClient.health(),
     log: appendBootstrapLog,
   });
+}
+
+function createCliManager(paths, runtimeMetadata = backgroundManager?.readRuntimeMetadata() || null) {
+  const manager = new CliManager({
+    paths,
+    stableRuntimePath: (backgroundManager || createBackgroundManager(paths)).stableRuntimePath,
+    runtimeMetadata,
+  });
+  cliManager = manager;
+  return manager;
+}
+
+async function ensureStableRuntimeAndCli(paths, settings) {
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  let metadata = manager.readRuntimeMetadata();
+  try {
+    const copy = manager.copyOrUpdateRuntime();
+    metadata = copy.metadata;
+  } catch (error) {
+    updateBootstrap({ cli: { ...bootstrapState.cli, status: 'Broken', error: error.message } });
+    throw error;
+  }
+  const cli = createCliManager(paths, metadata);
+  const cliMetadata = await cli.installOrRepair({ configurePath: true });
+  const nextSettings = writeSettings(paths, settingsFromCliMetadata(settingsFromRuntimeMetadata(settings, metadata, { checkedAt: new Date().toISOString() }), cliMetadata));
+  updateBootstrap({
+    background: { ...backgroundStateFromSettings(nextSettings), runtime: metadata },
+    cli: cliStateFromSettings(nextSettings, cliMetadata),
+  });
+  return { metadata, cliMetadata, settings: nextSettings };
 }
 
 async function reconcileStartupNode(paths, settings, runtimeCommand) {
@@ -216,6 +257,16 @@ function defaultSettings() {
     installedRuntimeVersion: null,
     installedRuntimeSha256: null,
     lastUpdateCheckTimestamp: null,
+    cliInstalled: false,
+    cliCommandName: 'aethermesh',
+    cliShimPath: null,
+    cliTargetRuntimePath: null,
+    cliInstalledAt: null,
+    cliLastVerifiedAt: null,
+    cliRuntimeVersion: null,
+    cliRuntimeSha256: null,
+    cliPathStatus: 'not installed',
+    cliPathSetupCommand: null,
     advancedLogs: false,
   };
 }
@@ -263,6 +314,41 @@ function backgroundStateFromSettings(settings) {
   };
 }
 
+function cliStateFromSettings(settings, cliMetadata = null) {
+  const installed = Boolean(cliMetadata?.cliInstalled ?? settings.cliInstalled);
+  const verificationOk = cliMetadata?.cliVerificationOk;
+  const pathStatus = cliMetadata?.cliPathStatus || settings.cliPathStatus || 'not installed';
+  return {
+    installed,
+    status: installed ? (verificationOk === false ? 'Broken' : 'Installed') : 'Not installed',
+    command: cliMetadata?.cliCommandName || settings.cliCommandName || 'aethermesh',
+    shimPath: cliMetadata?.cliShimPath || settings.cliShimPath,
+    targetRuntimePath: cliMetadata?.cliTargetRuntimePath || settings.cliTargetRuntimePath || settings.installedRuntimePath,
+    runtimeVersion: cliMetadata?.cliRuntimeVersion || settings.cliRuntimeVersion || settings.installedRuntimeVersion,
+    runtimeSha256: cliMetadata?.cliRuntimeSha256 || settings.cliRuntimeSha256 || settings.installedRuntimeSha256,
+    pathStatus,
+    pathSetupCommand: cliMetadata?.cliPathSetupCommand || settings.cliPathSetupCommand,
+    lastVerifiedAt: cliMetadata?.cliLastVerifiedAt || settings.cliLastVerifiedAt,
+    error: cliMetadata?.cliVerificationError || null,
+  };
+}
+
+function settingsFromCliMetadata(settings, metadata = {}) {
+  return {
+    ...settings,
+    cliInstalled: Boolean(metadata.cliInstalled),
+    cliCommandName: metadata.cliCommandName || settings.cliCommandName,
+    cliShimPath: metadata.cliShimPath || settings.cliShimPath,
+    cliTargetRuntimePath: metadata.cliTargetRuntimePath || settings.cliTargetRuntimePath,
+    cliInstalledAt: metadata.cliInstalledAt || settings.cliInstalledAt,
+    cliLastVerifiedAt: metadata.cliLastVerifiedAt || settings.cliLastVerifiedAt,
+    cliRuntimeVersion: metadata.cliRuntimeVersion || settings.cliRuntimeVersion,
+    cliRuntimeSha256: metadata.cliRuntimeSha256 || settings.cliRuntimeSha256,
+    cliPathStatus: metadata.cliPathStatus || settings.cliPathStatus,
+    cliPathSetupCommand: metadata.cliPathSetupCommand || settings.cliPathSetupCommand,
+  };
+}
+
 function settingsFromRuntimeMetadata(settings, metadata, update = {}) {
   return {
     ...settings,
@@ -282,14 +368,19 @@ async function checkRuntimeUpdates({ restart = false, apply = true } = {}) {
   updateBootstrap({ update: { ...bootstrapState.update, status: 'checking' } });
   const check = await manager.checkForRuntimeUpdates();
   let result = { updated: false, update: check };
-  if (apply && settings.backgroundNodeEnabled && check.available) {
-    result = await manager.applyRuntimeUpdate({ restart });
+  if (apply && (settings.backgroundNodeEnabled || settings.cliInstalled) && check.available) {
+    result = await manager.applyRuntimeUpdate({ restart: settings.backgroundNodeEnabled && restart });
   }
   const metadata = result.metadata || manager.readRuntimeMetadata();
-  const nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(settings, metadata, result.update || check));
+  let nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(settings, metadata, result.update || check));
+  if (nextSettings.cliInstalled && metadata) {
+    const cliMetadata = await createCliManager(paths, metadata).installOrRepair({ configurePath: false });
+    nextSettings = writeSettings(paths, settingsFromCliMetadata(nextSettings, cliMetadata));
+  }
   updateBootstrap({
     update: { status: result.updated ? 'updated' : 'current', lastCheck: nextSettings.lastUpdateCheckTimestamp, available: check.available, error: null },
     background: { ...backgroundStateFromSettings(nextSettings), runtime: metadata },
+    cli: cliStateFromSettings(nextSettings),
   });
   return { ...result, settings: nextSettings };
 }
@@ -300,7 +391,10 @@ function scheduleRuntimeUpdateChecks(paths = getPaths()) {
   backgroundManager = manager;
   manager.schedulePeriodicUpdateChecks({
     intervalMs: UPDATE_INTERVAL_MS,
-    shouldApply: () => readSettings(paths).backgroundNodeEnabled,
+    shouldApply: () => {
+      const current = readSettings(paths);
+      return current.backgroundNodeEnabled || current.cliInstalled;
+    },
     shouldRestart: () => readSettings(paths).backgroundNodeEnabled,
     onResult: (error, result) => {
       if (error) {
@@ -309,13 +403,60 @@ function scheduleRuntimeUpdateChecks(paths = getPaths()) {
       }
       const latest = result?.metadata || manager.readRuntimeMetadata();
       const currentSettings = readSettings(paths);
-      const nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(currentSettings, latest, result?.update || {}));
+      let nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(currentSettings, latest, result?.update || {}));
+      if (nextSettings.cliInstalled && latest) {
+        createCliManager(paths, latest).installOrRepair({ configurePath: false }).then((cliMetadata) => {
+          const refreshed = writeSettings(paths, settingsFromCliMetadata(readSettings(paths), cliMetadata));
+          updateBootstrap({ cli: cliStateFromSettings(refreshed, cliMetadata) });
+        }).catch((cliError) => {
+          updateBootstrap({ cli: { ...bootstrapState.cli, status: 'Broken', error: cliError.message } });
+        });
+      }
       updateBootstrap({
         update: { status: result?.updated ? 'updated' : 'current', lastCheck: nextSettings.lastUpdateCheckTimestamp, available: result?.update?.available || false, error: null },
         background: { ...backgroundStateFromSettings(nextSettings), runtime: latest },
+        cli: cliStateFromSettings(nextSettings),
       });
     },
   });
+}
+
+async function repairCli({ configurePath = true } = {}) {
+  const paths = getPaths();
+  ensureStorage(paths);
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  const runtime = manager.copyOrUpdateRuntime();
+  const cli = createCliManager(paths, runtime.metadata);
+  const cliMetadata = await cli.installOrRepair({ configurePath });
+  const nextSettings = writeSettings(paths, settingsFromCliMetadata(settingsFromRuntimeMetadata(settings, runtime.metadata, { checkedAt: new Date().toISOString() }), cliMetadata));
+  updateBootstrap({ cli: cliStateFromSettings(nextSettings, cliMetadata), background: { ...backgroundStateFromSettings(nextSettings), runtime: runtime.metadata } });
+  return bootstrapState;
+}
+
+async function uninstallCli() {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  const cli = createCliManager(paths, manager.readRuntimeMetadata());
+  const cliMetadata = await cli.uninstall();
+  const nextSettings = writeSettings(paths, settingsFromCliMetadata(settings, cliMetadata));
+  updateBootstrap({ cli: cliStateFromSettings(nextSettings, cliMetadata) });
+  return bootstrapState;
+}
+
+async function refreshCliStatus() {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  const cli = createCliManager(paths, manager.readRuntimeMetadata());
+  const cliMetadata = await cli.getStatus();
+  const nextSettings = writeSettings(paths, settingsFromCliMetadata(settings, cliMetadata));
+  updateBootstrap({ cli: cliStateFromSettings(nextSettings, cliMetadata) });
+  return bootstrapState;
 }
 
 async function enableBackgroundNode() {
@@ -326,9 +467,12 @@ async function enableBackgroundNode() {
   backgroundManager = manager;
   const install = await manager.installBackgroundNode();
   settings = writeSettings(paths, settingsFromRuntimeMetadata(settings, install.metadata, { checkedAt: new Date().toISOString() }));
+  const cliMetadata = await createCliManager(paths, install.metadata).installOrRepair({ configurePath: false });
+  settings = writeSettings(paths, settingsFromCliMetadata(settings, cliMetadata));
   updateBootstrap({
     status: 'running',
     background: { ...backgroundStateFromSettings(settings), status: 'running', runtime: install.metadata },
+    cli: cliStateFromSettings(settings, cliMetadata),
     process: { status: 'running', pid: null, mode: 'background-os-managed' },
   });
   await waitForApi();
@@ -435,6 +579,10 @@ ipcMain.handle('aethermesh:restart-node', async () => {
 ipcMain.handle('aethermesh:enable-background-node', enableBackgroundNode);
 ipcMain.handle('aethermesh:disable-background-node', () => disableBackgroundNode());
 ipcMain.handle('aethermesh:remove-local-data', removeLocalAetherMeshData);
+ipcMain.handle('aethermesh:repair-cli', () => repairCli({ configurePath: true }));
+ipcMain.handle('aethermesh:reinstall-cli', () => repairCli({ configurePath: true }));
+ipcMain.handle('aethermesh:uninstall-cli', uninstallCli);
+ipcMain.handle('aethermesh:get-cli-status', refreshCliStatus);
 ipcMain.handle('aethermesh:check-runtime-updates', () => checkRuntimeUpdates({ restart: true, apply: true }));
 ipcMain.handle('aethermesh:read-background-logs', () => {
   const paths = getPaths();

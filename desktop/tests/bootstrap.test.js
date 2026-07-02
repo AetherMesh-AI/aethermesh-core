@@ -35,6 +35,17 @@ const {
   buildWindowsTaskXml,
   getStableRuntimePath,
 } = require('../src/bootstrap/backgroundNodeManager');
+const {
+  CLI_COMMAND_NAME,
+  CliManager,
+  buildPosixShim,
+  buildWindowsCmdShim,
+  buildWindowsPowerShellShim,
+  getCliBinDir,
+  getCliShimPaths,
+  getPathSetupCommand,
+  isDirOnPath,
+} = require('../src/bootstrap/cliManager');
 const { shouldLeaveBackgroundNodeRunning, shouldStopTemporaryNode } = require('../src/bootstrap/lifecycle');
 
 test('platform storage paths are per-user and app-managed', () => {
@@ -412,6 +423,124 @@ test('periodic update checks do not install stable runtime until background mode
     assert.equal(results[0].result.updated, false);
     assert.equal(results[0].result.update.available, true);
     assert.equal(fs.existsSync(manager.stableRuntimePath), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('per-user CLI paths and shims point at stable runtime', () => {
+  assert.equal(CLI_COMMAND_NAME, 'aethermesh');
+  assert.equal(getCliBinDir({ platform: 'darwin', homeDir: '/Users/trevor' }), path.join('/Users/trevor', '.local', 'bin'));
+  assert.equal(getCliBinDir({ platform: 'linux', homeDir: '/home/trevor' }), path.join('/home/trevor', '.local', 'bin'));
+  assert.equal(getCliBinDir({ platform: 'win32', homeDir: 'C:/Users/Trevor', env: { LOCALAPPDATA: 'C:/Users/Trevor/AppData/Local' } }), path.join('C:/Users/Trevor/AppData/Local', 'AetherMesh', 'bin'));
+
+  const posix = getCliShimPaths({ platform: 'linux', binDir: '/home/trevor/.local/bin' });
+  assert.equal(posix.commandPath, path.join('/home/trevor/.local/bin', 'aethermesh'));
+  assert.equal(posix.nodeCommandPath, path.join('/home/trevor/.local/bin', 'aethermesh-node'));
+  assert.equal(buildPosixShim({ runtimePath: '/home/trevor/.local/share/aethermesh/runtime/aethermesh-node', homeDir: '/home/trevor/.local/share/aethermesh' }), "#!/usr/bin/env sh\nAETHERMESH_HOME='/home/trevor/.local/share/aethermesh' exec '/home/trevor/.local/share/aethermesh/runtime/aethermesh-node' \"$@\"\n");
+
+  const cmd = buildWindowsCmdShim({ runtimePath: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\runtime\\aethermesh-node.exe', homeDir: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh' });
+  assert.match(cmd, /set "AETHERMESH_HOME=C:\\Users\\Trevor\\AppData\\Local\\AetherMesh"/);
+  assert.match(cmd, /"C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\runtime\\aethermesh-node\.exe" %\*/);
+  const ps1 = buildWindowsPowerShellShim({ runtimePath: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\runtime\\aethermesh-node.exe', homeDir: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh' });
+  assert.match(ps1, /\$env:AETHERMESH_HOME='C:\\Users\\Trevor\\AppData\\Local\\AetherMesh'/);
+  assert.match(ps1, /& 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\runtime\\aethermesh-node\.exe' @args/);
+});
+
+test('CLI path detection and setup commands are per-user', () => {
+  assert.equal(isDirOnPath('/Users/trevor/.local/bin', `/usr/bin${path.delimiter}/Users/trevor/.local/bin`), true);
+  assert.equal(isDirOnPath('/Users/trevor/.local/bin', '/usr/bin'), false);
+  assert.equal(getPathSetupCommand({ platform: 'darwin', shell: '/bin/zsh', binDir: '/Users/trevor/.local/bin' }), 'echo \'export PATH="/Users/trevor/.local/bin:$PATH"\' >> ~/.zshrc');
+  assert.equal(getPathSetupCommand({ platform: 'linux', shell: '/usr/bin/fish', binDir: '/home/trevor/.local/bin' }), "fish_add_path '/home/trevor/.local/bin'");
+  assert.match(getPathSetupCommand({ platform: 'win32', binDir: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\bin' }), /SetEnvironmentVariable/);
+});
+
+test('CLI install repair and uninstall metadata transitions preserve runtime target', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-cli-'));
+  try {
+    const runtimePath = path.join(root, 'home', 'runtime', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(runtimePath), { recursive: true });
+    fs.writeFileSync(runtimePath, 'runtime-v1');
+    fs.chmodSync(runtimePath, 0o755);
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { logsDir: path.join(root, 'logs') });
+    const calls = [];
+    const cli = new CliManager({
+      paths,
+      stableRuntimePath: runtimePath,
+      runtimeMetadata: { version: '0.2.0-alpha', sha256: 'abc123' },
+      platform: 'linux',
+      homeDir: root,
+      env: { PATH: '/usr/bin', SHELL: '/bin/zsh' },
+      execFile: fakeExecFile(calls),
+    });
+    const installed = await cli.installOrRepair();
+    assert.equal(installed.cliInstalled, true);
+    assert.equal(installed.cliCommandName, 'aethermesh');
+    assert.equal(installed.cliTargetRuntimePath, runtimePath);
+    assert.equal(installed.cliRuntimeVersion, '0.2.0-alpha');
+    assert.equal(installed.cliRuntimeSha256, 'abc123');
+    assert.equal(installed.cliPathStatus, 'installed but PATH update required');
+    assert.equal(fs.readFileSync(cli.shims.commandPath, 'utf8'), buildPosixShim({ runtimePath, homeDir: paths.home }));
+    assert.equal(fs.statSync(cli.shims.commandPath).mode & 0o111, 0o111);
+    assert.equal(calls[0].command, cli.shims.commandPath);
+    assert.deepEqual(calls[0].args, ['--version']);
+
+    const uninstalled = await cli.uninstall();
+    assert.equal(uninstalled.cliInstalled, false);
+    assert.equal(fs.existsSync(cli.shims.commandPath), false);
+    assert.equal(fs.existsSync(runtimePath), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('CLI detects broken target and runtime update preserves existing shim path', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-cli-update-'));
+  try {
+    const bundled = path.join(root, 'bundle', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(bundled), { recursive: true });
+    fs.writeFileSync(bundled, 'runtime-v1');
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { logsDir: path.join(root, 'logs') });
+    const background = new BackgroundNodeManager({
+      paths,
+      bundledRuntimePath: bundled,
+      version: '0.2.0-alpha',
+      platform: 'linux',
+      execFile: fakeExecFile([]),
+    });
+    const runtime = background.copyOrUpdateRuntime();
+    const cli = new CliManager({
+      paths,
+      stableRuntimePath: background.stableRuntimePath,
+      runtimeMetadata: runtime.metadata,
+      platform: 'linux',
+      homeDir: root,
+      env: { PATH: `${root}/.local/bin`, SHELL: '/bin/zsh' },
+      execFile: fakeExecFile([]),
+    });
+    await cli.installOrRepair({ configurePath: false });
+    const shimPath = cli.shims.commandPath;
+    assert.equal(fs.existsSync(shimPath), true);
+
+    fs.rmSync(background.stableRuntimePath, { force: true });
+    const broken = await cli.getStatus();
+    assert.equal(broken.cliPathStatus, 'broken target');
+    assert.equal(broken.cliVerificationOk, false);
+
+    fs.writeFileSync(bundled, 'runtime-v2');
+    const updated = await background.applyRuntimeUpdate();
+    const repaired = await new CliManager({
+      paths,
+      stableRuntimePath: background.stableRuntimePath,
+      runtimeMetadata: updated.metadata,
+      platform: 'linux',
+      homeDir: root,
+      env: { PATH: `${root}/.local/bin`, SHELL: '/bin/zsh' },
+      execFile: fakeExecFile([]),
+    }).installOrRepair({ configurePath: false });
+    assert.equal(repaired.cliShimPath, shimPath);
+    assert.equal(repaired.cliRuntimeSha256, updated.metadata.sha256);
+    assert.equal(fs.readFileSync(shimPath, 'utf8'), buildPosixShim({ runtimePath: background.stableRuntimePath, homeDir: paths.home }));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

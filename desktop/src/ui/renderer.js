@@ -4,6 +4,7 @@ const els = {
   package: document.getElementById('package-status'),
   api: document.getElementById('api-status'),
   background: document.getElementById('background-status'),
+  cli: document.getElementById('cli-status'),
   onboarding: document.getElementById('background-onboarding'),
   peers: document.getElementById('peer-list'),
   capabilities: document.getElementById('capability-list'),
@@ -19,6 +20,11 @@ const els = {
   checkUpdates: document.getElementById('check-updates'),
   viewBackgroundLogs: document.getElementById('view-background-logs'),
   removeLocalData: document.getElementById('remove-local-data'),
+  repairCli: document.getElementById('repair-cli'),
+  reinstallCli: document.getElementById('reinstall-cli'),
+  uninstallCli: document.getElementById('uninstall-cli'),
+  copyCliPath: document.getElementById('copy-cli-path'),
+  openCliDocs: document.getElementById('open-cli-docs'),
 };
 
 let bootstrapState = {};
@@ -54,6 +60,7 @@ function setBootstrap(state) {
     ['Error', bootstrapState.error || 'none'],
   ]);
   renderBackground(bootstrapState);
+  renderCli(bootstrapState);
   els.logs.textContent = (bootstrapState.logs || []).join('\n') || 'Waiting for bootstrap...';
 }
 
@@ -72,6 +79,21 @@ function renderBackground(state) {
     ['Update status', update.error || update.status || 'idle'],
   ]);
   els.onboarding.hidden = Boolean(bg.enabled);
+}
+
+function renderCli(state) {
+  const cli = state.cli || {};
+  setRows(els.cli, [
+    ['CLI status', cli.status || 'Not installed'],
+    ['CLI command', cli.command || 'aethermesh'],
+    ['CLI path', cli.shimPath || 'not installed'],
+    ['Runtime target path', cli.targetRuntimePath || state.runtime?.stablePath || 'not installed'],
+    ['Runtime version', cli.runtimeVersion || 'not installed'],
+    ['Runtime sha256', shortHash(cli.runtimeSha256)],
+    ['PATH status', cli.pathStatus || 'unknown'],
+    ['Last verified', cli.lastVerifiedAt || 'never'],
+    ['Error', cli.error || 'none'],
+  ]);
 }
 
 async function refreshDashboard() {
@@ -166,6 +188,21 @@ els.removeLocalData.addEventListener('click', () => {
   if (confirmed) {
     runAction(() => window.aethermesh.removeLocalData());
   }
+});
+els.repairCli.addEventListener('click', () => runAction(() => window.aethermesh.repairCli()));
+els.reinstallCli.addEventListener('click', () => runAction(() => window.aethermesh.reinstallCli()));
+els.uninstallCli.addEventListener('click', () => runAction(() => window.aethermesh.uninstallCli()));
+els.copyCliPath.addEventListener('click', async () => {
+  const command = bootstrapState.cli?.pathSetupCommand;
+  if (!command) {
+    els.logs.textContent = 'CLI bin directory is already on PATH.';
+    return;
+  }
+  await navigator.clipboard.writeText(command);
+  els.logs.textContent = `Copied PATH setup command:\n${command}`;
+});
+els.openCliDocs.addEventListener('click', () => {
+  els.logs.textContent = 'CLI docs: desktop/docs/cli.md';
 });
 window.aethermesh.onState(setBootstrap);
 
