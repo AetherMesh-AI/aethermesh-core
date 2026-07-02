@@ -15,14 +15,14 @@
     }
   ],
   "mac": {
-    "target": ["dmg", "dir"],
+    "target": ["dmg"],
     "category": "public.app-category.developer-tools"
   },
   "win": {
     "target": ["nsis"]
   },
   "linux": {
-    "target": ["AppImage", "deb"],
+    "target": ["deb"],
     "category": "Development",
     "maintainer": "AetherMesh AI <releases@aethermesh.ai>"
   }
