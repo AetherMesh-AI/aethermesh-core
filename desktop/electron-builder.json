@@ -16,7 +16,8 @@
   ],
   "mac": {
     "target": ["dmg"],
-    "category": "public.app-category.developer-tools"
+    "category": "public.app-category.developer-tools",
+    "identity": "-"
   },
   "win": {
     "target": ["nsis"]

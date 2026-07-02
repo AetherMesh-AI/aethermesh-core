@@ -32,8 +32,12 @@ Unsigned dev builds can trigger warnings. Use signed release builds for normal d
 
 ## macOS Gatekeeper
 
-Unsigned dev builds may require manual approval in System Settings. Release builds should be signed and notarized.
+CI ad-hoc signs the macOS DMG (`identity: "-"`) so the app bundle has a valid local code signature instead of looking damaged after download. Fully trusted first-run behavior still requires a Developer ID Application certificate and Apple notarization secrets.
+
+## Linux `.deb` package metadata
+
+Electron Builder requires maintainer metadata for Linux `.deb` packages. Keep `linux.maintainer` set in `desktop/electron-builder.json` when editing Linux package targets.
 
 ## Linux system dependency missing
 
-Electron AppImage/deb builds may require common desktop libraries depending on distro. Prefer the `.deb` on Debian/Ubuntu-like systems when available.
+Electron `.deb` builds may require common desktop libraries depending on distro. Use the `.deb` on Debian/Ubuntu-like systems.
