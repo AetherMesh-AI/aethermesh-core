@@ -1,9 +1,12 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
 const { test } = require('node:test');
 const path = require('node:path');
 
 const {
   getDefaultAetherMeshHome,
+  getDefaultAetherMeshLogsDir,
   getAetherMeshPaths,
 } = require('../src/bootstrap/storage');
 const {
@@ -25,6 +28,14 @@ const {
   getRuntimeExecutableName,
   resolveRuntimeCommand,
 } = require('../src/bootstrap/runtime');
+const {
+  BackgroundNodeManager,
+  buildLaunchAgentPlist,
+  buildSystemdUserService,
+  buildWindowsTaskXml,
+  getStableRuntimePath,
+} = require('../src/bootstrap/backgroundNodeManager');
+const { shouldLeaveBackgroundNodeRunning, shouldStopTemporaryNode } = require('../src/bootstrap/lifecycle');
 
 test('platform storage paths are per-user and app-managed', () => {
   assert.equal(
@@ -35,22 +46,24 @@ test('platform storage paths are per-user and app-managed', () => {
     getDefaultAetherMeshHome({
       platform: 'win32',
       homeDir: 'C:/Users/Trevor',
-      env: { APPDATA: 'C:/Users/Trevor/AppData/Roaming' },
+      env: { LOCALAPPDATA: 'C:/Users/Trevor/AppData/Local' },
     }),
-    path.join('C:/Users/Trevor/AppData/Roaming', 'AetherMesh'),
+    path.join('C:/Users/Trevor/AppData/Local', 'AetherMesh'),
   );
   assert.equal(
     getDefaultAetherMeshHome({
       platform: 'linux',
       homeDir: '/home/trevor',
-      env: { XDG_DATA_HOME: '/home/trevor/.local/state' },
+      env: { XDG_DATA_HOME: '/home/trevor/.local/share' },
     }),
-    path.join('/home/trevor/.local/state', 'AetherMesh'),
+    path.join('/home/trevor/.local/share', 'aethermesh'),
   );
 
   const paths = getAetherMeshPaths('/tmp/AetherMesh');
-  assert.equal(paths.venvDir, path.join('/tmp/AetherMesh', 'venv'));
-  assert.equal(paths.logsDir, path.join('/tmp/AetherMesh', 'logs'));
+  assert.equal(paths.runtimeDir, path.join('/tmp/AetherMesh', 'runtime'));
+  assert.equal(getDefaultAetherMeshLogsDir({ platform: 'darwin', homeDir: '/Users/trevor' }), path.join('/Users/trevor', 'Library', 'Logs', 'AetherMesh'));
+  assert.equal(getDefaultAetherMeshLogsDir({ platform: 'win32', home: 'C:/Users/Trevor/AppData/Local/AetherMesh' }), path.join('C:/Users/Trevor/AppData/Local/AetherMesh', 'logs'));
+  assert.equal(getDefaultAetherMeshLogsDir({ platform: 'linux', homeDir: '/home/trevor', env: { XDG_STATE_HOME: '/home/trevor/.local/state' } }), path.join('/home/trevor/.local/state', 'aethermesh', 'logs'));
   assert.equal(paths.configDir, path.join('/tmp/AetherMesh', 'config'));
   assert.equal(paths.metadataDir, path.join('/tmp/AetherMesh', 'metadata'));
   assert.equal(paths.installStatusPath, path.join('/tmp/AetherMesh', 'metadata', 'install-status.json'));
@@ -229,6 +242,187 @@ test('local API client reports reachable and unreachable states', async () => {
   assert.equal(health.reachable, false);
   assert.match(health.error, /connection refused/);
 });
+
+test('background manager copies runtime atomically and records metadata', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-bg-'));
+  try {
+    const bundled = path.join(root, 'bundle', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(bundled), { recursive: true });
+    fs.writeFileSync(bundled, 'runtime-v1');
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { platform: 'linux', homeDir: root, logsDir: path.join(root, 'logs') });
+    const manager = new BackgroundNodeManager({
+      paths,
+      bundledRuntimePath: bundled,
+      version: '0.2.0-alpha',
+      platform: 'linux',
+      now: () => new Date('2026-07-02T00:00:00Z'),
+      execFile: fakeExecFile([]),
+    });
+
+    const first = manager.copyOrUpdateRuntime();
+    assert.equal(first.updated, true);
+    assert.equal(fs.readFileSync(manager.stableRuntimePath, 'utf8'), 'runtime-v1');
+    assert.equal(fs.statSync(manager.stableRuntimePath).mode & 0o111, 0o111);
+    assert.equal(first.metadata.version, '0.2.0-alpha');
+    assert.equal(first.metadata.installedPath, manager.stableRuntimePath);
+    assert.equal(first.metadata.sourcePath, bundled);
+
+    const second = manager.copyOrUpdateRuntime();
+    assert.equal(second.updated, false);
+
+    fs.writeFileSync(bundled, 'runtime-v2');
+    const update = await manager.checkForRuntimeUpdates();
+    assert.equal(update.available, true);
+    const applied = await manager.applyRuntimeUpdate();
+    assert.equal(applied.updated, true);
+    assert.equal(fs.readFileSync(manager.stableRuntimePath, 'utf8'), 'runtime-v2');
+    assert.ok(fs.existsSync(manager.backupMetadataPath));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('background manager generates per-platform user startup registrations', async () => {
+  const macPlist = buildLaunchAgentPlist({
+    runtimePath: '/Users/trevor/Library/Application Support/AetherMesh/runtime/aethermesh-node',
+    homeDir: '/Users/trevor/Library/Application Support/AetherMesh',
+    logsDir: '/Users/trevor/Library/Logs/AetherMesh',
+    host: '127.0.0.1',
+    port: 7280,
+  });
+  assert.match(macPlist, /dev\.aethermesh\.node/);
+  assert.match(macPlist, /RunAtLoad/);
+  assert.match(macPlist, /KeepAlive/);
+  assert.match(macPlist, /node\.log/);
+
+  const systemd = buildSystemdUserService({
+    runtimePath: '/home/trevor/.local/share/aethermesh/runtime/aethermesh-node',
+    homeDir: '/home/trevor/.local/share/aethermesh',
+    logsDir: '/home/trevor/.local/state/aethermesh/logs',
+    host: '127.0.0.1',
+    port: 7280,
+  });
+  assert.match(systemd, /ExecStart=.*aethermesh-node node start --host 127\.0\.0\.1 --port 7280/);
+  assert.match(systemd, /Restart=always/);
+  assert.match(systemd, /WantedBy=default\.target/);
+
+  const windowsXml = buildWindowsTaskXml({
+    runtimePath: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh\\runtime\\aethermesh-node.exe',
+    homeDir: 'C:\\Users\\Trevor\\AppData\\Local\\AetherMesh',
+    host: '127.0.0.1',
+    port: 7280,
+  });
+  assert.match(windowsXml, /<LogonTrigger>/);
+  assert.match(windowsXml, /<RunLevel>LeastPrivilege<\/RunLevel>/);
+  assert.match(windowsXml, /node start --host 127\.0\.0\.1 --port 7280/);
+});
+
+test('background manager invokes OS helpers without admin-only services', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-bg-os-'));
+  try {
+    const bundled = path.join(root, 'bundle', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(bundled), { recursive: true });
+    fs.writeFileSync(bundled, 'runtime');
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { logsDir: path.join(root, 'logs') });
+    const calls = [];
+    const manager = new BackgroundNodeManager({
+      paths,
+      bundledRuntimePath: bundled,
+      version: '0.2.0-alpha',
+      platform: 'linux',
+      execFile: fakeExecFile(calls),
+    });
+    manager.copyOrUpdateRuntime();
+    await manager.enableStartAtLogin();
+    await manager.startBackgroundNode();
+    await manager.stopBackgroundNode();
+    await manager.disableStartAtLogin();
+    assert.deepEqual(calls.map((call) => [call.command, call.args.slice(0, 3)]), [
+      ['systemctl', ['--user', 'daemon-reload']],
+      ['systemctl', ['--user', 'enable', 'aethermesh-node.service']],
+      ['systemctl', ['--user', 'start', 'aethermesh-node.service']],
+      ['systemctl', ['--user', 'stop', 'aethermesh-node.service']],
+      ['systemctl', ['--user', 'stop', 'aethermesh-node.service']],
+      ['systemctl', ['--user', 'disable', 'aethermesh-node.service']],
+      ['systemctl', ['--user', 'daemon-reload']],
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('close and quit lifecycle keeps OS-managed nodes running', () => {
+  assert.equal(shouldStopTemporaryNode({ backgroundNodeEnabled: false, keepNodeRunningAfterClose: false }), true);
+  assert.equal(shouldStopTemporaryNode({ backgroundNodeEnabled: false, keepNodeRunningAfterClose: true }), false);
+  assert.equal(shouldStopTemporaryNode({ backgroundNodeEnabled: true, keepNodeRunningAfterClose: false }), false);
+  assert.equal(shouldLeaveBackgroundNodeRunning({ backgroundNodeEnabled: true }), true);
+  assert.equal(shouldLeaveBackgroundNodeRunning({ backgroundNodeEnabled: false }), false);
+});
+
+test('runtime update checks can be scheduled for gossip-trigger-compatible refreshes', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-bg-update-'));
+  try {
+    const bundled = path.join(root, 'bundle', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(bundled), { recursive: true });
+    fs.writeFileSync(bundled, 'runtime');
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { logsDir: path.join(root, 'logs') });
+    const manager = new BackgroundNodeManager({
+      paths,
+      bundledRuntimePath: bundled,
+      version: '0.2.0-alpha',
+      platform: 'linux',
+      execFile: fakeExecFile([]),
+    });
+    const results = [];
+    manager.schedulePeriodicUpdateChecks({ intervalMs: 5, onResult: (error, result) => results.push({ error, result }) });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    manager.clearPeriodicUpdateChecks();
+    assert.ok(results.length >= 1);
+    assert.equal(results[0].error, null);
+    assert.equal(results[0].result.updated, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('periodic update checks do not install stable runtime until background mode applies updates', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aethermesh-bg-check-only-'));
+  try {
+    const bundled = path.join(root, 'bundle', 'aethermesh-node');
+    fs.mkdirSync(path.dirname(bundled), { recursive: true });
+    fs.writeFileSync(bundled, 'runtime');
+    const paths = getAetherMeshPaths(path.join(root, 'home'), { logsDir: path.join(root, 'logs') });
+    const manager = new BackgroundNodeManager({
+      paths,
+      bundledRuntimePath: bundled,
+      version: '0.2.0-alpha',
+      platform: 'linux',
+      execFile: fakeExecFile([]),
+    });
+    const results = [];
+    manager.schedulePeriodicUpdateChecks({
+      intervalMs: 5,
+      shouldApply: () => false,
+      onResult: (error, result) => results.push({ error, result }),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    manager.clearPeriodicUpdateChecks();
+    assert.ok(results.length >= 1);
+    assert.equal(results[0].error, null);
+    assert.equal(results[0].result.updated, false);
+    assert.equal(results[0].result.update.available, true);
+    assert.equal(fs.existsSync(manager.stableRuntimePath), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function fakeExecFile(calls) {
+  return (command, args, options, callback) => {
+    calls.push({ command, args, options });
+    callback(null, '', '');
+  };
+}
 
 function createFakeChild() {
   const EventEmitter = require('node:events');

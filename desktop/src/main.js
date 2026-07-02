@@ -2,7 +2,9 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { BackgroundNodeManager, UPDATE_INTERVAL_MS } = require('./bootstrap/backgroundNodeManager');
 const { LocalApiClient } = require('./bootstrap/apiClient');
+const { shouldStopTemporaryNode } = require('./bootstrap/lifecycle');
 const { normalizePackageSettings } = require('./bootstrap/packageInstaller');
 const { resolveRuntimeCommand } = require('./bootstrap/runtime');
 const { getDefaultAetherMeshHome, getAetherMeshPaths } = require('./bootstrap/storage');
@@ -15,6 +17,8 @@ const apiClient = new LocalApiClient({ baseUrl: `http://${apiHost}:${apiPort}` }
 
 let mainWindow;
 let supervisor;
+let backgroundManager;
+let shutdownStarted = false;
 let bootstrapState = {
   status: 'idle',
   error: null,
@@ -22,7 +26,9 @@ let bootstrapState = {
   python: { usable: false, mode: 'developer-fallback' },
   package: { installed: true, source: 'bundled-runtime' },
   storage: {},
-  process: { status: 'stopped' },
+  process: { status: 'stopped', mode: 'temporary-app-managed' },
+  background: { enabled: false, startAtLogin: false, status: 'disabled' },
+  update: { status: 'idle', lastCheck: null },
   logs: [],
 };
 
@@ -45,45 +51,88 @@ function createWindow() {
 async function bootstrap() {
   try {
     updateBootstrap({ status: 'checking-runtime', error: null });
-    const home = getDefaultAetherMeshHome();
-    const paths = getAetherMeshPaths(home);
+    const paths = getPaths();
     ensureStorage(paths);
     const settings = readSettings(paths);
-    updateBootstrap({ storage: paths, package: { installed: true, source: 'bundled-runtime' } });
-
     const runtimeCommand = getRuntimeCommand();
+    backgroundManager = createBackgroundManager(paths, runtimeCommand, settings);
     updateBootstrap({
+      storage: paths,
+      package: { installed: true, source: 'bundled-runtime' },
+      background: backgroundStateFromSettings(settings),
       runtime: {
         mode: app.isPackaged ? 'bundled' : 'development',
         command: runtimeCommand,
+        stablePath: backgroundManager.stableRuntimePath,
         available: true,
       },
       status: 'runtime-ready',
     });
 
-    await startNode(paths, settings, runtimeCommand);
+    await reconcileStartupNode(paths, settings, runtimeCommand);
+    await checkRuntimeUpdates({ restart: settings.backgroundNodeEnabled, apply: settings.backgroundNodeEnabled });
+    scheduleRuntimeUpdateChecks(paths);
   } catch (error) {
     updateBootstrap({ status: 'error', error: error.message });
   }
 }
 
+function getPaths() {
+  return getAetherMeshPaths(getDefaultAetherMeshHome());
+}
+
 function ensureStorage(paths) {
+  fs.mkdirSync(paths.home, { recursive: true });
   fs.mkdirSync(paths.logsDir, { recursive: true });
   fs.mkdirSync(paths.configDir, { recursive: true });
   fs.mkdirSync(paths.metadataDir, { recursive: true });
+  fs.mkdirSync(paths.runtimeDir, { recursive: true });
 }
 
-async function startNode(paths, settings = readSettings(paths), runtimeCommand = getRuntimeCommand()) {
-  updateBootstrap({ status: 'starting-node' });
+function createBackgroundManager(paths, runtimeCommand = getRuntimeCommand(), settings = readSettings(paths)) {
+  return new BackgroundNodeManager({
+    paths,
+    bundledRuntimePath: runtimeCommand,
+    version: app.getVersion(),
+    host: settings.nodeHost,
+    port: settings.nodePort,
+    healthCheck: () => apiClient.health(),
+    log: appendBootstrapLog,
+  });
+}
+
+async function reconcileStartupNode(paths, settings, runtimeCommand) {
   const health = await apiClient.health();
   if (health.reachable) {
     updateBootstrap({
       status: 'running',
-      process: { status: 'running', error: null, pid: null, external: true },
+      process: { status: 'running', error: null, pid: null, external: true, mode: settings.backgroundNodeEnabled ? 'background-os-managed' : 'existing-local-api' },
       logs: [...bootstrapState.logs, 'connected to existing local AetherMesh API'].slice(-500),
     });
     return;
   }
+  assertPortAvailableForAetherMesh(health);
+
+  if (settings.backgroundNodeEnabled) {
+    await startBackgroundNode(paths, settings);
+    return;
+  }
+
+  await startTemporaryNode(paths, settings, runtimeCommand);
+}
+
+async function startTemporaryNode(paths, settings = readSettings(paths), runtimeCommand = getRuntimeCommand()) {
+  updateBootstrap({ status: 'starting-node', process: { status: 'starting', mode: 'temporary-app-managed' } });
+  const health = await apiClient.health();
+  if (health.reachable) {
+    updateBootstrap({
+      status: 'running',
+      process: { status: 'running', error: null, pid: null, external: true, mode: 'existing-local-api' },
+      logs: [...bootstrapState.logs, 'connected to existing local AetherMesh API'].slice(-500),
+    });
+    return;
+  }
+  assertPortAvailableForAetherMesh(health);
   supervisor = new NodeSupervisor({
     aethermeshCommand: runtimeCommand,
     env: {
@@ -91,10 +140,32 @@ async function startNode(paths, settings = readSettings(paths), runtimeCommand =
       AETHERMESH_HOME: paths.home,
     },
   });
-  await supervisor.start({ host: settings.api.host, port: settings.api.port });
-  updateBootstrap({ status: 'waiting-api', process: supervisor.state, logs: supervisor.logs });
+  await supervisor.start({ host: settings.nodeHost, port: settings.nodePort });
+  updateBootstrap({ status: 'waiting-api', process: { ...supervisor.state, mode: 'temporary-app-managed' }, logs: supervisor.logs });
   await waitForApi();
-  updateBootstrap({ status: 'running', process: supervisor.state, logs: supervisor.logs });
+  updateBootstrap({ status: 'running', process: { ...supervisor.state, mode: 'temporary-app-managed' }, logs: supervisor.logs });
+}
+
+async function startBackgroundNode(paths = getPaths(), settings = readSettings(paths)) {
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  updateBootstrap({ status: 'starting-background-node', background: { ...backgroundStateFromSettings(settings), status: 'starting' } });
+  const health = await apiClient.health();
+  if (!health.reachable) {
+    await manager.startBackgroundNode();
+    await waitForApi();
+  }
+  updateBootstrap({
+    status: 'running',
+    background: { ...backgroundStateFromSettings(settings), status: 'running', runtime: manager.readRuntimeMetadata() },
+    process: { status: 'running', pid: null, mode: 'background-os-managed' },
+  });
+}
+
+function assertPortAvailableForAetherMesh(health) {
+  if (health?.error && /failed with HTTP/i.test(health.error)) {
+    throw new Error(`port ${apiPort} is in use but is not serving the AetherMesh API: ${health.error}`);
+  }
 }
 
 async function waitForApi({ attempts = 30, delayMs = 500 } = {}) {
@@ -108,11 +179,14 @@ async function waitForApi({ attempts = 30, delayMs = 500 } = {}) {
   throw new Error('local AetherMesh API did not become reachable');
 }
 
-function stopNode(keepRunning = false) {
-  if (supervisor) {
-    supervisor.stop({ keepRunning });
+function stopTemporaryNode(settings = readSettings(getPaths())) {
+  if (!shouldStopTemporaryNode(settings)) {
+    return;
   }
-  updateBootstrap({ process: supervisor ? supervisor.state : { status: 'stopped' }, logs: supervisor ? supervisor.logs : [] });
+  if (supervisor) {
+    supervisor.stop();
+  }
+  updateBootstrap({ process: supervisor ? { ...supervisor.state, mode: 'temporary-app-managed' } : { status: 'stopped', mode: 'temporary-app-managed' }, logs: supervisor ? supervisor.logs : [] });
 }
 
 function getRuntimeCommand() {
@@ -126,23 +200,181 @@ function getRuntimeCommand() {
   });
 }
 
-function readSettings(paths) {
-  const settingsPath = path.join(paths.configDir, 'desktop-settings.json');
-  const defaults = {
+function defaultSettings() {
+  return {
     runtime: {
       source: 'bundled',
       allowDeveloperPythonFallback: !app.isPackaged,
     },
     package: normalizePackageSettings({ autoUpdateOnLaunch: false }),
-    api: { host: apiHost, port: apiPort },
+    backgroundNodeEnabled: false,
+    startNodeAtLogin: false,
     keepNodeRunningAfterClose: false,
+    nodeHost: apiHost,
+    nodePort: apiPort,
+    installedRuntimePath: null,
+    installedRuntimeVersion: null,
+    installedRuntimeSha256: null,
+    lastUpdateCheckTimestamp: null,
     advancedLogs: false,
   };
+}
+
+function readSettings(paths) {
+  const settingsPath = path.join(paths.configDir, 'desktop-settings.json');
+  const defaults = defaultSettings();
   if (!fs.existsSync(settingsPath)) {
+    fs.mkdirSync(paths.configDir, { recursive: true });
     fs.writeFileSync(settingsPath, `${JSON.stringify(defaults, null, 2)}\n`);
     return defaults;
   }
-  return { ...defaults, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+  return normalizeSettings({ ...defaults, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) });
+}
+
+function normalizeSettings(settings) {
+  return {
+    ...defaultSettings(),
+    ...settings,
+    package: normalizePackageSettings(settings.package || {}),
+    nodeHost: settings.nodeHost || settings.api?.host || apiHost,
+    nodePort: settings.nodePort || settings.api?.port || apiPort,
+  };
+}
+
+function writeSettings(paths, partial) {
+  const current = readSettings(paths);
+  const next = normalizeSettings({ ...current, ...partial });
+  fs.mkdirSync(paths.configDir, { recursive: true });
+  fs.writeFileSync(path.join(paths.configDir, 'desktop-settings.json'), `${JSON.stringify(next, null, 2)}\n`);
+  return next;
+}
+
+function backgroundStateFromSettings(settings) {
+  return {
+    enabled: Boolean(settings.backgroundNodeEnabled),
+    startAtLogin: Boolean(settings.startNodeAtLogin),
+    keepNodeRunningAfterClose: Boolean(settings.keepNodeRunningAfterClose),
+    status: settings.backgroundNodeEnabled ? 'enabled' : 'disabled',
+    apiUrl: `http://${settings.nodeHost}:${settings.nodePort}`,
+    installedRuntimePath: settings.installedRuntimePath,
+    installedRuntimeVersion: settings.installedRuntimeVersion,
+    installedRuntimeSha256: settings.installedRuntimeSha256,
+    lastUpdateCheckTimestamp: settings.lastUpdateCheckTimestamp,
+  };
+}
+
+function settingsFromRuntimeMetadata(settings, metadata, update = {}) {
+  return {
+    ...settings,
+    installedRuntimePath: metadata?.installedPath || settings.installedRuntimePath,
+    installedRuntimeVersion: metadata?.version || settings.installedRuntimeVersion,
+    installedRuntimeSha256: metadata?.sha256 || settings.installedRuntimeSha256,
+    lastUpdateCheckTimestamp: update.checkedAt || settings.lastUpdateCheckTimestamp,
+  };
+}
+
+async function checkRuntimeUpdates({ restart = false, apply = true } = {}) {
+  const paths = getPaths();
+  ensureStorage(paths);
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  updateBootstrap({ update: { ...bootstrapState.update, status: 'checking' } });
+  const check = await manager.checkForRuntimeUpdates();
+  let result = { updated: false, update: check };
+  if (apply && settings.backgroundNodeEnabled && check.available) {
+    result = await manager.applyRuntimeUpdate({ restart });
+  }
+  const metadata = result.metadata || manager.readRuntimeMetadata();
+  const nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(settings, metadata, result.update || check));
+  updateBootstrap({
+    update: { status: result.updated ? 'updated' : 'current', lastCheck: nextSettings.lastUpdateCheckTimestamp, available: check.available, error: null },
+    background: { ...backgroundStateFromSettings(nextSettings), runtime: metadata },
+  });
+  return { ...result, settings: nextSettings };
+}
+
+function scheduleRuntimeUpdateChecks(paths = getPaths()) {
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  manager.schedulePeriodicUpdateChecks({
+    intervalMs: UPDATE_INTERVAL_MS,
+    shouldApply: () => readSettings(paths).backgroundNodeEnabled,
+    shouldRestart: () => readSettings(paths).backgroundNodeEnabled,
+    onResult: (error, result) => {
+      if (error) {
+        updateBootstrap({ update: { ...bootstrapState.update, status: 'error', error: error.message } });
+        return;
+      }
+      const latest = result?.metadata || manager.readRuntimeMetadata();
+      const currentSettings = readSettings(paths);
+      const nextSettings = writeSettings(paths, settingsFromRuntimeMetadata(currentSettings, latest, result?.update || {}));
+      updateBootstrap({
+        update: { status: result?.updated ? 'updated' : 'current', lastCheck: nextSettings.lastUpdateCheckTimestamp, available: result?.update?.available || false, error: null },
+        background: { ...backgroundStateFromSettings(nextSettings), runtime: latest },
+      });
+    },
+  });
+}
+
+async function enableBackgroundNode() {
+  const paths = getPaths();
+  ensureStorage(paths);
+  let settings = writeSettings(paths, { backgroundNodeEnabled: true, startNodeAtLogin: true, keepNodeRunningAfterClose: true });
+  const manager = createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  const install = await manager.installBackgroundNode();
+  settings = writeSettings(paths, settingsFromRuntimeMetadata(settings, install.metadata, { checkedAt: new Date().toISOString() }));
+  updateBootstrap({
+    status: 'running',
+    background: { ...backgroundStateFromSettings(settings), status: 'running', runtime: install.metadata },
+    process: { status: 'running', pid: null, mode: 'background-os-managed' },
+  });
+  await waitForApi();
+  return bootstrapState;
+}
+
+async function disableBackgroundNode({ removeData = false } = {}) {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  backgroundManager = manager;
+  await manager.uninstallBackgroundNode();
+  const nextSettings = writeSettings(paths, { backgroundNodeEnabled: false, startNodeAtLogin: false, keepNodeRunningAfterClose: false });
+  if (removeData) {
+    throw new Error('Removing local AetherMesh data is intentionally not implemented in this release');
+  }
+  updateBootstrap({
+    status: 'stopped',
+    background: backgroundStateFromSettings(nextSettings),
+    process: { status: 'stopped', mode: 'temporary-app-managed' },
+  });
+  return bootstrapState;
+}
+
+async function removeLocalAetherMeshData() {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  if (settings.backgroundNodeEnabled) {
+    await disableBackgroundNode();
+  } else {
+    stopTemporaryNode(settings);
+  }
+  if (paths.logsDir && paths.logsDir !== paths.home && fs.existsSync(paths.logsDir)) {
+    fs.rmSync(paths.logsDir, { recursive: true, force: true });
+  }
+  if (fs.existsSync(paths.home)) {
+    fs.rmSync(paths.home, { recursive: true, force: true });
+  }
+  updateBootstrap({
+    status: 'removed-local-data',
+    storage: {},
+    background: { enabled: false, startAtLogin: false, status: 'disabled' },
+    process: { status: 'stopped', mode: 'temporary-app-managed' },
+    logs: ['local AetherMesh data removed'],
+  });
+  return bootstrapState;
 }
 
 function appendBootstrapLog(message) {
@@ -164,17 +396,51 @@ ipcMain.handle('aethermesh:get-state', () => bootstrapState);
 ipcMain.handle('aethermesh:get-dashboard', async () => apiClient.dashboardSnapshot());
 ipcMain.handle('aethermesh:get-health', async () => apiClient.health());
 ipcMain.handle('aethermesh:start-node', async () => {
-  const paths = getAetherMeshPaths(getDefaultAetherMeshHome());
+  const paths = getPaths();
   ensureStorage(paths);
-  if (!supervisor || supervisor.state.status !== 'running') {
-    await startNode(paths);
+  const settings = readSettings(paths);
+  if (settings.backgroundNodeEnabled) {
+    await startBackgroundNode(paths, settings);
+  } else if (!supervisor || supervisor.state.status !== 'running') {
+    await startTemporaryNode(paths, settings);
   }
   return bootstrapState;
 });
 ipcMain.handle('aethermesh:stop-node', async () => {
-  const paths = getAetherMeshPaths(getDefaultAetherMeshHome());
-  stopNode(readSettings(paths).keepNodeRunningAfterClose);
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  if (settings.backgroundNodeEnabled) {
+    const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+    await manager.stopBackgroundNode();
+    updateBootstrap({ process: { status: 'stopped', mode: 'background-os-managed' }, background: { ...backgroundStateFromSettings(settings), status: 'stopped' } });
+  } else {
+    stopTemporaryNode(settings);
+  }
   return bootstrapState;
+});
+ipcMain.handle('aethermesh:restart-node', async () => {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  if (settings.backgroundNodeEnabled) {
+    const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+    await manager.stopBackgroundNode({ ignoreErrors: true });
+    await manager.startBackgroundNode();
+    await waitForApi();
+  } else {
+    stopTemporaryNode(settings);
+    await startTemporaryNode(paths, settings);
+  }
+  return bootstrapState;
+});
+ipcMain.handle('aethermesh:enable-background-node', enableBackgroundNode);
+ipcMain.handle('aethermesh:disable-background-node', () => disableBackgroundNode());
+ipcMain.handle('aethermesh:remove-local-data', removeLocalAetherMeshData);
+ipcMain.handle('aethermesh:check-runtime-updates', () => checkRuntimeUpdates({ restart: true, apply: true }));
+ipcMain.handle('aethermesh:read-background-logs', () => {
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  const manager = backgroundManager || createBackgroundManager(paths, getRuntimeCommand(), settings);
+  return manager.readRecentLogs();
 });
 ipcMain.handle('aethermesh:platform-notes', () => platformNotes());
 
@@ -183,10 +449,23 @@ app.whenReady().then(() => {
   bootstrap();
 });
 
+app.on('before-quit', () => {
+  shutdownStarted = true;
+  const paths = getPaths();
+  const settings = readSettings(paths);
+  stopTemporaryNode(settings);
+  if (backgroundManager && !settings.backgroundNodeEnabled) {
+    backgroundManager.clearPeriodicUpdateChecks();
+  }
+});
+
 app.on('window-all-closed', () => {
-  const paths = getAetherMeshPaths(getDefaultAetherMeshHome());
+  const paths = getPaths();
+  const settings = readSettings(paths);
   try {
-    stopNode(readSettings(paths).keepNodeRunningAfterClose);
+    if (!shutdownStarted) {
+      stopTemporaryNode(settings);
+    }
   } finally {
     if (process.platform !== 'darwin') app.quit();
   }
@@ -196,4 +475,4 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-module.exports = { appendBootstrapLog };
+module.exports = { appendBootstrapLog, backgroundStateFromSettings, defaultSettings, normalizeSettings };
