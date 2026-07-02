@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import http.client
+import json
+import os
+import subprocess  # nosec B404
 import threading
 import webbrowser
+from contextlib import closing
 from typing import Annotated
 
 import typer
@@ -96,7 +101,28 @@ def node_start(
     if dry_run:
         console.print(f"Would start AetherMesh local API on http://{host}:{port}")
         return
+    if _background_mode_enabled():
+        _control_background_node("start")
+        console.print("Started AetherMesh background node.")
+        return
+    if _local_api_is_aethermesh(host=host, port=port):
+        console.print(
+            f"AetherMesh local API is already running on http://{host}:{port}"
+        )
+        return
     _serve(host=host, port=port, open_browser=False)
+
+
+@node_app.command("stop")
+def node_stop() -> None:
+    """Stop the local node runtime."""
+
+    if _background_mode_enabled():
+        _control_background_node("stop")
+        console.print("Stopped AetherMesh background node.")
+        return
+    NodeRuntimeService.default().mark_runtime_stopped()
+    console.print("Marked foreground AetherMesh node stopped.")
 
 
 @app.command()
@@ -180,6 +206,67 @@ def ui(
         console.print(url)
         return
     _serve(host=host, port=port, open_browser=not no_open)
+
+
+def _background_mode_enabled() -> bool:
+    service = NodeRuntimeService.default()
+    settings_path = service.paths.home / "config" / "desktop-settings.json"
+    try:
+        with settings_path.open("r", encoding="utf-8") as handle:
+            settings = json.load(handle)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return False
+    return bool(settings.get("backgroundNodeEnabled"))
+
+
+def _control_background_node(action: str) -> None:
+    if action not in {"start", "stop"}:
+        raise RuntimeServiceError(f"unsupported background action: {action}")
+    if os.name == "nt":
+        command = [
+            "schtasks.exe",
+            "/Run" if action == "start" else "/End",
+            "/TN",
+            "AetherMesh Node",
+        ]
+    elif sys_platform() == "darwin":
+        uid = os.getuid()
+        label = "dev.aethermesh.node"
+        command = (
+            ["launchctl", "kickstart", "-k", f"gui/{uid}/{label}"]
+            if action == "start"
+            else ["launchctl", "kill", "TERM", f"gui/{uid}/{label}"]
+        )
+    else:
+        command = ["systemctl", "--user", action, "aethermesh-node.service"]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)  # nosec B603
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
+        raise typer.BadParameter(
+            f"could not {action} background node: {detail}"
+        ) from exc
+
+
+def _local_api_is_aethermesh(*, host: str, port: int) -> bool:
+    if host not in {"127.0.0.1", "localhost"}:
+        return False
+    try:
+        with closing(http.client.HTTPConnection(host, port, timeout=0.5)) as connection:
+            connection.request("GET", "/health")
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        return False
+    return (
+        isinstance(payload, dict) and payload.get("service") == "aethermesh-local-node"
+    )
+
+
+def sys_platform() -> str:
+    import sys
+
+    return sys.platform
 
 
 def _serve(*, host: str, port: int, open_browser: bool) -> None:

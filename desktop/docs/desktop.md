@@ -1,60 +1,115 @@
-# AetherMesh Desktop MVP
+# AetherMesh Desktop
 
-AetherMesh Desktop is an Electron launcher with a bundled AetherMesh runtime sidecar.
+AetherMesh Desktop is an Electron controller/viewer with a bundled AetherMesh runtime sidecar.
 
-## Why Electron
+## Runtime model
 
-The repo does not currently contain a JavaScript/React/Vite web app to wrap, and the existing UI/API boundary is already localhost-oriented. Electron is the smallest practical cross-platform path here because it can ship a packaged HTML/CSS/JS shell while supervising a bundled node runtime process.
-
-The desktop app remains a controller/viewer:
-
-```text
-AetherMesh Desktop
-  -> packaged HTML/CSS/JS dashboard
-  -> bundled runtime sidecar in app resources
-  -> runs aethermesh-node init
-  -> supervises aethermesh-node node start --host 127.0.0.1 --port 7280
-  -> reads local API JSON endpoints
-```
-
-The UI is not the node process.
-
-## Runtime sidecar
-
-Production desktop builds do not ask normal users to install Python, open a terminal, or run pip. The installer includes a platform-specific runtime binary:
+The UI is not the node process. The packaged app includes a platform-specific runtime binary:
 
 - macOS: `aethermesh-node`
 - Windows: `aethermesh-node.exe`
 - Linux: `aethermesh-node`
 
-The runtime is built from the Python package with PyInstaller and copied into Electron resources under `runtime/`. The Electron main process resolves that bundled binary in packaged builds and starts it directly.
+Production desktop builds do not ask normal users to install Python, run pip, or install a global CLI. Python detection, venv creation, and package install helpers remain development/repair fallback utilities only.
 
-Python detection, venv creation, and package install helpers remain in the source tree as development/repair fallback utilities only. They are not the normal user startup path.
+## Two node modes
+
+### Temporary app-managed mode
+
+This is the default when the user has not enabled background mode:
+
+```text
+AetherMesh Desktop
+  -> bundled runtime sidecar in app resources
+  -> aethermesh-node init
+  -> aethermesh-node node start --host 127.0.0.1 --port 7280
+  -> stop supervised child process when the app/window closes
+```
+
+### Background OS-managed mode
+
+When the user enables **Run AetherMesh in the background**, the app copies the bundled runtime into a stable per-user runtime directory and registers it with the operating system:
+
+- macOS: `~/Library/Application Support/AetherMesh/runtime/aethermesh-node`
+- Windows: `%LOCALAPPDATA%/AetherMesh/runtime/aethermesh-node.exe`
+- Linux: `~/.local/share/aethermesh/runtime/aethermesh-node`
+
+The OS then manages startup/restart:
+
+- macOS: per-user LaunchAgent at `~/Library/LaunchAgents/dev.aethermesh.node.plist`
+- Windows: per-user Task Scheduler task named `AetherMesh Node`
+- Linux: systemd user service at `~/.config/systemd/user/aethermesh-node.service`
+
+Closing the Electron window or quitting the app does not stop the OS-managed node while background mode is enabled. Disabling background mode stops/unregisters the OS-managed node but leaves user data intact.
 
 ## Storage
 
 The launcher uses per-user app storage:
 
 - macOS: `~/Library/Application Support/AetherMesh/`
-- Windows: `%APPDATA%/AetherMesh/`
-- Linux: `${XDG_DATA_HOME}/AetherMesh/` or `~/.local/share/AetherMesh/`
+- Windows: `%LOCALAPPDATA%/AetherMesh/`
+- Linux: `${XDG_DATA_HOME}/aethermesh/` or `~/.local/share/aethermesh/`
 
-Inside that folder it keeps:
+Recommended log locations:
 
-- `logs/` launcher/node logs
+- macOS: `~/Library/Logs/AetherMesh/node.log`
+- Windows: `%LOCALAPPDATA%/AetherMesh/logs/node.log`
+- Linux: `${XDG_STATE_HOME}/aethermesh/logs/node.log` or `~/.local/state/aethermesh/logs/node.log`
+
+Inside the data folder it keeps:
+
+- `runtime/` stable copied runtime
 - `config/desktop-settings.json`
-- `metadata/process-state.json`
-- local node data owned by the bundled runtime via `AETHERMESH_HOME`
+- `metadata/runtime.json`
+- `metadata/runtime.previous.json` when a runtime update replaces an older runtime
+- `metadata/cli.json` for CLI shim status and verification metadata
+- local node data owned by the runtime via `AETHERMESH_HOME`
+
+## AetherMesh CLI
+
+On first run, the desktop app automatically installs a per-user `aethermesh` CLI shim. The shim points at the stable runtime path, so runtime updates automatically update what terminal users run. The app does not install a second independent binary and does not require admin/root permissions.
+
+- macOS/Linux CLI shim: `~/.local/bin/aethermesh`
+- Windows CMD shim: `%LOCALAPPDATA%/AetherMesh/bin/aethermesh.cmd`
+- Windows PowerShell shim: `%LOCALAPPDATA%/AetherMesh/bin/aethermesh.ps1`
+
+Users can repair, reinstall, or uninstall the CLI from the app. Uninstalling CLI wrappers does not remove the stable runtime, background node registration, user data, config, or node identity. See `desktop/docs/cli.md`.
 
 ## Startup flow
 
-1. Resolve bundled runtime sidecar from app resources.
-2. Create app data directories.
-3. Reconnect to an already-running local API if one is reachable.
-4. Otherwise run `aethermesh-node init`.
-5. Start `aethermesh-node node start --host 127.0.0.1 --port 7280`.
-6. Wait for the local API to become reachable.
-7. Load dashboard data from the local API.
+1. Create per-user storage/log/runtime directories.
+2. Resolve the bundled runtime sidecar from app resources.
+3. Health-check `http://127.0.0.1:7280/health`.
+4. Copy/update the bundled runtime into the stable runtime path.
+5. Automatically install or repair the per-user `aethermesh` CLI shim.
+6. If healthy, reconnect the UI to the already-running node.
+7. If unhealthy and background mode is enabled, ask the OS background manager to start the registered node, then health-check again.
+8. If background mode is disabled, use the temporary supervised sidecar process.
+9. Check whether the stable runtime needs to be updated from the bundled runtime.
+10. Schedule periodic runtime update checks every 60 seconds.
+
+## Runtime update behavior
+
+Runtime updates compare the installed stable runtime metadata with the bundled runtime from the current app build:
+
+- version
+- sha256
+- source path
+- installed path
+- installed timestamp
+
+When the bundled runtime is newer or has a different hash, the app:
+
+1. Stops the background node if it is running.
+2. Copies the new runtime to a temporary file.
+3. Marks it executable on macOS/Linux.
+4. Atomically renames it over the stable runtime.
+5. Writes backup metadata for the previous runtime.
+6. Re-runs `aethermesh-node init`.
+7. Re-verifies the CLI shim metadata.
+8. Restarts the background node if background mode was enabled.
+
+Updates preserve CLI shims, config, data, node identity, keys, peers, and contribution data. Future gossip-triggered update checks should call this same update path.
 
 ## Development commands
 
@@ -79,17 +134,19 @@ Development mode can run against `AETHERMESH_RUNTIME_PATH=/path/to/aethermesh-no
 
 Electron Builder is configured for:
 
-- macOS `.app`/`.dmg`
+- macOS `.dmg`
 - Windows NSIS `.exe`
-- Linux `AppImage` and `.deb`
+- Linux `.deb`
 
-The release workflow builds the sidecar and desktop app per platform/architecture matrix and attaches artifacts to tagged GitHub releases. Release names use the actual source archive hash suffix:
+The release workflow builds one installer per platform/architecture matrix and attaches exactly those installers to the latest GitHub release. Release names use the actual source archive hash suffix:
 
 ```text
 0.2.0-alpha - (...<last 5 chars of source archive sha256>)
 ```
 
-GitHub releases are created/edited with `--latest` so the newest release is marked current/latest when GitHub supports it.
+## Manual validation
+
+See `desktop/docs/background-node.md` for the platform-specific manual test plan.
 
 ## Security defaults
 
@@ -97,13 +154,18 @@ GitHub releases are created/edited with `--latest` so the newest release is mark
 - No curl/bash remote script execution.
 - No silent system Python install.
 - No global pip install.
-- No PATH mutation by default.
+- No system-wide CLI install by default.
+- Per-user CLI shim points at the stable runtime; it does not copy a second independent binary.
+- User PATH may be updated only through user-owned shell config or user-level Windows environment settings.
 - Local API binds to `127.0.0.1` by default.
+- No LAN/WAN API exposure by default.
+- No admin/root daemon by default.
 - No telemetry.
 - No centralized AetherMesh infrastructure.
 
-## Current MVP limits
+## Deferred work
 
-- Runtime sidecars are built with PyInstaller, not signed app-update infrastructure yet.
-- Normal app/runtime updates are manual release downloads for now.
-- Optional terminal CLI exposure is intentionally deferred; future versions can add a safe shim/symlink button.
+- Developer ID signing and notarization for frictionless macOS first launch.
+- Optional system-wide terminal CLI exposure via an explicit future advanced install action.
+- Advanced admin/system-wide service mode.
+- Dynamic update check intervals driven by gossip/outdated-version signals.

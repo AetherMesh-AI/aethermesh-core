@@ -3,6 +3,9 @@ const els = {
   bootstrap: document.getElementById('bootstrap-status'),
   package: document.getElementById('package-status'),
   api: document.getElementById('api-status'),
+  background: document.getElementById('background-status'),
+  cli: document.getElementById('cli-status'),
+  onboarding: document.getElementById('background-onboarding'),
   peers: document.getElementById('peer-list'),
   capabilities: document.getElementById('capability-list'),
   logs: document.getElementById('logs'),
@@ -10,6 +13,18 @@ const els = {
   refresh: document.getElementById('refresh'),
   start: document.getElementById('start'),
   stop: document.getElementById('stop'),
+  restart: document.getElementById('restart'),
+  enableBackground: document.getElementById('enable-background'),
+  enableBackgroundOnboarding: document.getElementById('enable-background-onboarding'),
+  disableBackground: document.getElementById('disable-background'),
+  checkUpdates: document.getElementById('check-updates'),
+  viewBackgroundLogs: document.getElementById('view-background-logs'),
+  removeLocalData: document.getElementById('remove-local-data'),
+  repairCli: document.getElementById('repair-cli'),
+  reinstallCli: document.getElementById('reinstall-cli'),
+  uninstallCli: document.getElementById('uninstall-cli'),
+  copyCliPath: document.getElementById('copy-cli-path'),
+  openCliDocs: document.getElementById('open-cli-docs'),
 };
 
 let bootstrapState = {};
@@ -25,6 +40,14 @@ function setRows(target, rows) {
   }
 }
 
+function formatBool(value) {
+  return value ? 'enabled' : 'disabled';
+}
+
+function shortHash(value) {
+  return value ? `${value.slice(0, 12)}…` : 'not installed';
+}
+
 function setBootstrap(state) {
   bootstrapState = state || {};
   setRows(els.bootstrap, [
@@ -32,10 +55,45 @@ function setBootstrap(state) {
     ['Runtime', bootstrapState.runtime?.command || 'checking'],
     ['Runtime mode', bootstrapState.runtime?.mode || 'bundled'],
     ['Process', bootstrapState.process?.status || 'stopped'],
+    ['Process mode', bootstrapState.process?.mode || 'temporary-app-managed'],
     ['Storage', bootstrapState.storage?.home || 'pending'],
     ['Error', bootstrapState.error || 'none'],
   ]);
+  renderBackground(bootstrapState);
+  renderCli(bootstrapState);
   els.logs.textContent = (bootstrapState.logs || []).join('\n') || 'Waiting for bootstrap...';
+}
+
+function renderBackground(state) {
+  const bg = state.background || {};
+  const update = state.update || {};
+  setRows(els.background, [
+    ['Node status', state.process?.status || 'stopped'],
+    ['Mode', bg.enabled ? 'Background OS-managed' : 'Temporary app-managed'],
+    ['API URL', bg.apiUrl || 'http://127.0.0.1:7280'],
+    ['Start at login', formatBool(bg.startAtLogin)],
+    ['Runtime path', bg.installedRuntimePath || state.runtime?.stablePath || 'not installed'],
+    ['Runtime version', bg.installedRuntimeVersion || bg.runtime?.version || 'not installed'],
+    ['Runtime sha256', shortHash(bg.installedRuntimeSha256 || bg.runtime?.sha256)],
+    ['Last update check', bg.lastUpdateCheckTimestamp || update.lastCheck || 'never'],
+    ['Update status', update.error || update.status || 'idle'],
+  ]);
+  els.onboarding.hidden = Boolean(bg.enabled);
+}
+
+function renderCli(state) {
+  const cli = state.cli || {};
+  setRows(els.cli, [
+    ['CLI status', cli.status || 'Not installed'],
+    ['CLI command', cli.command || 'aethermesh'],
+    ['CLI path', cli.shimPath || 'not installed'],
+    ['Runtime target path', cli.targetRuntimePath || state.runtime?.stablePath || 'not installed'],
+    ['Runtime version', cli.runtimeVersion || 'not installed'],
+    ['Runtime sha256', shortHash(cli.runtimeSha256)],
+    ['PATH status', cli.pathStatus || 'unknown'],
+    ['Last verified', cli.lastVerifiedAt || 'never'],
+    ['Error', cli.error || 'none'],
+  ]);
 }
 
 async function refreshDashboard() {
@@ -52,6 +110,10 @@ async function refreshDashboard() {
 
   if (!health.reachable) {
     setRows(els.node, [['Status', state.process?.status || 'starting']]);
+    setRows(els.package, [
+      ['Installed', state.package?.installed ? 'yes' : 'no'],
+      ['Source', state.package?.source || 'bundled-runtime'],
+    ]);
     return;
   }
 
@@ -70,8 +132,8 @@ async function refreshDashboard() {
   ]);
   setRows(els.settings, [
     ['Runtime source', state.runtime?.mode || 'bundled'],
-    ['Package updates', 'manual app/runtime updates'],
-    ['Keep node running after close', 'off'],
+    ['Package updates', 'bundled runtime updates'],
+    ['Keep node running after close', formatBool(state.background?.keepNodeRunningAfterClose)],
     ['API bind', `${dashboard.status.api.host}:${dashboard.status.api.port}`],
     ['Advanced logs', 'off'],
   ]);
@@ -106,9 +168,42 @@ function renderCapabilities(capabilities) {
   }
 }
 
+function runAction(action) {
+  return action().then(refreshDashboard).catch(showError);
+}
+
 els.refresh.addEventListener('click', () => refreshDashboard().catch(showError));
-els.start.addEventListener('click', () => window.aethermesh.startNode().then(refreshDashboard).catch(showError));
-els.stop.addEventListener('click', () => window.aethermesh.stopNode().then(refreshDashboard).catch(showError));
+els.start.addEventListener('click', () => runAction(() => window.aethermesh.startNode()));
+els.stop.addEventListener('click', () => runAction(() => window.aethermesh.stopNode()));
+els.restart.addEventListener('click', () => runAction(() => window.aethermesh.restartNode()));
+els.enableBackground.addEventListener('click', () => runAction(() => window.aethermesh.enableBackgroundNode()));
+els.enableBackgroundOnboarding.addEventListener('click', () => runAction(() => window.aethermesh.enableBackgroundNode()));
+els.disableBackground.addEventListener('click', () => runAction(() => window.aethermesh.disableBackgroundNode()));
+els.checkUpdates.addEventListener('click', () => runAction(() => window.aethermesh.checkRuntimeUpdates()));
+els.viewBackgroundLogs.addEventListener('click', () => window.aethermesh.readBackgroundLogs().then((logs) => {
+  els.logs.textContent = logs || 'No background logs yet.';
+}).catch(showError));
+els.removeLocalData.addEventListener('click', () => {
+  const confirmed = window.confirm('Remove local AetherMesh data, config, runtime metadata, and logs from this user account? This cannot be undone.');
+  if (confirmed) {
+    runAction(() => window.aethermesh.removeLocalData());
+  }
+});
+els.repairCli.addEventListener('click', () => runAction(() => window.aethermesh.repairCli()));
+els.reinstallCli.addEventListener('click', () => runAction(() => window.aethermesh.reinstallCli()));
+els.uninstallCli.addEventListener('click', () => runAction(() => window.aethermesh.uninstallCli()));
+els.copyCliPath.addEventListener('click', async () => {
+  const command = bootstrapState.cli?.pathSetupCommand;
+  if (!command) {
+    els.logs.textContent = 'CLI bin directory is already on PATH.';
+    return;
+  }
+  await navigator.clipboard.writeText(command);
+  els.logs.textContent = `Copied PATH setup command:\n${command}`;
+});
+els.openCliDocs.addEventListener('click', () => {
+  els.logs.textContent = 'CLI docs: desktop/docs/cli.md';
+});
 window.aethermesh.onState(setBootstrap);
 
 function showError(error) {
