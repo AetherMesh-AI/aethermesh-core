@@ -30,6 +30,9 @@ aethermesh-core = "aethermesh_core.cli:main"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.data-files]
+"wordlists/node-names" = ["wordlists/node-names/*.txt"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

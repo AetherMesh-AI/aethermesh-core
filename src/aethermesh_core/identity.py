@@ -8,6 +8,7 @@ import os
 import platform
 import re
 import subprocess  # nosec B404 - fixed local hardware probe commands only; no user input.
+from functools import lru_cache
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -32,6 +33,14 @@ UNKNOWN_GPU_COUNT = "UNKNOWN_GPU_COUNT"
 UNKNOWN_GPU_VRAM = "UNKNOWN_GPU_VRAM"
 UNKNOWN_RAM_GB = "UNKNOWN_RAM_GB"
 NO_GPU_DETECTED = "NO_GPU_DETECTED"
+NODE_NAME_WORDLIST_SIZE = 16384
+NODE_NAME_WORDLIST_DIR = Path(__file__).parents[2] / "wordlists" / "node-names"
+NODE_NAME_WORDLIST_FILES = {
+    "cpu": "cpu-traits.txt",
+    "mac": "mac-signals.txt",
+    "gpu": "gpu-compute.txt",
+    "ram": "ram-memory.txt",
+}
 
 FileReader = Callable[[str], str]
 CommandRunner = Callable[..., str]
@@ -90,15 +99,25 @@ def load_or_create_identity(
     if identity_path.exists():
         return _load_identity(identity_path)
 
+    node_id = deterministic_machine_node_id(
+        goos=goos,
+        read_file=read_file,
+        run_command=run_command,
+        read_hostname=read_hostname,
+        hardware_inputs=hardware_inputs,
+        account_id=account_id,
+    )
     identity = NodeIdentity(
-        node_id=deterministic_machine_node_id(
+        node_id=node_id,
+        node_name=deterministic_machine_node_name(
             goos=goos,
             read_file=read_file,
             run_command=run_command,
             read_hostname=read_hostname,
             hardware_inputs=hardware_inputs,
             account_id=account_id,
-        )
+            node_id=node_id,
+        ),
     )
     _save_identity(identity_path, identity)
     return identity
@@ -122,19 +141,51 @@ def deterministic_machine_node_id(
     """
 
     del account_id, read_hostname
-    hardware = hardware_inputs or collect_hardware_identity_inputs(
-        goos=_default_goos() if goos is None else goos,
-        read_file=_read_text_file if read_file is None else read_file,
-        run_command=_run_command if run_command is None else run_command,
-    )
+    hardware = _resolved_hardware_inputs(goos, read_file, run_command, hardware_inputs)
     hashes = _component_hashes(hardware)
     root_json = _canonical_root_json(hashes)
     node_id = _sha256_hex(root_json)
     if debug:
         print_hardware_node_id_debug(
-            hashes=hashes, root_json=root_json, node_id=node_id, output=output
+            hashes=hashes,
+            root_json=root_json,
+            node_id=node_id,
+            node_name=_node_name_from_hashes(hashes, node_id),
+            output=output,
         )
     return node_id
+
+
+def deterministic_machine_node_name(
+    *,
+    node_id: str | None = None,
+    account_id: str | None = None,
+    hardware_inputs: HardwareIdentityInputs | None = None,
+    read_hostname: Callable[[], str] | None = None,
+    run_command: Callable[..., str] | None = None,
+    read_file: Callable[[str], str] | None = None,
+    goos: str | None = None,
+) -> str:
+    """Return the deterministic display-only node name for hardware inputs."""
+
+    del account_id, read_hostname
+    hardware = _resolved_hardware_inputs(goos, read_file, run_command, hardware_inputs)
+    hashes = _component_hashes(hardware)
+    effective_node_id = node_id or _sha256_hex(_canonical_root_json(hashes))
+    return _node_name_from_hashes(hashes, effective_node_id)
+
+
+def _resolved_hardware_inputs(
+    goos: str | None,
+    read_file: Callable[[str], str] | None,
+    run_command: Callable[..., str] | None,
+    hardware_inputs: HardwareIdentityInputs | None,
+) -> HardwareIdentityInputs:
+    return hardware_inputs or collect_hardware_identity_inputs(
+        goos=_default_goos() if goos is None else goos,
+        read_file=_read_text_file if read_file is None else read_file,
+        run_command=_run_command if run_command is None else run_command,
+    )
 
 
 def collect_hardware_identity_inputs(
@@ -172,6 +223,7 @@ def print_hardware_node_id_debug(
     hashes: HardwareComponentHashes,
     root_json: str,
     node_id: str,
+    node_name: str,
     output: TextIO | None = None,
 ) -> None:
     """Print the full hardware-root derivation in a readable debug format."""
@@ -188,6 +240,7 @@ def print_hardware_node_id_debug(
         f"[DEBUG] RAM_HASH = {hashes.ram_hash}",
         f"[DEBUG] ROOT_JSON = {root_json}",
         f"[DEBUG] NODE_ID = {node_id}",
+        f"[DEBUG] NODE_NAME = {node_name}",
     ]
     print("\n".join(lines), file=destination)
 
@@ -236,6 +289,36 @@ def _canonical_root_json(hashes: HardwareComponentHashes) -> str:
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def _node_name_from_hashes(hashes: HardwareComponentHashes, node_id: str) -> str:
+    wordlists = _node_name_wordlists()
+    words = (
+        wordlists["cpu"][_index_from_hash(hashes.cpu_hash)],
+        wordlists["mac"][_index_from_hash(hashes.mac_hash)],
+        wordlists["gpu"][_index_from_hash(hashes.gpu_hash)],
+        wordlists["ram"][_index_from_hash(hashes.ram_hash)],
+    )
+    return f"{'-'.join(words)}_{node_id[:6]}"
+
+
+def _index_from_hash(hash_hex: str) -> int:
+    return int(hash_hex[:16], 16) % NODE_NAME_WORDLIST_SIZE
+
+
+@lru_cache(maxsize=1)
+def _node_name_wordlists() -> dict[str, tuple[str, ...]]:
+    wordlist_dir = _node_name_wordlist_dir()
+    return {
+        key: tuple((wordlist_dir / filename).read_text(encoding="ascii").splitlines())
+        for key, filename in NODE_NAME_WORDLIST_FILES.items()
+    }
+
+
+def _node_name_wordlist_dir() -> Path:
+    if NODE_NAME_WORDLIST_DIR.exists():
+        return NODE_NAME_WORDLIST_DIR
+    return Path(sys.prefix) / "wordlists" / "node-names"
 
 
 def _gpu_input(hardware: HardwareIdentityInputs) -> str:
@@ -756,7 +839,12 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'node.node_id' must be a non-empty string"
         )
-    return NodeIdentity(node_id=node_id)
+    node_name = node.get("node_name")
+    if node_name is not None and (not isinstance(node_name, str) or not node_name):
+        raise IdentityPersistenceError(
+            "identity JSON field 'node.node_name' must be a non-empty string when present"
+        )
+    return NodeIdentity(node_id=node_id, node_name=node_name)
 
 
 def _save_identity(path: Path, identity: NodeIdentity) -> None:
@@ -770,7 +858,10 @@ def _save_identity(path: Path, identity: NodeIdentity) -> None:
 
 
 def _identity_document(identity: NodeIdentity) -> dict[str, object]:
+    node: dict[str, object] = {"node_id": identity.node_id}
+    if identity.node_name is not None:
+        node["node_name"] = identity.node_name
     return {
         "version": IDENTITY_SCHEMA_VERSION,
-        "node": {"node_id": identity.node_id},
+        "node": node,
     }

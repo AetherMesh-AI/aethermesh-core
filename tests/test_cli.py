@@ -1248,6 +1248,10 @@ class CliTests(unittest.TestCase):
                 "aethermesh_core.cli.deterministic_machine_node_id",
                 return_value="local-stable-machine",
             ),
+            patch(
+                "aethermesh_core.cli.deterministic_machine_node_name",
+                return_value="lucid-beacon-tensor-vault_localx",
+            ),
             contextlib.redirect_stdout(stdout),
         ):
             exit_code = main(["run-demo", "--message", "hello mesh"])
@@ -1255,6 +1259,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["node_id"], "local-stable-machine")
+        self.assertEqual(payload["node_name"], "lucid-beacon-tensor-vault_localx")
         self.assertEqual(payload["output"], "hello mesh")
 
     def test_run_demo_identity_path_creates_and_reuses_node_id(self) -> None:
@@ -1289,10 +1294,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(first_exit, 0)
         self.assertEqual(second_exit, 0)
         self.assertRegex(first_payload["node_id"], r"^[0-9a-f]{64}$")
+        self.assertRegex(
+            first_payload["node_name"], r"^[a-z]+-[a-z]+-[a-z]+-[a-z]+_[a-f0-9]{6}$"
+        )
         self.assertFalse(first_payload["node_id"].startswith("local-"))
         self.assertEqual(second_payload["node_id"], first_payload["node_id"])
+        self.assertEqual(second_payload["node_name"], first_payload["node_name"])
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(persisted["node"]["node_id"], first_payload["node_id"])
+        self.assertEqual(persisted["node"]["node_name"], first_payload["node_name"])
         self.assertNotIn("validation", first_payload)
         self.assertNotIn("ledger_summary", first_payload)
 

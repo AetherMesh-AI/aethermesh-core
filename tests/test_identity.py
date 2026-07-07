@@ -9,6 +9,7 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from aethermesh_core import identity as identity_module
 from aethermesh_core.identity import (
     HardwareIdentityInputs,
     IdentityPersistenceError,
@@ -20,6 +21,8 @@ from aethermesh_core.identity import (
     _default_goos,
     _extract_labeled_value,
     _extract_mac_addresses,
+    _identity_document,
+    _index_from_hash,
     _linux_gpu_device_id,
     _linux_gpu_model,
     _linux_gpu_vendor,
@@ -27,6 +30,9 @@ from aethermesh_core.identity import (
     _linux_physical_core_count,
     _max_csv_int,
     _max_gpu_vram_gb,
+    _node_name_from_hashes,
+    _node_name_wordlist_dir,
+    _node_name_wordlists,
     _normalize_mac_address,
     _physical_core_count_fallback,
     _physical_mac_addresses,
@@ -39,8 +45,10 @@ from aethermesh_core.identity import (
     _vram_value_to_gb,
     collect_hardware_identity_inputs,
     deterministic_machine_node_id,
+    deterministic_machine_node_name,
     load_or_create_identity,
 )
+from aethermesh_core.models import NodeIdentity
 
 
 def _hardware(**overrides: object) -> HardwareIdentityInputs:
@@ -72,6 +80,107 @@ def _expected_node_id(hardware: HardwareIdentityInputs) -> str:
 
 
 class IdentityPersistenceTests(unittest.TestCase):
+    def test_node_name_wordlists_exist_and_are_valid(self) -> None:
+        wordlists = _node_name_wordlists()
+        self.assertEqual(set(wordlists), {"cpu", "mac", "gpu", "ram"})
+        for words in wordlists.values():
+            self.assertEqual(len(words), 16384)
+            self.assertEqual(len(set(words)), 16384)
+            for word in words:
+                self.assertRegex(word, r"^[a-z]+$")
+                self.assertGreaterEqual(len(word), 3)
+
+    def test_packaged_wordlist_dir_falls_back_to_install_prefix(self) -> None:
+        with patch.object(
+            identity_module, "NODE_NAME_WORDLIST_DIR", Path("/definitely/missing")
+        ):
+            with patch.object(sys, "prefix", "/tmp/aethermesh-prefix"):
+                self.assertEqual(
+                    _node_name_wordlist_dir(),
+                    Path("/tmp/aethermesh-prefix") / "wordlists" / "node-names",
+                )
+
+    def test_deterministic_node_name_uses_component_hash_words_and_node_tag(
+        self,
+    ) -> None:
+        hardware = _hardware()
+        hashes = _component_hashes(hardware)
+        node_id = deterministic_machine_node_id(hardware_inputs=hardware)
+        node_name = deterministic_machine_node_name(hardware_inputs=hardware)
+        wordlists = _node_name_wordlists()
+
+        self.assertRegex(node_name, r"^[a-z]+-[a-z]+-[a-z]+-[a-z]+_[a-f0-9]{6}$")
+        self.assertEqual(node_name.rsplit("_", 1)[1], node_id[:6])
+        self.assertEqual(
+            node_name,
+            "-".join(
+                [
+                    wordlists["cpu"][_index_from_hash(hashes.cpu_hash)],
+                    wordlists["mac"][_index_from_hash(hashes.mac_hash)],
+                    wordlists["gpu"][_index_from_hash(hashes.gpu_hash)],
+                    wordlists["ram"][_index_from_hash(hashes.ram_hash)],
+                ]
+            )
+            + f"_{node_id[:6]}",
+        )
+        self.assertEqual(
+            node_name, deterministic_machine_node_name(hardware_inputs=hardware)
+        )
+        self.assertEqual(node_id, _expected_node_id(hardware))
+        self.assertFalse(node_id.startswith("local-"))
+
+    def test_changing_component_hashes_changes_matching_node_name_word(self) -> None:
+        baseline_hashes = _component_hashes(_hardware())
+        baseline_id = deterministic_machine_node_id(hardware_inputs=_hardware())
+        baseline_words = (
+            _node_name_from_hashes(baseline_hashes, baseline_id)
+            .split("_", 1)[0]
+            .split("-")
+        )
+
+        scenarios = [
+            ("cpu", _hardware(cpu_brand_or_chip_name="Apple M3 Ultra"), 0),
+            (
+                "mac",
+                _hardware(
+                    permanent_mac_addresses=("AA:BB:CC:DD:EE:FF", "77:88:99:AA:BB:CC")
+                ),
+                1,
+            ),
+            ("gpu", _hardware(gpu_model_or_chip_name="M4 Ultra GPU"), 2),
+            ("ram", _hardware(total_installed_ram_gb=96), 3),
+        ]
+        for _label, hardware, changed_index in scenarios:
+            changed_hashes = _component_hashes(hardware)
+            changed_id = deterministic_machine_node_id(hardware_inputs=hardware)
+            changed_words = (
+                _node_name_from_hashes(changed_hashes, changed_id)
+                .split("_", 1)[0]
+                .split("-")
+            )
+            self.assertNotEqual(
+                changed_words[changed_index], baseline_words[changed_index]
+            )
+            for stable_index in set(range(4)) - {changed_index}:
+                self.assertEqual(
+                    changed_words[stable_index], baseline_words[stable_index]
+                )
+
+    def test_changing_node_id_changes_only_node_name_suffix(self) -> None:
+        hashes = _component_hashes(_hardware())
+        first = _node_name_from_hashes(hashes, "a" * 64)
+        second = _node_name_from_hashes(hashes, "b" * 64)
+
+        self.assertEqual(first.split("_", 1)[0], second.split("_", 1)[0])
+        self.assertTrue(first.endswith("_aaaaaa"))
+        self.assertTrue(second.endswith("_bbbbbb"))
+
+    def test_legacy_identity_document_can_omit_node_name(self) -> None:
+        self.assertEqual(
+            _identity_document(NodeIdentity(node_id="legacy-node")),
+            {"version": 1, "node": {"node_id": "legacy-node"}},
+        )
+
     def test_missing_identity_file_is_created_with_hardware_root_node_id(self) -> None:
         hardware = _hardware()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -81,10 +190,17 @@ class IdentityPersistenceTests(unittest.TestCase):
             persisted = json.loads(identity_path.read_text(encoding="utf-8"))
 
         self.assertEqual(identity.node_id, _expected_node_id(hardware))
+        self.assertEqual(
+            identity.node_name,
+            deterministic_machine_node_name(hardware_inputs=hardware),
+        )
         self.assertFalse(identity.node_id.startswith("local-"))
         self.assertEqual(
             persisted,
-            {"version": 1, "node": {"node_id": identity.node_id}},
+            {
+                "version": 1,
+                "node": {"node_id": identity.node_id, "node_name": identity.node_name},
+            },
         )
 
     def test_same_hardware_inputs_always_produce_same_node_id(self) -> None:
@@ -257,6 +373,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertIn("[DEBUG] RAM_HASH = ", debug_text)
         self.assertIn("[DEBUG] ROOT_JSON = ", debug_text)
         self.assertIn(f"[DEBUG] NODE_ID = {node_id}", debug_text)
+        self.assertIn("[DEBUG] NODE_NAME = ", debug_text)
 
     def test_hardware_inputs_are_collected_without_account_or_install_identifiers(
         self,

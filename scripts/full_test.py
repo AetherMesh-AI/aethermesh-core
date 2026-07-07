@@ -83,6 +83,8 @@ def _base_checks(base: str) -> list[Check]:
                 "0",
                 "--exclude-path-prefix",
                 "graphify-out/",
+                "--exclude-path-prefix",
+                "wordlists/node-names/",
             ),
         ),
     ]

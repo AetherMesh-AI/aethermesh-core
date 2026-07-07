@@ -25,6 +25,7 @@ from aethermesh_core.runtime_service import (
     _config_api_host,
     _config_api_port,
     _config_node_id,
+    _config_node_name,
     _default_home,
     _memory_total_bytes,
     _merge_config,
@@ -74,6 +75,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 {
                     "initialized",
                     "node_id",
+                    "node_name",
                     "home",
                     "config_path",
                     "data_dir",
@@ -101,6 +103,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 {
                     "initialized",
                     "node_id",
+                    "node_name",
                     "status",
                     "version",
                     "uptime_seconds",
@@ -118,6 +121,14 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertTrue(status["initialized"])
+            self.assertRegex(
+                str(status["node_name"]),
+                r"^[a-z]+-[a-z]+-[a-z]+-[a-z]+_[a-f0-9]{6}$",
+            )
+            self.assertEqual(initialized["node_name"], status["node_name"])
+            self.assertEqual(
+                str(status["node_name"]).rsplit("_", 1)[1], status["node_id"][:6]
+            )
             self.assertEqual(status["status"], "stopped")
             self.assertIsNone(status["uptime_seconds"])
             self.assertIsNone(status["pid"])
@@ -144,6 +155,7 @@ class RuntimeServiceTests(unittest.TestCase):
             config = json.loads((Path(temp_dir) / "config.json").read_text())
             self.assertEqual(config["version"], 1)
             self.assertEqual(config["node"]["node_id"], status["node_id"])
+            self.assertEqual(config["node"]["node_name"], status["node_name"])
             self.assertEqual(config["node"]["status"], "local_only")
             self.assertEqual(config["paths"]["home"], str(Path(temp_dir)))
             self.assertEqual(config["paths"]["data_dir"], str(Path(temp_dir) / "data"))
@@ -236,6 +248,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(config["custom"], "kept")
             self.assertEqual(config["node"]["label"], "dev")
             self.assertEqual(config["node"]["node_id"], result["node_id"])
+            self.assertEqual(config["node"]["node_name"], result["node_name"])
             self.assertEqual(config["api"], {"host": "localhost", "port": 9999})
             self.assertEqual(len(service.recent_logs(limit=2)["events"]), 2)
 
@@ -318,6 +331,14 @@ class RuntimeServiceTests(unittest.TestCase):
         self.assertIsNone(_config_node_id({"node": []}))
         self.assertEqual(_config_node_id({"node": {"node_id": "node-a"}}), "node-a")
         self.assertIsNone(_config_node_id({"node": {"node_id": ""}}))
+        self.assertIsNone(_config_node_name({"node": []}))
+        self.assertEqual(
+            _config_node_name(
+                {"node": {"node_name": "lucid-beacon-tensor-vault_bd0e94"}}
+            ),
+            "lucid-beacon-tensor-vault_bd0e94",
+        )
+        self.assertIsNone(_config_node_name({"node": {"node_name": ""}}))
         self.assertEqual(_config_api_host({"api": {"host": 7}}), "127.0.0.1")
         self.assertEqual(_config_api_host({"api": {"host": "localhost"}}), "localhost")
         self.assertEqual(_config_api_host({}), "127.0.0.1")

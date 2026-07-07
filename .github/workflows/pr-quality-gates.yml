@@ -282,7 +282,7 @@ jobs:
       - name: PR size stays reviewable
         run: |
           git fetch origin "${GITHUB_BASE_REF:-main}" --depth=1
-          python scripts/ci_quality_gates.py pr-size --base "origin/${GITHUB_BASE_REF:-main}" --max-files 80 --max-lines 10000 --max-binary-files 0 --exclude-path-prefix graphify-out/
+          python scripts/ci_quality_gates.py pr-size --base "origin/${GITHUB_BASE_REF:-main}" --max-files 80 --max-lines 10000 --max-binary-files 0 --exclude-path-prefix graphify-out/ --exclude-path-prefix wordlists/node-names/
 
   python-flaky-test-check:
     name: Python - Flaky Test Check
