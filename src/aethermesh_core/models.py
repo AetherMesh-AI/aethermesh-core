@@ -12,6 +12,7 @@ class NodeIdentity:
     """Identity for one local node."""
 
     node_id: str
+    node_name: str | None = None
 
     @classmethod
     def ephemeral(cls) -> "NodeIdentity":

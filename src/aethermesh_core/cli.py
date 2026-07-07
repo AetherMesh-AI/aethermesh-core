@@ -17,6 +17,7 @@ from aethermesh_core.flow_audit import FlowAuditError, audit_local_flow
 from aethermesh_core.identity import (
     IdentityPersistenceError,
     deterministic_machine_node_id,
+    deterministic_machine_node_name,
     load_or_create_identity,
 )
 from aethermesh_core.job_manifest import (
@@ -455,12 +456,20 @@ def run_demo(
     if identity_path is not None:
         identity = load_or_create_identity(identity_path)
     else:
+        resolved_node_id = node_id if node_id else deterministic_machine_node_id()
         identity = NodeIdentity(
-            node_id=node_id if node_id else deterministic_machine_node_id()
+            node_id=resolved_node_id,
+            node_name=(
+                None
+                if node_id
+                else deterministic_machine_node_name(node_id=resolved_node_id)
+            ),
         )
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
     result_dict = result.to_dict()
+    if identity.node_name is not None:
+        result_dict["node_name"] = identity.node_name
     if not include_ledger and ledger_path is None:
         return result_dict
 
@@ -470,6 +479,8 @@ def run_demo(
     )
     record_result = replace(result, contribution_units=credited_units)
     result_dict = record_result.to_dict()
+    if identity.node_name is not None:
+        result_dict["node_name"] = identity.node_name
     if ledger_path is None:
         ledger = ContributionLedger()
         ledger.record(

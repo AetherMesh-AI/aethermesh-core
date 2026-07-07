@@ -17,7 +17,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from aethermesh_core.identity import load_or_create_identity
+from aethermesh_core.identity import (
+    deterministic_machine_node_name,
+    load_or_create_identity,
+)
 from aethermesh_core.json_io import atomic_write_json
 
 CONFIG_SCHEMA_VERSION = 1
@@ -102,11 +105,15 @@ class NodeRuntimeService:
         self.paths.data_dir.mkdir(parents=True, exist_ok=True)
         self.paths.log_dir.mkdir(parents=True, exist_ok=True)
         identity = load_or_create_identity(self.paths.identity_path)
-        config = self._default_config(node_id=identity.node_id)
+        node_name = identity.node_name or deterministic_machine_node_name(
+            node_id=identity.node_id
+        )
+        config = self._default_config(node_id=identity.node_id, node_name=node_name)
         if self.paths.config_path.exists():
             existing = self.load_config()
             config = _merge_config(existing, config)
             config.setdefault("node", {})["node_id"] = identity.node_id
+            config.setdefault("node", {})["node_name"] = node_name
         self._write_config(config)
         if not self.paths.events_path.exists():
             self.paths.events_path.write_text("", encoding="utf-8")
@@ -114,6 +121,7 @@ class NodeRuntimeService:
         return {
             "initialized": True,
             "node_id": identity.node_id,
+            "node_name": node_name,
             "home": str(self.paths.home),
             "config_path": str(self.paths.config_path),
             "data_dir": str(self.paths.data_dir),
@@ -126,6 +134,7 @@ class NodeRuntimeService:
 
         config = self.load_config()
         node_id = _config_node_id(config)
+        node_name = _config_node_name(config)
         running, pid, started_at = self._runtime_marker()
         uptime_seconds: int | None = None
         if running and started_at is not None:
@@ -136,6 +145,7 @@ class NodeRuntimeService:
             "initialized": self.paths.config_path.exists()
             and self.paths.identity_path.exists(),
             "node_id": node_id,
+            "node_name": node_name,
             "status": "running" if running else "stopped",
             "version": _package_version(),
             "uptime_seconds": uptime_seconds,
@@ -269,10 +279,16 @@ class NodeRuntimeService:
             "disk_data_path_free_bytes": disk.free,
         }
 
-    def _default_config(self, node_id: str | None) -> dict[str, Any]:
+    def _default_config(
+        self, node_id: str | None, node_name: str | None = None
+    ) -> dict[str, Any]:
         return {
             "version": CONFIG_SCHEMA_VERSION,
-            "node": {"node_id": node_id, "status": "local_only"},
+            "node": {
+                "node_id": node_id,
+                "node_name": node_name,
+                "status": "local_only",
+            },
             "paths": {
                 "home": str(self.paths.home),
                 "data_dir": str(self.paths.data_dir),
@@ -335,6 +351,14 @@ def _config_node_id(config: dict[str, Any]) -> str | None:
         return None
     node_id = node.get("node_id")
     return node_id if isinstance(node_id, str) and node_id else None
+
+
+def _config_node_name(config: dict[str, Any]) -> str | None:
+    node = config.get("node")
+    if not isinstance(node, dict):
+        return None
+    node_name = node.get("node_name")
+    return node_name if isinstance(node_name, str) and node_name else None
 
 
 def _config_api_host(config: dict[str, Any]) -> str:

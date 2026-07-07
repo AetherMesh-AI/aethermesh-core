@@ -78,18 +78,21 @@ from scripts import ci_quality_gates
 
 
 class QualityGateEdgeCoverageTests(unittest.TestCase):
-    def test_pr_size_excludes_graphify_out_from_reviewability_counts(self) -> None:
+    def test_pr_size_excludes_generated_static_data_from_reviewability_counts(
+        self,
+    ) -> None:
         args = argparse.Namespace(
             base="origin/main",
             max_files=1,
             max_lines=5,
             max_binary_files=0,
-            exclude_path_prefix=["graphify-out/"],
+            exclude_path_prefix=["graphify-out/", "wordlists/node-names/"],
         )
         diff = "\n".join(
             [
                 "100\t200\tgraphify-out/graph.json",
                 "-\t-\tgraphify-out/graph.html",
+                "9000\t0\twordlists/node-names/cpu-traits.txt",
                 "2\t3\tsrc/aethermesh_core/example.py",
             ]
         )
@@ -104,7 +107,7 @@ class QualityGateEdgeCoverageTests(unittest.TestCase):
         self.assertIn("files=1", stdout.getvalue())
         self.assertIn("changed_lines=5", stdout.getvalue())
         self.assertIn("binary_files=0", stdout.getvalue())
-        self.assertIn("ignored_files=2", stdout.getvalue())
+        self.assertIn("ignored_files=3", stdout.getvalue())
 
     def test_remove_temp_helpers_ignore_missing_files(self) -> None:
         for remover in (remove_temp_file, remove_ledger_temp, remove_receipt_temp):
