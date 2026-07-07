@@ -4,171 +4,509 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
 from aethermesh_core.identity import (
+    HardwareIdentityInputs,
     IdentityPersistenceError,
+    _bytes_to_gb,
+    _canonical_root_json,
+    _colon_value,
+    _component_hashes,
+    _csv_first_value,
     _default_goos,
-    _fallback_parts,
-    _machine_fingerprint,
+    _extract_labeled_value,
+    _extract_mac_addresses,
+    _linux_gpu_device_id,
+    _linux_gpu_model,
+    _linux_gpu_vendor,
+    _linux_memtotal_gb,
+    _linux_physical_core_count,
+    _max_csv_int,
+    _max_gpu_vram_gb,
+    _normalize_mac_address,
+    _physical_core_count_fallback,
+    _physical_mac_addresses,
     _read_or_empty,
     _read_text_file,
+    _round_installed_ram_gb,
     _run_command,
     _run_or_empty,
+    _safe_int,
+    _vram_value_to_gb,
+    collect_hardware_identity_inputs,
     deterministic_machine_node_id,
     load_or_create_identity,
 )
 
 
+def _hardware(**overrides: object) -> HardwareIdentityInputs:
+    values = {
+        "cpu_architecture": " arm64 ",
+        "cpu_vendor": " Apple ",
+        "cpu_brand_or_chip_name": " Apple   M4 Max ",
+        "physical_core_count": 16,
+        "logical_thread_count": 16,
+        "permanent_mac_addresses": ("aa:bb:cc:dd:ee:ff", " 11-22-33-44-55-66 "),
+        "gpu_vendor": "Apple",
+        "gpu_model_or_chip_name": "M4 Max GPU",
+        "gpu_device_id_if_available": "0x1234",
+        "gpu_count": 1,
+        "max_gpu_vram_gb": 64,
+        "total_installed_ram_gb": 128.2,
+    }
+    values.update(overrides)
+    return HardwareIdentityInputs(**values)
+
+
+def _sha(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _expected_node_id(hardware: HardwareIdentityInputs) -> str:
+    hashes = _component_hashes(hardware)
+    return _sha(_canonical_root_json(hashes))
+
+
 class IdentityPersistenceTests(unittest.TestCase):
-    def test_missing_identity_file_is_created_with_deterministic_machine_node_id(
-        self,
-    ) -> None:
+    def test_missing_identity_file_is_created_with_hardware_root_node_id(self) -> None:
+        hardware = _hardware()
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "deep" / "nested" / "local-node.json"
 
-            identity = load_or_create_identity(
-                identity_path,
-                goos="linux",
-                read_file=lambda path: {
-                    "/etc/machine-id": " machine-a\n",
-                    "/var/lib/dbus/machine-id": "dbus-a",
-                }[path],
-                run_command=lambda name, *args: "product-a",
-                read_hostname=lambda: "host-a",
-            )
+            identity = load_or_create_identity(identity_path, hardware_inputs=hardware)
             persisted = json.loads(identity_path.read_text(encoding="utf-8"))
 
-        expected = "local-" + hashlib.sha256(b"machine-a|dbus-a|product-a").hexdigest()
-        self.assertEqual(identity.node_id, expected)
+        self.assertEqual(identity.node_id, _expected_node_id(hardware))
+        self.assertFalse(identity.node_id.startswith("local-"))
         self.assertEqual(
             persisted,
             {"version": 1, "node": {"node_id": identity.node_id}},
         )
 
-    def test_deterministic_machine_node_id_filters_empty_parts(self) -> None:
-        node_id = deterministic_machine_node_id(
-            goos="linux",
-            read_file=lambda path: {
-                "/etc/machine-id": "\n",
-                "/var/lib/dbus/machine-id": "dbus-a\n",
-            }[path],
-            run_command=lambda name, *args: "  ",
-            read_hostname=lambda: "ignored-host",
+    def test_same_hardware_inputs_always_produce_same_node_id(self) -> None:
+        first = deterministic_machine_node_id(hardware_inputs=_hardware())
+        second = deterministic_machine_node_id(hardware_inputs=_hardware())
+
+        self.assertEqual(first, second)
+        self.assertEqual(first, _expected_node_id(_hardware()))
+        self.assertRegex(first, r"^[0-9a-f]{64}$")
+
+    def test_changing_cpu_info_changes_cpu_hash_and_node_id(self) -> None:
+        baseline = _component_hashes(_hardware())
+        changed = _component_hashes(_hardware(cpu_brand_or_chip_name="Apple M3 Ultra"))
+
+        self.assertNotEqual(changed.cpu_hash, baseline.cpu_hash)
+        self.assertEqual(changed.mac_hash, baseline.mac_hash)
+        self.assertNotEqual(
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(cpu_brand_or_chip_name="Apple M3 Ultra")
+            ),
+            deterministic_machine_node_id(hardware_inputs=_hardware()),
+        )
+
+    def test_changing_mac_set_changes_mac_hash_and_node_id(self) -> None:
+        baseline = _component_hashes(_hardware())
+        changed = _component_hashes(
+            _hardware(
+                permanent_mac_addresses=("AA:BB:CC:DD:EE:FF", "77:88:99:AA:BB:CC")
+            )
+        )
+
+        self.assertNotEqual(changed.mac_hash, baseline.mac_hash)
+        self.assertEqual(changed.cpu_hash, baseline.cpu_hash)
+        self.assertNotEqual(
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(
+                    permanent_mac_addresses=("AA:BB:CC:DD:EE:FF", "77:88:99:AA:BB:CC")
+                )
+            ),
+            deterministic_machine_node_id(hardware_inputs=_hardware()),
+        )
+
+    def test_changing_gpu_info_changes_gpu_hash_and_node_id(self) -> None:
+        baseline = _component_hashes(_hardware())
+        changed = _component_hashes(_hardware(gpu_model_or_chip_name="M4 Ultra GPU"))
+
+        self.assertNotEqual(changed.gpu_hash, baseline.gpu_hash)
+        self.assertEqual(changed.ram_hash, baseline.ram_hash)
+        self.assertNotEqual(
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(gpu_model_or_chip_name="M4 Ultra GPU")
+            ),
+            deterministic_machine_node_id(hardware_inputs=_hardware()),
+        )
+
+    def test_blank_hardware_fields_use_explicit_placeholders(self) -> None:
+        hashes = _component_hashes(
+            _hardware(
+                cpu_architecture="  arm64  ",
+                cpu_vendor="   ",
+                cpu_brand_or_chip_name=" Apple    M2   Pro ",
+                physical_core_count=" 10 ",
+                logical_thread_count="10",
+                gpu_vendor=" Apple   (0x106b) ",
+                gpu_model_or_chip_name=" Apple    M2   Pro ",
+                gpu_device_id_if_available=" ",
+                gpu_count=" 1 ",
+                max_gpu_vram_gb="",
+                total_installed_ram_gb=" 16.1 ",
+            )
         )
 
         self.assertEqual(
-            node_id,
-            "local-" + hashlib.sha256(b"dbus-a").hexdigest(),
+            hashes.cpu_input,
+            "ARM64|UNKNOWN_CPU_VENDOR|APPLE M2 PRO|10|10",
+        )
+        self.assertEqual(
+            hashes.gpu_input,
+            "APPLE (0X106B)|APPLE M2 PRO|UNKNOWN_GPU_DEVICE_ID|1|UNKNOWN_GPU_VRAM",
+        )
+        self.assertEqual(hashes.ram_input, "16")
+        self.assertNotIn("||", hashes.cpu_input)
+        self.assertNotIn("||", hashes.gpu_input)
+
+    def test_mac_addresses_normalize_uppercase_separator_free_and_sorted(self) -> None:
+        hashes = _component_hashes(
+            _hardware(
+                permanent_mac_addresses=(
+                    " 20:a5:cb:c8:f1:d6 ",
+                    "20-A5-CB-CD-15-72",
+                    "",
+                    "  ",
+                )
+            )
         )
 
-    def test_deterministic_machine_node_id_uses_hostname_fallback(self) -> None:
+        self.assertEqual(hashes.mac_input, "20A5CBC8F1D6|20A5CBCD1572")
+
+    def test_changing_gpu_vram_changes_gpu_hash_and_node_id(self) -> None:
+        baseline = _component_hashes(_hardware(max_gpu_vram_gb=16))
+        changed = _component_hashes(_hardware(max_gpu_vram_gb=32))
+
+        self.assertNotEqual(changed.gpu_hash, baseline.gpu_hash)
+        self.assertEqual(changed.cpu_hash, baseline.cpu_hash)
+        self.assertNotEqual(
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(max_gpu_vram_gb=32)
+            ),
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(max_gpu_vram_gb=16)
+            ),
+        )
+
+    def test_missing_gpu_uses_no_gpu_detected_hash(self) -> None:
+        hashes = _component_hashes(
+            _hardware(
+                gpu_vendor="",
+                gpu_model_or_chip_name="",
+                gpu_device_id_if_available="",
+                gpu_count=0,
+                max_gpu_vram_gb="",
+            )
+        )
+
+        self.assertEqual(hashes.gpu_input, "NO_GPU_DETECTED")
+        self.assertEqual(hashes.gpu_hash, _sha("NO_GPU_DETECTED"))
+
+    def test_changing_ram_changes_ram_hash_and_node_id(self) -> None:
+        baseline = _component_hashes(_hardware())
+        changed = _component_hashes(_hardware(total_installed_ram_gb=64.4))
+
+        self.assertNotEqual(changed.ram_hash, baseline.ram_hash)
+        self.assertNotEqual(
+            deterministic_machine_node_id(
+                hardware_inputs=_hardware(total_installed_ram_gb=64.4)
+            ),
+            deterministic_machine_node_id(hardware_inputs=_hardware()),
+        )
+
+    def test_changing_account_id_does_not_change_node_id(self) -> None:
+        baseline = deterministic_machine_node_id(
+            hardware_inputs=_hardware(), account_id="account-a"
+        )
+        changed = deterministic_machine_node_id(
+            hardware_inputs=_hardware(), account_id="account-b"
+        )
+
+        self.assertEqual(changed, baseline)
+
+    def test_generated_node_id_has_no_local_prefix(self) -> None:
+        node_id = deterministic_machine_node_id(hardware_inputs=_hardware())
+
+        self.assertFalse(node_id.startswith("local-"))
+        self.assertFalse(node_id.startswith("local-hash"))
+
+    def test_debug_output_prints_full_formula_inputs_and_hashes(self) -> None:
+        output = StringIO()
         node_id = deterministic_machine_node_id(
-            goos="linux",
+            hardware_inputs=_hardware(), debug=True, output=output
+        )
+
+        debug_text = output.getvalue()
+        self.assertIn("[DEBUG] CPU_INPUT = ARM64|APPLE|APPLE M4 MAX|16|16", debug_text)
+        self.assertIn("[DEBUG] CPU_HASH = ", debug_text)
+        self.assertIn("[DEBUG] MAC_INPUT = 112233445566|AABBCCDDEEFF", debug_text)
+        self.assertIn("[DEBUG] MAC_HASH = ", debug_text)
+        self.assertIn("[DEBUG] GPU_INPUT = APPLE|M4 MAX GPU|0X1234|1|64", debug_text)
+        self.assertIn("[DEBUG] GPU_HASH = ", debug_text)
+        self.assertIn("[DEBUG] RAM_INPUT = 128", debug_text)
+        self.assertIn("[DEBUG] RAM_HASH = ", debug_text)
+        self.assertIn("[DEBUG] ROOT_JSON = ", debug_text)
+        self.assertIn(f"[DEBUG] NODE_ID = {node_id}", debug_text)
+
+    def test_hardware_inputs_are_collected_without_account_or_install_identifiers(
+        self,
+    ) -> None:
+        commands: list[tuple[str, tuple[str, ...]]] = []
+
+        def run_command(name: str, *args: str) -> str:
+            commands.append((name, args))
+            if name == "sysctl" and args == ("-n", "machdep.cpu.vendor"):
+                return "Apple"
+            if name == "sysctl" and args == ("-n", "machdep.cpu.brand_string"):
+                return "Apple M4 Max"
+            if name == "sysctl" and args == ("-n", "hw.physicalcpu"):
+                return "16"
+            if name == "sysctl" and args == ("-n", "hw.logicalcpu"):
+                return "16"
+            if name == "sysctl" and args == ("-n", "hw.memsize"):
+                return str(128 * 1024**3)
+            if name == "networksetup":
+                return "Hardware Port: Wi-Fi\nEthernet Address: aa:bb:cc:dd:ee:ff"
+            if name == "system_profiler":
+                return "Chipset Model: Apple M4 Max\nVendor: Apple\nDevice ID: 0x1234\nVRAM (Total): 64 GB"
+            raise OSError(name)
+
+        node_id = deterministic_machine_node_id(
+            goos="darwin",
+            run_command=run_command,
             read_file=lambda path: (_ for _ in ()).throw(FileNotFoundError(path)),
-            run_command=lambda name, *args: (_ for _ in ()).throw(OSError(name)),
-            read_hostname=lambda: " fallback-host\n",
+            account_id="ignored-account",
         )
 
+        self.assertRegex(node_id, r"^[0-9a-f]{64}$")
+        flattened_commands = " ".join(
+            " ".join((name, *args)) for name, args in commands
+        )
+        self.assertNotIn("machine-id", flattened_commands)
+        self.assertNotIn("IOPlatformUUID", flattened_commands)
+        self.assertNotIn("hostname", flattened_commands.lower())
+
+    def test_physical_mac_filter_keeps_only_ethernet_and_wifi_hardware(self) -> None:
+        darwin_networksetup = """
+Hardware Port: Wi-Fi
+Device: en0
+Ethernet Address: aa:bb:cc:dd:ee:01
+
+Hardware Port: Ethernet
+Device: en7
+Ethernet Address: aa:bb:cc:dd:ee:02
+
+Hardware Port: Thunderbolt Bridge
+Device: bridge0
+Ethernet Address: aa:bb:cc:dd:ee:03
+
+Hardware Port: Ethernet Adapter (en6)
+Device: en6
+Ethernet Address: aa:bb:cc:dd:ee:05
+
+Hardware Port: USB 10/100/1000 LAN
+Device: en10
+Ethernet Address: aa:bb:cc:dd:ee:06
+
+Hardware Port: Bluetooth PAN
+Device: en8
+Ethernet Address: aa:bb:cc:dd:ee:04
+"""
         self.assertEqual(
-            node_id,
-            "local-" + hashlib.sha256(b"fallback-os|linux|fallback-host").hexdigest(),
+            _physical_mac_addresses(darwin_networksetup, source="darwin-networksetup"),
+            ["aa:bb:cc:dd:ee:01", "aa:bb:cc:dd:ee:02", "aa:bb:cc:dd:ee:06"],
         )
 
-    def test_machine_fingerprint_uses_platform_specific_sources(self) -> None:
+        linux_ip = "\n".join(
+            [
+                "2: eth0: <BROADCAST> link/ether aa:bb:cc:dd:ee:11 brd ff:ff:ff:ff:ff:ff",
+                "3: wlan0: <BROADCAST> link/ether aa:bb:cc:dd:ee:12 brd ff:ff:ff:ff:ff:ff",
+                "4: docker0: <BROADCAST> link/ether aa:bb:cc:dd:ee:13 brd ff:ff:ff:ff:ff:ff",
+                "5: vethabc@if4: <BROADCAST> link/ether aa:bb:cc:dd:ee:14 brd ff:ff:ff:ff:ff:ff",
+                "6: bridge0: <BROADCAST> link/ether aa:bb:cc:dd:ee:15 brd ff:ff:ff:ff:ff:ff",
+            ]
+        )
         self.assertEqual(
-            _machine_fingerprint(
-                "darwin",
-                read_file=lambda path: "unused",
-                run_command=lambda name, *args: " DARWIN-UUID ",
-                read_hostname=lambda: "ignored",
+            _physical_mac_addresses(linux_ip, source="linux-ip-link"),
+            ["aa:bb:cc:dd:ee:11", "aa:bb:cc:dd:ee:12"],
+        )
+
+        windows_getmac = (
+            '"Connection Name","Network Adapter","Physical Address","Transport Name"\n'
+            '"Ethernet","Intel Ethernet","AA-BB-CC-DD-EE-21","tcpip"\n'
+            '"Wi-Fi","Intel Wi-Fi 6","AA-BB-CC-DD-EE-22","tcpip"\n'
+            '"Bluetooth Network Connection","Bluetooth Device","AA-BB-CC-DD-EE-23","tcpip"\n'
+            '"vEthernet (Default Switch)","Hyper-V Virtual Ethernet","AA-BB-CC-DD-EE-24","tcpip"\n'
+        )
+        self.assertEqual(
+            _physical_mac_addresses(windows_getmac, source="windows-getmac"),
+            ["AA-BB-CC-DD-EE-21", "AA-BB-CC-DD-EE-22"],
+        )
+        self.assertEqual(_physical_mac_addresses("", source="unknown-source"), [])
+        self.assertEqual(
+            _physical_mac_addresses(
+                "Hardware Port: Wi-Fi\nEthernet Address: ff:ff:ff:ff:ff:ff\n",
+                source="darwin-networksetup",
             ),
-            "DARWIN-UUID",
+            [],
         )
         self.assertEqual(
-            _machine_fingerprint(
-                "windows",
-                read_file=lambda path: "unused",
-                run_command=lambda name, *args: (
-                    " WINDOWS-UUID " if name == "wmic" else "POWERSHELL-UUID"
-                ),
-                read_hostname=lambda: "ignored",
+            _physical_mac_addresses(
+                "garbage without link fields", source="linux-ip-link"
             ),
-            "WINDOWS-UUID|POWERSHELL-UUID",
+            [],
         )
         self.assertEqual(
-            _machine_fingerprint(
-                "plan9",
-                read_file=lambda path: "unused",
-                run_command=lambda name, *args: "unused",
-                read_hostname=lambda: "ignored",
+            _physical_mac_addresses(
+                "4: docker0: <BROADCAST> link/ether aa:bb:cc:dd:ee:13 brd ff:ff:ff:ff:ff:ff",
+                source="linux-ip-link",
             ),
-            "unknown-os|plan9",
+            [],
         )
 
-    def test_machine_fingerprint_helper_edges_are_stable(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            value_path = Path(temp_dir) / "value.txt"
-            value_path.write_text(" value\n", encoding="utf-8")
+    def test_hardware_collectors_cover_linux_windows_and_unknown_os(self) -> None:
+        linux_files = {
+            "/proc/cpuinfo": "vendor_id: GenuineIntel\nmodel name: Xeon\n",
+            "/proc/meminfo": "MemTotal: 67108864 kB\n",
+        }
 
-            self.assertEqual(_read_text_file(str(value_path)), "value")
+        def linux_command(name: str, *args: str) -> str:
+            if name == "lscpu":
+                return "CPU(s): 12\nCore(s) per socket: 6\nSocket(s): 1\n"
+            if name == "lspci":
+                return "00:02.0 VGA compatible controller [0300]: Intel Arc [8086:56a0]\n\tRegion 0: Memory at 00000000 (64-bit, prefetchable) [size=8G]"
+            if name == "ip":
+                return "2: eth0: <BROADCAST> link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff"
+            raise OSError(name)
 
-        self.assertEqual(_read_or_empty(None, "/missing"), "")
-        self.assertEqual(_run_or_empty(None, "ignored"), "")
+        linux = collect_hardware_identity_inputs(
+            goos="linux",
+            read_file=lambda path: linux_files[path],
+            run_command=linux_command,
+        )
+        self.assertEqual(linux.cpu_vendor, "GenuineIntel")
+        self.assertEqual(linux.cpu_brand_or_chip_name, "Xeon")
+        self.assertEqual(linux.physical_core_count, 6)
+        self.assertEqual(linux.permanent_mac_addresses, ("aa:bb:cc:dd:ee:ff",))
+        self.assertEqual(linux.gpu_vendor, "Intel")
+        self.assertEqual(linux.gpu_device_id_if_available, "8086:56a0")
+        self.assertEqual(linux.gpu_count, 1)
+        self.assertEqual(linux.max_gpu_vram_gb, 8)
+        self.assertEqual(linux.total_installed_ram_gb, 64)
+
+        def windows_command(name: str, *args: str) -> str:
+            command = " ".join((name, *args))
+            if "cpu get" in command:
+                return (
+                    "Node,Manufacturer,Name,NumberOfCores,NumberOfLogicalProcessors\n"
+                    "pc,AMD,Ryzen 9,12,24\n"
+                )
+            if "win32_VideoController" in command:
+                return (
+                    "Node,AdapterCompatibility,Name,PNPDeviceID,AdapterRAM\n"
+                    "pc,NVIDIA,RTX 4090,PCI\\VEN_10DE&DEV_2684,25769803776\n"
+                )
+            if "memorychip" in command:
+                return "Capacity\n34359738368\n34359738368\n"
+            if name == "getmac":
+                return '"Ethernet","AA-BB-CC-DD-EE-FF"\n'
+            raise OSError(name)
+
+        windows = collect_hardware_identity_inputs(
+            goos="windows",
+            read_file=lambda path: "unused",
+            run_command=windows_command,
+        )
+        self.assertEqual(windows.cpu_vendor, "AMD")
+        self.assertEqual(windows.cpu_brand_or_chip_name, "Ryzen 9")
+        self.assertEqual(windows.physical_core_count, "12")
+        self.assertEqual(windows.logical_thread_count, "24")
+        self.assertEqual(windows.gpu_vendor, "NVIDIA")
+        self.assertEqual(windows.gpu_model_or_chip_name, "RTX 4090")
+        self.assertEqual(windows.gpu_count, 1)
+        self.assertEqual(windows.max_gpu_vram_gb, 24)
+        self.assertEqual(windows.total_installed_ram_gb, 64)
+
+        unknown = collect_hardware_identity_inputs(
+            goos="plan9",
+            read_file=lambda path: "unused",
+            run_command=lambda name, *args: "unused",
+        )
+        self.assertEqual(unknown.gpu_count, 0)
+        self.assertEqual(unknown.permanent_mac_addresses, ())
+
+    def test_hardware_parser_edge_cases_are_stable(self) -> None:
+        self.assertEqual(_normalize_mac_address("00:00:00:00:00:00"), "")
+        self.assertEqual(_normalize_mac_address("not-a-mac"), "")
+        self.assertEqual(_extract_mac_addresses("ff:ff:ff:ff:ff:ff"), [])
+        self.assertEqual(_round_installed_ram_gb("not-a-number"), 0)
+        self.assertEqual(_bytes_to_gb(0), 0)
+        self.assertEqual(_linux_memtotal_gb(""), 0)
+        self.assertEqual(_colon_value("", "Missing"), "")
+        self.assertEqual(_extract_labeled_value("", "Missing"), "")
+        self.assertEqual(_max_gpu_vram_gb(""), 0)
+        self.assertEqual(_max_gpu_vram_gb("VRAM (Total): 512 MB\nVRAM: 2 GB"), 2)
+        self.assertEqual(_max_gpu_vram_gb("size=1048576 KB\nsize=1 TB"), 1024)
+        self.assertEqual(_vram_value_to_gb("not-a-number", "GB"), 0)
+        self.assertEqual(_vram_value_to_gb("2", "XB"), 2)
+        self.assertEqual(_max_csv_int("", "AdapterRAM"), 0)
+        self.assertEqual(_max_csv_int("Node,Name\npc,value", "AdapterRAM"), 0)
+        self.assertEqual(_max_csv_int("Node,AdapterRAM\npc", "AdapterRAM"), 0)
         self.assertEqual(
-            _run_or_empty(
-                lambda name, *args: (_ for _ in ()).throw(
-                    subprocess.CalledProcessError(1, name)
-                ),
-                "false",
-            ),
+            _max_csv_int("Node,AdapterRAM\npc,1024\npc,2048", "AdapterRAM"), 2048
+        )
+        self.assertEqual(_linux_gpu_model(""), "")
+        self.assertEqual(_linux_gpu_vendor(""), "")
+        self.assertEqual(_linux_gpu_device_id(""), "")
+        self.assertEqual(
+            _linux_gpu_device_id("00:02.0 VGA compatible controller: Intel Arc"),
             "",
         )
-        self.assertEqual(_fallback_parts("linux", None), ["fallback-os", "linux"])
         self.assertEqual(
-            _fallback_parts(
-                "linux", lambda: (_ for _ in ()).throw(OSError("hostname"))
+            _linux_gpu_model("00:02.0 VGA compatible controller: Intel Arc"),
+            "Intel Arc",
+        )
+        self.assertEqual(_csv_first_value("", "Name"), "")
+        self.assertEqual(_csv_first_value("Node,Name\npc,value", "Missing"), "")
+        self.assertEqual(_csv_first_value("Node,Name\npc", "Name"), "")
+        self.assertEqual(_safe_int("not-an-int"), 0)
+        self.assertEqual(
+            _linux_physical_core_count(
+                "physical id: 0\ncore id: 0\nphysical id: 0\ncore id: 1\n", ""
             ),
-            ["fallback-os", "linux"],
+            2,
         )
         self.assertEqual(
-            _fallback_parts("linux", lambda: " \n"), ["fallback-os", "linux"]
+            _linux_physical_core_count("", "Core(s) per socket: 8\nSocket(s): 2\n"),
+            16,
         )
-        self.assertEqual(
-            _fallback_parts("linux", lambda: " host "), ["fallback-os", "linux", "host"]
-        )
-
-    def test_default_goos_maps_common_python_platforms(self) -> None:
-        cases = [
-            ("linux", "linux"),
-            ("linux2", "linux"),
-            ("darwin", "darwin"),
-            ("win32", "windows"),
-            ("freebsd13", "freebsd13"),
-        ]
-        for platform_name, expected in cases:
-            with self.subTest(platform_name=platform_name):
-                with patch("aethermesh_core.identity.sys.platform", platform_name):
-                    self.assertEqual(_default_goos(), expected)
-
-    def test_default_command_runner_trims_stdout(self) -> None:
-        self.assertEqual(
-            _run_command(sys.executable, "-c", "print(' command-value ')"),
-            "command-value",
-        )
+        self.assertIsInstance(_linux_physical_core_count("", ""), int)
+        with patch("aethermesh_core.identity.os.cpu_count", return_value=None):
+            self.assertEqual(_physical_core_count_fallback(), 0)
 
     def test_existing_identity_file_reuses_node_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
             identity_path.write_text(
-                json.dumps({"version": 1, "node": {"node_id": "local-stable-node"}}),
+                json.dumps({"version": 1, "node": {"node_id": "legacy-node-id"}}),
                 encoding="utf-8",
             )
 
-            identity = load_or_create_identity(identity_path)
+            identity = load_or_create_identity(
+                identity_path, hardware_inputs=_hardware()
+            )
 
-        self.assertEqual(identity.node_id, "local-stable-node")
+        self.assertEqual(identity.node_id, "legacy-node-id")
 
     def test_malformed_identity_json_raises_clear_error_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -183,7 +521,7 @@ class IdentityPersistenceTests(unittest.TestCase):
     def test_unsupported_identity_version_raises_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
-            original = json.dumps({"version": 2, "node": {"node_id": "local-future"}})
+            original = json.dumps({"version": 2, "node": {"node_id": "future-node"}})
             identity_path.write_text(original, encoding="utf-8")
 
             with self.assertRaisesRegex(IdentityPersistenceError, "version 1"):
@@ -206,7 +544,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         cases = [
             ([], "identity JSON must be an object"),
             (
-                {"version": 2, "node": {"node_id": "local-future"}},
+                {"version": 2, "node": {"node_id": "future-node"}},
                 "identity JSON must contain version 1",
             ),
             (
@@ -226,6 +564,58 @@ class IdentityPersistenceTests(unittest.TestCase):
                     with self.assertRaises(IdentityPersistenceError) as cm:
                         load_or_create_identity(identity_path)
                     self.assertEqual(str(cm.exception), expected_message)
+
+    def test_helper_edges_are_stable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            value_path = Path(temp_dir) / "value.txt"
+            value_path.write_text(" value\n", encoding="utf-8")
+
+            self.assertEqual(_read_text_file(str(value_path)), "value")
+
+        self.assertEqual(_read_or_empty(None, "/missing"), "")
+        self.assertEqual(
+            _read_or_empty(
+                lambda path: (_ for _ in ()).throw(FileNotFoundError(path)),
+                "/missing",
+            ),
+            "",
+        )
+        self.assertEqual(_run_or_empty(None, "ignored"), "")
+        self.assertEqual(
+            _run_or_empty(
+                lambda name, *args: (_ for _ in ()).throw(
+                    subprocess.CalledProcessError(1, name)
+                ),
+                "false",
+            ),
+            "",
+        )
+
+    def test_default_goos_maps_common_python_platforms(self) -> None:
+        cases = [
+            ("linux", "linux"),
+            ("linux2", "linux"),
+            ("darwin", "darwin"),
+            ("win32", "windows"),
+            ("freebsd13", "freebsd13"),
+        ]
+        for platform_name, expected in cases:
+            with self.subTest(platform_name=platform_name):
+                with patch("aethermesh_core.identity.sys.platform", platform_name):
+                    self.assertEqual(_default_goos(), expected)
+
+    def test_default_command_runner_trims_stdout(self) -> None:
+        self.assertEqual(
+            _run_command(sys.executable, "-c", "print(' command-value ')"),
+            "command-value",
+        )
+
+    def test_debug_output_defaults_to_stdout(self) -> None:
+        output = StringIO()
+        with redirect_stdout(output):
+            deterministic_machine_node_id(hardware_inputs=_hardware(), debug=True)
+
+        self.assertIn("[DEBUG] NODE_ID = ", output.getvalue())
 
 
 if __name__ == "__main__":
