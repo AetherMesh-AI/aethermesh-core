@@ -83,12 +83,76 @@ class IdentityPersistenceTests(unittest.TestCase):
     def test_node_name_wordlists_exist_and_are_valid(self) -> None:
         wordlists = _node_name_wordlists()
         self.assertEqual(set(wordlists), {"cpu", "mac", "gpu", "ram"})
+        denied_public_name_fragments = {
+            "behead",
+            "bitch",
+            "blood",
+            "bomb",
+            "boob",
+            "brib",
+            "cancer",
+            "cocaine",
+            "corpse",
+            "cunt",
+            "death",
+            "destruct",
+            "dick",
+            "disease",
+            "extermin",
+            "extortion",
+            "fecal",
+            "fraud",
+            "fuck",
+            "haram",
+            "hate",
+            "heroin",
+            "hitler",
+            "jihad",
+            "kidnap",
+            "lucifer",
+            "malice",
+            "malware",
+            "murder",
+            "nazi",
+            "obscen",
+            "openai",
+            "pedo",
+            "plague",
+            "porn",
+            "rape",
+            "rectal",
+            "sabotag",
+            "satan",
+            "scam",
+            "sex",
+            "shit",
+            "sinful",
+            "slut",
+            "spank",
+            "suicide",
+            "terror",
+            "testicular",
+            "tequila",
+            "thug",
+            "traitor",
+            "trojan",
+            "venmo",
+            "virus",
+            "vomit",
+            "weapon",
+            "weed",
+            "whore",
+        }
         for words in wordlists.values():
             self.assertEqual(len(words), 16384)
             self.assertEqual(len(set(words)), 16384)
             for word in words:
                 self.assertRegex(word, r"^[a-z]+$")
                 self.assertGreaterEqual(len(word), 3)
+                self.assertFalse(
+                    any(fragment in word for fragment in denied_public_name_fragments),
+                    word,
+                )
 
     def test_packaged_wordlist_dir_falls_back_to_install_prefix(self) -> None:
         with patch.object(
