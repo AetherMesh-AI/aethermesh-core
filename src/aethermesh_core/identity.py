@@ -1044,7 +1044,47 @@ def _load_identity(path: Path) -> NodeIdentity:
     _require_provenance_string(provenance, "creation_event")
     _require_provenance_string(provenance, "load_behavior")
     _require_provenance_string(provenance, "authority")
+    references = document.get("references")
+    if not isinstance(references, dict):
+        raise IdentityPersistenceError(
+            "identity JSON field 'references' must be an object"
+        )
+    _require_string_list(references, "manifest_refs")
+    _require_string_list(references, "validation_receipt_refs")
+    lineage = document.get("lineage")
+    if not isinstance(lineage, dict):
+        raise IdentityPersistenceError(
+            "identity JSON field 'lineage' must be an object"
+        )
+    _require_string_list(lineage, "parent_node_ids")
+    _require_string_list(lineage, "lineage_links")
+    contribution_attribution = document.get("contribution_attribution")
+    if not isinstance(contribution_attribution, dict):
+        raise IdentityPersistenceError(
+            "identity JSON field 'contribution_attribution' must be an object"
+        )
+    attribution_creator_node_id = contribution_attribution.get("creator_node_id")
+    if attribution_creator_node_id != creator_node_id:
+        raise IdentityPersistenceError(
+            "identity JSON field 'contribution_attribution.creator_node_id' must match node.creator_node_id"
+        )
+    attribution_node_id = contribution_attribution.get("attribution_node_id")
+    if attribution_node_id != node_id:
+        raise IdentityPersistenceError(
+            "identity JSON field 'contribution_attribution.attribution_node_id' must match node.node_id"
+        )
+    _require_string_list(contribution_attribution, "contribution_refs")
     return NodeIdentity(node_id=node_id, node_name=node_name)
+
+
+def _require_string_list(document: dict[str, object], field_name: str) -> None:
+    value = document.get(field_name)
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item for item in value
+    ):
+        raise IdentityPersistenceError(
+            f"identity JSON field '{field_name}' must be a list of non-empty strings"
+        )
 
 
 def _require_provenance_string(document: dict[str, object], field_name: str) -> None:
@@ -1083,5 +1123,18 @@ def _identity_document(
             "creation_event": "identity_manifest_created",
             "load_behavior": "reuse_existing_identity_without_overwrite",
             "authority": IDENTITY_AUTHORITY,
+        },
+        "references": {
+            "manifest_refs": [],
+            "validation_receipt_refs": [],
+        },
+        "lineage": {
+            "parent_node_ids": [],
+            "lineage_links": [],
+        },
+        "contribution_attribution": {
+            "creator_node_id": identity.node_id,
+            "attribution_node_id": identity.node_id,
+            "contribution_refs": [],
         },
     }

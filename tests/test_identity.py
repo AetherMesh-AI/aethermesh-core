@@ -451,6 +451,19 @@ class IdentityPersistenceTests(unittest.TestCase):
                     "load_behavior": "reuse_existing_identity_without_overwrite",
                     "authority": "local-only-no-network-consensus",
                 },
+                "references": {
+                    "manifest_refs": [],
+                    "validation_receipt_refs": [],
+                },
+                "lineage": {
+                    "parent_node_ids": [],
+                    "lineage_links": [],
+                },
+                "contribution_attribution": {
+                    "creator_node_id": "local-node",
+                    "attribution_node_id": "local-node",
+                    "contribution_refs": [],
+                },
             },
         )
 
@@ -472,6 +485,19 @@ class IdentityPersistenceTests(unittest.TestCase):
                     "creation_event": "identity_manifest_created",
                     "load_behavior": "reuse_existing_identity_without_overwrite",
                     "authority": "local-only-no-network-consensus",
+                },
+                "references": {
+                    "manifest_refs": [],
+                    "validation_receipt_refs": [],
+                },
+                "lineage": {
+                    "parent_node_ids": [],
+                    "lineage_links": [],
+                },
+                "contribution_attribution": {
+                    "creator_node_id": "local-node",
+                    "attribution_node_id": "local-node",
+                    "contribution_refs": [],
                 },
             },
         )
@@ -518,6 +544,22 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "creation_event": "identity_manifest_created",
                 "load_behavior": "reuse_existing_identity_without_overwrite",
                 "authority": "local-only-no-network-consensus",
+            },
+        )
+        self.assertEqual(
+            persisted["references"],
+            {"manifest_refs": [], "validation_receipt_refs": []},
+        )
+        self.assertEqual(
+            persisted["lineage"],
+            {"parent_node_ids": [], "lineage_links": []},
+        )
+        self.assertEqual(
+            persisted["contribution_attribution"],
+            {
+                "creator_node_id": identity.node_id,
+                "attribution_node_id": identity.node_id,
+                "contribution_refs": [],
             },
         )
 
@@ -955,6 +997,19 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                     "load_behavior": "reuse_existing_identity_without_overwrite",
                     "authority": "local-only-no-network-consensus",
                 },
+                "references": {
+                    "manifest_refs": ["manifests/local-batch.json#node:legacy-node-id"],
+                    "validation_receipt_refs": ["receipts/receipt-0001.json"],
+                },
+                "lineage": {
+                    "parent_node_ids": ["original-creator-node"],
+                    "lineage_links": ["lineage/local-node-link.json"],
+                },
+                "contribution_attribution": {
+                    "creator_node_id": "original-creator-node",
+                    "attribution_node_id": "legacy-node-id",
+                    "contribution_refs": ["contributions/contribution-0001.json"],
+                },
             }
             identity_path.write_text(
                 json.dumps(original_document),
@@ -1009,6 +1064,33 @@ Ethernet Address: aa:bb:cc:dd:ee:04
             identity_path.write_text(original, encoding="utf-8")
 
             with self.assertRaisesRegex(IdentityPersistenceError, "creator_node_id"):
+                load_or_create_identity(identity_path, hardware_inputs=_hardware())
+
+            self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
+
+    def test_missing_identity_reference_data_raises_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            original = json.dumps(
+                {
+                    "version": 1,
+                    "node": {
+                        "node_id": "legacy-node",
+                        "creator_node_id": "legacy-node",
+                        "created_at": "2026-07-08T00:00:00+00:00",
+                    },
+                    "provenance": {
+                        "created_by": "older-local-tool",
+                        "source": "local-first-initialization",
+                        "creation_event": "identity_manifest_created",
+                        "load_behavior": "reuse_existing_identity_without_overwrite",
+                        "authority": "local-only-no-network-consensus",
+                    },
+                }
+            )
+            identity_path.write_text(original, encoding="utf-8")
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "references"):
                 load_or_create_identity(identity_path, hardware_inputs=_hardware())
 
             self.assertEqual(identity_path.read_text(encoding="utf-8"), original)

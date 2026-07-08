@@ -18,10 +18,12 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.identity import (
+    deterministic_machine_node_id,
     deterministic_machine_node_name,
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.models import NodeIdentity
 
 CONFIG_SCHEMA_VERSION = 1
 DEFAULT_API_HOST = "127.0.0.1"
@@ -104,16 +106,28 @@ class NodeRuntimeService:
         self.paths.home.mkdir(parents=True, exist_ok=True)
         self.paths.data_dir.mkdir(parents=True, exist_ok=True)
         self.paths.log_dir.mkdir(parents=True, exist_ok=True)
-        identity = load_or_create_identity(self.paths.identity_path)
+        existing = self.load_config() if self.paths.config_path.exists() else None
+        base_config = existing or self._default_config(node_id=None)
+        persistence_enabled = _config_identity_persistence_enabled(base_config)
+        identity_path = _config_identity_path(base_config, self.paths.identity_path)
+        if persistence_enabled:
+            identity = load_or_create_identity(identity_path)
+        else:
+            node_id = deterministic_machine_node_id()
+            identity = NodeIdentity(
+                node_id=node_id,
+                node_name=deterministic_machine_node_name(node_id=node_id),
+            )
         node_name = identity.node_name or deterministic_machine_node_name(
             node_id=identity.node_id
         )
         config = self._default_config(node_id=identity.node_id, node_name=node_name)
-        if self.paths.config_path.exists():
-            existing = self.load_config()
+        if existing is not None:
             config = _merge_config(existing, config)
             config.setdefault("node", {})["node_id"] = identity.node_id
             config.setdefault("node", {})["node_name"] = node_name
+        config.setdefault("identity", {})["persist"] = persistence_enabled
+        config.setdefault("identity", {})["path"] = str(identity_path)
         self._write_config(config)
         if not self.paths.events_path.exists():
             self.paths.events_path.write_text("", encoding="utf-8")
@@ -126,7 +140,8 @@ class NodeRuntimeService:
             "config_path": str(self.paths.config_path),
             "data_dir": str(self.paths.data_dir),
             "log_dir": str(self.paths.log_dir),
-            "identity_path": str(self.paths.identity_path),
+            "identity_path": str(identity_path),
+            "identity_persisted": persistence_enabled,
         }
 
     def get_node_status(self) -> dict[str, Any]:
@@ -143,7 +158,10 @@ class NodeRuntimeService:
         peers = self.list_peers()
         return {
             "initialized": self.paths.config_path.exists()
-            and self.paths.identity_path.exists(),
+            and (
+                not _config_identity_persistence_enabled(config)
+                or _config_identity_path(config, self.paths.identity_path).exists()
+            ),
             "node_id": node_id,
             "node_name": node_name,
             "status": "running" if running else "stopped",
@@ -174,7 +192,13 @@ class NodeRuntimeService:
     def start_node_runtime(self) -> dict[str, Any]:
         """Prepare local runtime state before a foreground API/node process starts."""
 
-        if not self.paths.config_path.exists() or not self.paths.identity_path.exists():
+        config = self.load_config() if self.paths.config_path.exists() else None
+        identity_missing = (
+            config is not None
+            and _config_identity_persistence_enabled(config)
+            and not _config_identity_path(config, self.paths.identity_path).exists()
+        )
+        if config is None or identity_missing:
             self.initialize_local_node_data()
         self.mark_runtime_started()
         status = self.get_node_status()
@@ -295,6 +319,7 @@ class NodeRuntimeService:
                 "log_dir": str(self.paths.log_dir),
             },
             "api": {"host": DEFAULT_API_HOST, "port": DEFAULT_API_PORT},
+            "identity": {"persist": False, "path": str(self.paths.identity_path)},
         }
 
     def _write_config(self, document: dict[str, Any]) -> None:
@@ -351,6 +376,35 @@ def _config_node_id(config: dict[str, Any]) -> str | None:
         return None
     node_id = node.get("node_id")
     return node_id if isinstance(node_id, str) and node_id else None
+
+
+def _config_identity_persistence_enabled(config: dict[str, Any]) -> bool:
+    identity = config.get("identity")
+    if identity is None:
+        return False
+    if not isinstance(identity, dict):
+        raise RuntimeServiceError("config JSON field 'identity' must be an object")
+    persist = identity.get("persist", False)
+    if not isinstance(persist, bool):
+        raise RuntimeServiceError(
+            "config JSON field 'identity.persist' must be a boolean"
+        )
+    return persist
+
+
+def _config_identity_path(config: dict[str, Any], default_path: Path) -> Path:
+    identity = config.get("identity")
+    if not isinstance(identity, dict):
+        return default_path
+    configured_path = identity.get("path")
+    if configured_path is None:
+        return default_path
+    if not isinstance(configured_path, str) or not configured_path.strip():
+        raise RuntimeServiceError(
+            "config JSON field 'identity.path' must be a non-empty string"
+        )
+    path = Path(configured_path).expanduser()
+    return path if path.is_absolute() else default_path.parent / path
 
 
 def _config_node_name(config: dict[str, Any]) -> str | None:

@@ -24,6 +24,8 @@ from aethermesh_core.runtime_service import (
     RuntimeServiceError,
     _config_api_host,
     _config_api_port,
+    _config_identity_path,
+    _config_identity_persistence_enabled,
     _config_node_id,
     _config_node_name,
     _default_home,
@@ -81,6 +83,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     "data_dir",
                     "log_dir",
                     "identity_path",
+                    "identity_persisted",
                 },
             )
             self.assertTrue(initialized["initialized"])
@@ -93,7 +96,8 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 initialized["identity_path"], str(Path(temp_dir) / "identity.json")
             )
-            self.assertTrue(Path(initialized["identity_path"]).exists())
+            self.assertFalse(initialized["identity_persisted"])
+            self.assertFalse(Path(initialized["identity_path"]).exists())
             self.assertEqual(
                 service.recent_logs(limit=1)["events"][0].split(" ", 1)[1],
                 "initialized local node data",
@@ -161,11 +165,63 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(config["paths"]["data_dir"], str(Path(temp_dir) / "data"))
             self.assertEqual(config["paths"]["log_dir"], str(Path(temp_dir) / "logs"))
             self.assertEqual(config["api"], {"host": "127.0.0.1", "port": 7280})
+            self.assertEqual(
+                config["identity"],
+                {"persist": False, "path": str(Path(temp_dir) / "identity.json")},
+            )
 
             with patch.object(
                 service, "_runtime_marker", return_value=(False, None, int(time.time()))
             ):
                 self.assertIsNone(service.get_node_status()["uptime_seconds"])
+
+    def test_identity_persistence_only_when_configured(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            service.paths.home.mkdir(parents=True, exist_ok=True)
+            persistent_config = service._default_config(node_id=None)
+            persistent_config["identity"] = {
+                "persist": True,
+                "path": "identity.json",
+            }
+            service._write_config(persistent_config)
+
+            first = service.initialize_local_node_data()
+            persisted_document = json.loads(service.paths.identity_path.read_text())
+            second = service.initialize_local_node_data()
+
+            self.assertTrue(first["identity_persisted"])
+            self.assertTrue(service.paths.identity_path.exists())
+            self.assertEqual(first["identity_path"], str(service.paths.identity_path))
+            self.assertEqual(first["node_id"], second["node_id"])
+            self.assertEqual(
+                persisted_document["node"]["creator_node_id"], first["node_id"]
+            )
+            self.assertEqual(
+                persisted_document["references"],
+                {"manifest_refs": [], "validation_receipt_refs": []},
+            )
+            self.assertEqual(
+                persisted_document["lineage"],
+                {"parent_node_ids": [], "lineage_links": []},
+            )
+            self.assertEqual(
+                persisted_document["contribution_attribution"],
+                {
+                    "creator_node_id": first["node_id"],
+                    "attribution_node_id": first["node_id"],
+                    "contribution_refs": [],
+                },
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            first = service.initialize_local_node_data()
+            second = service.initialize_local_node_data()
+
+            self.assertFalse(first["identity_persisted"])
+            self.assertFalse(service.paths.identity_path.exists())
+            self.assertEqual(first["node_id"], second["node_id"])
 
     def test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work(
         self,
@@ -295,7 +351,7 @@ class RuntimeServiceTests(unittest.TestCase):
             initialized = service.initialize_local_node_data()
             self.assertEqual(initialized["home"], str(nested_home))
             self.assertTrue(service.paths.config_path.exists())
-            self.assertTrue(service.paths.identity_path.exists())
+            self.assertFalse(service.paths.identity_path.exists())
 
         with tempfile.TemporaryDirectory() as temp_dir:
             nested_home = Path(temp_dir) / "nested" / "runtime"
@@ -310,7 +366,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertFalse(service.paths.identity_path.exists())
             status = service.start_node_runtime()
             self.assertEqual(status["status"], "running")
-            self.assertTrue(service.paths.identity_path.exists())
+            self.assertFalse(service.paths.identity_path.exists())
 
     def test_config_errors_and_defaults_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -345,6 +401,24 @@ class RuntimeServiceTests(unittest.TestCase):
         self.assertEqual(_config_api_port({"api": {"port": True}}), 7280)
         self.assertEqual(_config_api_port({"api": {"port": 9999}}), 9999)
         self.assertEqual(_config_api_port({}), 7280)
+        self.assertFalse(_config_identity_persistence_enabled({}))
+        self.assertTrue(
+            _config_identity_persistence_enabled({"identity": {"persist": True}})
+        )
+        with self.assertRaisesRegex(RuntimeServiceError, "identity.persist"):
+            _config_identity_persistence_enabled({"identity": {"persist": "yes"}})
+        self.assertEqual(
+            _config_identity_path({"identity": {}}, Path("home/id.json")),
+            Path("home/id.json"),
+        )
+        self.assertEqual(
+            _config_identity_path(
+                {"identity": {"path": "identity.json"}}, Path("home/id.json")
+            ),
+            Path("home/identity.json"),
+        )
+        with self.assertRaisesRegex(RuntimeServiceError, "identity.path"):
+            _config_identity_path({"identity": {"path": ""}}, Path("home/id.json"))
         self.assertEqual(
             _merge_config({"a": {"b": 2}, "c": 3}, {"a": {"d": 4}, "c": 0}),
             {"a": {"b": 2, "d": 4}, "c": 3},
