@@ -1,7 +1,6 @@
 name: Bug report
 description: Report a reproducible AetherMesh Core bug.
 title: "bug: "
-labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:
