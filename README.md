@@ -211,6 +211,8 @@ The `text_chunk` workload accepts plain input text plus optional `max_chars` (de
 
 The local-only `node_roster` includes each node's `node_id`, `status`, assignment count, contribution units, and deterministic heartbeat metadata. `heartbeat_sequence` and `heartbeat_count` are in-memory simulation counters recorded when available nodes start a local run; they are not real network heartbeats or wall-clock liveness timestamps.
 
+The public Phase 1 local node identity format is documented in [docs/local-node-identity.md](docs/local-node-identity.md), with a minimal fixture in [examples/local-node-identity.json](examples/local-node-identity.json). It keeps `node_id`, `creator_node_id`, public key, and local manifest linkage separate from private key material and from later registry, token, networking, or dashboard state.
+
 To opt in to local JSON-backed contribution persistence for a manifest batch, pass `--ledger-path`:
 
 ```bash
