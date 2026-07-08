@@ -174,6 +174,29 @@ class IdentityPersistenceTests(unittest.TestCase):
         ):
             parse_local_node_identity_document(document)
 
+    def test_public_local_node_identity_rejects_secret_material_name_variants(
+        self,
+    ) -> None:
+        base_document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "examples/local-batch.json#node:node-local-a",
+        }
+
+        for secret_field in ("privateKey", "secret-key", "seed"):
+            with self.subTest(secret_field=secret_field):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "must not contain private key material",
+                ):
+                    parse_local_node_identity_document(
+                        base_document
+                        | {"local_metadata": {secret_field: "do-not-copy"}}
+                    )
+
     def test_public_local_node_identity_rejects_non_integer_version(self) -> None:
         base_document = {
             "node_id": "node-local-a",
@@ -221,20 +244,27 @@ class IdentityPersistenceTests(unittest.TestCase):
                     )
 
     def test_public_local_node_identity_rejects_secret_manifest_ref(self) -> None:
-        document = {
+        base_document = {
             "node_id": "node-local-a",
             "creator_node_id": "node-local-a",
             "created_at": "2026-07-08T00:00:00Z",
             "identity_version": 1,
             "public_key": "ed25519-pub-local-a",
-            "manifest_ref": "keys/private_key.json#node:node-local-a",
         }
 
-        with self.assertRaisesRegex(
-            IdentityPersistenceError,
-            "manifest_ref must not reference private key material",
+        for manifest_ref in (
+            "keys/private_key.json#node:node-local-a",
+            "keys/private-key.json#node:node-local-a",
+            "keys/seed.json#node:node-local-a",
         ):
-            parse_local_node_identity_document(document)
+            with self.subTest(manifest_ref=manifest_ref):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "manifest_ref must not reference private key material",
+                ):
+                    parse_local_node_identity_document(
+                        base_document | {"manifest_ref": manifest_ref}
+                    )
 
     def test_node_name_wordlists_exist_and_are_valid(self) -> None:
         wordlists = _node_name_wordlists()

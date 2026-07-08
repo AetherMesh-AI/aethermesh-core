@@ -37,6 +37,7 @@ LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS = (
     "private_key",
     "secret_key",
     "secret_seed",
+    "seed",
     "mnemonic",
     "password",
 )
@@ -229,22 +230,24 @@ def _require_local_manifest_ref(value: str) -> None:
         raise IdentityPersistenceError(
             "local node identity manifest_ref must be a local file or fixture reference"
         )
-    if any(
-        fragment in lowered for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
-    ):
+    if _contains_secret_identity_fragment(lowered):
         raise IdentityPersistenceError(
             "local node identity manifest_ref must not reference private key material"
         )
 
 
+def _contains_secret_identity_fragment(value: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]", "", value.lower())
+    return any(
+        fragment in value.lower() or re.sub(r"[^a-z0-9]", "", fragment) in normalized
+        for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
+    )
+
+
 def _reject_secret_identity_fields(value: object) -> None:
     if isinstance(value, dict):
         for key, nested_value in value.items():
-            lowered_key = str(key).lower()
-            if any(
-                fragment in lowered_key
-                for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
-            ):
+            if _contains_secret_identity_fragment(str(key)):
                 raise IdentityPersistenceError(
                     "local node identity must not contain private key material"
                 )
