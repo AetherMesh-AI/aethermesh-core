@@ -7,6 +7,7 @@ import json
 import os
 import platform
 import re
+import secrets
 import subprocess  # nosec B404 - fixed local hardware probe commands only; no user input.
 from functools import lru_cache
 import sys
@@ -22,6 +23,9 @@ from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.models import NodeIdentity
 
 IDENTITY_SCHEMA_VERSION = 1
+IDENTITY_CREATED_BY = "aethermesh_core.identity.load_or_create_identity"
+IDENTITY_PROVENANCE_SOURCE = "local-first-initialization"
+IDENTITY_AUTHORITY = "local-only-no-network-consensus"
 LOCAL_NODE_IDENTITY_VERSION = 1
 LOCAL_NODE_IDENTITY_REQUIRED_FIELDS = frozenset(
     {
@@ -72,6 +76,7 @@ NODE_NAME_WORDLIST_FILES = {
 FileReader = Callable[[str], str]
 CommandRunner = Callable[..., str]
 HostnameReader = Callable[[], str]
+NodeIdFactory = Callable[[], str]
 
 
 @dataclass(frozen=True)
@@ -266,6 +271,7 @@ def load_or_create_identity(
     read_hostname: HostnameReader | None = None,
     hardware_inputs: HardwareIdentityInputs | None = None,
     account_id: str | None = None,
+    node_id_factory: NodeIdFactory | None = None,
 ) -> NodeIdentity:
     """Load a versioned local node identity, creating one if the file is missing."""
 
@@ -273,14 +279,7 @@ def load_or_create_identity(
     if identity_path.exists():
         return _load_identity(identity_path)
 
-    node_id = deterministic_machine_node_id(
-        goos=goos,
-        read_file=read_file,
-        run_command=run_command,
-        read_hostname=read_hostname,
-        hardware_inputs=hardware_inputs,
-        account_id=account_id,
-    )
+    node_id = (node_id_factory or _new_local_node_id)()
     identity = NodeIdentity(
         node_id=node_id,
         node_name=deterministic_machine_node_name(
@@ -295,6 +294,12 @@ def load_or_create_identity(
     )
     _save_identity(identity_path, identity)
     return identity
+
+
+def _new_local_node_id() -> str:
+    """Return a new collision-resistant local node id for first-time manifests."""
+
+    return secrets.token_hex(32)
 
 
 def deterministic_machine_node_id(
@@ -1018,7 +1023,36 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'node.node_name' must be a non-empty string when present"
         )
+    creator_node_id = node.get("creator_node_id")
+    if not isinstance(creator_node_id, str) or not creator_node_id:
+        raise IdentityPersistenceError(
+            "identity JSON field 'node.creator_node_id' must be a non-empty string"
+        )
+    created_at = node.get("created_at")
+    if not isinstance(created_at, str) or not created_at:
+        raise IdentityPersistenceError(
+            "identity JSON field 'node.created_at' must be a non-empty string"
+        )
+    _require_identity_timestamp(created_at)
+    provenance = document.get("provenance")
+    if not isinstance(provenance, dict):
+        raise IdentityPersistenceError(
+            "identity JSON field 'provenance' must be an object"
+        )
+    _require_provenance_string(provenance, "created_by")
+    _require_provenance_string(provenance, "source")
+    _require_provenance_string(provenance, "creation_event")
+    _require_provenance_string(provenance, "load_behavior")
+    _require_provenance_string(provenance, "authority")
     return NodeIdentity(node_id=node_id, node_name=node_name)
+
+
+def _require_provenance_string(document: dict[str, object], field_name: str) -> None:
+    value = document.get(field_name)
+    if not isinstance(value, str) or not value:
+        raise IdentityPersistenceError(
+            f"identity JSON field 'provenance.{field_name}' must be a non-empty string"
+        )
 
 
 def _save_identity(path: Path, identity: NodeIdentity) -> None:
@@ -1031,11 +1065,23 @@ def _save_identity(path: Path, identity: NodeIdentity) -> None:
         raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
 
 
-def _identity_document(identity: NodeIdentity) -> dict[str, object]:
+def _identity_document(
+    identity: NodeIdentity, *, created_at: str | None = None
+) -> dict[str, object]:
+    timestamp = created_at or datetime.now(UTC).replace(microsecond=0).isoformat()
     node: dict[str, object] = {"node_id": identity.node_id}
     if identity.node_name is not None:
         node["node_name"] = identity.node_name
+    node["creator_node_id"] = identity.node_id
+    node["created_at"] = timestamp
     return {
         "version": IDENTITY_SCHEMA_VERSION,
         "node": node,
+        "provenance": {
+            "created_by": IDENTITY_CREATED_BY,
+            "source": IDENTITY_PROVENANCE_SOURCE,
+            "creation_event": "identity_manifest_created",
+            "load_behavior": "reuse_existing_identity_without_overwrite",
+            "authority": IDENTITY_AUTHORITY,
+        },
     }
