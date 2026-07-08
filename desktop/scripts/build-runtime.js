@@ -8,6 +8,8 @@ const arch = process.env.AETHERMESH_TARGET_ARCH || process.arch;
 const exeName = platform === 'win32' ? 'aethermesh-node.exe' : 'aethermesh-node';
 const runtimeOut = path.join(root, 'dist', 'runtime', `${platform}-${arch}`);
 const entry = path.join(root, 'desktop', 'pyinstaller', 'aethermesh_node.py');
+const addDataSeparator = platform === 'win32' ? ';' : ':';
+const nodeNameWordlists = path.join(root, 'wordlists', 'node-names');
 
 fs.rmSync(runtimeOut, { recursive: true, force: true });
 fs.mkdirSync(runtimeOut, { recursive: true });
@@ -30,6 +32,8 @@ const args = [
   path.join(root, 'src'),
   '--collect-all',
   'aethermesh_core',
+  '--add-data',
+  `${nodeNameWordlists}${addDataSeparator}${path.join('wordlists', 'node-names')}`,
   '--hidden-import',
   'uvicorn',
   '--hidden-import',
