@@ -156,7 +156,8 @@ async function refreshAll() {
     getJson('/api/status'), getJson('/api/peers'), getJson('/api/jobs'), getJson('/api/logs')
   ]);
   dl('node', [
-    ['Node ID', status.node_id], ['Status', status.status], ['Version', status.version],
+    ['Node ID', status.node_id], ['Node Name', status.node_name], ['Status', status.status],
+    ['Version', status.version],
     ['Uptime', status.uptime_seconds === null ? 'not running' : status.uptime_seconds + 's'],
     ['Config', status.config_path], ['Data directory', status.data_dir]
   ]);

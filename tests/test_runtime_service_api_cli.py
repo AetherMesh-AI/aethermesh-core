@@ -495,10 +495,25 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(
                 payloads["version_alias"]["version"], payloads["status"]["version"]
             )
+            service_status = service.get_node_status()
+            self.assertEqual(payloads["status"]["node_id"], service_status["node_id"])
             self.assertEqual(
-                payloads["status"]["node_id"], service.get_node_status()["node_id"]
+                payloads["status"]["node_name"], service_status["node_name"]
+            )
+            self.assertEqual(
+                payloads["status_alias"]["node_name"], service_status["node_name"]
             )
             self.assertEqual(payloads["node"], payloads["node_alias"])
+            self.assertEqual(payloads["node"]["node_id"], service_status["node_id"])
+            self.assertEqual(payloads["node"]["node_name"], service_status["node_name"])
+            self.assertRegex(
+                str(payloads["node"]["node_name"]),
+                r"^[a-z]+-[a-z]+-[a-z]+-[a-z]+_[a-f0-9]{6}$",
+            )
+            self.assertEqual(
+                str(payloads["node"]["node_name"]).rsplit("_", 1)[1],
+                payloads["node"]["node_id"][:6],
+            )
             self.assertEqual(payloads["node"]["status"], "stopped")
             self.assertEqual(payloads["peers"], payloads["peers_alias"])
             self.assertEqual(payloads["peers"]["peers"], [])
@@ -519,6 +534,8 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(payloads["restart"]["restart_requested"], True)
             self.assertIn("AetherMesh Local Node", payloads["html"])
             self.assertIn("/api/status", payloads["html"])
+            self.assertIn("Node Name", payloads["html"])
+            self.assertIn("status.node_name", payloads["html"])
             self.assertIn("textContent", payloads["html"])
             self.assertNotIn("innerHTML", payloads["html"])
 
