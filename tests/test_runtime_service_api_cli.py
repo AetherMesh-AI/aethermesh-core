@@ -887,7 +887,13 @@ class AppCliTests(unittest.TestCase):
                 self.assertEqual(calls["host"], "localhost")
                 self.assertEqual(calls["port"], 7281)
 
-            with patch("aethermesh_core.app_cli._serve") as serve:
+            with (
+                patch(
+                    "aethermesh_core.app_cli._local_api_is_aethermesh",
+                    return_value=False,
+                ),
+                patch("aethermesh_core.app_cli._serve") as serve,
+            ):
                 CliRunner(env={"AETHERMESH_HOME": temp_dir}).invoke(
                     app_cli.app, ["node", "start"]
                 )

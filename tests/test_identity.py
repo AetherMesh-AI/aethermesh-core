@@ -47,6 +47,7 @@ from aethermesh_core.identity import (
     deterministic_machine_node_id,
     deterministic_machine_node_name,
     load_or_create_identity,
+    parse_local_node_identity_document,
 )
 from aethermesh_core.models import NodeIdentity
 
@@ -80,6 +81,161 @@ def _expected_node_id(hardware: HardwareIdentityInputs) -> str:
 
 
 class IdentityPersistenceTests(unittest.TestCase):
+    def test_public_local_node_identity_example_parses(self) -> None:
+        example_path = (
+            Path(__file__).parents[1] / "examples" / "local-node-identity.json"
+        )
+        document = json.loads(example_path.read_text(encoding="utf-8"))
+
+        identity = parse_local_node_identity_document(document)
+
+        self.assertEqual(identity.node_id, "node-local-7f3a9c2e")
+        self.assertEqual(identity.creator_node_id, "node-local-7f3a9c2e")
+        self.assertEqual(identity.created_at, "2026-07-08T00:00:00Z")
+        self.assertEqual(identity.identity_version, 1)
+        self.assertEqual(identity.public_key, "ed25519-pub-local-example-7f3a9c2e")
+        self.assertEqual(
+            identity.manifest_ref,
+            "examples/local-batch.json#node:node-local-7f3a9c2e",
+        )
+        self.assertEqual(
+            identity.local_metadata,
+            {"display_name": "Local prototype node", "environment": "dev-fixture"},
+        )
+        self.assertEqual(identity.to_document(), document)
+        parse_local_node_identity_document(document | {"local_metadata": {"notes": []}})
+
+    def test_creator_node_id_is_preserved_separately_from_derived_record_ids(
+        self,
+    ) -> None:
+        identity = parse_local_node_identity_document(
+            {
+                "node_id": "node-local-worker-a",
+                "creator_node_id": "node-local-creator-a",
+                "created_at": "2026-07-08T00:00:00+00:00",
+                "identity_version": 1,
+                "public_key": "ed25519-pub-local-worker-a",
+                "manifest_ref": "examples/local-batch.json#node:node-local-worker-a",
+            }
+        )
+        generated_record_ids = {
+            "work_id": "work-0001",
+            "receipt_id": "receipt-0001",
+            "lineage_id": "lineage-0001",
+            "contribution_record_id": "contribution-0001",
+        }
+
+        self.assertEqual(identity.creator_node_id, "node-local-creator-a")
+        self.assertNotIn(identity.creator_node_id, generated_record_ids.values())
+        self.assertNotEqual(identity.creator_node_id, identity.node_id)
+        self.assertEqual(
+            identity.to_document(),
+            {
+                "node_id": "node-local-worker-a",
+                "creator_node_id": "node-local-creator-a",
+                "created_at": "2026-07-08T00:00:00+00:00",
+                "identity_version": 1,
+                "public_key": "ed25519-pub-local-worker-a",
+                "manifest_ref": "examples/local-batch.json#node:node-local-worker-a",
+            },
+        )
+
+    def test_public_local_node_identity_rejects_secret_material(self) -> None:
+        document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "examples/local-batch.json#node:node-local-a",
+            "local_metadata": {"private_key_path": "keys/node-local-a.key"},
+        }
+
+        with self.assertRaisesRegex(
+            IdentityPersistenceError,
+            "must not contain private key material",
+        ):
+            parse_local_node_identity_document(document)
+
+    def test_public_local_node_identity_rejects_secret_material_in_lists(self) -> None:
+        document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "examples/local-batch.json#node:node-local-a",
+            "local_metadata": {"notes": [{"secret_seed": "do-not-copy"}]},
+        }
+
+        with self.assertRaisesRegex(
+            IdentityPersistenceError,
+            "must not contain private key material",
+        ):
+            parse_local_node_identity_document(document)
+
+    def test_public_local_node_identity_rejects_non_integer_version(self) -> None:
+        base_document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "examples/local-batch.json#node:node-local-a",
+        }
+
+        for identity_version in (True, "1", 2):
+            with self.subTest(identity_version=identity_version):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "identity_version must be integer 1",
+                ):
+                    parse_local_node_identity_document(
+                        base_document | {"identity_version": identity_version}
+                    )
+
+    def test_public_local_node_identity_rejects_nonlocal_manifest_ref(self) -> None:
+        base_document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+        }
+        denied_refs = (
+            "registry://nodes/node-local-a",
+            "https://example.invalid/nodes/node-local-a",
+            "/var/tmp/aethermesh/manifest.json",
+            "~/.aethermesh/manifest.json",
+            "../outside-repo/manifest.json",
+            "C:\\Users\\example\\manifest.json",
+        )
+
+        for manifest_ref in denied_refs:
+            with self.subTest(manifest_ref=manifest_ref):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "manifest_ref must be a local file or fixture reference",
+                ):
+                    parse_local_node_identity_document(
+                        base_document | {"manifest_ref": manifest_ref}
+                    )
+
+    def test_public_local_node_identity_rejects_secret_manifest_ref(self) -> None:
+        document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "keys/private_key.json#node:node-local-a",
+        }
+
+        with self.assertRaisesRegex(
+            IdentityPersistenceError,
+            "manifest_ref must not reference private key material",
+        ):
+            parse_local_node_identity_document(document)
+
     def test_node_name_wordlists_exist_and_are_valid(self) -> None:
         wordlists = _node_name_wordlists()
         self.assertEqual(set(wordlists), {"cpu", "mac", "gpu", "ram"})

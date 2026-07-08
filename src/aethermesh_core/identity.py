@@ -12,6 +12,7 @@ from functools import lru_cache
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
@@ -21,6 +22,31 @@ from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.models import NodeIdentity
 
 IDENTITY_SCHEMA_VERSION = 1
+LOCAL_NODE_IDENTITY_VERSION = 1
+LOCAL_NODE_IDENTITY_REQUIRED_FIELDS = frozenset(
+    {
+        "node_id",
+        "creator_node_id",
+        "created_at",
+        "identity_version",
+        "public_key",
+        "manifest_ref",
+    }
+)
+LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS = (
+    "private_key",
+    "secret_key",
+    "secret_seed",
+    "mnemonic",
+    "password",
+)
+LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES = (
+    "http://",
+    "https://",
+    "registry://",
+    "token://",
+    "dashboard://",
+)
 UNKNOWN_CPU_ARCHITECTURE = "UNKNOWN_CPU_ARCHITECTURE"
 UNKNOWN_CPU_VENDOR = "UNKNOWN_CPU_VENDOR"
 UNKNOWN_CPU_BRAND = "UNKNOWN_CPU_BRAND"
@@ -81,6 +107,151 @@ class HardwareComponentHashes:
 
 class IdentityPersistenceError(ValueError):
     """Raised when local identity JSON cannot be safely loaded or saved."""
+
+
+@dataclass(frozen=True)
+class LocalNodeIdentity:
+    """Validated version 1 public local node identity document."""
+
+    node_id: str
+    creator_node_id: str
+    created_at: str
+    identity_version: int
+    public_key: str
+    manifest_ref: str
+    local_metadata: dict[str, object] | None = None
+
+    def to_document(self) -> dict[str, object]:
+        """Return the public identity document without private key material."""
+
+        document: dict[str, object] = {
+            "node_id": self.node_id,
+            "creator_node_id": self.creator_node_id,
+            "created_at": self.created_at,
+            "identity_version": self.identity_version,
+            "public_key": self.public_key,
+            "manifest_ref": self.manifest_ref,
+        }
+        if self.local_metadata is not None:
+            document["local_metadata"] = dict(self.local_metadata)
+        return document
+
+
+def parse_local_node_identity_document(document: object) -> LocalNodeIdentity:
+    """Parse and validate the Phase 1 public local node identity shape."""
+
+    if not isinstance(document, dict):
+        raise IdentityPersistenceError("local node identity must be a JSON object")
+    _reject_secret_identity_fields(document)
+
+    missing_fields = sorted(LOCAL_NODE_IDENTITY_REQUIRED_FIELDS - document.keys())
+    if missing_fields:
+        raise IdentityPersistenceError(
+            "local node identity missing required fields: " + ", ".join(missing_fields)
+        )
+
+    node_id = _required_identity_string(document, "node_id")
+    _require_reference_safe_identity_value("node_id", node_id)
+    creator_node_id = _required_identity_string(document, "creator_node_id")
+    _require_reference_safe_identity_value("creator_node_id", creator_node_id)
+    created_at = _required_identity_string(document, "created_at")
+    _require_identity_timestamp(created_at)
+    identity_version = document["identity_version"]
+    if (
+        not isinstance(identity_version, int)
+        or isinstance(identity_version, bool)
+        or identity_version != LOCAL_NODE_IDENTITY_VERSION
+    ):
+        raise IdentityPersistenceError("local node identity_version must be integer 1")
+    public_key = _required_identity_string(document, "public_key")
+    manifest_ref = _required_identity_string(document, "manifest_ref")
+    _require_local_manifest_ref(manifest_ref)
+
+    local_metadata = document.get("local_metadata")
+    if local_metadata is not None and not isinstance(local_metadata, dict):
+        raise IdentityPersistenceError(
+            "local node identity local_metadata must be an object when present"
+        )
+
+    return LocalNodeIdentity(
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        created_at=created_at,
+        identity_version=identity_version,
+        public_key=public_key,
+        manifest_ref=manifest_ref,
+        local_metadata=dict(local_metadata) if local_metadata is not None else None,
+    )
+
+
+def _required_identity_string(document: dict[str, object], field_name: str) -> str:
+    value = document[field_name]
+    if not isinstance(value, str) or not value.strip():
+        raise IdentityPersistenceError(
+            f"local node identity field '{field_name}' must be a non-empty string"
+        )
+    return value
+
+
+def _require_reference_safe_identity_value(field_name: str, value: str) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9._:-]+", value):
+        raise IdentityPersistenceError(
+            f"local node identity field '{field_name}' must be reference-safe"
+        )
+
+
+def _require_identity_timestamp(value: str) -> None:
+    normalized = value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise IdentityPersistenceError(
+            "local node identity created_at must be an ISO 8601 timestamp"
+        ) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise IdentityPersistenceError(
+            "local node identity created_at must include a timezone"
+        )
+    parsed.astimezone(UTC)
+
+
+def _require_local_manifest_ref(value: str) -> None:
+    lowered = value.lower()
+    path_part = value.split("#", 1)[0]
+    if (
+        value != value.strip()
+        or "://" in lowered
+        or lowered.startswith(LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES)
+        or path_part.startswith(("/", "~"))
+        or re.match(r"^[A-Za-z]:[\\/]", path_part) is not None
+        or ".." in Path(path_part).parts
+    ):
+        raise IdentityPersistenceError(
+            "local node identity manifest_ref must be a local file or fixture reference"
+        )
+    if any(
+        fragment in lowered for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
+    ):
+        raise IdentityPersistenceError(
+            "local node identity manifest_ref must not reference private key material"
+        )
+
+
+def _reject_secret_identity_fields(value: object) -> None:
+    if isinstance(value, dict):
+        for key, nested_value in value.items():
+            lowered_key = str(key).lower()
+            if any(
+                fragment in lowered_key
+                for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
+            ):
+                raise IdentityPersistenceError(
+                    "local node identity must not contain private key material"
+                )
+            _reject_secret_identity_fields(nested_value)
+    elif isinstance(value, list):
+        for nested_value in value:
+            _reject_secret_identity_fields(nested_value)
 
 
 def load_or_create_identity(
