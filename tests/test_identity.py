@@ -174,6 +174,25 @@ class IdentityPersistenceTests(unittest.TestCase):
         ):
             parse_local_node_identity_document(document)
 
+    def test_public_local_node_identity_rejects_non_integer_version(self) -> None:
+        base_document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "public_key": "ed25519-pub-local-a",
+            "manifest_ref": "examples/local-batch.json#node:node-local-a",
+        }
+
+        for identity_version in (True, "1", 2):
+            with self.subTest(identity_version=identity_version):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "identity_version must be integer 1",
+                ):
+                    parse_local_node_identity_document(
+                        base_document | {"identity_version": identity_version}
+                    )
+
     def test_public_local_node_identity_rejects_nonlocal_manifest_ref(self) -> None:
         base_document = {
             "node_id": "node-local-a",
@@ -185,10 +204,10 @@ class IdentityPersistenceTests(unittest.TestCase):
         denied_refs = (
             "registry://nodes/node-local-a",
             "https://example.invalid/nodes/node-local-a",
-            "/Users/trevoroler/.aethermesh/manifest.json",
+            "/var/tmp/aethermesh/manifest.json",
             "~/.aethermesh/manifest.json",
             "../outside-repo/manifest.json",
-            "C:\\Users\\trevoroler\\manifest.json",
+            "C:\\Users\\example\\manifest.json",
         )
 
         for manifest_ref in denied_refs:

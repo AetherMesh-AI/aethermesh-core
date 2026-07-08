@@ -157,7 +157,11 @@ def parse_local_node_identity_document(document: object) -> LocalNodeIdentity:
     created_at = _required_identity_string(document, "created_at")
     _require_identity_timestamp(created_at)
     identity_version = document["identity_version"]
-    if identity_version != LOCAL_NODE_IDENTITY_VERSION:
+    if (
+        not isinstance(identity_version, int)
+        or isinstance(identity_version, bool)
+        or identity_version != LOCAL_NODE_IDENTITY_VERSION
+    ):
         raise IdentityPersistenceError("local node identity_version must be integer 1")
     public_key = _required_identity_string(document, "public_key")
     manifest_ref = _required_identity_string(document, "manifest_ref")
