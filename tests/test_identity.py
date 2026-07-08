@@ -50,6 +50,10 @@ from aethermesh_core.identity import (
     parse_local_node_identity_document,
 )
 from aethermesh_core.models import NodeIdentity
+from aethermesh_core.receipts import (
+    load_receipt_document_if_exists,
+    write_receipt_document,
+)
 
 
 def _hardware(**overrides: object) -> HardwareIdentityInputs:
@@ -425,10 +429,50 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertTrue(first.endswith("_aaaaaa"))
         self.assertTrue(second.endswith("_bbbbbb"))
 
-    def test_legacy_identity_document_can_omit_node_name(self) -> None:
+    def test_identity_document_records_creator_timestamp_and_provenance(self) -> None:
         self.assertEqual(
-            _identity_document(NodeIdentity(node_id="legacy-node")),
-            {"version": 1, "node": {"node_id": "legacy-node"}},
+            _identity_document(
+                NodeIdentity(node_id="local-node", node_name="test-node_123456"),
+                created_at="2026-07-08T00:00:00+00:00",
+            ),
+            {
+                "version": 1,
+                "node": {
+                    "node_id": "local-node",
+                    "node_name": "test-node_123456",
+                    "creator_node_id": "local-node",
+                    "created_at": "2026-07-08T00:00:00+00:00",
+                },
+                "provenance": {
+                    "created_by": "aethermesh_core.identity.load_or_create_identity",
+                    "source": "local-first-initialization",
+                    "creation_event": "identity_manifest_created",
+                    "load_behavior": "reuse_existing_identity_without_overwrite",
+                    "authority": "local-only-no-network-consensus",
+                },
+            },
+        )
+
+        self.assertEqual(
+            _identity_document(
+                NodeIdentity(node_id="local-node"),
+                created_at="2026-07-08T00:00:00+00:00",
+            ),
+            {
+                "version": 1,
+                "node": {
+                    "node_id": "local-node",
+                    "creator_node_id": "local-node",
+                    "created_at": "2026-07-08T00:00:00+00:00",
+                },
+                "provenance": {
+                    "created_by": "aethermesh_core.identity.load_or_create_identity",
+                    "source": "local-first-initialization",
+                    "creation_event": "identity_manifest_created",
+                    "load_behavior": "reuse_existing_identity_without_overwrite",
+                    "authority": "local-only-no-network-consensus",
+                },
+            },
         )
 
     def test_missing_identity_file_is_created_with_hardware_root_node_id(self) -> None:
@@ -445,11 +489,29 @@ class IdentityPersistenceTests(unittest.TestCase):
             deterministic_machine_node_name(hardware_inputs=hardware),
         )
         self.assertFalse(identity.node_id.startswith("local-"))
+        self.assertEqual(persisted["version"], 1)
         self.assertEqual(
-            persisted,
+            persisted["node"],
             {
-                "version": 1,
-                "node": {"node_id": identity.node_id, "node_name": identity.node_name},
+                "node_id": identity.node_id,
+                "node_name": identity.node_name,
+                "creator_node_id": identity.node_id,
+                "created_at": persisted["node"]["created_at"],
+            },
+        )
+        self.assertEqual(persisted["node"]["creator_node_id"], identity.node_id)
+        self.assertRegex(
+            persisted["node"]["created_at"],
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$",
+        )
+        self.assertEqual(
+            persisted["provenance"],
+            {
+                "created_by": "aethermesh_core.identity.load_or_create_identity",
+                "source": "local-first-initialization",
+                "creation_event": "identity_manifest_created",
+                "load_behavior": "reuse_existing_identity_without_overwrite",
+                "authority": "local-only-no-network-consensus",
             },
         )
 
@@ -864,16 +926,35 @@ Ethernet Address: aa:bb:cc:dd:ee:04
     def test_existing_identity_file_reuses_node_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "local-node.json"
+            original_document = {
+                "version": 1,
+                "node": {
+                    "node_id": "legacy-node-id",
+                    "node_name": "legacy-node-name_legacy",
+                    "creator_node_id": "original-creator-node",
+                    "created_at": "2026-07-08T00:00:00+00:00",
+                },
+                "provenance": {
+                    "created_by": "older-local-tool",
+                    "source": "local-first-initialization",
+                    "creation_event": "identity_manifest_created",
+                    "load_behavior": "reuse_existing_identity_without_overwrite",
+                    "authority": "local-only-no-network-consensus",
+                },
+            }
             identity_path.write_text(
-                json.dumps({"version": 1, "node": {"node_id": "legacy-node-id"}}),
+                json.dumps(original_document),
                 encoding="utf-8",
             )
 
             identity = load_or_create_identity(
                 identity_path, hardware_inputs=_hardware()
             )
+            reloaded_document = json.loads(identity_path.read_text(encoding="utf-8"))
 
         self.assertEqual(identity.node_id, "legacy-node-id")
+        self.assertEqual(identity.node_name, "legacy-node-name_legacy")
+        self.assertEqual(reloaded_document, original_document)
 
     def test_malformed_identity_json_raises_clear_error_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -906,6 +987,59 @@ Ethernet Address: aa:bb:cc:dd:ee:04
 
             with self.assertRaisesRegex(IdentityPersistenceError, "node.node_id"):
                 load_or_create_identity(identity_path)
+
+    def test_missing_creator_identity_data_raises_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            original = json.dumps({"version": 1, "node": {"node_id": "legacy-node"}})
+            identity_path.write_text(original, encoding="utf-8")
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "creator_node_id"):
+                load_or_create_identity(identity_path, hardware_inputs=_hardware())
+
+            self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
+
+    def test_identity_receipt_reference_uses_stable_node_id(self) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            first_identity = load_or_create_identity(
+                identity_path, hardware_inputs=hardware
+            )
+            second_identity = load_or_create_identity(
+                identity_path, hardware_inputs=hardware
+            )
+
+        receipt = {
+            "version": 1,
+            "run_source": "run-local-flow",
+            "receipts": [
+                {
+                    "job_id": "job-1",
+                    "job_type": "echo",
+                    "node_id": second_identity.node_id,
+                    "assignment_message_id": "msg-0001",
+                    "correlation_id": "job-1",
+                    "result_message_id": "msg-0002",
+                    "validation_message_id": "msg-0003",
+                    "contribution_message_id": "msg-0004",
+                    "result_status": "completed",
+                    "result_hash": "a" * 64,
+                    "validation": {"valid": True, "reason": "ok"},
+                    "credited_units": 1,
+                    "output_summary": {"value": "hello"},
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt_path = Path(temp_dir) / "receipts.json"
+            write_receipt_document(receipt_path, receipt)
+            validated_receipt = load_receipt_document_if_exists(receipt_path)
+
+        self.assertEqual(first_identity.node_id, second_identity.node_id)
+        self.assertEqual(validated_receipt, receipt)
+        self.assertEqual(receipt["receipts"][0]["node_id"], first_identity.node_id)
 
     def test_identity_error_messages_are_stable(self) -> None:
         cases = [
