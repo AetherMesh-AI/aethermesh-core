@@ -213,9 +213,23 @@ def _require_identity_timestamp(value: str) -> None:
 
 def _require_local_manifest_ref(value: str) -> None:
     lowered = value.lower()
-    if lowered.startswith(LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES):
+    path_part = value.split("#", 1)[0]
+    if (
+        value != value.strip()
+        or "://" in lowered
+        or lowered.startswith(LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES)
+        or path_part.startswith(("/", "~"))
+        or re.match(r"^[A-Za-z]:[\\/]", path_part) is not None
+        or ".." in Path(path_part).parts
+    ):
         raise IdentityPersistenceError(
             "local node identity manifest_ref must be a local file or fixture reference"
+        )
+    if any(
+        fragment in lowered for fragment in LOCAL_NODE_IDENTITY_SECRET_FIELD_FRAGMENTS
+    ):
+        raise IdentityPersistenceError(
+            "local node identity manifest_ref must not reference private key material"
         )
 
 

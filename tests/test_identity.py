@@ -175,18 +175,45 @@ class IdentityPersistenceTests(unittest.TestCase):
             parse_local_node_identity_document(document)
 
     def test_public_local_node_identity_rejects_nonlocal_manifest_ref(self) -> None:
+        base_document = {
+            "node_id": "node-local-a",
+            "creator_node_id": "node-local-a",
+            "created_at": "2026-07-08T00:00:00Z",
+            "identity_version": 1,
+            "public_key": "ed25519-pub-local-a",
+        }
+        denied_refs = (
+            "registry://nodes/node-local-a",
+            "https://example.invalid/nodes/node-local-a",
+            "/Users/trevoroler/.aethermesh/manifest.json",
+            "~/.aethermesh/manifest.json",
+            "../outside-repo/manifest.json",
+            "C:\\Users\\trevoroler\\manifest.json",
+        )
+
+        for manifest_ref in denied_refs:
+            with self.subTest(manifest_ref=manifest_ref):
+                with self.assertRaisesRegex(
+                    IdentityPersistenceError,
+                    "manifest_ref must be a local file or fixture reference",
+                ):
+                    parse_local_node_identity_document(
+                        base_document | {"manifest_ref": manifest_ref}
+                    )
+
+    def test_public_local_node_identity_rejects_secret_manifest_ref(self) -> None:
         document = {
             "node_id": "node-local-a",
             "creator_node_id": "node-local-a",
             "created_at": "2026-07-08T00:00:00Z",
             "identity_version": 1,
             "public_key": "ed25519-pub-local-a",
-            "manifest_ref": "registry://nodes/node-local-a",
+            "manifest_ref": "keys/private_key.json#node:node-local-a",
         }
 
         with self.assertRaisesRegex(
             IdentityPersistenceError,
-            "manifest_ref must be a local file or fixture reference",
+            "manifest_ref must not reference private key material",
         ):
             parse_local_node_identity_document(document)
 
