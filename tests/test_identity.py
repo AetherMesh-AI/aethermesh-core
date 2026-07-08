@@ -30,6 +30,7 @@ from aethermesh_core.identity import (
     _linux_physical_core_count,
     _max_csv_int,
     _max_gpu_vram_gb,
+    _new_local_node_id,
     _node_name_from_hashes,
     _node_name_wordlist_dir,
     _node_name_wordlists,
@@ -475,20 +476,25 @@ class IdentityPersistenceTests(unittest.TestCase):
             },
         )
 
-    def test_missing_identity_file_is_created_with_hardware_root_node_id(self) -> None:
+    def test_missing_identity_file_is_created_with_random_local_node_id(self) -> None:
         hardware = _hardware()
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "deep" / "nested" / "local-node.json"
 
-            identity = load_or_create_identity(identity_path, hardware_inputs=hardware)
+            identity = load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
             persisted = json.loads(identity_path.read_text(encoding="utf-8"))
 
-        self.assertEqual(identity.node_id, _expected_node_id(hardware))
+        self.assertEqual(identity.node_id, "a" * 64)
         self.assertEqual(
             identity.node_name,
-            deterministic_machine_node_name(hardware_inputs=hardware),
+            deterministic_machine_node_name(hardware_inputs=hardware, node_id="a" * 64),
         )
-        self.assertFalse(identity.node_id.startswith("local-"))
+        self.assertNotEqual(identity.node_id, _expected_node_id(hardware))
+        self.assertRegex(identity.node_id, r"^[0-9a-f]{64}$")
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(
             persisted["node"],
@@ -514,6 +520,14 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "authority": "local-only-no-network-consensus",
             },
         )
+
+    def test_new_local_node_id_uses_collision_resistant_hex_randomness(self) -> None:
+        first = _new_local_node_id()
+        second = _new_local_node_id()
+
+        self.assertRegex(first, r"^[0-9a-f]{64}$")
+        self.assertRegex(second, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(first, second)
 
     def test_same_hardware_inputs_always_produce_same_node_id(self) -> None:
         first = deterministic_machine_node_id(hardware_inputs=_hardware())
