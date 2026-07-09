@@ -392,7 +392,7 @@ def reset_identity(
         else backup_root / "identity-reset-receipts.json"
     )
     _load_identity_reset_receipts(receipt_path)
-    _save_identity(identity_path, new_identity)
+    _save_identity(identity_path, new_identity, overwrite_existing=True)
     try:
         _append_identity_reset_receipt(
             receipt_path,
@@ -1327,9 +1327,15 @@ def _load_identity_reset_receipts(path: Path) -> dict[str, object]:
     return document
 
 
-def _save_identity(path: Path, identity: NodeIdentity) -> None:
+def _save_identity(
+    path: Path, identity: NodeIdentity, *, overwrite_existing: bool = False
+) -> None:
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and not overwrite_existing:
+        raise IdentityPersistenceError(
+            "identity file already exists; use the explicit reset flow to replace it"
+        )
     document = _identity_document(identity)
     try:
         atomic_write_json(path, document)

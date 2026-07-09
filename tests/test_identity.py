@@ -44,6 +44,7 @@ from aethermesh_core.identity import (
     _run_command,
     _run_or_empty,
     _safe_int,
+    _save_identity,
     _load_identity_reset_receipts,
     _unique_reset_artifact_path,
     _vram_value_to_gb,
@@ -601,6 +602,21 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contribution_refs": [],
             },
         )
+
+    def test_identity_creation_refuses_to_overwrite_existing_file_without_reset(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            _save_identity(identity_path, NodeIdentity(node_id="a" * 64))
+            original = json.loads(identity_path.read_text(encoding="utf-8"))
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "explicit reset"):
+                _save_identity(identity_path, NodeIdentity(node_id="b" * 64))
+
+            after_attempt = json.loads(identity_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(after_attempt, original)
 
     def test_explicit_identity_reset_quarantines_old_identity_and_records_receipt(
         self,
