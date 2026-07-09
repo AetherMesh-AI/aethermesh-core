@@ -20,6 +20,7 @@ from aethermesh_core.identity import (
     deterministic_machine_node_id,
     deterministic_machine_node_name,
     load_or_create_identity,
+    reset_identity,
 )
 from aethermesh_core.job_manifest import (
     ManifestError,
@@ -138,6 +139,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--ledger-path",
         default=None,
         help="Opt in to JSON-file-backed local contribution ledger persistence.",
+    )
+
+    reset = subcommands.add_parser(
+        "reset-identity",
+        help="Explicitly reset a persisted local node identity after quarantining the old one.",
+    )
+    reset.add_argument(
+        "--identity-path",
+        required=True,
+        help="Path to the existing persisted local node identity JSON file.",
+    )
+    reset.add_argument(
+        "--confirm-reset",
+        action="store_true",
+        help="Required acknowledgement that lineage and attribution continuity may be affected.",
+    )
+    reset.add_argument(
+        "--reason",
+        default=None,
+        help="Optional local audit reason recorded in the reset receipt.",
+    )
+    reset.add_argument(
+        "--quarantine-dir",
+        default=None,
+        help="Optional directory for quarantined previous identity material and receipts.",
+    )
+    reset.add_argument(
+        "--audit-receipt-path",
+        default=None,
+        help="Optional path for the local identity reset audit receipt JSON.",
     )
 
     subcommands.add_parser(
@@ -1277,6 +1308,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         except (IdentityPersistenceError, LedgerPersistenceError) as exc:
             parser.error(str(exc))
         print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "reset-identity":
+        if not args.confirm_reset:
+            parser.error(
+                "reset-identity requires --confirm-reset because lineage and attribution continuity may be affected"
+            )
+        try:
+            result = reset_identity(
+                args.identity_path,
+                reason=args.reason,
+                quarantine_dir=args.quarantine_dir,
+                audit_receipt_path=args.audit_receipt_path,
+            )
+        except IdentityPersistenceError as exc:
+            parser.error(str(exc))
+        print(result.warning, file=sys.stderr)
+        print(json.dumps(result.to_dict(), sort_keys=True))
         return 0
 
     if args.command == "simulate-local":

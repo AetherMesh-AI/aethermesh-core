@@ -44,12 +44,15 @@ from aethermesh_core.identity import (
     _run_command,
     _run_or_empty,
     _safe_int,
+    _unique_reset_artifact_path,
+    _load_identity_reset_receipts,
     _vram_value_to_gb,
     collect_hardware_identity_inputs,
     deterministic_machine_node_id,
     deterministic_machine_node_name,
     load_or_create_identity,
     parse_local_node_identity_document,
+    reset_identity,
 )
 from aethermesh_core.models import NodeIdentity
 from aethermesh_core.receipts import (
@@ -598,6 +601,136 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contribution_refs": [],
             },
         )
+
+    def test_explicit_identity_reset_quarantines_old_identity_and_records_receipt(
+        self,
+    ) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            quarantine_dir = Path(temp_dir) / "quarantine"
+            first = load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+            original_document = json.loads(identity_path.read_text(encoding="utf-8"))
+
+            result = reset_identity(
+                identity_path,
+                reason="operator requested recovery",
+                quarantine_dir=quarantine_dir,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "b" * 64,
+            )
+            reset_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            backup_document = json.loads(
+                Path(result.backup_path).read_text(encoding="utf-8")
+            )
+            receipt_document = json.loads(
+                Path(result.audit_receipt_path).read_text(encoding="utf-8")
+            )
+            reloaded = load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "c" * 64,
+            )
+
+        self.assertEqual(first.node_id, "a" * 64)
+        self.assertEqual(result.previous_node_id, "a" * 64)
+        self.assertEqual(result.new_node_id, "b" * 64)
+        self.assertIn("lineage and contribution attribution continuity", result.warning)
+        self.assertEqual(backup_document, original_document)
+        self.assertEqual(reloaded.node_id, "b" * 64)
+        self.assertEqual(reset_document["node"]["node_id"], "b" * 64)
+        self.assertEqual(reset_document["node"]["creator_node_id"], "b" * 64)
+        self.assertEqual(reset_document["references"]["manifest_refs"], [])
+        self.assertEqual(reset_document["references"]["validation_receipt_refs"], [])
+        self.assertEqual(
+            reset_document["lineage"], {"parent_node_ids": [], "lineage_links": []}
+        )
+        self.assertEqual(
+            reset_document["contribution_attribution"],
+            {
+                "creator_node_id": "b" * 64,
+                "attribution_node_id": "b" * 64,
+                "contribution_refs": [],
+            },
+        )
+        self.assertEqual(receipt_document["version"], 1)
+        self.assertEqual(receipt_document["receipt_type"], "identity_reset_audit")
+        self.assertEqual(len(receipt_document["reset_receipts"]), 1)
+        receipt = receipt_document["reset_receipts"][0]
+        self.assertEqual(receipt["event"], "identity_reset")
+        self.assertEqual(receipt["previous_node_id"], "a" * 64)
+        self.assertEqual(receipt["new_node_id"], "b" * 64)
+        self.assertEqual(receipt["reason"], "operator requested recovery")
+        self.assertEqual(receipt["quarantined_identity_path"], result.backup_path)
+        self.assertEqual(
+            receipt["active_identity_binding"],
+            {
+                "manifest_node_id": "b" * 64,
+                "validation_receipt_node_id": "b" * 64,
+                "lineage_node_id": "b" * 64,
+                "contribution_attribution_node_id": "b" * 64,
+            },
+        )
+
+    def test_identity_reset_requires_existing_identity_without_creating_one(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "existing identity"):
+                reset_identity(identity_path, node_id_factory=lambda: "b" * 64)
+
+            self.assertFalse(identity_path.exists())
+
+    def test_identity_reset_artifact_paths_avoid_collisions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "identity-reset.json").write_text("{}", encoding="utf-8")
+
+            path = _unique_reset_artifact_path(root, "identity-reset", ".json")
+
+        self.assertEqual(path.name, "identity-reset-1.json")
+
+    def test_identity_reset_receipt_loader_rejects_invalid_existing_receipts(
+        self,
+    ) -> None:
+        invalid_documents = [
+            ("not json", "malformed"),
+            (json.dumps([]), "must be an object"),
+            (json.dumps({"version": 2}), "version 1"),
+            (json.dumps({"version": 1, "receipt_type": "other"}), "receipt_type"),
+            (
+                json.dumps({"version": 1, "receipt_type": "identity_reset_audit"}),
+                "reset_receipts",
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt_path = Path(temp_dir) / "identity-reset-receipts.json"
+            for contents, message in invalid_documents:
+                with self.subTest(message=message):
+                    receipt_path.write_text(contents, encoding="utf-8")
+
+                    with self.assertRaisesRegex(IdentityPersistenceError, message):
+                        _load_identity_reset_receipts(receipt_path)
+
+    def test_identity_reset_receipt_loader_accepts_valid_existing_receipt(self) -> None:
+        document = {
+            "version": 1,
+            "receipt_type": "identity_reset_audit",
+            "reset_receipts": [{"event": "identity_reset"}],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt_path = Path(temp_dir) / "identity-reset-receipts.json"
+            receipt_path.write_text(json.dumps(document), encoding="utf-8")
+
+            loaded = _load_identity_reset_receipts(receipt_path)
+
+        self.assertEqual(loaded, document)
 
     def test_identity_created_at_must_be_utc(self) -> None:
         document = _identity_document(
