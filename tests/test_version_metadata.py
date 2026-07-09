@@ -1,5 +1,8 @@
 import unittest
+from importlib import metadata
+from unittest import mock
 
+from aethermesh_core import __version__
 from aethermesh_core.identity import (
     IdentityPersistenceError,
     _identity_document,
@@ -39,6 +42,17 @@ class VersionMetadataTests(unittest.TestCase):
         self.assertRegex(
             version_metadata_ref(metadata), r"^version-metadata-sha256:[0-9a-f]{64}$"
         )
+
+    def test_capture_version_metadata_falls_back_to_package_version_constant(
+        self,
+    ) -> None:
+        with mock.patch(
+            "aethermesh_core.version_metadata.metadata.version",
+            side_effect=metadata.PackageNotFoundError,
+        ):
+            captured = capture_version_metadata(captured_at="2026-07-08T00:00:00+00:00")
+
+        self.assertEqual(captured["node_software_version"], __version__)
 
     def test_identity_manifest_validation_fails_for_missing_version_metadata(
         self,

@@ -52,6 +52,7 @@ class ReceiptTests(unittest.TestCase):
         self.assertEqual(document["run_source"], "run-local-flow")
         self.assertEqual(document["version_metadata"], metadata)
         self.assertEqual(document["version_metadata_ref"], metadata_ref)
+        self.assertEqual(document["version_metadata_by_ref"], {metadata_ref: metadata})
         self.assertEqual(
             document["receipts"],
             [
@@ -252,6 +253,50 @@ class ReceiptTests(unittest.TestCase):
         self.assertEqual(
             [receipt["assignment_message_id"] for receipt in merged["receipts"]],
             ["msg-0003", "msg-0006"],
+        )
+
+    def test_existing_receipts_keep_original_metadata_ref_when_new_run_is_merged(
+        self,
+    ) -> None:
+        original_metadata = capture_version_metadata(
+            captured_at="2026-07-08T00:00:00+00:00"
+        )
+        new_metadata = capture_version_metadata(captured_at="2026-07-08T00:01:00+00:00")
+        original_ref = version_metadata_ref(original_metadata)
+        new_ref = version_metadata_ref(new_metadata)
+        original = _processed_assignment(
+            message_id="msg-0003",
+            correlation_id="echo-1",
+            job=Job("echo-1", "echo", {"message": "one"}),
+            result=JobResult("echo-1", "node-a", "completed", "one", None, 1),
+            result_message_id="msg-0004",
+            contribution_message_id="msg-0005",
+        )
+        new = _processed_assignment(
+            message_id="msg-0006",
+            correlation_id="echo-2",
+            job=Job("echo-2", "echo", {"message": "two"}),
+            result=JobResult("echo-2", "node-a", "completed", "two", None, 1),
+            result_message_id="msg-0007",
+            contribution_message_id="msg-0008",
+        )
+        existing = build_receipt_document(
+            [original], version_metadata=original_metadata
+        )
+
+        merged = build_receipt_document(
+            [new], existing_document=existing, version_metadata=new_metadata
+        )
+
+        refs_by_assignment = {
+            receipt["assignment_message_id"]: receipt["version_metadata_ref"]
+            for receipt in merged["receipts"]
+        }
+        self.assertEqual(refs_by_assignment["msg-0003"], original_ref)
+        self.assertEqual(refs_by_assignment["msg-0006"], new_ref)
+        self.assertEqual(
+            merged["version_metadata_by_ref"],
+            {original_ref: original_metadata, new_ref: new_metadata},
         )
 
     def test_receipt_document_write_and_load_round_trip(self) -> None:
