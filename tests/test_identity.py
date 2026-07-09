@@ -44,8 +44,8 @@ from aethermesh_core.identity import (
     _run_command,
     _run_or_empty,
     _safe_int,
-    _unique_reset_artifact_path,
     _load_identity_reset_receipts,
+    _unique_reset_artifact_path,
     _vram_value_to_gb,
     collect_hardware_identity_inputs,
     deterministic_machine_node_id,
@@ -731,6 +731,33 @@ class IdentityPersistenceTests(unittest.TestCase):
             loaded = _load_identity_reset_receipts(receipt_path)
 
         self.assertEqual(loaded, document)
+
+    def test_identity_reset_invalid_audit_receipt_does_not_replace_identity(
+        self,
+    ) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            receipt_path = Path(temp_dir) / "identity-reset-receipts.json"
+            load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+            original = json.loads(identity_path.read_text(encoding="utf-8"))
+            receipt_path.write_text("not-json", encoding="utf-8")
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "malformed"):
+                reset_identity(
+                    identity_path,
+                    audit_receipt_path=receipt_path,
+                    hardware_inputs=hardware,
+                    node_id_factory=lambda: "b" * 64,
+                )
+
+            after_reset_attempt = json.loads(identity_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(after_reset_attempt, original)
 
     def test_identity_created_at_must_be_utc(self) -> None:
         document = _identity_document(

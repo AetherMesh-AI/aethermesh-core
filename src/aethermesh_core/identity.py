@@ -386,12 +386,13 @@ def reset_identity(
             node_id=node_id,
         ),
     )
-    _save_identity(identity_path, new_identity)
     receipt_path = (
         Path(audit_receipt_path)
         if audit_receipt_path is not None
         else backup_root / "identity-reset-receipts.json"
     )
+    _load_identity_reset_receipts(receipt_path)
+    _save_identity(identity_path, new_identity)
     _append_identity_reset_receipt(
         receipt_path,
         timestamp=timestamp,
