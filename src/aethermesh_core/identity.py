@@ -1144,9 +1144,9 @@ def _load_identity(path: Path) -> NodeIdentity:
         identity = _validated_identity_from_document(
             _load_identity_document(path), identity_path=path
         )
-    except IdentityPersistenceError:
+    except IdentityPersistenceError as exc:
         LOGGER.warning("identity validation failed for %s", path.name)
-        raise
+        raise IdentityPersistenceError(f"identity file {path}: {exc}") from exc
     LOGGER.info("identity validation passed for %s", path.name)
     return identity
 
