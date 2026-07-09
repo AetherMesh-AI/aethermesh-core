@@ -44,6 +44,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(demo.command, "run-demo")
         self.assertEqual(demo.node_id, None)
         self.assertEqual(demo.identity_path, None)
+        self.assertEqual(demo.ephemeral_identity, False)
         self.assertEqual(demo.message, "hello mesh")
         self.assertEqual(demo.include_ledger, False)
         self.assertEqual(demo.ledger_path, None)
@@ -99,6 +100,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(flow.command, "run-local-flow")
         self.assertEqual(flow.manifest, "manifest.json")
         self.assertEqual(flow.output_dir, "out")
+        self.assertEqual(flow.ephemeral_identity, False)
 
         transport_flow = parser.parse_args(
             [
@@ -273,13 +275,13 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             subparser_help,
             {
-                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to a deterministic machine id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
+                "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--ephemeral-identity] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to a deterministic machine id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --ephemeral-identity Use a fresh test-only node identity for this run without touching persistent identity files. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
                 "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
                 "update": "usage: aethermesh-core update [-h] [--dry-run] [--release-url RELEASE_URL] options: -h, --help show this help message and exit --dry-run Download and verify the latest release wheel without installing it. --release-url RELEASE_URL Override the GitHub latest-release API URL for update discovery.",
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
                 "dispatch-local-batch": "usage: aethermesh-core dispatch-local-batch [-h] --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
                 "dispatch-peer-batch": "usage: aethermesh-core dispatch-peer-batch [-h] --peer-log-path PEER_LOG_PATH --manifest MANIFEST --message-log-path MESSAGE_LOG_PATH options: -h, --help show this help message and exit --peer-log-path PEER_LOG_PATH Path to an existing version 1 local heartbeat message log. --manifest MANIFEST Path to a version 1 manifest whose jobs should be dispatched. --message-log-path MESSAGE_LOG_PATH Path to write the version 1 assignment-only local message log.",
-                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts. --transport-dir TRANSPORT_DIR Opt in to file-backed local transport inboxes for worker processing.",
+                "run-local-flow": "usage: aethermesh-core run-local-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] [--ephemeral-identity] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts. --transport-dir TRANSPORT_DIR Opt in to file-backed local transport inboxes for worker processing. --ephemeral-identity Replace manifest worker node IDs with fresh test-only IDs for this flow run.",
                 "run-local-transport-flow": "usage: aethermesh-core run-local-transport-flow [-h] --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --output-dir OUTPUT_DIR Directory for deterministic local flow artifacts. --transport-dir TRANSPORT_DIR Override the default file-backed local transport directory.",
                 "run-peer-transport-flow": "usage: aethermesh-core run-peer-transport-flow [-h] --peer-log-path PEER_LOG_PATH --manifest MANIFEST --output-dir OUTPUT_DIR [--transport-dir TRANSPORT_DIR] options: -h, --help show this help message and exit --peer-log-path PEER_LOG_PATH Path to an existing version 1 local heartbeat peer message log. --manifest MANIFEST Path to a version 1 manifest whose jobs should be run. --output-dir OUTPUT_DIR Directory for deterministic local peer transport artifacts. --transport-dir TRANSPORT_DIR Override the default file-backed local transport directory.",
                 "audit-local-flow": "usage: aethermesh-core audit-local-flow [-h] --output-dir OUTPUT_DIR options: -h, --help show this help message and exit --output-dir OUTPUT_DIR Directory containing deterministic local flow artifacts to audit.",
@@ -1261,6 +1263,106 @@ class CliTests(unittest.TestCase):
         self.assertEqual(payload["node_id"], "local-stable-machine")
         self.assertEqual(payload["node_name"], "lucid-beacon-tensor-vault_localx")
         self.assertEqual(payload["output"], "hello mesh")
+
+    def test_run_demo_ephemeral_identity_is_opt_in_and_does_not_touch_persistent_identity(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            persistent_stdout = io.StringIO()
+            with contextlib.redirect_stdout(persistent_stdout):
+                persistent_exit = main(
+                    ["run-demo", "--identity-path", str(identity_path)]
+                )
+            original_identity = identity_path.read_text(encoding="utf-8")
+            first_stdout = io.StringIO()
+            first_stderr = io.StringIO()
+            with (
+                contextlib.redirect_stdout(first_stdout),
+                contextlib.redirect_stderr(first_stderr),
+            ):
+                first_exit = main(["run-demo", "--ephemeral-identity"])
+            second_stdout = io.StringIO()
+            with (
+                contextlib.redirect_stdout(second_stdout),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                second_exit = main(["run-demo", "--ephemeral-identity"])
+            after_identity = identity_path.read_text(encoding="utf-8")
+
+        first_payload = json.loads(first_stdout.getvalue())
+        second_payload = json.loads(second_stdout.getvalue())
+        self.assertEqual(persistent_exit, 0)
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(second_exit, 0)
+        self.assertEqual(after_identity, original_identity)
+        self.assertTrue(first_payload["ephemeral"])
+        self.assertEqual(first_payload["artifact_mode"], "ephemeral_test")
+        self.assertRegex(first_payload["node_id"], r"^node-[0-9a-f]{32}$")
+        self.assertNotEqual(first_payload["node_id"], second_payload["node_id"])
+        self.assertIn("ephemeral test identity mode active", first_stderr.getvalue())
+
+    def test_run_demo_ephemeral_identity_rejects_persistent_identity_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            stderr = io.StringIO()
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
+                main(
+                    [
+                        "run-demo",
+                        "--ephemeral-identity",
+                        "--identity-path",
+                        str(identity_path),
+                    ]
+                )
+
+            self.assertFalse(identity_path.exists())
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn("cannot be combined", stderr.getvalue())
+
+    def test_run_demo_ephemeral_identity_env_flag_is_opt_in(self) -> None:
+        stdout = io.StringIO()
+        with (
+            patch.dict("os.environ", {"AETHERMESH_EPHEMERAL_IDENTITY": "true"}),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            exit_code = main(["run-demo"])
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["ephemeral"])
+        self.assertEqual(payload["artifact_mode"], "ephemeral_test")
+
+    def test_run_demo_ephemeral_identity_marks_persisted_ledger_as_test_only(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            ledger_path = Path(temp_dir) / "ledger.json"
+            stdout = io.StringIO()
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                exit_code = main(
+                    [
+                        "run-demo",
+                        "--ephemeral-identity",
+                        "--ledger-path",
+                        str(ledger_path),
+                    ]
+                )
+            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(payload["ephemeral"])
+        self.assertTrue(ledger["ephemeral"])
+        self.assertEqual(ledger["artifact_mode"], "ephemeral_test")
 
     def test_run_demo_identity_path_creates_and_reuses_node_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2954,6 +3056,83 @@ class CliTests(unittest.TestCase):
                 "contribution_recorded",
             ],
         )
+
+    def test_run_local_flow_ephemeral_identity_marks_receipts_and_uses_fresh_roster(
+        self,
+    ) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        manifest_path = repo_root / "examples" / "local-batch.json"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first_output_dir = Path(temp_dir) / "first-flow"
+            second_output_dir = Path(temp_dir) / "second-flow"
+            first_stdout = io.StringIO()
+            first_stderr = io.StringIO()
+            with (
+                contextlib.redirect_stdout(first_stdout),
+                contextlib.redirect_stderr(first_stderr),
+            ):
+                first_exit = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(first_output_dir),
+                        "--ephemeral-identity",
+                    ]
+                )
+            second_stdout = io.StringIO()
+            with (
+                contextlib.redirect_stdout(second_stdout),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                second_exit = main(
+                    [
+                        "run-local-flow",
+                        "--manifest",
+                        str(manifest_path),
+                        "--output-dir",
+                        str(second_output_dir),
+                        "--ephemeral-identity",
+                    ]
+                )
+            first_receipts = json.loads(
+                (first_output_dir / "receipts.json").read_text(encoding="utf-8")
+            )
+            first_ledger = json.loads(
+                (first_output_dir / "ledger.json").read_text(encoding="utf-8")
+            )
+            first_flow_log = json.loads(
+                (first_output_dir / "flow-message-log.json").read_text(encoding="utf-8")
+            )
+
+        first_payload = json.loads(first_stdout.getvalue())
+        second_payload = json.loads(second_stdout.getvalue())
+        self.assertEqual(first_exit, 0)
+        self.assertEqual(second_exit, 0)
+        self.assertTrue(first_payload["ephemeral"])
+        self.assertEqual(first_payload["artifact_mode"], "ephemeral_test")
+        self.assertEqual(first_payload["roster_source"], "ephemeral_test_identity")
+        self.assertNotEqual(
+            first_payload["available_node_ids"], second_payload["available_node_ids"]
+        )
+        self.assertTrue(first_receipts["ephemeral"])
+        self.assertEqual(first_receipts["artifact_mode"], "ephemeral_test")
+        self.assertTrue(first_receipts["receipts"][0]["ephemeral"])
+        self.assertEqual(
+            first_receipts["receipts"][0]["artifact_mode"], "ephemeral_test"
+        )
+        self.assertTrue(first_ledger["ephemeral"])
+        self.assertEqual(first_ledger["artifact_mode"], "ephemeral_test")
+        self.assertRegex(
+            first_receipts["receipts"][0]["node_id"], r"^node-[0-9a-f]{32}$"
+        )
+        self.assertNotIn("local-node-a", first_payload["available_node_ids"])
+        self.assertEqual(
+            first_flow_log["metadata"]["available_node_ids"],
+            first_payload["available_node_ids"],
+        )
+        self.assertIn("ephemeral test identity mode active", first_stderr.getvalue())
 
     def test_run_local_flow_skips_offline_nodes_but_reports_them(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

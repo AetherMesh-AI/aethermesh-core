@@ -23,6 +23,7 @@ def build_receipt_document(
     processed_assignments: list[ProcessedAssignment],
     *,
     existing_document: dict[str, Any] | None = None,
+    artifact_mode: str | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic version 1 receipt document.
 
@@ -41,9 +42,12 @@ def build_receipt_document(
 
     for assignment in processed_assignments:
         receipt = _receipt_from_processed_assignment(assignment)
+        if artifact_mode == "ephemeral_test":
+            receipt["artifact_mode"] = "ephemeral_test"
+            receipt["ephemeral"] = True
         receipts_by_assignment_id[receipt["assignment_message_id"]] = receipt
 
-    return {
+    document: dict[str, Any] = {
         "version": RECEIPT_DOCUMENT_VERSION,
         "run_source": RUN_SOURCE,
         "receipts": sorted(
@@ -55,6 +59,10 @@ def build_receipt_document(
             ),
         ),
     }
+    if artifact_mode == "ephemeral_test":
+        document["artifact_mode"] = "ephemeral_test"
+        document["ephemeral"] = True
+    return document
 
 
 def load_receipt_document_if_exists(path: str | Path) -> dict[str, Any] | None:
@@ -186,6 +194,7 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
         raise ReceiptPersistenceError(
             "receipt JSON field 'run_source' must be run-local-flow"
         )
+    _require_optional_artifact_mode(document, "receipt JSON")
     receipts = document.get("receipts")
     if not isinstance(receipts, list):
         raise ReceiptPersistenceError("receipt JSON field 'receipts' must be a list")
@@ -244,6 +253,21 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
             raise ReceiptPersistenceError(
                 f"receipt entry {index} field 'output_summary' must be an object"
             )
+        _require_optional_artifact_mode(receipt, f"receipt entry {index}")
+
+
+def _require_optional_artifact_mode(document: dict[str, Any], context: str) -> None:
+    artifact_mode = document.get("artifact_mode")
+    if artifact_mode is None:
+        return
+    if artifact_mode != "ephemeral_test":
+        raise ReceiptPersistenceError(
+            f"{context} field 'artifact_mode' must be ephemeral_test when present"
+        )
+    if document.get("ephemeral") is not True:
+        raise ReceiptPersistenceError(
+            f"{context} field 'ephemeral' must be true for ephemeral_test artifacts"
+        )
 
 
 def _remove_temp_file(path: str) -> None:
