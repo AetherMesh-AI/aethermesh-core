@@ -3105,8 +3105,20 @@ class CliTests(unittest.TestCase):
             first_flow_log = json.loads(
                 (first_output_dir / "flow-message-log.json").read_text(encoding="utf-8")
             )
+            first_dispatch_log = json.loads(
+                (first_output_dir / "dispatch-message-log.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            first_payload = json.loads(first_stdout.getvalue())
+            first_worker_log = json.loads(
+                (
+                    first_output_dir
+                    / "worker-message-logs"
+                    / f"{first_payload['available_node_ids'][0]}.json"
+                ).read_text(encoding="utf-8")
+            )
 
-        first_payload = json.loads(first_stdout.getvalue())
         second_payload = json.loads(second_stdout.getvalue())
         self.assertEqual(first_exit, 0)
         self.assertEqual(second_exit, 0)
@@ -3132,6 +3144,9 @@ class CliTests(unittest.TestCase):
             first_flow_log["metadata"]["available_node_ids"],
             first_payload["available_node_ids"],
         )
+        for message_log in (first_dispatch_log, first_flow_log, first_worker_log):
+            self.assertTrue(message_log["metadata"]["ephemeral"])
+            self.assertEqual(message_log["metadata"]["artifact_mode"], "ephemeral_test")
         self.assertIn("ephemeral test identity mode active", first_stderr.getvalue())
 
     def test_run_local_flow_skips_offline_nodes_but_reports_them(self) -> None:

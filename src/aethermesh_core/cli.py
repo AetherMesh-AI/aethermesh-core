@@ -97,6 +97,7 @@ class InboxReplayRequest:
     output_message_log_path: str | None = None
     node_state_path: str | None = None
     write_transport_outbox: bool = False
+    ephemeral_identity: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -457,6 +458,16 @@ def _mark_ephemeral_artifact(payload: dict[str, object], enabled: bool) -> None:
     if enabled:
         payload["artifact_mode"] = "ephemeral_test"
         payload["ephemeral"] = True
+
+
+def _mark_ephemeral_message_log(document: dict[str, object], enabled: bool) -> None:
+    if not enabled:
+        return
+    metadata = document.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError("message log metadata must be an object")
+    metadata["artifact_mode"] = "ephemeral_test"
+    metadata["ephemeral"] = True
 
 
 def _use_ephemeral_identity(flag_enabled: bool) -> bool:
@@ -838,6 +849,7 @@ def _run_local_flow_with_roster(
         message_log_document["metadata"]["source"] = "dispatch-peer-batch"
         message_log_document["metadata"]["peer_log_path"] = peer_log_path
         message_log_document["metadata"]["roster_source"] = "heartbeat_peer_log"
+    _mark_ephemeral_message_log(message_log_document, ephemeral_identity)
     write_message_log(dispatch_message_log_path, message_log_document)
     dispatch_payload = dispatch.to_dict()
 
@@ -877,6 +889,7 @@ def _run_local_flow_with_roster(
                 ledger_path=str(ledger_path),
                 output_message_log_path=str(worker_message_log_path),
                 node_state_path=str(node_state_path),
+                ephemeral_identity=ephemeral_identity,
             )
         )
         processed_assignments.extend(inbox_result.processed)
@@ -936,6 +949,7 @@ def _run_local_flow_with_roster(
         source=command,
         peer_log_path=peer_log_path,
     )
+    _mark_ephemeral_message_log(flow_message_log_document, ephemeral_identity)
     write_message_log(flow_message_log_path, flow_message_log_document)
     receipt_document = build_receipt_document(
         processed_assignments,
@@ -1104,6 +1118,7 @@ def _process_local_inbox(
             processed_assignment_count=len(inbox_result.processed),
             ignored_message_ids=list(inbox_result.ignored_message_ids),
         )
+        _mark_ephemeral_message_log(output_document, request.ephemeral_identity)
         write_message_log(request.output_message_log_path, output_document)
         payload["output_message_log_path"] = request.output_message_log_path
         payload["final_message_count"] = len(messages) + len(emitted_messages)
