@@ -1183,50 +1183,60 @@ class IdentityPersistenceTests(unittest.TestCase):
         )
 
     def test_identity_load_rejects_mismatched_local_reference_metadata(self) -> None:
+        def mismatched_manifest(
+            root: Path, document: dict[str, object], node_id: str
+        ) -> None:
+            _identity_section(document, "references")["manifest_refs"] = [
+                "manifests/local-batch.json"
+            ]
+            _write_identity_manifest(root, "b" * 64)
+
+        def mismatched_receipt(
+            root: Path, document: dict[str, object], node_id: str
+        ) -> None:
+            _identity_section(document, "references")["validation_receipt_refs"] = [
+                "receipts/receipt-0001.json"
+            ]
+            _write_identity_receipt(root, "b" * 64)
+
+        def mismatched_lineage(
+            root: Path, document: dict[str, object], node_id: str
+        ) -> None:
+            _identity_section(document, "lineage")["lineage_links"] = [
+                "lineage/link-0001.json"
+            ]
+            _write_json(root / "lineage" / "link-0001.json", {"node_id": "b" * 64})
+
+        def mismatched_contribution(
+            root: Path, document: dict[str, object], node_id: str
+        ) -> None:
+            _identity_section(document, "contribution_attribution")[
+                "contribution_refs"
+            ] = ["contributions/contribution-0001.json"]
+            _write_json(
+                root / "contributions" / "contribution-0001.json",
+                {"attribution_node_id": "b" * 64},
+            )
+
         cases = (
             (
                 "manifest",
-                lambda root, document, node_id: (
-                    _identity_section(document, "references").__setitem__(
-                        "manifest_refs", ["manifests/local-batch.json"]
-                    ),
-                    _write_identity_manifest(root, "b" * 64),
-                ),
+                mismatched_manifest,
                 "manifest ref must include node.node_id",
             ),
             (
                 "receipt",
-                lambda root, document, node_id: (
-                    _identity_section(document, "references").__setitem__(
-                        "validation_receipt_refs", ["receipts/receipt-0001.json"]
-                    ),
-                    _write_identity_receipt(root, "b" * 64),
-                ),
+                mismatched_receipt,
                 "validation receipt ref must include node.node_id",
             ),
             (
                 "lineage",
-                lambda root, document, node_id: (
-                    _identity_section(document, "lineage").__setitem__(
-                        "lineage_links", ["lineage/link-0001.json"]
-                    ),
-                    _write_json(
-                        root / "lineage" / "link-0001.json", {"node_id": "b" * 64}
-                    ),
-                ),
+                mismatched_lineage,
                 "lineage.lineage_links ref node binding must match node.node_id",
             ),
             (
                 "contribution",
-                lambda root, document, node_id: (
-                    _identity_section(document, "contribution_attribution").__setitem__(
-                        "contribution_refs", ["contributions/contribution-0001.json"]
-                    ),
-                    _write_json(
-                        root / "contributions" / "contribution-0001.json",
-                        {"attribution_node_id": "b" * 64},
-                    ),
-                ),
+                mismatched_contribution,
                 "contribution_attribution.contribution_refs ref node binding must match node.node_id",
             ),
         )
