@@ -86,6 +86,7 @@ from aethermesh_core.runner import LocalRunner
 from aethermesh_core.scheduler import LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
+from aethermesh_core.version_metadata import capture_version_metadata
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,7 @@ class InboxReplayRequest:
     node_state_path: str | None = None
     write_transport_outbox: bool = False
     ephemeral_identity: bool = False
+    version_metadata: dict[str, object] | None = None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -814,6 +816,7 @@ def _run_local_flow_with_roster(
     available_node_ids = [
         node.node_id for node in nodes if node.status.value == "available"
     ]
+    run_version_metadata = capture_version_metadata()
     offline_node_ids = [
         node.node_id for node in nodes if node.status.value == "offline"
     ]
@@ -890,6 +893,7 @@ def _run_local_flow_with_roster(
                 output_message_log_path=str(worker_message_log_path),
                 node_state_path=str(node_state_path),
                 ephemeral_identity=ephemeral_identity,
+                version_metadata=run_version_metadata,
             )
         )
         processed_assignments.extend(inbox_result.processed)
@@ -955,6 +959,7 @@ def _run_local_flow_with_roster(
         processed_assignments,
         existing_document=existing_receipt_document,
         artifact_mode="ephemeral_test" if ephemeral_identity else None,
+        version_metadata=run_version_metadata,
     )
     write_receipt_document(receipts_path, receipt_document)
     result: dict[str, object] = {
@@ -1102,6 +1107,7 @@ def _process_local_inbox(
         processed_message_ids=(
             list(node_state.processed_message_ids) if node_state is not None else None
         ),
+        version_metadata=request.version_metadata,
     )
     inbox_result = service.process_inbox()
     if request.ledger_path is not None:

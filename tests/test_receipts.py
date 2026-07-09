@@ -18,6 +18,14 @@ from aethermesh_core.receipts import (
     write_receipt_document,
 )
 from aethermesh_core.validation import validate_job_result
+from aethermesh_core.version_metadata import (
+    capture_version_metadata,
+    version_metadata_ref,
+)
+
+
+def _test_version_metadata() -> dict[str, object]:
+    return capture_version_metadata(captured_at="2026-07-08T00:00:00+00:00")
 
 
 class ReceiptTests(unittest.TestCase):
@@ -35,11 +43,15 @@ class ReceiptTests(unittest.TestCase):
             contribution_message_id="msg-0005",
         )
         expected_hash = result_hash(assignment.result)
+        metadata = _test_version_metadata()
+        metadata_ref = version_metadata_ref(metadata)
 
-        document = build_receipt_document([assignment])
+        document = build_receipt_document([assignment], version_metadata=metadata)
 
         self.assertEqual(document["version"], 1)
         self.assertEqual(document["run_source"], "run-local-flow")
+        self.assertEqual(document["version_metadata"], metadata)
+        self.assertEqual(document["version_metadata_ref"], metadata_ref)
         self.assertEqual(
             document["receipts"],
             [
@@ -55,6 +67,7 @@ class ReceiptTests(unittest.TestCase):
                     "result_status": "completed",
                     "result_hash": expected_hash,
                     "validation": {"valid": True, "reason": "ok"},
+                    "version_metadata_ref": metadata_ref,
                     "credited_units": 1,
                     "output_summary": {"value": "hello mesh"},
                 }
@@ -266,10 +279,8 @@ class ReceiptTests(unittest.TestCase):
             write_receipt_document(path, document)
             raw = path.read_text(encoding="utf-8")
 
-            self.assertEqual(
-                raw,
-                '{\n  "receipts": [],\n  "run_source": "run-local-flow",\n  "version": 1\n}\n',
-            )
+            self.assertTrue(raw.endswith("\n"))
+            self.assertEqual(json.loads(raw), document)
             self.assertEqual(
                 sorted(child.name for child in path.parent.iterdir()),
                 ["receipts.json"],

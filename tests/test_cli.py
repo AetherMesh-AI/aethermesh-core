@@ -2969,6 +2969,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual(len(ledger["records"]), 6)
         self.assertEqual(receipts["version"], 1)
         self.assertEqual(receipts["run_source"], "run-local-flow")
+        self.assertEqual(
+            receipts["version_metadata_ref"],
+            receipts["receipts"][0]["version_metadata_ref"],
+        )
+        self.assertIn("runtime_version", receipts["version_metadata"])
         self.assertEqual(len(receipts["receipts"]), 6)
         self.assertEqual(
             [receipt["assignment_message_id"] for receipt in receipts["receipts"]],
@@ -2990,6 +2995,7 @@ class CliTests(unittest.TestCase):
                 "result_status": "completed",
                 "result_hash": first_receipt_hash,
                 "validation": {"valid": True, "reason": "ok"},
+                "version_metadata_ref": receipts["version_metadata_ref"],
                 "credited_units": 1,
                 "output_summary": {"value": "hello mesh"},
             },

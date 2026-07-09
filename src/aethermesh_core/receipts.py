@@ -10,6 +10,11 @@ from typing import Any
 
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.node_service import ProcessedAssignment
+from aethermesh_core.version_metadata import (
+    capture_version_metadata,
+    validate_version_metadata,
+    version_metadata_ref,
+)
 
 RECEIPT_DOCUMENT_VERSION = 1
 RUN_SOURCE = "run-local-flow"
@@ -24,6 +29,7 @@ def build_receipt_document(
     *,
     existing_document: dict[str, Any] | None = None,
     artifact_mode: str | None = None,
+    version_metadata: dict[str, object] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic version 1 receipt document.
 
@@ -36,12 +42,21 @@ def build_receipt_document(
     receipts_by_assignment_id: dict[str, dict[str, Any]] = {}
     if existing_document is not None:
         _validate_receipt_document(existing_document)
+    metadata = (
+        dict(existing_document["version_metadata"])
+        if existing_document is not None and not processed_assignments
+        else validate_version_metadata(version_metadata or capture_version_metadata())
+    )
+    metadata_ref = version_metadata_ref(metadata)
+    if existing_document is not None:
         for receipt in existing_document["receipts"]:
             assignment_message_id = receipt["assignment_message_id"]
-            receipts_by_assignment_id[assignment_message_id] = dict(receipt)
+            merged_receipt = dict(receipt)
+            merged_receipt["version_metadata_ref"] = metadata_ref
+            receipts_by_assignment_id[assignment_message_id] = merged_receipt
 
     for assignment in processed_assignments:
-        receipt = _receipt_from_processed_assignment(assignment)
+        receipt = _receipt_from_processed_assignment(assignment, metadata_ref)
         if artifact_mode == "ephemeral_test":
             receipt["artifact_mode"] = "ephemeral_test"
             receipt["ephemeral"] = True
@@ -50,6 +65,8 @@ def build_receipt_document(
     document: dict[str, Any] = {
         "version": RECEIPT_DOCUMENT_VERSION,
         "run_source": RUN_SOURCE,
+        "version_metadata": metadata,
+        "version_metadata_ref": metadata_ref,
         "receipts": sorted(
             receipts_by_assignment_id.values(),
             key=lambda receipt: (
@@ -113,6 +130,7 @@ def write_receipt_document(path: str | Path, document: dict[str, Any]) -> None:
 
 def _receipt_from_processed_assignment(
     assignment: ProcessedAssignment,
+    metadata_ref: str,
 ) -> dict[str, Any]:
     result_message = _single_emitted_message(assignment, "job_result_reported")
     validation_message = _single_emitted_message(assignment, "job_validated")
@@ -133,6 +151,7 @@ def _receipt_from_processed_assignment(
             "valid": assignment.validation.valid,
             "reason": assignment.validation.reason,
         },
+        "version_metadata_ref": metadata_ref,
         "credited_units": credited_units,
         "output_summary": _output_summary(assignment.result.output),
     }
@@ -194,6 +213,15 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
         raise ReceiptPersistenceError(
             "receipt JSON field 'run_source' must be run-local-flow"
         )
+    try:
+        metadata = validate_version_metadata(document.get("version_metadata"))
+    except ValueError as exc:
+        raise ReceiptPersistenceError(f"receipt JSON {exc}") from exc
+    expected_metadata_ref = version_metadata_ref(metadata)
+    if document.get("version_metadata_ref") != expected_metadata_ref:
+        raise ReceiptPersistenceError(
+            "receipt JSON field 'version_metadata_ref' must match version_metadata"
+        )
     _require_optional_artifact_mode(document, "receipt JSON")
     receipts = document.get("receipts")
     if not isinstance(receipts, list):
@@ -210,6 +238,7 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
             "validation_message_id",
             "result_status",
             "result_hash",
+            "version_metadata_ref",
         ):
             if (
                 not isinstance(receipt.get(field_name), str)
@@ -219,6 +248,10 @@ def _validate_receipt_document(document: dict[str, Any]) -> None:
                     f"receipt entry {index} field '{field_name}' must be a non-empty string"
                 )
         _require_result_hash(index, receipt["result_hash"])
+        if receipt["version_metadata_ref"] != expected_metadata_ref:
+            raise ReceiptPersistenceError(
+                f"receipt entry {index} field 'version_metadata_ref' must match receipt JSON version_metadata_ref"
+            )
         correlation_id = receipt.get("correlation_id")
         if correlation_id is not None and not isinstance(correlation_id, str):
             raise ReceiptPersistenceError(

@@ -21,6 +21,11 @@ from typing import TextIO
 
 from aethermesh_core.json_io import atomic_write_json
 from aethermesh_core.models import NodeIdentity
+from aethermesh_core.version_metadata import (
+    VersionMetadataError,
+    capture_version_metadata,
+    validate_version_metadata,
+)
 
 IDENTITY_SCHEMA_VERSION = 1
 IDENTITY_CREATED_BY = "aethermesh_core.identity.load_or_create_identity"
@@ -1054,6 +1059,10 @@ def _load_identity(path: Path) -> NodeIdentity:
         )
     _require_string_list(references, "manifest_refs")
     _require_string_list(references, "validation_receipt_refs")
+    try:
+        validate_version_metadata(references.get("version_metadata"))
+    except VersionMetadataError as exc:
+        raise IdentityPersistenceError(f"identity JSON {exc}") from exc
     lineage = document.get("lineage")
     if not isinstance(lineage, dict):
         raise IdentityPersistenceError(
@@ -1112,6 +1121,11 @@ def _identity_document(
     identity: NodeIdentity, *, created_at: str | None = None
 ) -> dict[str, object]:
     timestamp = created_at or datetime.now(UTC).replace(microsecond=0).isoformat()
+    try:
+        _require_identity_timestamp(timestamp)
+        version_metadata = capture_version_metadata(captured_at=timestamp)
+    except IdentityPersistenceError:
+        version_metadata = capture_version_metadata()
     node: dict[str, object] = {"node_id": identity.node_id}
     if identity.node_name is not None:
         node["node_name"] = identity.node_name
@@ -1130,6 +1144,7 @@ def _identity_document(
         "references": {
             "manifest_refs": [],
             "validation_receipt_refs": [],
+            "version_metadata": version_metadata,
         },
         "lineage": {
             "parent_node_ids": [],

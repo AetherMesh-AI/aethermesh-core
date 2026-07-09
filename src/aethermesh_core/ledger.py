@@ -26,11 +26,15 @@ class ContributionRecord:
     validation_reason: str | None = None
     job_type: str | None = None
     result_hash: str | None = None
+    version_metadata_ref: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the record into a JSON-compatible dictionary."""
 
-        return asdict(self)
+        document = asdict(self)
+        if self.version_metadata_ref is None:
+            document.pop("version_metadata_ref")
+        return document
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "ContributionRecord":
@@ -63,6 +67,11 @@ class ContributionRecord:
         result_hash = payload.get("result_hash")
         if result_hash is not None:
             _require_result_hash("result_hash", result_hash)
+        version_ref = payload.get("version_metadata_ref")
+        if version_ref is not None and not isinstance(version_ref, str):
+            raise LedgerPersistenceError(
+                "ledger record field 'version_metadata_ref' must be a string or null"
+            )
         return cls(
             node_id=payload["node_id"],
             job_id=payload["job_id"],
@@ -73,6 +82,7 @@ class ContributionRecord:
             validation_reason=validation_reason,
             job_type=job_type,
             result_hash=result_hash,
+            version_metadata_ref=version_ref,
         )
 
 
@@ -105,6 +115,7 @@ class ContributionLedger:
         validation_valid: bool | None = None,
         validation_reason: str | None = None,
         job_type: str | None = None,
+        version_metadata_ref: str | None = None,
     ) -> ContributionRecord:
         """Record one result and return its local contribution record.
 
@@ -127,6 +138,7 @@ class ContributionLedger:
             validation_reason=validation_reason,
             job_type=job_type,
             result_hash=canonical_result_hash(result),
+            version_metadata_ref=version_metadata_ref,
         )
         self._records.append(record)
         return record
