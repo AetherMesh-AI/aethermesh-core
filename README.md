@@ -213,6 +213,8 @@ The local-only `node_roster` includes each node's `node_id`, `status`, assignmen
 
 The public Phase 1 local node identity format is documented in [docs/local-node-identity.md](docs/local-node-identity.md), with a minimal fixture in [examples/local-node-identity.json](examples/local-node-identity.json). It keeps `node_id`, `creator_node_id`, public key, and local manifest linkage separate from private key material and from later registry, token, networking, or dashboard state.
 
+The local node lifecycle states and transition rules are documented in [docs/local-node-lifecycle.md](docs/local-node-lifecycle.md) and implemented in `aethermesh_core.lifecycle`. They define the single-node states `created`, `configured`, `ready`, `running`, `paused`, `validating`, `completed`, `failed`, and `retired`, while preserving creator identity, active manifest, lineage, validation receipts, and contribution attribution across pause, failure, and restart paths.
+
 To opt in to local JSON-backed contribution persistence for a manifest batch, pass `--ledger-path`:
 
 ```bash
