@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
@@ -96,6 +97,7 @@ class InboxReplayRequest:
     output_message_log_path: str | None = None
     node_state_path: str | None = None
     write_transport_outbox: bool = False
+    ephemeral_identity: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -114,6 +116,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--identity-path",
         default=None,
         help="Opt in to JSON-file-backed local node identity persistence.",
+    )
+    demo.add_argument(
+        "--ephemeral-identity",
+        action="store_true",
+        help="Use a fresh test-only node identity for this run without touching persistent identity files.",
     )
     demo.add_argument(
         "--message",
@@ -224,6 +231,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--transport-dir",
         default=None,
         help="Opt in to file-backed local transport inboxes for worker processing.",
+    )
+    local_flow.add_argument(
+        "--ephemeral-identity",
+        action="store_true",
+        help="Replace manifest worker node IDs with fresh test-only IDs for this flow run.",
     )
 
     local_transport_flow = subcommands.add_parser(
@@ -442,18 +454,59 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _mark_ephemeral_artifact(payload: dict[str, object], enabled: bool) -> None:
+    if enabled:
+        payload["artifact_mode"] = "ephemeral_test"
+        payload["ephemeral"] = True
+
+
+def _mark_ephemeral_message_log(document: dict[str, object], enabled: bool) -> None:
+    if not enabled:
+        return
+    metadata = document.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError("message log metadata must be an object")
+    metadata["artifact_mode"] = "ephemeral_test"
+    metadata["ephemeral"] = True
+
+
+def _use_ephemeral_identity(flag_enabled: bool) -> bool:
+    if flag_enabled:
+        return True
+    return os.environ.get("AETHERMESH_EPHEMERAL_IDENTITY", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _log_ephemeral_identity_active(command: str) -> None:
+    print(
+        f"info: ephemeral test identity mode active for {command}; persistent identity files will not be used or modified",
+        file=sys.stderr,
+    )
+
+
 def run_demo(
     node_id: str | None,
     message: str,
     include_ledger: bool = False,
     ledger_path: str | None = None,
     identity_path: str | None = None,
+    ephemeral_identity: bool = False,
 ) -> dict[str, object]:
+    if ephemeral_identity and (node_id or identity_path):
+        raise IdentityPersistenceError(
+            "--ephemeral-identity cannot be combined with --node-id or --identity-path"
+        )
     if node_id and identity_path:
         raise IdentityPersistenceError(
             "--node-id and --identity-path are mutually exclusive"
         )
-    if identity_path is not None:
+    if ephemeral_identity:
+        identity = NodeIdentity.ephemeral()
+    elif identity_path is not None:
         identity = load_or_create_identity(identity_path)
     else:
         resolved_node_id = node_id if node_id else deterministic_machine_node_id()
@@ -468,6 +521,7 @@ def run_demo(
     job = Job(job_id="demo-echo", job_type="echo", payload={"message": message})
     result = LocalRunner(identity).run(job)
     result_dict = result.to_dict()
+    _mark_ephemeral_artifact(result_dict, ephemeral_identity)
     if identity.node_name is not None:
         result_dict["node_name"] = identity.node_name
     if not include_ledger and ledger_path is None:
@@ -479,6 +533,7 @@ def run_demo(
     )
     record_result = replace(result, contribution_units=credited_units)
     result_dict = record_result.to_dict()
+    _mark_ephemeral_artifact(result_dict, ephemeral_identity)
     if identity.node_name is not None:
         result_dict["node_name"] = identity.node_name
     if ledger_path is None:
@@ -489,11 +544,13 @@ def run_demo(
             validation_reason=validation.reason,
             job_type=job.job_type,
         )
-        return {
+        payload: dict[str, object] = {
             "result": result_dict,
             "validation": validation.to_dict(),
             "ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
         }
+        _mark_ephemeral_artifact(payload, ephemeral_identity)
+        return payload
 
     ledger, extra_fields = load_ledger_document(ledger_path)
     ledger.record(
@@ -502,13 +559,18 @@ def run_demo(
         validation_reason=validation.reason,
         job_type=job.job_type,
     )
+    if ephemeral_identity:
+        extra_fields["artifact_mode"] = "ephemeral_test"
+        extra_fields["ephemeral"] = True
     save_ledger_document(ledger_path, ledger, extra_fields)
-    return {
+    payload = {
         "result": result_dict,
         "validation": validation.to_dict(),
         "ledger_path": ledger_path,
         "persisted_ledger_summary": ledger.summary_for_node(identity.node_id).to_dict(),
     }
+    _mark_ephemeral_artifact(payload, ephemeral_identity)
+    return payload
 
 
 def run_default_local_simulation() -> dict[str, object]:
@@ -655,19 +717,35 @@ def summarize_peers(message_log_path: str) -> dict[str, object]:
     return peer_summary_document(message_log_path)
 
 
+def _ephemeral_roster(nodes: list[ScheduledNode]) -> list[ScheduledNode]:
+    return [
+        ScheduledNode(
+            node_id=NodeIdentity.ephemeral().node_id,
+            status=node.status,
+            capabilities=node.capabilities,
+        )
+        for node in nodes
+    ]
+
+
 def run_local_flow(
-    manifest_path: str, output_dir: str, transport_dir: str | None = None
+    manifest_path: str,
+    output_dir: str,
+    transport_dir: str | None = None,
+    ephemeral_identity: bool = False,
 ) -> dict[str, object]:
     """Run dispatch and all available local worker inboxes as one local flow."""
 
     batch = load_job_manifest(manifest_path)
+    nodes = _ephemeral_roster(batch.nodes) if ephemeral_identity else batch.nodes
     return _run_local_flow_with_roster(
         manifest_path=manifest_path,
         jobs=batch.jobs,
-        nodes=batch.nodes,
+        nodes=nodes,
         output_dir=output_dir,
         transport_dir=transport_dir,
         command="run-local-flow",
+        ephemeral_identity=ephemeral_identity,
     )
 
 
@@ -718,6 +796,7 @@ def _run_local_flow_with_roster(
     transport_dir: str | None,
     command: str,
     peer_log_path: str | None = None,
+    ephemeral_identity: bool = False,
 ) -> dict[str, object]:
     output_path = Path(output_dir)
     try:
@@ -770,6 +849,7 @@ def _run_local_flow_with_roster(
         message_log_document["metadata"]["source"] = "dispatch-peer-batch"
         message_log_document["metadata"]["peer_log_path"] = peer_log_path
         message_log_document["metadata"]["roster_source"] = "heartbeat_peer_log"
+    _mark_ephemeral_message_log(message_log_document, ephemeral_identity)
     write_message_log(dispatch_message_log_path, message_log_document)
     dispatch_payload = dispatch.to_dict()
 
@@ -809,6 +889,7 @@ def _run_local_flow_with_roster(
                 ledger_path=str(ledger_path),
                 output_message_log_path=str(worker_message_log_path),
                 node_state_path=str(node_state_path),
+                ephemeral_identity=ephemeral_identity,
             )
         )
         processed_assignments.extend(inbox_result.processed)
@@ -837,6 +918,11 @@ def _run_local_flow_with_roster(
             worker_message_log_path
         )
 
+    if ephemeral_identity:
+        ledger, extra_fields = load_ledger_document(ledger_path)
+        extra_fields["artifact_mode"] = "ephemeral_test"
+        extra_fields["ephemeral"] = True
+        save_ledger_document(ledger_path, ledger, extra_fields)
     ledger_summary = summarize_ledger(str(ledger_path))
     processed_node_ids = [str(result["node_id"]) for result in per_node_results]
     processed_assignment_count = sum(
@@ -863,10 +949,12 @@ def _run_local_flow_with_roster(
         source=command,
         peer_log_path=peer_log_path,
     )
+    _mark_ephemeral_message_log(flow_message_log_document, ephemeral_identity)
     write_message_log(flow_message_log_path, flow_message_log_document)
     receipt_document = build_receipt_document(
         processed_assignments,
         existing_document=existing_receipt_document,
+        artifact_mode="ephemeral_test" if ephemeral_identity else None,
     )
     write_receipt_document(receipts_path, receipt_document)
     result: dict[str, object] = {
@@ -899,6 +987,10 @@ def _run_local_flow_with_roster(
     if peer_log_path is not None:
         result["peer_log_path"] = peer_log_path
         result["roster_source"] = "heartbeat_peer_log"
+    if ephemeral_identity:
+        result["artifact_mode"] = "ephemeral_test"
+        result["ephemeral"] = True
+        result["roster_source"] = "ephemeral_test_identity"
     if transport_payload is not None:
         transport_inbox_paths = transport_payload.get("inbox_paths", {})
         if not isinstance(transport_inbox_paths, dict):
@@ -1026,6 +1118,7 @@ def _process_local_inbox(
             processed_assignment_count=len(inbox_result.processed),
             ignored_message_ids=list(inbox_result.ignored_message_ids),
         )
+        _mark_ephemeral_message_log(output_document, request.ephemeral_identity)
         write_message_log(request.output_message_log_path, output_document)
         payload["output_message_log_path"] = request.output_message_log_path
         payload["final_message_count"] = len(messages) + len(emitted_messages)
@@ -1163,6 +1256,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "run-demo":
+        ephemeral_identity = _use_ephemeral_identity(args.ephemeral_identity)
+        if ephemeral_identity:
+            _log_ephemeral_identity_active(args.command)
         try:
             payload = run_demo(
                 args.node_id,
@@ -1170,6 +1266,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.include_ledger,
                 args.ledger_path,
                 args.identity_path,
+                ephemeral_identity,
             )
         except (IdentityPersistenceError, LedgerPersistenceError) as exc:
             parser.error(str(exc))
@@ -1241,8 +1338,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "run-local-flow":
+        ephemeral_identity = _use_ephemeral_identity(args.ephemeral_identity)
+        if ephemeral_identity:
+            _log_ephemeral_identity_active(args.command)
         return _run_json_command(
-            lambda: run_local_flow(args.manifest, args.output_dir, args.transport_dir),
+            lambda: run_local_flow(
+                args.manifest,
+                args.output_dir,
+                args.transport_dir,
+                ephemeral_identity,
+            ),
             FlowCommandError,
         )
 
