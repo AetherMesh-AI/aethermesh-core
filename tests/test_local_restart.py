@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import patch
 
 from aethermesh_core.cli import main
+from aethermesh_core.local_json_helpers import load_json_mapping, require_text_field
 from aethermesh_core.local_restart import LocalRestartError, restart_local_node
 from aethermesh_core.local_startup import start_local_node
 
@@ -134,6 +135,21 @@ class LocalRestartTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertIn("identity file is missing", stderr.getvalue())
+
+    def test_restart_shared_json_helpers_preserve_local_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "not-object.json"
+            path.write_text("[]", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalRestartError, "sample JSON must be an object"
+            ):
+                load_json_mapping(path, "sample", LocalRestartError)
+
+        with self.assertRaisesRegex(
+            LocalRestartError, "sample field 'node_id' must be a string"
+        ):
+            require_text_field({"node_id": ""}, "node_id", "sample", LocalRestartError)
 
     @staticmethod
     def _load(path: Path) -> dict[str, Any]:

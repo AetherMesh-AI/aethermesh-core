@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 from aethermesh_core.json_io import atomic_create_json
+from aethermesh_core.local_json_helpers import (
+    append_json_line,
+    canonical_json_hash,
+    load_json_mapping,
+    require_text_field,
+)
 from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
 
@@ -214,25 +218,11 @@ def _recovery_decisions(
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except FileNotFoundError as exc:
-        raise LocalRestartError(f"required {label} file is missing") from exc
-    except json.JSONDecodeError as exc:
-        raise LocalRestartError(f"{label} JSON is malformed: {exc.msg}") from exc
-    except OSError as exc:
-        raise LocalRestartError(f"could not read {label} file: {exc}") from exc
-    if not isinstance(document, dict):
-        raise LocalRestartError(f"{label} JSON must be an object")
-    return document
+    return load_json_mapping(path, label, LocalRestartError)
 
 
 def _required_string(document: dict[str, Any], field_name: str, label: str) -> str:
-    value = document.get(field_name)
-    if not isinstance(value, str) or not value:
-        raise LocalRestartError(f"{label} field {field_name!r} must be a string")
-    return value
+    return require_text_field(document, field_name, label, LocalRestartError)
 
 
 def _next_restart_receipt_ref(root: Path, timestamp: str) -> str:
@@ -244,17 +234,11 @@ def _next_restart_receipt_ref(root: Path, timestamp: str) -> str:
 
 
 def _append_log(path: Path, **payload: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, sort_keys=True))
-        handle.write("\n")
+    append_json_line(path, payload, create_parent=True)
 
 
 def _document_hash(document: dict[str, Any]) -> str:
-    canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return "sha256:" + sha256(canonical).hexdigest()
+    return canonical_json_hash(document, prefix="sha256:")
 
 
 def _now() -> str:
