@@ -1218,6 +1218,14 @@ class IdentityPersistenceTests(unittest.TestCase):
                 {"attribution_node_id": "b" * 64},
             )
 
+        def unbound_lineage(
+            root: Path, document: dict[str, object], node_id: str
+        ) -> None:
+            _identity_section(document, "lineage")["lineage_links"] = [
+                "lineage/link-0001.json"
+            ]
+            _write_json(root / "lineage" / "link-0001.json", {"kind": "lineage"})
+
         cases = (
             (
                 "manifest",
@@ -1238,6 +1246,11 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contribution",
                 mismatched_contribution,
                 "contribution_attribution.contribution_refs ref node binding must match node.node_id",
+            ),
+            (
+                "unbound-lineage",
+                unbound_lineage,
+                "lineage.lineage_links ref must include a node binding",
             ),
         )
         for label, mutate, message in cases:

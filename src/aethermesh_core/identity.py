@@ -1378,7 +1378,11 @@ def _validate_identity_artifact_node_binding(
             f"identity JSON {section_name} ref must be a JSON object when present"
         )
     node_binding = document.get("node_id") or document.get("attribution_node_id")
-    if node_binding is not None and node_binding != node_id:
+    if not isinstance(node_binding, str) or not node_binding:
+        raise IdentityPersistenceError(
+            f"identity JSON {section_name} ref must include a node binding"
+        )
+    if node_binding != node_id:
         raise IdentityPersistenceError(
             f"identity JSON {section_name} ref node binding must match node.node_id"
         )
