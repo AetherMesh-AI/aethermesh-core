@@ -393,15 +393,25 @@ def reset_identity(
     )
     _load_identity_reset_receipts(receipt_path)
     _save_identity(identity_path, new_identity)
-    _append_identity_reset_receipt(
-        receipt_path,
-        timestamp=timestamp,
-        identity_path=identity_path,
-        backup_path=backup_path,
-        previous_node_id=previous.node_id,
-        new_node_id=new_identity.node_id,
-        reason=reason,
-    )
+    try:
+        _append_identity_reset_receipt(
+            receipt_path,
+            timestamp=timestamp,
+            identity_path=identity_path,
+            backup_path=backup_path,
+            previous_node_id=previous.node_id,
+            new_node_id=new_identity.node_id,
+            reason=reason,
+        )
+    except IdentityPersistenceError:
+        try:
+            shutil.copy2(backup_path, identity_path)
+        except OSError as exc:
+            raise IdentityPersistenceError(
+                "identity reset audit receipt failed after replacing identity, "
+                f"and previous identity restoration failed: {exc}"
+            ) from exc
+        raise
     return IdentityResetResult(
         previous_node_id=previous.node_id,
         new_node_id=new_identity.node_id,

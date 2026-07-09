@@ -764,6 +764,36 @@ class IdentityPersistenceTests(unittest.TestCase):
 
         self.assertEqual(after_reset_attempt, original)
 
+    def test_identity_reset_receipt_write_failure_restores_previous_identity(
+        self,
+    ) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+            original = json.loads(identity_path.read_text(encoding="utf-8"))
+
+            with (
+                patch(
+                    "aethermesh_core.identity.atomic_write_json",
+                    side_effect=[None, OSError("receipt disk full")],
+                ),
+                self.assertRaisesRegex(IdentityPersistenceError, "audit receipt"),
+            ):
+                reset_identity(
+                    identity_path,
+                    hardware_inputs=hardware,
+                    node_id_factory=lambda: "b" * 64,
+                )
+
+            after_reset_attempt = json.loads(identity_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(after_reset_attempt, original)
+
     def test_identity_created_at_must_be_utc(self) -> None:
         document = _identity_document(
             NodeIdentity(node_id="local-node"),
