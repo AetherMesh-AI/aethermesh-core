@@ -82,5 +82,27 @@ jobs:
         self.assertEqual(exit_code, 1)
 
 
+class DesktopReleaseWorkflowTests(unittest.TestCase):
+    def test_stage_step_normalizes_release_asset_names(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "desktop-release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("artifact_system=MacOS", workflow)
+        self.assertIn("artifact_system=Windows", workflow)
+        self.assertIn("artifact_system=Linux", workflow)
+        self.assertIn("artifact_extension=dmg", workflow)
+        self.assertIn("artifact_extension=exe", workflow)
+        self.assertIn("artifact_extension=deb", workflow)
+        self.assertIn(
+            'release_asset="dist/release-upload/'
+            "AetherMesh-${RELEASE_VERSION}-${artifact_system}-"
+            '${AETHERMESH_TARGET_ARCH}.${artifact_extension}"',
+            workflow,
+        )
+        self.assertIn('cp "$artifact" "$release_asset"', workflow)
+        self.assertNotIn('cp "$artifact" dist/release-upload/', workflow)
+
+
 if __name__ == "__main__":
     unittest.main()
