@@ -745,6 +745,16 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(first.node_id, "a" * 64)
         self.assertEqual(result.previous_node_id, "a" * 64)
         self.assertEqual(result.new_node_id, "b" * 64)
+        self.assertEqual(
+            result.to_dict(),
+            {
+                "previous_node_id": "a" * 64,
+                "new_node_id": "b" * 64,
+                "backup_path": result.backup_path,
+                "audit_receipt_path": result.audit_receipt_path,
+                "warning": result.warning,
+            },
+        )
         self.assertIn("lineage and contribution attribution continuity", result.warning)
         self.assertEqual(backup_document, original_document)
         self.assertEqual(reloaded.node_id, "b" * 64)
@@ -1514,6 +1524,223 @@ Ethernet Address: aa:bb:cc:dd:ee:04
         self.assertEqual(identity.node_id, "legacy-node-id")
         self.assertEqual(identity.node_name, "legacy-node-name_legacy")
         self.assertEqual(reloaded_document, original_document)
+
+    def test_identity_validation_accepts_matching_local_references(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            identity_path = root / "local-node.json"
+            (root / "manifests").mkdir()
+            (root / "receipts").mkdir()
+            (root / "lineage").mkdir()
+            (root / "contributions").mkdir()
+            (root / "manifests" / "local-batch.json").write_text(
+                json.dumps({"nodes": [{"node_id": "legacy-node-id"}]}),
+                encoding="utf-8",
+            )
+            (root / "receipts" / "receipt-0001.json").write_text(
+                json.dumps({"receipts": [{"node_id": "legacy-node-id"}]}),
+                encoding="utf-8",
+            )
+            (root / "lineage" / "local-node-link.json").write_text(
+                json.dumps({"node_id": "legacy-node-id"}),
+                encoding="utf-8",
+            )
+            (root / "contributions" / "contribution-0001.json").write_text(
+                json.dumps(
+                    {
+                        "node_id": "legacy-node-id",
+                        "creator_node_id": "original-creator-node",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            identity_path.write_text(
+                json.dumps(
+                    _identity_document(
+                        NodeIdentity(
+                            node_id="legacy-node-id",
+                            node_name="legacy-node-name_legacy",
+                        ),
+                        created_at="2026-07-08T00:00:00+00:00",
+                        creator_node_id="original-creator-node",
+                    )
+                    | {
+                        "references": {
+                            "manifest_refs": [
+                                "manifests/local-batch.json#node:legacy-node-id"
+                            ],
+                            "validation_receipt_refs": ["receipts/receipt-0001.json"],
+                            "version_metadata": _test_version_metadata(),
+                        },
+                        "lineage": {
+                            "parent_node_ids": ["original-creator-node"],
+                            "lineage_links": ["lineage/local-node-link.json"],
+                        },
+                        "contribution_attribution": {
+                            "creator_node_id": "original-creator-node",
+                            "attribution_node_id": "legacy-node-id",
+                            "contribution_refs": [
+                                "contributions/contribution-0001.json"
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertLogs("aethermesh_core.identity", level="INFO") as logs:
+                identity = load_or_create_identity(identity_path)
+
+        self.assertEqual(identity.node_id, "legacy-node-id")
+        self.assertTrue(
+            any(
+                "identity validation passed for local-node.json" in line
+                for line in logs.output
+            )
+        )
+
+    def test_identity_validation_rejects_mismatched_local_references_without_overwrite(
+        self,
+    ) -> None:
+        mismatched_documents = [
+            (
+                "manifest_refs",
+                {"nodes": [{"node_id": "other-node"}]},
+                "references.manifest_refs",
+            ),
+            (
+                "validation_receipt_refs",
+                {"receipts": [{"node_id": "other-node"}]},
+                "references.validation_receipt_refs",
+            ),
+            ("lineage_links", {"node_id": "other-node"}, "lineage.lineage_links"),
+            (
+                "contribution_refs",
+                {"node_id": "legacy-node-id", "creator_node_id": "other-creator"},
+                "contribution_attribution.contribution_refs",
+            ),
+        ]
+        for ref_field, artifact, message in mismatched_documents:
+            with self.subTest(ref_field=ref_field):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    identity_path = root / "local-node.json"
+                    artifact_path = root / "refs" / f"{ref_field}.json"
+                    artifact_path.parent.mkdir()
+                    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+                    document = _identity_document(
+                        NodeIdentity(node_id="legacy-node-id"),
+                        created_at="2026-07-08T00:00:00+00:00",
+                        creator_node_id="original-creator-node",
+                    )
+                    references = document["references"]
+                    lineage = document["lineage"]
+                    contribution_attribution = document["contribution_attribution"]
+                    assert isinstance(references, dict)
+                    assert isinstance(lineage, dict)
+                    assert isinstance(contribution_attribution, dict)
+                    if ref_field == "manifest_refs":
+                        references["manifest_refs"] = [f"refs/{ref_field}.json"]
+                    elif ref_field == "validation_receipt_refs":
+                        references["validation_receipt_refs"] = [
+                            f"refs/{ref_field}.json"
+                        ]
+                    elif ref_field == "lineage_links":
+                        lineage["lineage_links"] = [f"refs/{ref_field}.json"]
+                    else:
+                        contribution_attribution["contribution_refs"] = [
+                            f"refs/{ref_field}.json"
+                        ]
+                    original = json.dumps(document)
+                    identity_path.write_text(original, encoding="utf-8")
+
+                    with self.assertRaisesRegex(IdentityPersistenceError, message):
+                        load_or_create_identity(identity_path)
+
+                    self.assertEqual(
+                        identity_path.read_text(encoding="utf-8"), original
+                    )
+
+    def test_identity_reference_metadata_match_helpers_cover_supported_shapes(
+        self,
+    ) -> None:
+        self.assertFalse(
+            identity_module._manifest_document_matches_node([], "legacy-node-id")
+        )
+        self.assertTrue(
+            identity_module._manifest_document_matches_node(
+                {"nodes": ["legacy-node-id"]}, "legacy-node-id"
+            )
+        )
+        self.assertTrue(
+            identity_module._manifest_document_matches_node(
+                {"node": {"node_id": "legacy-node-id"}}, "legacy-node-id"
+            )
+        )
+        self.assertFalse(
+            identity_module._receipt_document_matches_node([], "legacy-node-id")
+        )
+        self.assertFalse(
+            identity_module._receipt_document_matches_node(
+                {"node_id": "other-node"}, "legacy-node-id"
+            )
+        )
+        self.assertTrue(
+            identity_module._identity_artifact_has_identity_metadata(
+                [{"parent_node_ids": ["legacy-node-id"]}]
+            )
+        )
+        self.assertFalse(
+            identity_module._identity_artifact_has_identity_metadata(["not-metadata"])
+        )
+        self.assertTrue(
+            identity_module._identity_artifact_mentions_node(
+                {"nested": ["legacy-node-id"]}, "legacy-node-id"
+            )
+        )
+        self.assertFalse(
+            identity_module._identity_artifact_mentions_node(
+                "other-node", "legacy-node-id"
+            )
+        )
+
+    def test_identity_validation_rejects_malformed_references_before_load(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            document = _identity_document(
+                NodeIdentity(node_id="legacy-node-id"),
+                created_at="2026-07-08T00:00:00+00:00",
+            )
+            references = document["references"]
+            assert isinstance(references, dict)
+            references["manifest_refs"] = ["../outside.json"]
+            original = json.dumps(document)
+            identity_path.write_text(original, encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                IdentityPersistenceError, "malformed local reference"
+            ):
+                load_or_create_identity(identity_path)
+
+            self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
+
+    def test_identity_validation_rejects_invalid_node_id_format_without_overwrite(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            original = json.dumps(
+                _identity_document(
+                    NodeIdentity(node_id="bad node id"),
+                    created_at="2026-07-08T00:00:00+00:00",
+                )
+            )
+            identity_path.write_text(original, encoding="utf-8")
+
+            with self.assertRaisesRegex(IdentityPersistenceError, "node.node_id"):
+                load_or_create_identity(identity_path)
+
+            self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
 
     def test_malformed_identity_json_raises_clear_error_without_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
