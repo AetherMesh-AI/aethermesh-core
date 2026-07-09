@@ -254,6 +254,10 @@ class IdentityPersistenceTests(unittest.TestCase):
             "~/.aethermesh/manifest.json",
             "../outside-repo/manifest.json",
             "C:\\Users\\example\\manifest.json",
+            "manifests/local batch.json#node:node-local-a",
+            "manifests/local-batch.json#",
+            "#node:node-local-a",
+            "manifests/local-batch.json#bad fragment",
         )
 
         for manifest_ref in denied_refs:
@@ -1705,24 +1709,40 @@ Ethernet Address: aa:bb:cc:dd:ee:04
         )
 
     def test_identity_validation_rejects_malformed_references_before_load(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            identity_path = Path(temp_dir) / "local-node.json"
-            document = _identity_document(
-                NodeIdentity(node_id="legacy-node-id"),
-                created_at="2026-07-08T00:00:00+00:00",
-            )
-            references = document["references"]
-            assert isinstance(references, dict)
-            references["manifest_refs"] = ["../outside.json"]
-            original = json.dumps(document)
-            identity_path.write_text(original, encoding="utf-8")
+        for manifest_ref in ("../outside.json", "refs/local.json#bad fragment"):
+            with self.subTest(manifest_ref=manifest_ref):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    identity_path = Path(temp_dir) / "local-node.json"
+                    document = _identity_document(
+                        NodeIdentity(node_id="legacy-node-id"),
+                        created_at="2026-07-08T00:00:00+00:00",
+                    )
+                    references = document["references"]
+                    assert isinstance(references, dict)
+                    references["manifest_refs"] = [manifest_ref]
+                    original = json.dumps(document)
+                    identity_path.write_text(original, encoding="utf-8")
 
-            with self.assertRaisesRegex(
-                IdentityPersistenceError, "malformed local reference"
-            ):
-                load_or_create_identity(identity_path)
+                    with self.assertLogs(
+                        "aethermesh_core.identity", level="WARNING"
+                    ) as logs:
+                        with self.assertRaisesRegex(
+                            IdentityPersistenceError, "malformed local reference"
+                        ):
+                            load_or_create_identity(identity_path)
 
-            self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
+                    self.assertEqual(
+                        identity_path.read_text(encoding="utf-8"), original
+                    )
+                    self.assertTrue(
+                        any(
+                            "identity validation failed for local-node.json" in line
+                            for line in logs.output
+                        )
+                    )
+                    self.assertFalse(
+                        any(str(identity_path.parent) in line for line in logs.output)
+                    )
 
     def test_identity_validation_rejects_invalid_node_id_format_without_overwrite(
         self,

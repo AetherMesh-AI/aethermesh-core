@@ -256,14 +256,17 @@ def _require_identity_timestamp(value: str) -> None:
 
 def _require_local_manifest_ref(value: str) -> None:
     lowered = value.lower()
-    path_part = value.split("#", 1)[0]
+    path_part, separator, fragment = value.partition("#")
     if (
         value != value.strip()
+        or not path_part
+        or not re.fullmatch(r"[A-Za-z0-9._/-]+", path_part)
         or "://" in lowered
         or lowered.startswith(LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES)
         or path_part.startswith(("/", "~"))
         or re.match(r"^[A-Za-z]:[\\/]", path_part) is not None
         or ".." in Path(path_part).parts
+        or (separator and not re.fullmatch(r"[A-Za-z0-9._:-]+", fragment))
     ):
         raise IdentityPersistenceError(
             "local node identity manifest_ref must be a local file or fixture reference"
@@ -1141,8 +1144,8 @@ def _load_identity(path: Path) -> NodeIdentity:
         identity = _validated_identity_from_document(
             _load_identity_document(path), identity_path=path
         )
-    except IdentityPersistenceError as exc:
-        LOGGER.warning("identity validation failed for %s: %s", path.name, exc)
+    except IdentityPersistenceError:
+        LOGGER.warning("identity validation failed for %s", path.name)
         raise
     LOGGER.info("identity validation passed for %s", path.name)
     return identity
