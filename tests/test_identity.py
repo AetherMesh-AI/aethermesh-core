@@ -626,7 +626,7 @@ class IdentityPersistenceTests(unittest.TestCase):
 
             with (
                 patch(
-                    "aethermesh_core.identity.tempfile.NamedTemporaryFile",
+                    "aethermesh_core.json_io.tempfile.NamedTemporaryFile",
                     side_effect=OSError("no temp space"),
                 ),
                 self.assertRaisesRegex(IdentityPersistenceError, "no temp space"),

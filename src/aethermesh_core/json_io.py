@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,18 @@ from typing import Any
 def atomic_write_json(path: Path, document: dict[str, Any]) -> None:
     """Write one JSON document using a temp file and atomic replace."""
 
+    _publish_json(path, document, os.replace)
+
+
+def atomic_create_json(path: Path, document: dict[str, Any]) -> None:
+    """Create one JSON document atomically without replacing an existing file."""
+
+    _publish_json(path, document, os.link)
+
+
+def _publish_json(
+    path: Path, document: dict[str, Any], publish: Callable[[str, Path], None]
+) -> None:
     parent = path.parent
     temp_name: str | None = None
     try:
@@ -29,7 +42,7 @@ def atomic_write_json(path: Path, document: dict[str, Any]) -> None:
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temp_name, path)
+        publish(temp_name, path)
     except (OSError, TypeError, ValueError):
         if temp_name is not None:
             remove_temp_file(temp_name)

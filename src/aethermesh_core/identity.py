@@ -10,7 +10,6 @@ import re
 import secrets
 import shutil
 import subprocess  # nosec B404 - fixed local hardware probe commands only; no user input.
-import tempfile
 from functools import lru_cache
 import sys
 from collections.abc import Callable, Iterable
@@ -21,7 +20,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TextIO
 
-from aethermesh_core.json_io import atomic_write_json, remove_temp_file
+from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.models import NodeIdentity
 from aethermesh_core.version_metadata import (
     VersionMetadataError,
@@ -334,12 +333,7 @@ def reset_identity(
     reason: str | None = None,
     quarantine_dir: str | Path | None = None,
     audit_receipt_path: str | Path | None = None,
-    goos: str | None = None,
-    read_file: FileReader | None = None,
-    run_command: CommandRunner | None = None,
-    read_hostname: HostnameReader | None = None,
     hardware_inputs: HardwareIdentityInputs | None = None,
-    account_id: str | None = None,
     node_id_factory: NodeIdFactory | None = None,
 ) -> IdentityResetResult:
     """Explicitly replace a persisted local identity after quarantining the old one.
@@ -378,12 +372,7 @@ def reset_identity(
     new_identity = NodeIdentity(
         node_id=node_id,
         node_name=deterministic_machine_node_name(
-            goos=goos,
-            read_file=read_file,
-            run_command=run_command,
-            read_hostname=read_hostname,
             hardware_inputs=hardware_inputs,
-            account_id=account_id,
             node_id=node_id,
         ),
     )
@@ -1348,31 +1337,14 @@ def _create_identity_document_without_overwrite(
 ) -> None:
     """Create an identity JSON file atomically without replacing a winner."""
 
-    parent = path.parent
-    temp_name = str(parent / f".{path.name}.uncreated.tmp")
     try:
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temp_name = handle.name
-            json.dump(document, handle, indent=2, sort_keys=True)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.link(temp_name, path)
+        atomic_create_json(path, document)
     except FileExistsError as exc:
         raise IdentityPersistenceError(
             "identity file already exists; use the explicit reset flow to replace it"
         ) from exc
     except (OSError, TypeError, ValueError) as exc:
         raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
-    finally:
-        remove_temp_file(temp_name)
 
 
 def _identity_document(
