@@ -43,6 +43,7 @@ from aethermesh_core.local_transport import (
     write_local_inbox,
     write_local_outbox,
 )
+from aethermesh_core.local_restart import LocalRestartError, restart_local_node
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
 from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
 from aethermesh_core.local_validation import (
@@ -227,6 +228,22 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=5.0,
         help="Bounded graceful shutdown timeout for local persistence checks.",
+    )
+
+    restart = subcommands.add_parser(
+        "restart-local-node",
+        help="Cleanly stop and restart a local-only node runtime from persisted state.",
+    )
+    restart.add_argument(
+        "--runtime-dir",
+        required=True,
+        help="Local runtime directory containing identity, manifests, receipts, logs, work, and lineage artifacts.",
+    )
+    restart.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=5.0,
+        help="Bounded graceful shutdown timeout before local restart.",
     )
 
     batch = subcommands.add_parser(
@@ -1400,6 +1417,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.runtime_dir, timeout_seconds=args.timeout_seconds
             ).to_dict()
         except LocalShutdownError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "restart-local-node":
+        try:
+            payload = restart_local_node(
+                args.runtime_dir, timeout_seconds=args.timeout_seconds
+            ).to_dict()
+        except LocalRestartError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))

@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.local_json_helpers import (
+    append_json_line,
+    canonical_json_hash,
+    load_json_mapping,
+    require_text_field,
+)
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
 
@@ -191,25 +195,11 @@ def _shutdown_already_completed(path: Path) -> bool:
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except FileNotFoundError as exc:
-        raise LocalShutdownError(f"required {label} file is missing") from exc
-    except json.JSONDecodeError as exc:
-        raise LocalShutdownError(f"{label} JSON is malformed: {exc.msg}") from exc
-    except OSError as exc:
-        raise LocalShutdownError(f"could not read {label} file: {exc}") from exc
-    if not isinstance(document, dict):
-        raise LocalShutdownError(f"{label} JSON must be an object")
-    return document
+    return load_json_mapping(path, label, LocalShutdownError)
 
 
 def _required_string(document: dict[str, Any], field_name: str, label: str) -> str:
-    value = document.get(field_name)
-    if not isinstance(value, str) or not value:
-        raise LocalShutdownError(f"{label} field {field_name!r} must be a string")
-    return value
+    return require_text_field(document, field_name, label, LocalShutdownError)
 
 
 def _required_object(
@@ -269,16 +259,11 @@ def _release_runtime_resources(*paths: Path) -> list[str]:
 
 
 def _append_log(path: Path, **payload: object) -> None:
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, sort_keys=True))
-        handle.write("\n")
+    append_json_line(path, payload)
 
 
 def _document_hash(document: dict[str, Any]) -> str:
-    canonical = json.dumps(document, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return sha256(canonical).hexdigest()
+    return canonical_json_hash(document)
 
 
 def _relative_ref(root: Path, path: Path) -> str:
