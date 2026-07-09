@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 
 from aethermesh_core import identity as identity_module
@@ -101,6 +102,73 @@ def _test_version_metadata(
     captured_at: str = "2026-07-08T00:00:00+00:00",
 ) -> dict[str, object]:
     return capture_version_metadata(captured_at=captured_at)
+
+
+def _write_json(path: Path, document: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+
+def _write_identity_manifest(root: Path, node_id: str) -> None:
+    _write_json(
+        root / "manifests" / "local-batch.json",
+        {
+            "version": 1,
+            "nodes": [node_id],
+            "jobs": [{"job_id": "echo-1", "job_type": "echo"}],
+        },
+    )
+
+
+def _write_identity_receipt(root: Path, node_id: str) -> None:
+    metadata = _test_version_metadata()
+    metadata_ref = version_metadata_ref(metadata)
+    _write_json(
+        root / "receipts" / "receipt-0001.json",
+        {
+            "version": 1,
+            "run_source": "run-local-flow",
+            "version_metadata": metadata,
+            "version_metadata_ref": metadata_ref,
+            "version_metadata_by_ref": {metadata_ref: metadata},
+            "receipts": [
+                {
+                    "job_id": "echo-1",
+                    "job_type": "echo",
+                    "node_id": node_id,
+                    "assignment_message_id": "msg-0001",
+                    "correlation_id": "echo-1",
+                    "result_message_id": "msg-0002",
+                    "validation_message_id": "msg-0003",
+                    "contribution_message_id": "msg-0004",
+                    "result_status": "completed",
+                    "result_hash": "b" * 64,
+                    "validation": {"valid": True, "reason": "ok"},
+                    "version_metadata_ref": metadata_ref,
+                    "credited_units": 1,
+                    "output_summary": {},
+                }
+            ],
+        },
+    )
+
+
+def _deep_merge_identity_document(
+    document: dict[str, object], patch_document: dict[str, object]
+) -> dict[str, object]:
+    merged = dict(document)
+    for key, value in patch_document.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            nested = dict(cast(dict[str, object], merged[key]))
+            nested.update(value)
+            merged[key] = nested
+        else:
+            merged[key] = value
+    return merged
+
+
+def _identity_section(document: dict[str, object], section_name: str) -> dict[str, Any]:
+    return cast(dict[str, Any], document[section_name])
 
 
 class IdentityPersistenceTests(unittest.TestCase):
@@ -694,7 +762,7 @@ class IdentityPersistenceTests(unittest.TestCase):
             )
             original_document = json.loads(identity_path.read_text(encoding="utf-8"))
             original_document["references"]["manifest_refs"] = [
-                "manifests/local-batch.json#node:aaaaaaaaaaaa"
+                f"manifests/local-batch.json#node:{'a' * 64}"
             ]
             original_document["references"]["validation_receipt_refs"] = [
                 "receipts/receipt-0001.json"
@@ -707,11 +775,41 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contributions/contribution-0001.json"
             ]
             identity_path.write_text(json.dumps(original_document), encoding="utf-8")
+            metadata = _test_version_metadata()
+            metadata_ref = version_metadata_ref(metadata)
             referenced_files = {
-                "manifests/local-batch.json": {"kind": "manifest"},
-                "receipts/receipt-0001.json": {"kind": "receipt"},
-                "lineage/local-node-link.json": {"kind": "lineage"},
-                "contributions/contribution-0001.json": {"kind": "contribution"},
+                "manifests/local-batch.json": {
+                    "version": 1,
+                    "nodes": ["a" * 64],
+                    "jobs": [{"job_id": "echo-1", "job_type": "echo"}],
+                },
+                "receipts/receipt-0001.json": {
+                    "version": 1,
+                    "run_source": "run-local-flow",
+                    "version_metadata": metadata,
+                    "version_metadata_ref": metadata_ref,
+                    "version_metadata_by_ref": {metadata_ref: metadata},
+                    "receipts": [
+                        {
+                            "job_id": "echo-1",
+                            "job_type": "echo",
+                            "node_id": "a" * 64,
+                            "assignment_message_id": "msg-0001",
+                            "correlation_id": "echo-1",
+                            "result_message_id": "msg-0002",
+                            "validation_message_id": "msg-0003",
+                            "contribution_message_id": "msg-0004",
+                            "result_status": "completed",
+                            "result_hash": "b" * 64,
+                            "validation": {"valid": True, "reason": "ok"},
+                            "version_metadata_ref": metadata_ref,
+                            "credited_units": 1,
+                            "output_summary": {},
+                        }
+                    ],
+                },
+                "lineage/local-node-link.json": {"node_id": "a" * 64},
+                "contributions/contribution-0001.json": {"node_id": "a" * 64},
             }
             for relative_path, document in referenced_files.items():
                 artifact_path = Path(temp_dir) / relative_path
@@ -785,12 +883,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         )
         self.assertEqual(
             copied_reference_documents,
-            {
-                "local-batch.json": {"kind": "manifest"},
-                "receipt-0001.json": {"kind": "receipt"},
-                "local-node-link.json": {"kind": "lineage"},
-                "contribution-0001.json": {"kind": "contribution"},
-            },
+            {Path(path).name: document for path, document in referenced_files.items()},
         )
         self.assertEqual(
             receipt["backed_up_identity_sections"],
@@ -1051,6 +1144,140 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "created_at must be a UTC timestamp",
             ):
                 load_or_create_identity(identity_path)
+
+    def test_identity_load_validates_local_refs_before_runtime_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            identity_path = root / "local-node.json"
+            node_id = "a" * 64
+            document = _identity_document(NodeIdentity(node_id=node_id))
+            _identity_section(document, "references")["manifest_refs"] = [
+                f"manifests/local-batch.json#node:{node_id}",
+                "manifests/local-batch.json#batch:local",
+            ]
+            _identity_section(document, "references")["validation_receipt_refs"] = [
+                "receipts/receipt-0001.json"
+            ]
+            _identity_section(document, "lineage")["lineage_links"] = [
+                "lineage/link-0001.json"
+            ]
+            _identity_section(document, "contribution_attribution")[
+                "contribution_refs"
+            ] = ["contributions/contribution-0001.json"]
+            _write_json(identity_path, document)
+            _write_identity_manifest(root, node_id)
+            _write_identity_receipt(root, node_id)
+            _write_json(root / "lineage" / "link-0001.json", {"node_id": node_id})
+            _write_json(
+                root / "contributions" / "contribution-0001.json", {"node_id": node_id}
+            )
+
+            with self.assertLogs("aethermesh_core.identity", level="INFO") as logs:
+                identity = load_or_create_identity(identity_path)
+
+        self.assertEqual(identity.node_id, node_id)
+        self.assertTrue(
+            any(
+                "local identity validation passed" in message for message in logs.output
+            )
+        )
+
+    def test_identity_load_rejects_mismatched_local_reference_metadata(self) -> None:
+        cases = (
+            (
+                "manifest",
+                lambda root, document, node_id: (
+                    _identity_section(document, "references").__setitem__(
+                        "manifest_refs", ["manifests/local-batch.json"]
+                    ),
+                    _write_identity_manifest(root, "b" * 64),
+                ),
+                "manifest ref must include node.node_id",
+            ),
+            (
+                "receipt",
+                lambda root, document, node_id: (
+                    _identity_section(document, "references").__setitem__(
+                        "validation_receipt_refs", ["receipts/receipt-0001.json"]
+                    ),
+                    _write_identity_receipt(root, "b" * 64),
+                ),
+                "validation receipt ref must include node.node_id",
+            ),
+            (
+                "lineage",
+                lambda root, document, node_id: (
+                    _identity_section(document, "lineage").__setitem__(
+                        "lineage_links", ["lineage/link-0001.json"]
+                    ),
+                    _write_json(
+                        root / "lineage" / "link-0001.json", {"node_id": "b" * 64}
+                    ),
+                ),
+                "lineage.lineage_links ref node binding must match node.node_id",
+            ),
+            (
+                "contribution",
+                lambda root, document, node_id: (
+                    _identity_section(document, "contribution_attribution").__setitem__(
+                        "contribution_refs", ["contributions/contribution-0001.json"]
+                    ),
+                    _write_json(
+                        root / "contributions" / "contribution-0001.json",
+                        {"attribution_node_id": "b" * 64},
+                    ),
+                ),
+                "contribution_attribution.contribution_refs ref node binding must match node.node_id",
+            ),
+        )
+        for label, mutate, message in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                identity_path = root / "local-node.json"
+                node_id = "a" * 64
+                document = _identity_document(NodeIdentity(node_id=node_id))
+                mutate(root, document, node_id)
+                original = json.dumps(document, sort_keys=True)
+                identity_path.write_text(original, encoding="utf-8")
+
+                with self.assertRaisesRegex(IdentityPersistenceError, message):
+                    load_or_create_identity(
+                        identity_path, node_id_factory=lambda: "c" * 64
+                    )
+
+                self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
+
+    def test_identity_load_rejects_invalid_node_id_and_local_ref_formats(self) -> None:
+        cases: tuple[tuple[dict[str, object], str], ...] = (
+            ({"node": {"node_id": "bad node id"}}, "node.node_id.*reference-safe"),
+            ({"version": 2}, "version 1"),
+            (
+                {"references": {"manifest_refs": ["../outside.json"]}},
+                "manifest_ref must be a local file or fixture reference",
+            ),
+            (
+                {"references": {"manifest_refs": ["manifests/local-batch.json#"]}},
+                "ref fragments must be non-empty",
+            ),
+        )
+        for patch_document, message in cases:
+            with (
+                self.subTest(message=message),
+                tempfile.TemporaryDirectory() as temp_dir,
+            ):
+                identity_path = Path(temp_dir) / "local-node.json"
+                document = _deep_merge_identity_document(
+                    _identity_document(NodeIdentity(node_id="a" * 64)), patch_document
+                )
+                original = json.dumps(document, sort_keys=True)
+                identity_path.write_text(original, encoding="utf-8")
+
+                with self.assertRaisesRegex(IdentityPersistenceError, message):
+                    load_or_create_identity(
+                        identity_path, node_id_factory=lambda: "c" * 64
+                    )
+
+                self.assertEqual(identity_path.read_text(encoding="utf-8"), original)
 
     def test_new_local_node_id_uses_collision_resistant_hex_randomness(self) -> None:
         first = _new_local_node_id()

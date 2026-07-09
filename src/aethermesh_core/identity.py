@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 import os
 import platform
 import re
@@ -21,7 +22,12 @@ from pathlib import Path
 from typing import TextIO
 
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+from aethermesh_core.job_manifest import ManifestError, load_job_manifest
 from aethermesh_core.models import NodeIdentity
+from aethermesh_core.receipts import (
+    ReceiptPersistenceError,
+    load_receipt_document_if_exists,
+)
 from aethermesh_core.version_metadata import (
     VersionMetadataError,
     capture_version_metadata,
@@ -58,6 +64,7 @@ LOCAL_NODE_IDENTITY_FORBIDDEN_MANIFEST_REF_PREFIXES = (
     "token://",
     "dashboard://",
 )
+LOGGER = logging.getLogger(__name__)
 UNKNOWN_CPU_ARCHITECTURE = "UNKNOWN_CPU_ARCHITECTURE"
 UNKNOWN_CPU_VENDOR = "UNKNOWN_CPU_VENDOR"
 UNKNOWN_CPU_BRAND = "UNKNOWN_CPU_BRAND"
@@ -1136,6 +1143,18 @@ def _safe_int(value: object) -> int:
 
 def _load_identity(path: Path) -> NodeIdentity:
     document = _load_identity_document(path)
+    try:
+        identity = _validated_runtime_identity(path, document)
+    except IdentityPersistenceError:
+        LOGGER.warning("local identity validation failed for %s", path.name)
+        raise
+    LOGGER.info("local identity validation passed for %s", path.name)
+    return identity
+
+
+def _validated_runtime_identity(
+    path: Path, document: dict[str, object]
+) -> NodeIdentity:
     if not isinstance(document, dict):
         raise IdentityPersistenceError("identity JSON must be an object")
     version = document.get("version")
@@ -1149,12 +1168,14 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'node.node_id' must be a non-empty string"
         )
+    _require_reference_safe_identity_value("node.node_id", node_id)
     node_name = node.get("node_name")
     if node_name is not None and (not isinstance(node_name, str) or not node_name):
         raise IdentityPersistenceError(
             "identity JSON field 'node.node_name' must be a non-empty string when present"
         )
     creator_node_id = _identity_document_creator_node_id(document)
+    _require_reference_safe_identity_value("node.creator_node_id", creator_node_id)
     created_at = node.get("created_at")
     if not isinstance(created_at, str) or not created_at:
         raise IdentityPersistenceError(
@@ -1176,8 +1197,10 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'references' must be an object"
         )
-    _require_string_list(references, "manifest_refs")
-    _require_string_list(references, "validation_receipt_refs")
+    manifest_refs = _require_string_list(references, "manifest_refs")
+    receipt_refs = _require_string_list(references, "validation_receipt_refs")
+    _validate_manifest_refs(manifest_refs, identity_path=path, node_id=node_id)
+    _validate_validation_receipt_refs(receipt_refs, identity_path=path, node_id=node_id)
     try:
         validate_version_metadata(references.get("version_metadata"))
     except VersionMetadataError as exc:
@@ -1187,8 +1210,18 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'lineage' must be an object"
         )
-    _require_string_list(lineage, "parent_node_ids")
-    _require_string_list(lineage, "lineage_links")
+    parent_node_ids = _require_string_list(lineage, "parent_node_ids")
+    for parent_node_id in parent_node_ids:
+        _require_reference_safe_identity_value(
+            "lineage.parent_node_ids", parent_node_id
+        )
+    lineage_links = _require_string_list(lineage, "lineage_links")
+    _validate_identity_artifact_refs(
+        lineage_links,
+        identity_path=path,
+        node_id=node_id,
+        section_name="lineage.lineage_links",
+    )
     contribution_attribution = document.get("contribution_attribution")
     if not isinstance(contribution_attribution, dict):
         raise IdentityPersistenceError(
@@ -1204,7 +1237,15 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'contribution_attribution.attribution_node_id' must match node.node_id"
         )
-    _require_string_list(contribution_attribution, "contribution_refs")
+    contribution_refs = _require_string_list(
+        contribution_attribution, "contribution_refs"
+    )
+    _validate_identity_artifact_refs(
+        contribution_refs,
+        identity_path=path,
+        node_id=node_id,
+        section_name="contribution_attribution.contribution_refs",
+    )
     return NodeIdentity(node_id=node_id, node_name=node_name)
 
 
@@ -1235,7 +1276,7 @@ def _identity_document_creator_node_id(document: dict[str, object]) -> str:
     return creator_node_id
 
 
-def _require_string_list(document: dict[str, object], field_name: str) -> None:
+def _require_string_list(document: dict[str, object], field_name: str) -> list[str]:
     value = document.get(field_name)
     if not isinstance(value, list) or any(
         not isinstance(item, str) or not item for item in value
@@ -1243,6 +1284,7 @@ def _require_string_list(document: dict[str, object], field_name: str) -> None:
         raise IdentityPersistenceError(
             f"identity JSON field '{field_name}' must be a list of non-empty strings"
         )
+    return value
 
 
 def _require_provenance_string(document: dict[str, object], field_name: str) -> None:
@@ -1251,6 +1293,121 @@ def _require_provenance_string(document: dict[str, object], field_name: str) -> 
         raise IdentityPersistenceError(
             f"identity JSON field 'provenance.{field_name}' must be a non-empty string"
         )
+
+
+def _validate_manifest_refs(
+    refs: Iterable[str], *, identity_path: Path, node_id: str
+) -> None:
+    for ref in refs:
+        _require_local_identity_ref(ref, section_name="references.manifest_refs")
+        referenced_node_id = _identity_ref_node_fragment(ref)
+        if referenced_node_id is not None and referenced_node_id != node_id:
+            raise IdentityPersistenceError(
+                "identity JSON manifest ref node fragment must match node.node_id"
+            )
+        path = _local_identity_ref_path(ref, identity_path=identity_path)
+        if path is None or not path.exists():
+            continue
+        try:
+            batch = load_job_manifest(path)
+        except ManifestError as exc:
+            raise IdentityPersistenceError(
+                f"identity JSON manifest ref '{ref}' is invalid: {exc}"
+            ) from exc
+        if node_id not in batch.node_ids:
+            raise IdentityPersistenceError(
+                "identity JSON manifest ref must include node.node_id in manifest nodes"
+            )
+
+
+def _validate_validation_receipt_refs(
+    refs: Iterable[str], *, identity_path: Path, node_id: str
+) -> None:
+    for ref in refs:
+        _require_local_identity_ref(
+            ref, section_name="references.validation_receipt_refs"
+        )
+        path = _local_identity_ref_path(ref, identity_path=identity_path)
+        if path is None or not path.exists():
+            continue
+        try:
+            document = load_receipt_document_if_exists(path)
+        except ReceiptPersistenceError as exc:
+            raise IdentityPersistenceError(
+                f"identity JSON validation receipt ref '{ref}' is invalid: {exc}"
+            ) from exc
+        receipts = document.get("receipts", []) if document is not None else []
+        if not any(
+            isinstance(receipt, dict) and receipt.get("node_id") == node_id
+            for receipt in receipts
+        ):
+            raise IdentityPersistenceError(
+                "identity JSON validation receipt ref must include node.node_id"
+            )
+
+
+def _validate_identity_artifact_refs(
+    refs: Iterable[str], *, identity_path: Path, node_id: str, section_name: str
+) -> None:
+    for ref in refs:
+        _require_local_identity_ref(ref, section_name=section_name)
+        path = _local_identity_ref_path(ref, identity_path=identity_path)
+        if path is None or not path.exists():
+            continue
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                document = json.load(handle)
+        except json.JSONDecodeError as exc:
+            raise IdentityPersistenceError(
+                f"identity JSON {section_name} ref '{ref}' is malformed: {exc.msg}"
+            ) from exc
+        except OSError as exc:
+            raise IdentityPersistenceError(
+                f"identity JSON {section_name} ref '{ref}' could not be read: {exc}"
+            ) from exc
+        _validate_identity_artifact_node_binding(
+            document, node_id=node_id, section_name=section_name
+        )
+
+
+def _validate_identity_artifact_node_binding(
+    document: object, *, node_id: str, section_name: str
+) -> None:
+    if not isinstance(document, dict):
+        raise IdentityPersistenceError(
+            f"identity JSON {section_name} ref must be a JSON object when present"
+        )
+    node_binding = document.get("node_id") or document.get("attribution_node_id")
+    if node_binding is not None and node_binding != node_id:
+        raise IdentityPersistenceError(
+            f"identity JSON {section_name} ref node binding must match node.node_id"
+        )
+
+
+def _require_local_identity_ref(ref: str, *, section_name: str) -> None:
+    _require_local_manifest_ref(ref)
+    if _local_identity_ref_path(ref, identity_path=Path("identity.json")) is None:
+        raise IdentityPersistenceError(
+            f"identity JSON field '{section_name}' must contain local file references"
+        )
+
+
+def _identity_ref_node_fragment(ref: str) -> str | None:
+    parts = ref.split("#", 1)
+    if len(parts) != 2:
+        return None
+    fragment = parts[1]
+    if not fragment:
+        raise IdentityPersistenceError("identity JSON ref fragments must be non-empty")
+    if fragment.startswith("node:"):
+        node_id = fragment.removeprefix("node:")
+        if not node_id:
+            raise IdentityPersistenceError(
+                "identity JSON node ref fragment must be non-empty"
+            )
+        _require_reference_safe_identity_value("ref.node", node_id)
+        return node_id
+    return None
 
 
 def _identity_reset_warning() -> str:
