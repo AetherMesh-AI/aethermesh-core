@@ -46,6 +46,7 @@ const {
   getPathSetupCommand,
   isDirOnPath,
 } = require('../src/bootstrap/cliManager');
+const { sendWindowState } = require('../src/bootstrap/electronState');
 const { shouldLeaveBackgroundNodeRunning, shouldStopTemporaryNode } = require('../src/bootstrap/lifecycle');
 
 test('platform storage paths are per-user and app-managed', () => {
@@ -368,6 +369,48 @@ test('close and quit lifecycle keeps OS-managed nodes running', () => {
   assert.equal(shouldStopTemporaryNode({ backgroundNodeEnabled: true, keepNodeRunningAfterClose: false }), false);
   assert.equal(shouldLeaveBackgroundNodeRunning({ backgroundNodeEnabled: true }), true);
   assert.equal(shouldLeaveBackgroundNodeRunning({ backgroundNodeEnabled: false }), false);
+});
+
+test('desktop state updates ignore destroyed Electron window surfaces', () => {
+  const state = { status: 'stopped' };
+  const sent = [];
+
+  assert.equal(sendWindowState(null, 'aethermesh:state', state), false);
+  assert.equal(sendWindowState({ isDestroyed: () => true }, 'aethermesh:state', state), false);
+  assert.equal(sendWindowState({ isDestroyed: () => false }, 'aethermesh:state', state), false);
+  assert.equal(
+    sendWindowState({
+      isDestroyed: () => false,
+      get webContents() {
+        throw new TypeError('Object has been destroyed');
+      },
+    }, 'aethermesh:state', state),
+    false,
+  );
+  assert.equal(
+    sendWindowState({ isDestroyed: () => false, webContents: { isDestroyed: () => true, send: () => sent.push('destroyed') } }, 'aethermesh:state', state),
+    false,
+  );
+  assert.equal(
+    sendWindowState({
+      isDestroyed: () => false,
+      webContents: {
+        isDestroyed: () => false,
+        send: () => {
+          throw new TypeError('Object has been destroyed');
+        },
+      },
+    }, 'aethermesh:state', state),
+    false,
+  );
+  assert.equal(sent.length, 0);
+});
+
+test('desktop state updates still report unexpected Electron send failures', () => {
+  assert.throws(
+    () => sendWindowState({ isDestroyed: () => false, webContents: { isDestroyed: () => false, send: () => { throw new Error('permission denied'); } } }, 'aethermesh:state', {}),
+    /permission denied/,
+  );
 });
 
 test('runtime update checks can be scheduled for gossip-trigger-compatible refreshes', async () => {
