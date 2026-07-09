@@ -112,12 +112,18 @@ jobs:
           case "${AETHERMESH_TARGET_PLATFORM}" in
             darwin)
               artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.dmg' | head -n 1)
+              artifact_system=MacOS
+              artifact_extension=dmg
               ;;
             win32)
               artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.exe' | head -n 1)
+              artifact_system=Windows
+              artifact_extension=exe
               ;;
             linux)
               artifact=$(find dist/desktop -maxdepth 1 -type f -name '*.deb' | head -n 1)
+              artifact_system=Linux
+              artifact_extension=deb
               ;;
             *)
               echo "unsupported target platform: ${AETHERMESH_TARGET_PLATFORM}" >&2
@@ -129,7 +135,8 @@ jobs:
             find dist/desktop -maxdepth 1 -type f -print >&2
             exit 1
           fi
-          cp "$artifact" dist/release-upload/
+          release_asset="dist/release-upload/AetherMesh-${RELEASE_VERSION}-${artifact_system}-${AETHERMESH_TARGET_ARCH}.${artifact_extension}"
+          cp "$artifact" "$release_asset"
           artifact_count=$(find dist/release-upload -type f | wc -l | tr -d ' ')
           if [ "$artifact_count" != "1" ]; then
             echo "expected exactly one release artifact, found ${artifact_count}" >&2
