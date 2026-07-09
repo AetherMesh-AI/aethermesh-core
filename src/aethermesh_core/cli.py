@@ -44,6 +44,7 @@ from aethermesh_core.local_transport import (
     write_local_outbox,
 )
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
+from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
 from aethermesh_core.local_validation import (
     LocalValidationError,
     validate_local_results,
@@ -210,6 +211,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--reset-creator-identity",
         action="store_true",
         help="Explicitly rotate the creator identity before startup; normal startup preserves it.",
+    )
+
+    shutdown = subcommands.add_parser(
+        "shutdown-local-node",
+        help="Gracefully stop a local-only node runtime and persist final state.",
+    )
+    shutdown.add_argument(
+        "--runtime-dir",
+        required=True,
+        help="Local runtime directory containing identity, manifests, receipts, logs, work, and lineage artifacts.",
+    )
+    shutdown.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=5.0,
+        help="Bounded graceful shutdown timeout for local persistence checks.",
     )
 
     batch = subcommands.add_parser(
@@ -1372,6 +1389,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reset_creator_identity=args.reset_creator_identity,
             ).to_dict()
         except LocalStartupError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "shutdown-local-node":
+        try:
+            payload = shutdown_local_node(
+                args.runtime_dir, timeout_seconds=args.timeout_seconds
+            ).to_dict()
+        except LocalShutdownError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
