@@ -375,6 +375,11 @@ def reset_identity(
         raise IdentityPersistenceError(
             f"could not quarantine previous identity file: {exc}"
         ) from exc
+    backed_up_refs = _backup_identity_referenced_artifacts(
+        previous_document,
+        identity_path=identity_path,
+        backup_root=backup_root,
+    )
 
     node_id = (node_id_factory or _new_local_node_id)()
     new_identity = NodeIdentity(
@@ -410,6 +415,7 @@ def reset_identity(
             previous_creator_node_id=previous_creator_node_id,
             new_creator_node_id=new_creator_node_id,
             rotate_creator_identity=rotate_creator_identity,
+            files_backed_up=[backup_path, *backed_up_refs],
             reason=reason,
         )
     except IdentityPersistenceError:
@@ -1274,6 +1280,76 @@ def _identity_reset_artifact_ref(path: Path) -> str:
     return path.name
 
 
+def _backup_identity_referenced_artifacts(
+    document: dict[str, object], *, identity_path: Path, backup_root: Path
+) -> list[Path]:
+    copied: list[Path] = []
+    refs_by_section = (
+        (
+            "manifest_refs",
+            _string_list_from_section(document, "references", "manifest_refs"),
+        ),
+        (
+            "validation_receipt_refs",
+            _string_list_from_section(
+                document, "references", "validation_receipt_refs"
+            ),
+        ),
+        (
+            "lineage_links",
+            _string_list_from_section(document, "lineage", "lineage_links"),
+        ),
+        (
+            "contribution_refs",
+            _string_list_from_section(
+                document,
+                "contribution_attribution",
+                "contribution_refs",
+            ),
+        ),
+    )
+    for section, refs in refs_by_section:
+        target_dir = backup_root / section
+        for ref in refs:
+            source = _local_identity_ref_path(ref, identity_path=identity_path)
+            if source is None or not source.is_file():
+                continue
+            target_dir.mkdir(parents=True, exist_ok=True)
+            destination = _unique_reset_artifact_path(
+                target_dir, source.stem, source.suffix
+            )
+            try:
+                shutil.copy2(source, destination)
+            except OSError as exc:
+                raise IdentityPersistenceError(
+                    f"could not quarantine referenced identity artifact: {exc}"
+                ) from exc
+            copied.append(destination)
+    return copied
+
+
+def _string_list_from_section(
+    document: dict[str, object], section_name: str, field_name: str
+) -> list[str]:
+    section = document.get(section_name)
+    if not isinstance(section, dict):
+        return []
+    values = section.get(field_name)
+    if not isinstance(values, list):
+        return []
+    return [value for value in values if isinstance(value, str) and value]
+
+
+def _local_identity_ref_path(ref: str, *, identity_path: Path) -> Path | None:
+    local_ref = ref.split("#", 1)[0]
+    if not local_ref or "://" in local_ref:
+        return None
+    path = Path(local_ref)
+    if path.is_absolute() or ".." in path.parts:
+        return None
+    return identity_path.parent / path
+
+
 def _append_identity_reset_receipt(
     path: Path,
     *,
@@ -1285,6 +1361,7 @@ def _append_identity_reset_receipt(
     previous_creator_node_id: str,
     new_creator_node_id: str,
     rotate_creator_identity: bool,
+    files_backed_up: list[Path],
     reason: str | None,
 ) -> None:
     document = _load_identity_reset_receipts(path)
@@ -1303,7 +1380,9 @@ def _append_identity_reset_receipt(
         "full_local_identity_rotation": rotate_creator_identity,
         "identity_path": _identity_reset_artifact_ref(identity_path),
         "quarantined_identity_path": _identity_reset_artifact_ref(backup_path),
-        "files_backed_up": [_identity_reset_artifact_ref(backup_path)],
+        "files_backed_up": [
+            _identity_reset_artifact_ref(file_path) for file_path in files_backed_up
+        ],
         "backed_up_identity_sections": [
             "node",
             "references.manifest_refs",
