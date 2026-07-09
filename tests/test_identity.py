@@ -1543,7 +1543,8 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                 load_or_create_identity(identity_path)
 
             message = str(context.exception)
-            self.assertIn(f"identity file {identity_path}", message)
+            self.assertIn(f"identity file {identity_path.name}", message)
+            self.assertNotIn(str(identity_path.parent), message)
             self.assertIn("malformed", message)
             self.assertEqual(
                 identity_path.read_text(encoding="utf-8"), original_identity
@@ -1627,7 +1628,8 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                         load_or_create_identity(identity_path)
 
                     message = str(context.exception)
-                    self.assertIn(f"identity file {identity_path}", message)
+                    self.assertIn(f"identity file {identity_path.name}", message)
+                    self.assertNotIn(str(identity_path.parent), message)
                     self.assertIn(expected_field, message)
                     self.assertEqual(
                         identity_path.read_text(encoding="utf-8"), original_identity
@@ -1852,6 +1854,88 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                         any(str(identity_path.parent) in line for line in logs.output)
                     )
 
+    def test_malformed_attribution_critical_identity_data_fails_closed(
+        self,
+    ) -> None:
+        case_names = (
+            "missing creator node id",
+            "invalid node id format",
+            "corrupted manifest reference",
+            "malformed validation receipt",
+            "missing lineage fields",
+            "missing contribution attribution",
+        )
+        for case_name in case_names:
+            with self.subTest(case_name=case_name):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    identity_path = root / "local-node.json"
+                    document = _identity_document(
+                        NodeIdentity(node_id="legacy-node-id"),
+                        created_at="2026-07-08T00:00:00+00:00",
+                        creator_node_id="original-creator-node",
+                    )
+                    referenced_artifacts: dict[str, str] = {}
+                    if case_name == "missing creator node id":
+                        node = document["node"]
+                        assert isinstance(node, dict)
+                        node.pop("creator_node_id")
+                        expected_message = "node.creator_node_id"
+                    elif case_name == "invalid node id format":
+                        node = document["node"]
+                        assert isinstance(node, dict)
+                        node["node_id"] = "bad node id"
+                        expected_message = "node.node_id"
+                    elif case_name == "corrupted manifest reference":
+                        references = document["references"]
+                        assert isinstance(references, dict)
+                        references["manifest_refs"] = ["../private/manifest.json"]
+                        expected_message = "references.manifest_refs"
+                    elif case_name == "malformed validation receipt":
+                        references = document["references"]
+                        assert isinstance(references, dict)
+                        references["validation_receipt_refs"] = [
+                            "receipts/receipt-0001.json"
+                        ]
+                        referenced_artifacts = {
+                            "receipts/receipt-0001.json": "{not-json"
+                        }
+                        expected_message = "referenced local artifact is malformed"
+                    elif case_name == "missing lineage fields":
+                        document["lineage"] = {}
+                        expected_message = "parent_node_ids"
+                    else:
+                        document.pop("contribution_attribution")
+                        expected_message = "contribution_attribution"
+                    for relative_path, contents in referenced_artifacts.items():
+                        artifact_path = root / relative_path
+                        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                        artifact_path.write_text(contents, encoding="utf-8")
+                    original_identity = json.dumps(document)
+                    identity_path.write_text(original_identity, encoding="utf-8")
+
+                    with self.assertRaises(IdentityPersistenceError) as context:
+                        load_or_create_identity(
+                            identity_path,
+                            hardware_inputs=_hardware(),
+                            node_id_factory=lambda: self.fail(
+                                "malformed identity must not generate a replacement"
+                            ),
+                        )
+
+                    message = str(context.exception)
+                    self.assertIn(f"identity file {identity_path.name}", message)
+                    self.assertNotIn(str(identity_path.parent), message)
+                    self.assertIn(expected_message, message)
+                    self.assertEqual(
+                        identity_path.read_text(encoding="utf-8"), original_identity
+                    )
+                    for relative_path, contents in referenced_artifacts.items():
+                        self.assertEqual(
+                            (root / relative_path).read_text(encoding="utf-8"),
+                            contents,
+                        )
+
     def test_identity_validation_rejects_invalid_node_id_format_without_overwrite(
         self,
     ) -> None:
@@ -2011,7 +2095,8 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                     with self.assertRaises(IdentityPersistenceError) as cm:
                         load_or_create_identity(identity_path)
                     message = str(cm.exception)
-                    self.assertIn(f"identity file {identity_path}", message)
+                    self.assertIn(f"identity file {identity_path.name}", message)
+                    self.assertNotIn(str(identity_path.parent), message)
                     self.assertIn(expected_message, message)
 
     def test_helper_edges_are_stable(self) -> None:
