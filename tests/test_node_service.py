@@ -61,6 +61,10 @@ class LocalNodeServiceTests(unittest.TestCase):
             processed.contribution_record.result_hash, result_hash(processed.result)
         )
         self.assertEqual(
+            processed.contribution_record.version_metadata_ref,
+            service.version_metadata_ref,
+        )
+        self.assertEqual(
             processed.emitted_messages[1].payload,
             {
                 "job_id": "echo-1",
@@ -71,6 +75,7 @@ class LocalNodeServiceTests(unittest.TestCase):
                 "valid": True,
                 "reason": "ok",
                 "contribution_units_after_validation": 1,
+                "version_metadata_ref": service.version_metadata_ref,
             },
         )
         self.assertEqual(
@@ -82,6 +87,7 @@ class LocalNodeServiceTests(unittest.TestCase):
                 "valid": True,
                 "validation": "ok",
                 "contribution_units": 1,
+                "version_metadata_ref": service.version_metadata_ref,
             },
         )
         self.assertEqual(processed.contribution_record.validation_valid, True)

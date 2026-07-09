@@ -13,6 +13,10 @@ from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.result_hash import result_hash as canonical_result_hash
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.validation import ValidationResult, validate_job_result
+from aethermesh_core.version_metadata import (
+    capture_version_metadata,
+    version_metadata_ref,
+)
 
 
 @dataclass(frozen=True)
@@ -51,12 +55,15 @@ class LocalNodeService:
         ledger: ContributionLedger,
         ledger_node_id: str = "local-ledger",
         processed_message_ids: list[str] | None = None,
+        version_metadata: dict[str, object] | None = None,
     ) -> None:
         self.identity = identity
         self.message_bus = message_bus
         self.runner = runner
         self.ledger = ledger
         self.ledger_node_id = ledger_node_id
+        self.version_metadata = version_metadata or capture_version_metadata()
+        self.version_metadata_ref = version_metadata_ref(self.version_metadata)
         self._processed_message_ids_in_order = list(processed_message_ids or [])
         self._processed_message_ids: set[str] = set(
             self._processed_message_ids_in_order
@@ -112,6 +119,7 @@ class LocalNodeService:
             validation_valid=validation.valid,
             validation_reason=validation.reason,
             job_type=job.job_type,
+            version_metadata_ref=self.version_metadata_ref,
         )
 
         result_message = self._send_message(
@@ -140,6 +148,7 @@ class LocalNodeService:
                 "valid": validation.valid,
                 "reason": validation.reason,
                 "contribution_units_after_validation": credited_units,
+                "version_metadata_ref": self.version_metadata_ref,
             },
             correlation_id=message.correlation_id or job.job_id,
         )
@@ -153,6 +162,7 @@ class LocalNodeService:
                 "valid": validation.valid,
                 "validation": validation.reason,
                 "contribution_units": record.contribution_units,
+                "version_metadata_ref": self.version_metadata_ref,
             },
             correlation_id=message.correlation_id or job.job_id,
         )

@@ -18,6 +18,14 @@ from aethermesh_core.receipts import (
     write_receipt_document,
 )
 from aethermesh_core.validation import validate_job_result
+from aethermesh_core.version_metadata import (
+    capture_version_metadata,
+    version_metadata_ref,
+)
+
+
+def _test_version_metadata() -> dict[str, object]:
+    return capture_version_metadata(captured_at="2026-07-08T00:00:00+00:00")
 
 
 class ReceiptTests(unittest.TestCase):
@@ -35,11 +43,16 @@ class ReceiptTests(unittest.TestCase):
             contribution_message_id="msg-0005",
         )
         expected_hash = result_hash(assignment.result)
+        metadata = _test_version_metadata()
+        metadata_ref = version_metadata_ref(metadata)
 
-        document = build_receipt_document([assignment])
+        document = build_receipt_document([assignment], version_metadata=metadata)
 
         self.assertEqual(document["version"], 1)
         self.assertEqual(document["run_source"], "run-local-flow")
+        self.assertEqual(document["version_metadata"], metadata)
+        self.assertEqual(document["version_metadata_ref"], metadata_ref)
+        self.assertEqual(document["version_metadata_by_ref"], {metadata_ref: metadata})
         self.assertEqual(
             document["receipts"],
             [
@@ -55,6 +68,7 @@ class ReceiptTests(unittest.TestCase):
                     "result_status": "completed",
                     "result_hash": expected_hash,
                     "validation": {"valid": True, "reason": "ok"},
+                    "version_metadata_ref": metadata_ref,
                     "credited_units": 1,
                     "output_summary": {"value": "hello mesh"},
                 }
@@ -241,6 +255,50 @@ class ReceiptTests(unittest.TestCase):
             ["msg-0003", "msg-0006"],
         )
 
+    def test_existing_receipts_keep_original_metadata_ref_when_new_run_is_merged(
+        self,
+    ) -> None:
+        original_metadata = capture_version_metadata(
+            captured_at="2026-07-08T00:00:00+00:00"
+        )
+        new_metadata = capture_version_metadata(captured_at="2026-07-08T00:01:00+00:00")
+        original_ref = version_metadata_ref(original_metadata)
+        new_ref = version_metadata_ref(new_metadata)
+        original = _processed_assignment(
+            message_id="msg-0003",
+            correlation_id="echo-1",
+            job=Job("echo-1", "echo", {"message": "one"}),
+            result=JobResult("echo-1", "node-a", "completed", "one", None, 1),
+            result_message_id="msg-0004",
+            contribution_message_id="msg-0005",
+        )
+        new = _processed_assignment(
+            message_id="msg-0006",
+            correlation_id="echo-2",
+            job=Job("echo-2", "echo", {"message": "two"}),
+            result=JobResult("echo-2", "node-a", "completed", "two", None, 1),
+            result_message_id="msg-0007",
+            contribution_message_id="msg-0008",
+        )
+        existing = build_receipt_document(
+            [original], version_metadata=original_metadata
+        )
+
+        merged = build_receipt_document(
+            [new], existing_document=existing, version_metadata=new_metadata
+        )
+
+        refs_by_assignment = {
+            receipt["assignment_message_id"]: receipt["version_metadata_ref"]
+            for receipt in merged["receipts"]
+        }
+        self.assertEqual(refs_by_assignment["msg-0003"], original_ref)
+        self.assertEqual(refs_by_assignment["msg-0006"], new_ref)
+        self.assertEqual(
+            merged["version_metadata_by_ref"],
+            {original_ref: original_metadata, new_ref: new_metadata},
+        )
+
     def test_receipt_document_write_and_load_round_trip(self) -> None:
         document = build_receipt_document([])
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -266,10 +324,8 @@ class ReceiptTests(unittest.TestCase):
             write_receipt_document(path, document)
             raw = path.read_text(encoding="utf-8")
 
-            self.assertEqual(
-                raw,
-                '{\n  "receipts": [],\n  "run_source": "run-local-flow",\n  "version": 1\n}\n',
-            )
+            self.assertTrue(raw.endswith("\n"))
+            self.assertEqual(json.loads(raw), document)
             self.assertEqual(
                 sorted(child.name for child in path.parent.iterdir()),
                 ["receipts.json"],

@@ -56,6 +56,10 @@ from aethermesh_core.receipts import (
     load_receipt_document_if_exists,
     write_receipt_document,
 )
+from aethermesh_core.version_metadata import (
+    capture_version_metadata,
+    version_metadata_ref,
+)
 
 
 def _hardware(**overrides: object) -> HardwareIdentityInputs:
@@ -84,6 +88,12 @@ def _sha(value: str) -> str:
 def _expected_node_id(hardware: HardwareIdentityInputs) -> str:
     hashes = _component_hashes(hardware)
     return _sha(_canonical_root_json(hashes))
+
+
+def _test_version_metadata(
+    captured_at: str = "2026-07-08T00:00:00+00:00",
+) -> dict[str, object]:
+    return capture_version_metadata(captured_at=captured_at)
 
 
 class IdentityPersistenceTests(unittest.TestCase):
@@ -432,6 +442,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertTrue(second.endswith("_bbbbbb"))
 
     def test_identity_document_records_creator_timestamp_and_provenance(self) -> None:
+        version_metadata = _test_version_metadata()
         self.assertEqual(
             _identity_document(
                 NodeIdentity(node_id="local-node", node_name="test-node_123456"),
@@ -455,6 +466,7 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "references": {
                     "manifest_refs": [],
                     "validation_receipt_refs": [],
+                    "version_metadata": version_metadata,
                 },
                 "lineage": {
                     "parent_node_ids": [],
@@ -490,6 +502,7 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "references": {
                     "manifest_refs": [],
                     "validation_receipt_refs": [],
+                    "version_metadata": version_metadata,
                 },
                 "lineage": {
                     "parent_node_ids": [],
@@ -564,9 +577,14 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "authority": "local-only-no-network-consensus",
             },
         )
+        self.assertEqual(persisted["references"]["manifest_refs"], [])
+        self.assertEqual(persisted["references"]["validation_receipt_refs"], [])
         self.assertEqual(
-            persisted["references"],
-            {"manifest_refs": [], "validation_receipt_refs": []},
+            persisted["references"]["version_metadata"]["captured_at"],
+            persisted["node"]["created_at"],
+        )
+        self.assertEqual(
+            persisted_after_second_load["references"], persisted["references"]
         )
         self.assertEqual(
             persisted["lineage"],
@@ -1033,6 +1051,7 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                 "references": {
                     "manifest_refs": ["manifests/local-batch.json#node:legacy-node-id"],
                     "validation_receipt_refs": ["receipts/receipt-0001.json"],
+                    "version_metadata": _test_version_metadata(),
                 },
                 "lineage": {
                     "parent_node_ids": ["original-creator-node"],
@@ -1139,9 +1158,13 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                 identity_path, hardware_inputs=hardware
             )
 
+        metadata = _test_version_metadata()
+        metadata_ref = version_metadata_ref(metadata)
         receipt = {
             "version": 1,
             "run_source": "run-local-flow",
+            "version_metadata": metadata,
+            "version_metadata_ref": metadata_ref,
             "receipts": [
                 {
                     "job_id": "job-1",
@@ -1155,6 +1178,7 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                     "result_status": "completed",
                     "result_hash": "a" * 64,
                     "validation": {"valid": True, "reason": "ok"},
+                    "version_metadata_ref": metadata_ref,
                     "credited_units": 1,
                     "output_summary": {"value": "hello"},
                 }

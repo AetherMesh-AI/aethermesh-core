@@ -197,10 +197,11 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 persisted_document["node"]["creator_node_id"], first["node_id"]
             )
+            self.assertEqual(persisted_document["references"]["manifest_refs"], [])
             self.assertEqual(
-                persisted_document["references"],
-                {"manifest_refs": [], "validation_receipt_refs": []},
+                persisted_document["references"]["validation_receipt_refs"], []
             )
+            self.assertIn("version_metadata", persisted_document["references"])
             self.assertEqual(
                 persisted_document["lineage"],
                 {"parent_node_ids": [], "lineage_links": []},

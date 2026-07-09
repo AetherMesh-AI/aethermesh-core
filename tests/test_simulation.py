@@ -98,6 +98,7 @@ class LocalSimulationTests(unittest.TestCase):
             [message["recipient_node_id"] for message in result["messages"][2:5]],
             ["node-a", "local-ledger", "local-ledger"],
         )
+        metadata_ref = result["messages"][4]["payload"]["version_metadata_ref"]
         self.assertEqual(
             [message["payload"] for message in result["messages"][2:6]],
             [
@@ -131,6 +132,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "valid": True,
                     "reason": "ok",
                     "contribution_units_after_validation": 1,
+                    "version_metadata_ref": metadata_ref,
                 },
                 {
                     "job_id": "echo-1",
@@ -139,6 +141,7 @@ class LocalSimulationTests(unittest.TestCase):
                     "validation": "ok",
                     "valid": True,
                     "contribution_units": 1,
+                    "version_metadata_ref": metadata_ref,
                 },
             ],
         )
