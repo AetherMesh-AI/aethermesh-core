@@ -54,6 +54,20 @@ class VersionMetadataTests(unittest.TestCase):
 
         self.assertEqual(captured["node_software_version"], __version__)
 
+    def test_version_metadata_rejects_unknown_fields(self) -> None:
+        captured = capture_version_metadata(captured_at="2026-07-08T00:00:00+00:00")
+        captured["local_path"] = "/Users/example/build"
+
+        with self.assertRaisesRegex(ValueError, "unsupported fields: local_path"):
+            validate_version_metadata(captured)
+
+    def test_capture_version_metadata_rejects_path_like_build_identifier(self) -> None:
+        with mock.patch.dict(
+            "os.environ", {"AETHERMESH_BUILD_ID": "/Users/example/build"}
+        ):
+            with self.assertRaisesRegex(ValueError, "build_identifier"):
+                capture_version_metadata(captured_at="2026-07-08T00:00:00+00:00")
+
     def test_identity_manifest_validation_fails_for_missing_version_metadata(
         self,
     ) -> None:

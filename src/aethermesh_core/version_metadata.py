@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from importlib import metadata
@@ -24,6 +25,7 @@ REQUIRED_VERSION_METADATA_FIELDS = frozenset(
         "captured_at",
     }
 )
+BUILD_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 
 class VersionMetadataError(ValueError):
@@ -62,6 +64,11 @@ def validate_version_metadata(document: object) -> dict[str, object]:
         raise VersionMetadataError(
             "version metadata missing required fields: " + ", ".join(missing_fields)
         )
+    unknown_fields = sorted(document.keys() - REQUIRED_VERSION_METADATA_FIELDS)
+    if unknown_fields:
+        raise VersionMetadataError(
+            "version metadata contains unsupported fields: " + ", ".join(unknown_fields)
+        )
     schema_version = document["version_metadata_schema_version"]
     if (
         not isinstance(schema_version, int)
@@ -80,6 +87,11 @@ def validate_version_metadata(document: object) -> dict[str, object]:
         "architecture",
     ):
         _require_non_empty_string(document, field_name)
+    build_identifier = str(document["build_identifier"])
+    if BUILD_IDENTIFIER_PATTERN.fullmatch(build_identifier) is None:
+        raise VersionMetadataError(
+            "version metadata field 'build_identifier' must be reference-safe"
+        )
     for field_name in ("manifest_schema_version", "validation_schema_version"):
         value = document[field_name]
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
