@@ -618,6 +618,48 @@ class IdentityPersistenceTests(unittest.TestCase):
 
         self.assertEqual(after_attempt, original)
 
+    def test_identity_creation_race_reuses_existing_winner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+
+            def racing_atomic_create(path: Path, document: dict[str, object]) -> None:
+                self.assertEqual(path, identity_path)
+                node_document = document["node"]
+                if not isinstance(node_document, dict):
+                    self.fail("identity document node must be an object")
+                self.assertEqual(node_document.get("node_id"), "b" * 64)
+                identity_path.write_text(
+                    json.dumps(_identity_document(NodeIdentity(node_id="a" * 64))),
+                    encoding="utf-8",
+                )
+                raise FileExistsError("identity won by another initializer")
+
+            with patch(
+                "aethermesh_core.identity.atomic_create_json",
+                side_effect=racing_atomic_create,
+            ):
+                loaded = load_or_create_identity(
+                    identity_path,
+                    node_id_factory=lambda: "b" * 64,
+                )
+
+        self.assertEqual(loaded.node_id, "a" * 64)
+
+    def test_identity_creation_removes_successful_atomic_create_temp_file(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+
+            _save_identity(identity_path, NodeIdentity(node_id="a" * 64))
+            temp_files = [
+                path
+                for path in Path(temp_dir).iterdir()
+                if path.name != identity_path.name
+            ]
+
+        self.assertEqual(temp_files, [])
+
     def test_identity_creation_temp_file_failure_does_not_leave_identity(
         self,
     ) -> None:

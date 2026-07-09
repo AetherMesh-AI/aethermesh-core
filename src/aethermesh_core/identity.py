@@ -323,7 +323,12 @@ def load_or_create_identity(
             node_id=node_id,
         ),
     )
-    _save_identity(identity_path, identity)
+    try:
+        _save_identity(identity_path, identity)
+    except IdentityPersistenceError as exc:
+        if identity_path.exists() and "already exists" in str(exc):
+            return _load_identity(identity_path)
+        raise
     return identity
 
 

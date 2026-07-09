@@ -47,6 +47,7 @@ def _publish_json(
         if temp_name is not None:
             remove_temp_file(temp_name)
         raise
+    remove_temp_file(temp_name)
 
 
 def remove_temp_file(path: str) -> None:
