@@ -224,6 +224,110 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertFalse(service.paths.identity_path.exists())
             self.assertEqual(first["node_id"], second["node_id"])
 
+    def test_persisted_identity_manifest_survives_restart_without_rewrite(self) -> None:
+        first_node_id = "a" * 64
+        fresh_node_id = "b" * 64
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir) / "persisted-node"
+            service = NodeRuntimeService.from_home(home)
+            service.paths.home.mkdir(parents=True, exist_ok=True)
+            persistent_config = service._default_config(node_id=None)
+            persistent_config["identity"] = {"persist": True, "path": "identity.json"}
+            service._write_config(persistent_config)
+
+            with patch(
+                "aethermesh_core.identity._new_local_node_id",
+                return_value=first_node_id,
+            ):
+                first = service.initialize_local_node_data()
+                service.mark_runtime_started()
+            persisted_document = json.loads(service.paths.identity_path.read_text())
+            persisted_document["references"]["manifest_refs"] = [
+                f"manifests/local-batch.json#node:{first_node_id}"
+            ]
+            persisted_document["references"]["validation_receipt_refs"] = [
+                "receipts/validation-0001.json"
+            ]
+            persisted_document["lineage"]["parent_node_ids"] = ["local-root"]
+            persisted_document["lineage"]["lineage_links"] = [
+                "lineage/local-node-link.json"
+            ]
+            persisted_document["contribution_attribution"]["contribution_refs"] = [
+                "contributions/contribution-0001.json"
+            ]
+            service.paths.identity_path.write_text(
+                json.dumps(persisted_document), encoding="utf-8"
+            )
+            manifest_after_first_start = json.loads(
+                service.paths.identity_path.read_text(encoding="utf-8")
+            )
+            service.mark_runtime_stopped()
+
+            restarted_service = NodeRuntimeService.from_home(home)
+            with patch(
+                "aethermesh_core.identity._new_local_node_id",
+                side_effect=AssertionError("restart must reuse persisted identity"),
+            ):
+                restarted = restarted_service.initialize_local_node_data()
+                restarted_status = restarted_service.start_node_runtime()
+            manifest_after_restart = json.loads(
+                restarted_service.paths.identity_path.read_text(encoding="utf-8")
+            )
+            restarted_service.mark_runtime_stopped()
+
+            fresh_home = Path(temp_dir) / "fresh-node"
+            fresh_service = NodeRuntimeService.from_home(fresh_home)
+            fresh_service.paths.home.mkdir(parents=True, exist_ok=True)
+            fresh_config = fresh_service._default_config(node_id=None)
+            fresh_config["identity"] = {"persist": True, "path": "identity.json"}
+            fresh_service._write_config(fresh_config)
+            with patch(
+                "aethermesh_core.identity._new_local_node_id",
+                return_value=fresh_node_id,
+            ):
+                fresh = fresh_service.initialize_local_node_data()
+            fresh_manifest = json.loads(
+                fresh_service.paths.identity_path.read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(first["node_id"], first_node_id)
+        self.assertEqual(restarted["node_id"], first_node_id)
+        self.assertEqual(restarted_status["node_id"], first_node_id)
+        self.assertEqual(manifest_after_restart, manifest_after_first_start)
+        self.assertEqual(
+            manifest_after_restart["node"]["creator_node_id"], first_node_id
+        )
+        self.assertEqual(
+            manifest_after_restart["contribution_attribution"]["creator_node_id"],
+            first_node_id,
+        )
+        self.assertEqual(
+            manifest_after_restart["contribution_attribution"]["attribution_node_id"],
+            first_node_id,
+        )
+        self.assertEqual(
+            manifest_after_restart["references"]["manifest_refs"],
+            [f"manifests/local-batch.json#node:{first_node_id}"],
+        )
+        self.assertEqual(
+            manifest_after_restart["references"]["validation_receipt_refs"],
+            ["receipts/validation-0001.json"],
+        )
+        self.assertEqual(
+            manifest_after_restart["lineage"],
+            {
+                "parent_node_ids": ["local-root"],
+                "lineage_links": ["lineage/local-node-link.json"],
+            },
+        )
+        self.assertEqual(
+            manifest_after_restart["contribution_attribution"]["contribution_refs"],
+            ["contributions/contribution-0001.json"],
+        )
+        self.assertEqual(fresh["node_id"], fresh_node_id)
+        self.assertNotEqual(fresh["node_id"], first["node_id"])
+        self.assertEqual(fresh_manifest["node"]["creator_node_id"], fresh_node_id)
+
     def test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work(
         self,
     ) -> None:
