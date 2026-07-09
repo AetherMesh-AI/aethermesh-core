@@ -157,6 +157,8 @@ def allowed_next_states(
 def validate_lifecycle_record(record: LifecycleRecord) -> None:
     """Validate fields required on every lifecycle-changing persisted record."""
 
+    if not record.event:
+        raise LifecycleTransitionError("lifecycle record requires event")
     if not record.creator_node_id:
         raise LifecycleTransitionError("lifecycle record requires creator_node_id")
     if not record.active_manifest_ref:

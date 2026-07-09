@@ -129,6 +129,14 @@ class LocalNodeLifecycleTests(unittest.TestCase):
         validate_transition(failed, _record(LocalNodeLifecycleState.RETIRED))
 
     def test_every_record_requires_creator_node_id_and_active_manifest(self) -> None:
+        with self.assertRaisesRegex(LifecycleTransitionError, "event"):
+            validate_lifecycle_record(
+                LifecycleRecord(
+                    state=LocalNodeLifecycleState.CREATED,
+                    creator_node_id="node-local-creator",
+                    active_manifest_ref="manifests/local-batch.json#node:node-local-creator",
+                )
+            )
         with self.assertRaisesRegex(LifecycleTransitionError, "creator_node_id"):
             validate_lifecycle_record(
                 _record(LocalNodeLifecycleState.CREATED, creator_node_id="")
