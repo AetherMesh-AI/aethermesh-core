@@ -1282,6 +1282,18 @@ class IdentityPersistenceTests(unittest.TestCase):
                 {"references": {"manifest_refs": ["manifests/local-batch.json#"]}},
                 "ref fragments must be non-empty",
             ),
+            (
+                {
+                    "references": {
+                        "manifest_refs": ["manifests/local-batch.json#bad fragment"]
+                    }
+                },
+                "ref.fragment.*reference-safe",
+            ),
+            (
+                {"references": {"manifest_refs": ["manifests/local-batch.json#node:"]}},
+                "node ref fragment must be non-empty",
+            ),
         )
         for patch_document, message in cases:
             with (

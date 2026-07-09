@@ -1390,6 +1390,7 @@ def _validate_identity_artifact_node_binding(
 
 def _require_local_identity_ref(ref: str, *, section_name: str) -> None:
     _require_local_manifest_ref(ref)
+    _identity_ref_fragment(ref)
     if _local_identity_ref_path(ref, identity_path=Path("identity.json")) is None:
         raise IdentityPersistenceError(
             f"identity JSON field '{section_name}' must contain local file references"
@@ -1397,21 +1398,28 @@ def _require_local_identity_ref(ref: str, *, section_name: str) -> None:
 
 
 def _identity_ref_node_fragment(ref: str) -> str | None:
-    parts = ref.split("#", 1)
-    if len(parts) != 2:
+    fragment = _identity_ref_fragment(ref)
+    if fragment is None:
         return None
-    fragment = parts[1]
-    if not fragment:
-        raise IdentityPersistenceError("identity JSON ref fragments must be non-empty")
     if fragment.startswith("node:"):
         node_id = fragment.removeprefix("node:")
         if not node_id:
             raise IdentityPersistenceError(
                 "identity JSON node ref fragment must be non-empty"
             )
-        _require_reference_safe_identity_value("ref.node", node_id)
         return node_id
     return None
+
+
+def _identity_ref_fragment(ref: str) -> str | None:
+    parts = ref.split("#", 1)
+    if len(parts) != 2:
+        return None
+    fragment = parts[1]
+    if not fragment:
+        raise IdentityPersistenceError("identity JSON ref fragments must be non-empty")
+    _require_reference_safe_identity_value("ref.fragment", fragment)
+    return fragment
 
 
 def _identity_reset_warning() -> str:
