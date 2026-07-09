@@ -690,6 +690,20 @@ class IdentityPersistenceTests(unittest.TestCase):
                 node_id_factory=lambda: "a" * 64,
             )
             original_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            original_document["references"]["manifest_refs"] = [
+                "manifests/local-batch.json#node:aaaaaaaaaaaa"
+            ]
+            original_document["references"]["validation_receipt_refs"] = [
+                "receipts/receipt-0001.json"
+            ]
+            original_document["lineage"]["parent_node_ids"] = ["creator-root"]
+            original_document["lineage"]["lineage_links"] = [
+                "lineage/local-node-link.json"
+            ]
+            original_document["contribution_attribution"]["contribution_refs"] = [
+                "contributions/contribution-0001.json"
+            ]
+            identity_path.write_text(json.dumps(original_document), encoding="utf-8")
 
             result = reset_identity(
                 identity_path,
