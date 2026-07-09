@@ -48,6 +48,13 @@ const {
 } = require('../src/bootstrap/cliManager');
 const { shouldLeaveBackgroundNodeRunning, shouldStopTemporaryNode } = require('../src/bootstrap/lifecycle');
 
+function assertPosixExecutableWhenSupported(filePath) {
+  assert.equal(fs.existsSync(filePath), true);
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(filePath).mode & 0o111, 0o111);
+  }
+}
+
 test('platform storage paths are per-user and app-managed', () => {
   assert.equal(
     getDefaultAetherMeshHome({ platform: 'darwin', homeDir: '/Users/trevor' }),
@@ -273,7 +280,7 @@ test('background manager copies runtime atomically and records metadata', async 
     const first = manager.copyOrUpdateRuntime();
     assert.equal(first.updated, true);
     assert.equal(fs.readFileSync(manager.stableRuntimePath, 'utf8'), 'runtime-v1');
-    assert.equal(fs.statSync(manager.stableRuntimePath).mode & 0o111, 0o111);
+    assertPosixExecutableWhenSupported(manager.stableRuntimePath);
     assert.equal(first.metadata.version, '0.2.0-alpha');
     assert.equal(first.metadata.installedPath, manager.stableRuntimePath);
     assert.equal(first.metadata.sourcePath, bundled);
@@ -481,7 +488,7 @@ test('CLI install repair and uninstall metadata transitions preserve runtime tar
     assert.equal(installed.cliRuntimeSha256, 'abc123');
     assert.equal(installed.cliPathStatus, 'installed but PATH update required');
     assert.equal(fs.readFileSync(cli.shims.commandPath, 'utf8'), buildPosixShim({ runtimePath, homeDir: paths.home }));
-    assert.equal(fs.statSync(cli.shims.commandPath).mode & 0o111, 0o111);
+    assertPosixExecutableWhenSupported(cli.shims.commandPath);
     assert.equal(calls[0].command, cli.shims.commandPath);
     assert.deepEqual(calls[0].args, ['--version']);
 
