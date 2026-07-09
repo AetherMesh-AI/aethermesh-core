@@ -665,7 +665,12 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(receipt["previous_node_id"], "a" * 64)
         self.assertEqual(receipt["new_node_id"], "b" * 64)
         self.assertEqual(receipt["reason"], "operator requested recovery")
-        self.assertEqual(receipt["quarantined_identity_path"], result.backup_path)
+        self.assertEqual(receipt["identity_path"], identity_path.name)
+        self.assertEqual(
+            receipt["quarantined_identity_path"], Path(result.backup_path).name
+        )
+        self.assertNotIn(temp_dir, receipt["identity_path"])
+        self.assertNotIn(temp_dir, receipt["quarantined_identity_path"])
         self.assertEqual(
             receipt["active_identity_binding"],
             {

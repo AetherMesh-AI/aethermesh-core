@@ -1234,6 +1234,12 @@ def _unique_reset_artifact_path(root: Path, stem: str, suffix: str) -> Path:
     return candidate
 
 
+def _identity_reset_artifact_ref(path: Path) -> str:
+    """Return a local audit reference without leaking host-specific directories."""
+
+    return path.name
+
+
 def _append_identity_reset_receipt(
     path: Path,
     *,
@@ -1255,8 +1261,8 @@ def _append_identity_reset_receipt(
         "timestamp": timestamp,
         "previous_node_id": previous_node_id,
         "new_node_id": new_node_id,
-        "identity_path": str(identity_path),
-        "quarantined_identity_path": str(backup_path),
+        "identity_path": _identity_reset_artifact_ref(identity_path),
+        "quarantined_identity_path": _identity_reset_artifact_ref(backup_path),
         "reason": reason or None,
         "warning": _identity_reset_warning(),
         "active_identity_binding": {
