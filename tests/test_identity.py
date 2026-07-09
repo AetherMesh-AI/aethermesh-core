@@ -1529,6 +1529,114 @@ Ethernet Address: aa:bb:cc:dd:ee:04
         self.assertEqual(identity.node_name, "legacy-node-name_legacy")
         self.assertEqual(reloaded_document, original_document)
 
+    def test_malformed_identity_json_names_file_path_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            identity_path = root / "local-node.json"
+            manifest_path = root / "manifests" / "local-batch.json"
+            manifest_path.parent.mkdir()
+            manifest_path.write_text('{"kind":"manifest"}', encoding="utf-8")
+            original_identity = '{"version": 1,'
+            identity_path.write_text(original_identity, encoding="utf-8")
+
+            with self.assertRaises(IdentityPersistenceError) as context:
+                load_or_create_identity(identity_path)
+
+            message = str(context.exception)
+            self.assertIn(f"identity file {identity_path}", message)
+            self.assertIn("malformed", message)
+            self.assertEqual(
+                identity_path.read_text(encoding="utf-8"), original_identity
+            )
+            self.assertEqual(
+                manifest_path.read_text(encoding="utf-8"), '{"kind":"manifest"}'
+            )
+
+    def test_invalid_identity_fields_name_file_and_do_not_modify_artifacts(
+        self,
+    ) -> None:
+        invalid_documents = [
+            ("missing creator", ("node", "creator_node_id"), "node.creator_node_id"),
+            ("missing node", ("node", "node_id"), "node.node_id"),
+            ("empty node", ("node", "node_id", ""), "node.node_id"),
+            (
+                "typed creator",
+                ("node", "creator_node_id", ["creator"]),
+                "node.creator_node_id",
+            ),
+            ("typed lineage", ("lineage", "lineage_links", "bad"), "lineage_links"),
+        ]
+        for _case_name, mutation, expected_field in invalid_documents:
+            with self.subTest(expected_field=expected_field):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    root = Path(temp_dir)
+                    identity_path = root / "local-node.json"
+                    artifact_contents = {
+                        root / "manifests" / "local-batch.json": json.dumps(
+                            {"nodes": [{"node_id": "legacy-node-id"}]}
+                        ),
+                        root / "receipts" / "receipt-0001.json": json.dumps(
+                            {"receipts": [{"node_id": "legacy-node-id"}]}
+                        ),
+                        root / "lineage" / "local-node-link.json": json.dumps(
+                            {"node_id": "legacy-node-id"}
+                        ),
+                        root / "contributions" / "contribution-0001.json": json.dumps(
+                            {
+                                "node_id": "legacy-node-id",
+                                "creator_node_id": "original-creator-node",
+                            }
+                        ),
+                    }
+                    for artifact_path, contents in artifact_contents.items():
+                        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                        artifact_path.write_text(contents, encoding="utf-8")
+                    document = _identity_document(
+                        NodeIdentity(node_id="legacy-node-id"),
+                        created_at="2026-07-08T00:00:00+00:00",
+                        creator_node_id="original-creator-node",
+                    )
+                    document["references"] = {
+                        "manifest_refs": [
+                            "manifests/local-batch.json#node:legacy-node-id"
+                        ],
+                        "validation_receipt_refs": ["receipts/receipt-0001.json"],
+                        "version_metadata": _test_version_metadata(),
+                    }
+                    document["lineage"] = {
+                        "parent_node_ids": ["original-creator-node"],
+                        "lineage_links": ["lineage/local-node-link.json"],
+                    }
+                    document["contribution_attribution"] = {
+                        "creator_node_id": "original-creator-node",
+                        "attribution_node_id": "legacy-node-id",
+                        "contribution_refs": ["contributions/contribution-0001.json"],
+                    }
+                    section_name = mutation[0]
+                    field_name = mutation[1]
+                    section = document[section_name]
+                    assert isinstance(section, dict)
+                    if len(mutation) == 2:
+                        section.pop(field_name)
+                    else:
+                        section[field_name] = mutation[2]
+                    original_identity = json.dumps(document)
+                    identity_path.write_text(original_identity, encoding="utf-8")
+
+                    with self.assertRaises(IdentityPersistenceError) as context:
+                        load_or_create_identity(identity_path)
+
+                    message = str(context.exception)
+                    self.assertIn(f"identity file {identity_path}", message)
+                    self.assertIn(expected_field, message)
+                    self.assertEqual(
+                        identity_path.read_text(encoding="utf-8"), original_identity
+                    )
+                    for artifact_path, contents in artifact_contents.items():
+                        self.assertEqual(
+                            artifact_path.read_text(encoding="utf-8"), contents
+                        )
+
     def test_identity_validation_accepts_matching_local_references(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -1902,7 +2010,9 @@ Ethernet Address: aa:bb:cc:dd:ee:04
                     identity_path.write_text(json.dumps(document), encoding="utf-8")
                     with self.assertRaises(IdentityPersistenceError) as cm:
                         load_or_create_identity(identity_path)
-                    self.assertEqual(str(cm.exception), expected_message)
+                    message = str(cm.exception)
+                    self.assertIn(f"identity file {identity_path}", message)
+                    self.assertIn(expected_message, message)
 
     def test_helper_edges_are_stable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
