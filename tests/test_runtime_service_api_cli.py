@@ -514,7 +514,16 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(
                 payloads["status_alias"]["node_name"], service_status["node_name"]
             )
-            self.assertEqual(payloads["node"], payloads["node_alias"])
+            node_without_dynamic_system = dict(payloads["node"])
+            node_alias_without_dynamic_system = dict(payloads["node_alias"])
+            node_without_dynamic_system.pop("system")
+            node_alias_without_dynamic_system.pop("system")
+            self.assertEqual(
+                node_alias_without_dynamic_system, node_without_dynamic_system
+            )
+            self.assertEqual(
+                set(payloads["node_alias"]["system"]), set(payloads["node"]["system"])
+            )
             self.assertEqual(payloads["node"]["node_id"], service_status["node_id"])
             self.assertEqual(payloads["node"]["node_name"], service_status["node_name"])
             self.assertRegex(
