@@ -43,6 +43,7 @@ from aethermesh_core.local_transport import (
     write_local_inbox,
     write_local_outbox,
 )
+from aethermesh_core.local_startup import LocalStartupError, start_local_node
 from aethermesh_core.local_validation import (
     LocalValidationError,
     validate_local_results,
@@ -194,6 +195,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--release-url",
         default=None,
         help="Override the GitHub latest-release API URL for update discovery.",
+    )
+
+    startup = subcommands.add_parser(
+        "start-local-node",
+        help="Initialize one local-only node runtime with identity, manifest, receipt, and lineage artifacts.",
+    )
+    startup.add_argument(
+        "--runtime-dir",
+        required=True,
+        help="Local runtime directory for identity, manifests, receipts, logs, work, and lineage artifacts.",
+    )
+    startup.add_argument(
+        "--reset-creator-identity",
+        action="store_true",
+        help="Explicitly rotate the creator identity before startup; normal startup preserves it.",
     )
 
     batch = subcommands.add_parser(
@@ -1345,6 +1361,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             ).to_dict()
         except ReleaseUpdateError as exc:
             print(f"error: update failed: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, sort_keys=True))
+        return 0
+
+    if args.command == "start-local-node":
+        try:
+            payload = start_local_node(
+                args.runtime_dir,
+                reset_creator_identity=args.reset_creator_identity,
+            ).to_dict()
+        except LocalStartupError as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0
