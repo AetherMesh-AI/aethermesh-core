@@ -10,6 +10,7 @@ import re
 import secrets
 import shutil
 import subprocess  # nosec B404 - fixed local hardware probe commands only; no user input.
+import tempfile
 from functools import lru_cache
 import sys
 from collections.abc import Callable, Iterable
@@ -20,7 +21,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TextIO
 
-from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.json_io import atomic_write_json, remove_temp_file
 from aethermesh_core.models import NodeIdentity
 from aethermesh_core.version_metadata import (
     VersionMetadataError,
@@ -1332,15 +1333,46 @@ def _save_identity(
 ) -> None:
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite_existing:
-        raise IdentityPersistenceError(
-            "identity file already exists; use the explicit reset flow to replace it"
-        )
     document = _identity_document(identity)
+    if not overwrite_existing:
+        _create_identity_document_without_overwrite(path, document)
+        return
     try:
         atomic_write_json(path, document)
     except OSError as exc:
         raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
+
+
+def _create_identity_document_without_overwrite(
+    path: Path, document: dict[str, object]
+) -> None:
+    """Create an identity JSON file atomically without replacing a winner."""
+
+    parent = path.parent
+    temp_name = str(parent / f".{path.name}.uncreated.tmp")
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_name = handle.name
+            json.dump(document, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temp_name, path)
+    except FileExistsError as exc:
+        raise IdentityPersistenceError(
+            "identity file already exists; use the explicit reset flow to replace it"
+        ) from exc
+    except (OSError, TypeError, ValueError) as exc:
+        raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
+    finally:
+        remove_temp_file(temp_name)
 
 
 def _identity_document(

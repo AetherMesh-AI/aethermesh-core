@@ -618,6 +618,23 @@ class IdentityPersistenceTests(unittest.TestCase):
 
         self.assertEqual(after_attempt, original)
 
+    def test_identity_creation_temp_file_failure_does_not_leave_identity(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+
+            with (
+                patch(
+                    "aethermesh_core.identity.tempfile.NamedTemporaryFile",
+                    side_effect=OSError("no temp space"),
+                ),
+                self.assertRaisesRegex(IdentityPersistenceError, "no temp space"),
+            ):
+                _save_identity(identity_path, NodeIdentity(node_id="a" * 64))
+
+            self.assertFalse(identity_path.exists())
+
     def test_explicit_identity_reset_quarantines_old_identity_and_records_receipt(
         self,
     ) -> None:
