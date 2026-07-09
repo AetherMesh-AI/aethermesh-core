@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
@@ -513,8 +514,19 @@ class IdentityPersistenceTests(unittest.TestCase):
                 node_id_factory=lambda: "a" * 64,
             )
             persisted = json.loads(identity_path.read_text(encoding="utf-8"))
+            second = load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "b" * 64,
+            )
+            persisted_after_second_load = json.loads(
+                identity_path.read_text(encoding="utf-8")
+            )
 
         self.assertEqual(identity.node_id, "a" * 64)
+        self.assertEqual(second.node_id, identity.node_id)
+        self.assertEqual(second.node_name, identity.node_name)
+        self.assertEqual(persisted_after_second_load, persisted)
         self.assertEqual(
             identity.node_name,
             deterministic_machine_node_name(hardware_inputs=hardware, node_id="a" * 64),
@@ -535,6 +547,12 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertRegex(
             persisted["node"]["created_at"],
             r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$",
+        )
+        created_at = datetime.fromisoformat(persisted["node"]["created_at"])
+        self.assertEqual(created_at.tzinfo, UTC)
+        self.assertEqual(
+            persisted_after_second_load["node"]["created_at"],
+            persisted["node"]["created_at"],
         )
         self.assertEqual(
             persisted["provenance"],
@@ -562,6 +580,21 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contribution_refs": [],
             },
         )
+
+    def test_identity_created_at_must_be_utc(self) -> None:
+        document = _identity_document(
+            NodeIdentity(node_id="local-node"),
+            created_at="2026-07-08T00:00:00-04:00",
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            identity_path.write_text(json.dumps(document), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                IdentityPersistenceError,
+                "created_at must be a UTC timestamp",
+            ):
+                load_or_create_identity(identity_path)
 
     def test_new_local_node_id_uses_collision_resistant_hex_randomness(self) -> None:
         first = _new_local_node_id()

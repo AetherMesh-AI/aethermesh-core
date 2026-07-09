@@ -13,7 +13,7 @@ from functools import lru_cache
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from io import StringIO
 from pathlib import Path
@@ -218,7 +218,10 @@ def _require_identity_timestamp(value: str) -> None:
         raise IdentityPersistenceError(
             "local node identity created_at must include a timezone"
         )
-    parsed.astimezone(UTC)
+    if parsed.utcoffset() != timedelta(0):
+        raise IdentityPersistenceError(
+            "local node identity created_at must be a UTC timestamp"
+        )
 
 
 def _require_local_manifest_ref(value: str) -> None:
