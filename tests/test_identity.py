@@ -718,7 +718,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(backup_document, original_document)
         self.assertEqual(reloaded.node_id, "b" * 64)
         self.assertEqual(reset_document["node"]["node_id"], "b" * 64)
-        self.assertEqual(reset_document["node"]["creator_node_id"], "b" * 64)
+        self.assertEqual(reset_document["node"]["creator_node_id"], "a" * 64)
         self.assertEqual(reset_document["references"]["manifest_refs"], [])
         self.assertEqual(reset_document["references"]["validation_receipt_refs"], [])
         self.assertEqual(
@@ -727,7 +727,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(
             reset_document["contribution_attribution"],
             {
-                "creator_node_id": "b" * 64,
+                "creator_node_id": "a" * 64,
                 "attribution_node_id": "b" * 64,
                 "contribution_refs": [],
             },
@@ -739,6 +739,20 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(receipt["event"], "identity_reset")
         self.assertEqual(receipt["previous_node_id"], "a" * 64)
         self.assertEqual(receipt["new_node_id"], "b" * 64)
+        self.assertEqual(receipt["previous_creator_node_id"], "a" * 64)
+        self.assertEqual(receipt["new_creator_node_id"], "a" * 64)
+        self.assertFalse(receipt["full_local_identity_rotation"])
+        self.assertEqual(receipt["files_backed_up"], [Path(result.backup_path).name])
+        self.assertEqual(
+            receipt["backed_up_identity_sections"],
+            [
+                "node",
+                "references.manifest_refs",
+                "references.validation_receipt_refs",
+                "lineage",
+                "contribution_attribution",
+            ],
+        )
         self.assertEqual(receipt["reason"], "operator requested recovery")
         self.assertEqual(receipt["identity_path"], identity_path.name)
         self.assertEqual(
@@ -753,8 +767,39 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "validation_receipt_node_id": "b" * 64,
                 "lineage_node_id": "b" * 64,
                 "contribution_attribution_node_id": "b" * 64,
+                "creator_node_id": "a" * 64,
             },
         )
+
+    def test_identity_reset_can_explicitly_rotate_creator_identity(self) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+
+            result = reset_identity(
+                identity_path,
+                rotate_creator_identity=True,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "b" * 64,
+            )
+            reset_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            receipt_document = json.loads(
+                Path(result.audit_receipt_path).read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(reset_document["node"]["creator_node_id"], "b" * 64)
+        self.assertEqual(
+            reset_document["contribution_attribution"]["creator_node_id"], "b" * 64
+        )
+        receipt = receipt_document["reset_receipts"][0]
+        self.assertTrue(receipt["full_local_identity_rotation"])
+        self.assertEqual(receipt["previous_creator_node_id"], "a" * 64)
+        self.assertEqual(receipt["new_creator_node_id"], "b" * 64)
 
     def test_identity_reset_requires_existing_identity_without_creating_one(
         self,

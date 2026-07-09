@@ -338,6 +338,7 @@ def reset_identity(
     reason: str | None = None,
     quarantine_dir: str | Path | None = None,
     audit_receipt_path: str | Path | None = None,
+    rotate_creator_identity: bool = False,
     hardware_inputs: HardwareIdentityInputs | None = None,
     node_id_factory: NodeIdFactory | None = None,
 ) -> IdentityResetResult:
@@ -354,6 +355,8 @@ def reset_identity(
             "identity reset requires an existing identity file; use normal init first"
         )
     previous = _load_identity(identity_path)
+    previous_document = _load_identity_document(identity_path)
+    previous_creator_node_id = _identity_document_creator_node_id(previous_document)
     timestamp = datetime.now(UTC).replace(microsecond=0).isoformat()
     backup_root = (
         Path(quarantine_dir)
@@ -381,13 +384,21 @@ def reset_identity(
             node_id=node_id,
         ),
     )
+    new_creator_node_id = (
+        node_id if rotate_creator_identity else previous_creator_node_id
+    )
     receipt_path = (
         Path(audit_receipt_path)
         if audit_receipt_path is not None
         else backup_root / "identity-reset-receipts.json"
     )
     _load_identity_reset_receipts(receipt_path)
-    _save_identity(identity_path, new_identity, overwrite_existing=True)
+    _save_identity(
+        identity_path,
+        new_identity,
+        overwrite_existing=True,
+        creator_node_id=new_creator_node_id,
+    )
     try:
         _append_identity_reset_receipt(
             receipt_path,
@@ -396,6 +407,9 @@ def reset_identity(
             backup_path=backup_path,
             previous_node_id=previous.node_id,
             new_node_id=new_identity.node_id,
+            previous_creator_node_id=previous_creator_node_id,
+            new_creator_node_id=new_creator_node_id,
+            rotate_creator_identity=rotate_creator_identity,
             reason=reason,
         )
     except IdentityPersistenceError:
@@ -1115,16 +1129,7 @@ def _safe_int(value: object) -> int:
 
 
 def _load_identity(path: Path) -> NodeIdentity:
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            document = json.load(handle)
-    except json.JSONDecodeError as exc:
-        raise IdentityPersistenceError(
-            f"identity JSON is malformed: {exc.msg}"
-        ) from exc
-    except OSError as exc:
-        raise IdentityPersistenceError(f"could not read identity file: {exc}") from exc
-
+    document = _load_identity_document(path)
     if not isinstance(document, dict):
         raise IdentityPersistenceError("identity JSON must be an object")
     version = document.get("version")
@@ -1143,11 +1148,7 @@ def _load_identity(path: Path) -> NodeIdentity:
         raise IdentityPersistenceError(
             "identity JSON field 'node.node_name' must be a non-empty string when present"
         )
-    creator_node_id = node.get("creator_node_id")
-    if not isinstance(creator_node_id, str) or not creator_node_id:
-        raise IdentityPersistenceError(
-            "identity JSON field 'node.creator_node_id' must be a non-empty string"
-        )
+    creator_node_id = _identity_document_creator_node_id(document)
     created_at = node.get("created_at")
     if not isinstance(created_at, str) or not created_at:
         raise IdentityPersistenceError(
@@ -1201,6 +1202,33 @@ def _load_identity(path: Path) -> NodeIdentity:
     return NodeIdentity(node_id=node_id, node_name=node_name)
 
 
+def _load_identity_document(path: Path) -> dict[str, object]:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            document: object = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise IdentityPersistenceError(
+            f"identity JSON is malformed: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise IdentityPersistenceError(f"could not read identity file: {exc}") from exc
+    if not isinstance(document, dict):
+        raise IdentityPersistenceError("identity JSON must be an object")
+    return document
+
+
+def _identity_document_creator_node_id(document: dict[str, object]) -> str:
+    node = document.get("node")
+    if not isinstance(node, dict):
+        raise IdentityPersistenceError("identity JSON field 'node' must be an object")
+    creator_node_id = node.get("creator_node_id")
+    if not isinstance(creator_node_id, str) or not creator_node_id:
+        raise IdentityPersistenceError(
+            "identity JSON field 'node.creator_node_id' must be a non-empty string"
+        )
+    return creator_node_id
+
+
 def _require_string_list(document: dict[str, object], field_name: str) -> None:
     value = document.get(field_name)
     if not isinstance(value, list) or any(
@@ -1222,7 +1250,8 @@ def _require_provenance_string(document: dict[str, object], field_name: str) -> 
 def _identity_reset_warning() -> str:
     return (
         "WARNING: resetting the local node identity may affect lineage and "
-        "contribution attribution continuity; the previous identity was quarantined."
+        "contribution attribution continuity; the previous identity was quarantined. "
+        "This is a local-only prototype reset and does not claim network consensus."
     )
 
 
@@ -1253,6 +1282,9 @@ def _append_identity_reset_receipt(
     backup_path: Path,
     previous_node_id: str,
     new_node_id: str,
+    previous_creator_node_id: str,
+    new_creator_node_id: str,
+    rotate_creator_identity: bool,
     reason: str | None,
 ) -> None:
     document = _load_identity_reset_receipts(path)
@@ -1266,8 +1298,19 @@ def _append_identity_reset_receipt(
         "timestamp": timestamp,
         "previous_node_id": previous_node_id,
         "new_node_id": new_node_id,
+        "previous_creator_node_id": previous_creator_node_id,
+        "new_creator_node_id": new_creator_node_id,
+        "full_local_identity_rotation": rotate_creator_identity,
         "identity_path": _identity_reset_artifact_ref(identity_path),
         "quarantined_identity_path": _identity_reset_artifact_ref(backup_path),
+        "files_backed_up": [_identity_reset_artifact_ref(backup_path)],
+        "backed_up_identity_sections": [
+            "node",
+            "references.manifest_refs",
+            "references.validation_receipt_refs",
+            "lineage",
+            "contribution_attribution",
+        ],
         "reason": reason or None,
         "warning": _identity_reset_warning(),
         "active_identity_binding": {
@@ -1275,6 +1318,7 @@ def _append_identity_reset_receipt(
             "validation_receipt_node_id": new_node_id,
             "lineage_node_id": new_node_id,
             "contribution_attribution_node_id": new_node_id,
+            "creator_node_id": new_creator_node_id,
         },
     }
     reset_receipts.append(receipt)
@@ -1323,11 +1367,15 @@ def _load_identity_reset_receipts(path: Path) -> dict[str, object]:
 
 
 def _save_identity(
-    path: Path, identity: NodeIdentity, *, overwrite_existing: bool = False
+    path: Path,
+    identity: NodeIdentity,
+    *,
+    overwrite_existing: bool = False,
+    creator_node_id: str | None = None,
 ) -> None:
     parent = path.parent
     parent.mkdir(parents=True, exist_ok=True)
-    document = _identity_document(identity)
+    document = _identity_document(identity, creator_node_id=creator_node_id)
     if not overwrite_existing:
         _create_identity_document_without_overwrite(path, document)
         return
@@ -1353,7 +1401,10 @@ def _create_identity_document_without_overwrite(
 
 
 def _identity_document(
-    identity: NodeIdentity, *, created_at: str | None = None
+    identity: NodeIdentity,
+    *,
+    created_at: str | None = None,
+    creator_node_id: str | None = None,
 ) -> dict[str, object]:
     timestamp = created_at or datetime.now(UTC).replace(microsecond=0).isoformat()
     try:
@@ -1364,7 +1415,8 @@ def _identity_document(
     node: dict[str, object] = {"node_id": identity.node_id}
     if identity.node_name is not None:
         node["node_name"] = identity.node_name
-    node["creator_node_id"] = identity.node_id
+    creator = creator_node_id or identity.node_id
+    node["creator_node_id"] = creator
     node["created_at"] = timestamp
     return {
         "version": IDENTITY_SCHEMA_VERSION,
@@ -1386,7 +1438,7 @@ def _identity_document(
             "lineage_links": [],
         },
         "contribution_attribution": {
-            "creator_node_id": identity.node_id,
+            "creator_node_id": creator,
             "attribution_node_id": identity.node_id,
             "contribution_refs": [],
         },

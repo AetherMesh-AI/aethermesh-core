@@ -24,6 +24,12 @@ The public identity may include only `public_key`. Portable records should refer
 
 `manifest_ref` links identity to a local node manifest by path or fixture fragment. It does not imply peer discovery, networking, a public registry, token balances, rewards, or dashboard state. A local runner can resolve the reference by loading the file in the current repository or configured local home.
 
+## Local prototype reset procedure
+
+Use `aethermesh-core reset-identity` only for local prototype recovery. It requires `--confirm-reset`, copies the previous identity JSON into a timestamped local quarantine file before replacement, and appends a local reset receipt with the previous node ID, new node ID, backed-up file names, reset reason, and creator identity state. The backup preserves the identity document sections that carry manifest references, validation receipt references, lineage records, and contribution attribution.
+
+By default, reset creates a fresh local node ID but preserves the original `creator_node_id` so existing work remains attributable to the same creator identity. Pass `--rotate-creator-identity` only when intentionally performing a full local identity rotation. Reset output is local-only audit evidence; it is not network revocation, peer consensus, token state, or decentralized identity governance.
+
 ## Minimal example
 
 See `examples/local-node-identity.json`:
