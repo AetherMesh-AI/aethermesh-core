@@ -170,6 +170,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional path for the local identity reset audit receipt JSON.",
     )
+    reset.add_argument(
+        "--rotate-creator-identity",
+        action="store_true",
+        help="Also rotate creator_node_id; default preserves creator identity for attribution continuity.",
+    )
 
     subcommands.add_parser(
         "simulate-local",
@@ -1321,6 +1326,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reason=args.reason,
                 quarantine_dir=args.quarantine_dir,
                 audit_receipt_path=args.audit_receipt_path,
+                rotate_creator_identity=args.rotate_creator_identity,
             )
         except IdentityPersistenceError as exc:
             parser.error(str(exc))

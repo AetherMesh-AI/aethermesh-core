@@ -14,6 +14,7 @@ from aethermesh_core import identity as identity_module
 from aethermesh_core.identity import (
     HardwareIdentityInputs,
     IdentityPersistenceError,
+    _backup_identity_referenced_artifacts,
     _bytes_to_gb,
     _canonical_root_json,
     _colon_value,
@@ -27,6 +28,7 @@ from aethermesh_core.identity import (
     _linux_gpu_device_id,
     _linux_gpu_model,
     _linux_gpu_vendor,
+    _local_identity_ref_path,
     _linux_memtotal_gb,
     _linux_physical_core_count,
     _max_csv_int,
@@ -45,6 +47,7 @@ from aethermesh_core.identity import (
     _run_or_empty,
     _safe_int,
     _save_identity,
+    _string_list_from_section,
     _load_identity_reset_receipts,
     _unique_reset_artifact_path,
     _vram_value_to_gb,
@@ -690,6 +693,30 @@ class IdentityPersistenceTests(unittest.TestCase):
                 node_id_factory=lambda: "a" * 64,
             )
             original_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            original_document["references"]["manifest_refs"] = [
+                "manifests/local-batch.json#node:aaaaaaaaaaaa"
+            ]
+            original_document["references"]["validation_receipt_refs"] = [
+                "receipts/receipt-0001.json"
+            ]
+            original_document["lineage"]["parent_node_ids"] = ["creator-root"]
+            original_document["lineage"]["lineage_links"] = [
+                "lineage/local-node-link.json"
+            ]
+            original_document["contribution_attribution"]["contribution_refs"] = [
+                "contributions/contribution-0001.json"
+            ]
+            identity_path.write_text(json.dumps(original_document), encoding="utf-8")
+            referenced_files = {
+                "manifests/local-batch.json": {"kind": "manifest"},
+                "receipts/receipt-0001.json": {"kind": "receipt"},
+                "lineage/local-node-link.json": {"kind": "lineage"},
+                "contributions/contribution-0001.json": {"kind": "contribution"},
+            }
+            for relative_path, document in referenced_files.items():
+                artifact_path = Path(temp_dir) / relative_path
+                artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                artifact_path.write_text(json.dumps(document), encoding="utf-8")
 
             result = reset_identity(
                 identity_path,
@@ -705,6 +732,10 @@ class IdentityPersistenceTests(unittest.TestCase):
             receipt_document = json.loads(
                 Path(result.audit_receipt_path).read_text(encoding="utf-8")
             )
+            copied_reference_documents = {
+                backup_file.name: json.loads(backup_file.read_text(encoding="utf-8"))
+                for backup_file in quarantine_dir.glob("*/*.json")
+            }
             reloaded = load_or_create_identity(
                 identity_path,
                 hardware_inputs=hardware,
@@ -718,7 +749,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(backup_document, original_document)
         self.assertEqual(reloaded.node_id, "b" * 64)
         self.assertEqual(reset_document["node"]["node_id"], "b" * 64)
-        self.assertEqual(reset_document["node"]["creator_node_id"], "b" * 64)
+        self.assertEqual(reset_document["node"]["creator_node_id"], "a" * 64)
         self.assertEqual(reset_document["references"]["manifest_refs"], [])
         self.assertEqual(reset_document["references"]["validation_receipt_refs"], [])
         self.assertEqual(
@@ -727,7 +758,7 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(
             reset_document["contribution_attribution"],
             {
-                "creator_node_id": "b" * 64,
+                "creator_node_id": "a" * 64,
                 "attribution_node_id": "b" * 64,
                 "contribution_refs": [],
             },
@@ -739,6 +770,38 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertEqual(receipt["event"], "identity_reset")
         self.assertEqual(receipt["previous_node_id"], "a" * 64)
         self.assertEqual(receipt["new_node_id"], "b" * 64)
+        self.assertEqual(receipt["previous_creator_node_id"], "a" * 64)
+        self.assertEqual(receipt["new_creator_node_id"], "a" * 64)
+        self.assertFalse(receipt["full_local_identity_rotation"])
+        self.assertEqual(
+            receipt["files_backed_up"],
+            [
+                Path(result.backup_path).name,
+                "local-batch.json",
+                "receipt-0001.json",
+                "local-node-link.json",
+                "contribution-0001.json",
+            ],
+        )
+        self.assertEqual(
+            copied_reference_documents,
+            {
+                "local-batch.json": {"kind": "manifest"},
+                "receipt-0001.json": {"kind": "receipt"},
+                "local-node-link.json": {"kind": "lineage"},
+                "contribution-0001.json": {"kind": "contribution"},
+            },
+        )
+        self.assertEqual(
+            receipt["backed_up_identity_sections"],
+            [
+                "node",
+                "references.manifest_refs",
+                "references.validation_receipt_refs",
+                "lineage",
+                "contribution_attribution",
+            ],
+        )
         self.assertEqual(receipt["reason"], "operator requested recovery")
         self.assertEqual(receipt["identity_path"], identity_path.name)
         self.assertEqual(
@@ -753,8 +816,113 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "validation_receipt_node_id": "b" * 64,
                 "lineage_node_id": "b" * 64,
                 "contribution_attribution_node_id": "b" * 64,
+                "creator_node_id": "a" * 64,
             },
         )
+
+    def test_identity_reset_can_explicitly_rotate_creator_identity(self) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+
+            result = reset_identity(
+                identity_path,
+                rotate_creator_identity=True,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "b" * 64,
+            )
+            reset_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            receipt_document = json.loads(
+                Path(result.audit_receipt_path).read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(reset_document["node"]["creator_node_id"], "b" * 64)
+        self.assertEqual(
+            reset_document["contribution_attribution"]["creator_node_id"], "b" * 64
+        )
+        receipt = receipt_document["reset_receipts"][0]
+        self.assertTrue(receipt["full_local_identity_rotation"])
+        self.assertEqual(receipt["previous_creator_node_id"], "a" * 64)
+        self.assertEqual(receipt["new_creator_node_id"], "b" * 64)
+
+    def test_identity_reset_reference_backup_ignores_non_local_or_missing_refs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            backup_root = Path(temp_dir) / "quarantine"
+            document = {
+                "references": {
+                    "manifest_refs": [
+                        "missing.json",
+                        "https://example.invalid/manifest.json",
+                        "../outside.json",
+                    ],
+                    "validation_receipt_refs": "not-a-list",
+                },
+                "lineage": "not-a-section",
+                "contribution_attribution": {"contribution_refs": [""]},
+            }
+
+            copied = _backup_identity_referenced_artifacts(
+                document,
+                identity_path=identity_path,
+                backup_root=backup_root,
+            )
+
+        self.assertEqual(copied, [])
+        self.assertEqual(
+            _string_list_from_section(document, "lineage", "lineage_links"), []
+        )
+        self.assertEqual(
+            _string_list_from_section(
+                document, "references", "validation_receipt_refs"
+            ),
+            [],
+        )
+        self.assertIsNone(
+            _local_identity_ref_path(
+                "https://example.invalid/manifest.json", identity_path=identity_path
+            )
+        )
+        self.assertIsNone(
+            _local_identity_ref_path("../outside.json", identity_path=identity_path)
+        )
+
+    def test_identity_reset_reference_backup_copy_failure_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            artifact_path = Path(temp_dir) / "manifests" / "local-batch.json"
+            artifact_path.parent.mkdir(parents=True, exist_ok=True)
+            artifact_path.write_text("{}", encoding="utf-8")
+            document = {
+                "references": {
+                    "manifest_refs": ["manifests/local-batch.json"],
+                    "validation_receipt_refs": [],
+                },
+                "lineage": {"lineage_links": []},
+                "contribution_attribution": {"contribution_refs": []},
+            }
+
+            with (
+                patch(
+                    "aethermesh_core.identity.shutil.copy2",
+                    side_effect=OSError("disk full"),
+                ),
+                self.assertRaisesRegex(
+                    IdentityPersistenceError, "referenced identity artifact"
+                ),
+            ):
+                _backup_identity_referenced_artifacts(
+                    document,
+                    identity_path=identity_path,
+                    backup_root=Path(temp_dir) / "quarantine",
+                )
 
     def test_identity_reset_requires_existing_identity_without_creating_one(
         self,
