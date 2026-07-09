@@ -43,12 +43,15 @@ from aethermesh_core.local_transport import (
     write_local_inbox,
     write_local_outbox,
 )
-from aethermesh_core.local_restart import LocalRestartError, restart_local_node
-from aethermesh_core.local_startup import LocalStartupError, start_local_node
-from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
-from aethermesh_core.local_validation import (
+from aethermesh_core.runtime import (
+    LocalRestartError,
+    LocalShutdownError,
+    LocalStartupError,
     LocalValidationError,
-    validate_local_results,
+    restart_local_node_runtime,
+    start_local_node_runtime,
+    stop_local_node_runtime,
+    validate_local_node_results,
 )
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.message_log import (
@@ -91,6 +94,8 @@ from aethermesh_core.scheduler import LocalScheduler, NodeStatus, ScheduledNode
 from aethermesh_core.simulation import run_local_simulation
 from aethermesh_core.validation import validate_job_result
 from aethermesh_core.version_metadata import capture_version_metadata
+
+start_local_node = start_local_node_runtime
 
 
 @dataclass(frozen=True)
@@ -1413,7 +1418,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "shutdown-local-node":
         try:
-            payload = shutdown_local_node(
+            payload = stop_local_node_runtime(
                 args.runtime_dir, timeout_seconds=args.timeout_seconds
             ).to_dict()
         except LocalShutdownError as exc:
@@ -1424,7 +1429,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "restart-local-node":
         try:
-            payload = restart_local_node(
+            payload = restart_local_node_runtime(
                 args.runtime_dir, timeout_seconds=args.timeout_seconds
             ).to_dict()
         except LocalRestartError as exc:
@@ -1545,7 +1550,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "validate-local-results":
         try:
-            payload = validate_local_results(
+            payload = validate_local_node_results(
                 assignment_log_path=args.assignment_log_path,
                 result_log_path=args.result_log_path,
                 validation_log_path=args.validation_log_path,
