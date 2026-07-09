@@ -10,6 +10,7 @@ from aethermesh_core.cli import build_parser, main
 from aethermesh_core.message_log import write_message_log
 from aethermesh_core.messages import MeshMessage
 from aethermesh_core.release_update import ReleaseUpdateError
+from aethermesh_core.version_metadata import capture_version_metadata
 
 
 class CliTests(unittest.TestCase):
@@ -20,6 +21,7 @@ class CliTests(unittest.TestCase):
         help_text = parser.format_help()
         for command in [
             "run-demo",
+            "reset-identity",
             "simulate-local",
             "run-local-batch",
             "dispatch-local-batch",
@@ -270,12 +272,13 @@ class CliTests(unittest.TestCase):
         }
         self.assertEqual(
             self._normalize_parser_help(parser.format_help()),
-            "usage: aethermesh-core [-h] {run-demo,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. simulate-local Run a deterministic local multi-node simulation and print JSON. update Install the latest AetherMesh wheel from the newest GitHub release. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. aggregate-local-flow Audit and aggregate a completed local flow artifact directory. validate-local-results Replay local assignment/result logs and write a validation report. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
+            "usage: aethermesh-core [-h] {run-demo,reset-identity,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} ... positional arguments: {run-demo,reset-identity,simulate-local,update,run-local-batch,dispatch-local-batch,dispatch-peer-batch,run-local-flow,run-local-transport-flow,run-peer-transport-flow,audit-local-flow,aggregate-local-flow,validate-local-results,ledger-summary,peer-summary,announce-local-node,materialize-local-inboxes,collect-local-outboxes,process-local-inbox} run-demo Run one local echo job and print its JSON result. reset-identity Explicitly reset a persisted local node identity after quarantining the old one. simulate-local Run a deterministic local multi-node simulation and print JSON. update Install the latest AetherMesh wheel from the newest GitHub release. run-local-batch Run a manifest-backed local multi-node job batch and print JSON. dispatch-local-batch Write assignment-only local dispatch messages for a manifest batch. dispatch-peer-batch Write local dispatch messages using heartbeat- discovered peers. run-local-flow Run dispatch plus all available local worker inboxes for a manifest. run-local-transport-flow Run the local flow using file-backed transport inboxes with a default transport directory. run-peer-transport-flow Run local file transport using heartbeat-discovered peers as the worker roster. audit-local-flow Read and verify a completed run-local-flow artifact directory. aggregate-local-flow Audit and aggregate a completed local flow artifact directory. validate-local-results Replay local assignment/result logs and write a validation report. ledger-summary Inspect an existing local contribution ledger and print JSON totals. peer-summary Inspect heartbeat-derived peers from an existing local message log. announce-local-node Write one local node heartbeat announcement message log. materialize-local-inboxes Materialize addressed message-log entries into file- backed local inboxes. collect-local-outboxes Collect per-node local transport outboxes into one message log. process-local-inbox Replay a local message log or local transport inbox for one node's work. options: -h, --help show this help message and exit",
         )
         self.assertEqual(
             subparser_help,
             {
                 "run-demo": "usage: aethermesh-core run-demo [-h] [--node-id NODE_ID] [--identity-path IDENTITY_PATH] [--ephemeral-identity] [--message MESSAGE] [--include-ledger] [--ledger-path LEDGER_PATH] options: -h, --help show this help message and exit --node-id NODE_ID Node id to use for the demo. Defaults to a deterministic machine id. --identity-path IDENTITY_PATH Opt in to JSON-file-backed local node identity persistence. --ephemeral-identity Use a fresh test-only node identity for this run without touching persistent identity files. --message MESSAGE Message payload for the local echo job. --include-ledger Include an in-memory contribution summary for the demo result. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence.",
+                "reset-identity": "usage: aethermesh-core reset-identity [-h] --identity-path IDENTITY_PATH [--confirm-reset] [--reason REASON] [--quarantine-dir QUARANTINE_DIR] [--audit-receipt-path AUDIT_RECEIPT_PATH] options: -h, --help show this help message and exit --identity-path IDENTITY_PATH Path to the existing persisted local node identity JSON file. --confirm-reset Required acknowledgement that lineage and attribution continuity may be affected. --reason REASON Optional local audit reason recorded in the reset receipt. --quarantine-dir QUARANTINE_DIR Optional directory for quarantined previous identity material and receipts. --audit-receipt-path AUDIT_RECEIPT_PATH Optional path for the local identity reset audit receipt JSON.",
                 "simulate-local": "usage: aethermesh-core simulate-local [-h] options: -h, --help show this help message and exit",
                 "update": "usage: aethermesh-core update [-h] [--dry-run] [--release-url RELEASE_URL] options: -h, --help show this help message and exit --dry-run Download and verify the latest release wheel without installing it. --release-url RELEASE_URL Override the GitHub latest-release API URL for update discovery.",
                 "run-local-batch": "usage: aethermesh-core run-local-batch [-h] --manifest MANIFEST [--ledger-path LEDGER_PATH] [--message-log-path MESSAGE_LOG_PATH] options: -h, --help show this help message and exit --manifest MANIFEST Path to a version 1 local job-batch JSON manifest. --ledger-path LEDGER_PATH Opt in to JSON-file-backed local contribution ledger persistence. --message-log-path MESSAGE_LOG_PATH Opt in to overwriting a local JSON audit log of deterministic mesh messages.",
@@ -1478,6 +1481,60 @@ class CliTests(unittest.TestCase):
         self.assertNotIn("Traceback", stderr.getvalue())
         self.assertEqual(identity_contents, original)
 
+    def test_reset_identity_requires_confirmation_and_records_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            quarantine_dir = Path(temp_dir) / "quarantine"
+            main(["run-demo", "--identity-path", str(identity_path)])
+            original = json.loads(identity_path.read_text(encoding="utf-8"))
+            stderr = io.StringIO()
+
+            with (
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as cm,
+            ):
+                main(["reset-identity", "--identity-path", str(identity_path)])
+
+            self.assertEqual(cm.exception.code, 2)
+            self.assertIn("requires --confirm-reset", stderr.getvalue())
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(stderr),
+            ):
+                exit_code = main(
+                    [
+                        "reset-identity",
+                        "--identity-path",
+                        str(identity_path),
+                        "--confirm-reset",
+                        "--reason",
+                        "local recovery",
+                        "--quarantine-dir",
+                        str(quarantine_dir),
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            reset_document = json.loads(identity_path.read_text(encoding="utf-8"))
+            backup_document = json.loads(Path(payload["backup_path"]).read_text())
+            receipt_document = json.loads(
+                Path(payload["audit_receipt_path"]).read_text()
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn(
+            "lineage and contribution attribution continuity", stderr.getvalue()
+        )
+        self.assertEqual(payload["previous_node_id"], original["node"]["node_id"])
+        self.assertEqual(payload["new_node_id"], reset_document["node"]["node_id"])
+        self.assertNotEqual(payload["new_node_id"], payload["previous_node_id"])
+        self.assertEqual(backup_document, original)
+        receipt = receipt_document["reset_receipts"][0]
+        self.assertEqual(receipt["previous_node_id"], payload["previous_node_id"])
+        self.assertEqual(receipt["new_node_id"], payload["new_node_id"])
+        self.assertEqual(receipt["reason"], "local recovery")
+
     def test_run_demo_persists_json_ledger_and_accumulates_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "ledger.json"
@@ -2555,36 +2612,43 @@ class CliTests(unittest.TestCase):
             second_output_path = Path(temp_dir) / "second-output.json"
             message_log_path.write_text(json.dumps(document), encoding="utf-8")
 
-            with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(
-                    main(
-                        [
-                            "process-local-inbox",
-                            "--node-id",
-                            "local-node-a",
-                            "--message-log-path",
-                            str(message_log_path),
-                            "--output-message-log-path",
-                            str(first_output_path),
-                        ]
-                    ),
-                    0,
-                )
-            with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(
-                    main(
-                        [
-                            "process-local-inbox",
-                            "--node-id",
-                            "local-node-a",
-                            "--message-log-path",
-                            str(message_log_path),
-                            "--output-message-log-path",
-                            str(second_output_path),
-                        ]
-                    ),
-                    0,
-                )
+            stable_version_metadata = capture_version_metadata(
+                captured_at="2026-07-08T00:00:00+00:00"
+            )
+            with patch(
+                "aethermesh_core.node_service.capture_version_metadata",
+                return_value=stable_version_metadata,
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        main(
+                            [
+                                "process-local-inbox",
+                                "--node-id",
+                                "local-node-a",
+                                "--message-log-path",
+                                str(message_log_path),
+                                "--output-message-log-path",
+                                str(first_output_path),
+                            ]
+                        ),
+                        0,
+                    )
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(
+                        main(
+                            [
+                                "process-local-inbox",
+                                "--node-id",
+                                "local-node-a",
+                                "--message-log-path",
+                                str(message_log_path),
+                                "--output-message-log-path",
+                                str(second_output_path),
+                            ]
+                        ),
+                        0,
+                    )
             first = json.loads(first_output_path.read_text(encoding="utf-8"))
             second = json.loads(second_output_path.read_text(encoding="utf-8"))
 

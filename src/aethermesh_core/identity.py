@@ -8,6 +8,7 @@ import os
 import platform
 import re
 import secrets
+import shutil
 import subprocess  # nosec B404 - fixed local hardware probe commands only; no user input.
 from functools import lru_cache
 import sys
@@ -19,7 +20,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TextIO
 
-from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.models import NodeIdentity
 from aethermesh_core.version_metadata import (
     VersionMetadataError,
@@ -146,6 +147,28 @@ class LocalNodeIdentity:
         if self.local_metadata is not None:
             document["local_metadata"] = dict(self.local_metadata)
         return document
+
+
+@dataclass(frozen=True)
+class IdentityResetResult:
+    """Local audit details for an explicit identity reset."""
+
+    previous_node_id: str
+    new_node_id: str
+    backup_path: str
+    audit_receipt_path: str
+    warning: str
+
+    def to_dict(self) -> dict[str, object]:
+        """Return JSON-serializable reset details for CLI/API callers."""
+
+        return {
+            "previous_node_id": self.previous_node_id,
+            "new_node_id": self.new_node_id,
+            "backup_path": self.backup_path,
+            "audit_receipt_path": self.audit_receipt_path,
+            "warning": self.warning,
+        }
 
 
 def parse_local_node_identity_document(document: object) -> LocalNodeIdentity:
@@ -300,8 +323,97 @@ def load_or_create_identity(
             node_id=node_id,
         ),
     )
-    _save_identity(identity_path, identity)
+    try:
+        _save_identity(identity_path, identity)
+    except IdentityPersistenceError as exc:
+        if identity_path.exists() and "already exists" in str(exc):
+            return _load_identity(identity_path)
+        raise
     return identity
+
+
+def reset_identity(
+    path: str | Path,
+    *,
+    reason: str | None = None,
+    quarantine_dir: str | Path | None = None,
+    audit_receipt_path: str | Path | None = None,
+    hardware_inputs: HardwareIdentityInputs | None = None,
+    node_id_factory: NodeIdFactory | None = None,
+) -> IdentityResetResult:
+    """Explicitly replace a persisted local identity after quarantining the old one.
+
+    Normal initialization must call ``load_or_create_identity``. This reset flow is
+    intentionally separate so identity replacement is local-first, auditable, and
+    never hidden behind routine startup.
+    """
+
+    identity_path = Path(path)
+    if not identity_path.exists():
+        raise IdentityPersistenceError(
+            "identity reset requires an existing identity file; use normal init first"
+        )
+    previous = _load_identity(identity_path)
+    timestamp = datetime.now(UTC).replace(microsecond=0).isoformat()
+    backup_root = (
+        Path(quarantine_dir)
+        if quarantine_dir is not None
+        else identity_path.parent / "identity-quarantine"
+    )
+    backup_root.mkdir(parents=True, exist_ok=True)
+    backup_path = _unique_reset_artifact_path(
+        backup_root,
+        f"{identity_path.stem}-{_timestamp_slug(timestamp)}-{previous.node_id[:12]}",
+        identity_path.suffix or ".json",
+    )
+    try:
+        shutil.copy2(identity_path, backup_path)
+    except OSError as exc:
+        raise IdentityPersistenceError(
+            f"could not quarantine previous identity file: {exc}"
+        ) from exc
+
+    node_id = (node_id_factory or _new_local_node_id)()
+    new_identity = NodeIdentity(
+        node_id=node_id,
+        node_name=deterministic_machine_node_name(
+            hardware_inputs=hardware_inputs,
+            node_id=node_id,
+        ),
+    )
+    receipt_path = (
+        Path(audit_receipt_path)
+        if audit_receipt_path is not None
+        else backup_root / "identity-reset-receipts.json"
+    )
+    _load_identity_reset_receipts(receipt_path)
+    _save_identity(identity_path, new_identity, overwrite_existing=True)
+    try:
+        _append_identity_reset_receipt(
+            receipt_path,
+            timestamp=timestamp,
+            identity_path=identity_path,
+            backup_path=backup_path,
+            previous_node_id=previous.node_id,
+            new_node_id=new_identity.node_id,
+            reason=reason,
+        )
+    except IdentityPersistenceError:
+        try:
+            shutil.copy2(backup_path, identity_path)
+        except OSError as exc:
+            raise IdentityPersistenceError(
+                "identity reset audit receipt failed after replacing identity, "
+                f"and previous identity restoration failed: {exc}"
+            ) from exc
+        raise
+    return IdentityResetResult(
+        previous_node_id=previous.node_id,
+        new_node_id=new_identity.node_id,
+        backup_path=str(backup_path),
+        audit_receipt_path=str(receipt_path),
+        warning=_identity_reset_warning(),
+    )
 
 
 def _new_local_node_id() -> str:
@@ -1107,13 +1219,136 @@ def _require_provenance_string(document: dict[str, object], field_name: str) -> 
         )
 
 
-def _save_identity(path: Path, identity: NodeIdentity) -> None:
-    parent = path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    document = _identity_document(identity)
+def _identity_reset_warning() -> str:
+    return (
+        "WARNING: resetting the local node identity may affect lineage and "
+        "contribution attribution continuity; the previous identity was quarantined."
+    )
+
+
+def _timestamp_slug(timestamp: str) -> str:
+    return re.sub(r"[^0-9A-Za-z]+", "-", timestamp).strip("-")
+
+
+def _unique_reset_artifact_path(root: Path, stem: str, suffix: str) -> Path:
+    candidate = root / f"{stem}{suffix}"
+    index = 1
+    while candidate.exists():
+        candidate = root / f"{stem}-{index}{suffix}"
+        index += 1
+    return candidate
+
+
+def _identity_reset_artifact_ref(path: Path) -> str:
+    """Return a local audit reference without leaking host-specific directories."""
+
+    return path.name
+
+
+def _append_identity_reset_receipt(
+    path: Path,
+    *,
+    timestamp: str,
+    identity_path: Path,
+    backup_path: Path,
+    previous_node_id: str,
+    new_node_id: str,
+    reason: str | None,
+) -> None:
+    document = _load_identity_reset_receipts(path)
+    reset_receipts = document["reset_receipts"]
+    if not isinstance(reset_receipts, list):
+        raise IdentityPersistenceError(
+            "identity reset audit receipt reset_receipts must be a list"
+        )
+    receipt = {
+        "event": "identity_reset",
+        "timestamp": timestamp,
+        "previous_node_id": previous_node_id,
+        "new_node_id": new_node_id,
+        "identity_path": _identity_reset_artifact_ref(identity_path),
+        "quarantined_identity_path": _identity_reset_artifact_ref(backup_path),
+        "reason": reason or None,
+        "warning": _identity_reset_warning(),
+        "active_identity_binding": {
+            "manifest_node_id": new_node_id,
+            "validation_receipt_node_id": new_node_id,
+            "lineage_node_id": new_node_id,
+            "contribution_attribution_node_id": new_node_id,
+        },
+    }
+    reset_receipts.append(receipt)
     try:
         atomic_write_json(path, document)
     except OSError as exc:
+        raise IdentityPersistenceError(
+            f"could not write identity reset audit receipt: {exc}"
+        ) from exc
+
+
+def _load_identity_reset_receipts(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {
+            "version": 1,
+            "receipt_type": "identity_reset_audit",
+            "reset_receipts": [],
+        }
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise IdentityPersistenceError(
+            f"identity reset audit receipt JSON is malformed: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise IdentityPersistenceError(
+            f"could not read identity reset audit receipt: {exc}"
+        ) from exc
+    if not isinstance(document, dict):
+        raise IdentityPersistenceError("identity reset audit receipt must be an object")
+    if document.get("version") != 1:
+        raise IdentityPersistenceError(
+            "identity reset audit receipt must contain version 1"
+        )
+    if document.get("receipt_type") != "identity_reset_audit":
+        raise IdentityPersistenceError(
+            "identity reset audit receipt_type must be identity_reset_audit"
+        )
+    reset_receipts = document.get("reset_receipts")
+    if not isinstance(reset_receipts, list):
+        raise IdentityPersistenceError(
+            "identity reset audit receipt reset_receipts must be a list"
+        )
+    return document
+
+
+def _save_identity(
+    path: Path, identity: NodeIdentity, *, overwrite_existing: bool = False
+) -> None:
+    parent = path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    document = _identity_document(identity)
+    if not overwrite_existing:
+        _create_identity_document_without_overwrite(path, document)
+        return
+    try:
+        atomic_write_json(path, document)
+    except OSError as exc:
+        raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
+
+
+def _create_identity_document_without_overwrite(
+    path: Path, document: dict[str, object]
+) -> None:
+    """Create an identity JSON file atomically without replacing a winner."""
+
+    try:
+        atomic_create_json(path, document)
+    except FileExistsError as exc:
+        raise IdentityPersistenceError(
+            "identity file already exists; use the explicit reset flow to replace it"
+        ) from exc
+    except (OSError, TypeError, ValueError) as exc:
         raise IdentityPersistenceError(f"could not write identity file: {exc}") from exc
 
 

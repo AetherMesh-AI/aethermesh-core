@@ -492,7 +492,17 @@ class ApiTests(unittest.TestCase):
             payloads = asyncio.run(_fetch_api_payloads(create_app(service)))
 
             self.assertEqual(payloads["health"]["ok"], True)
-            self.assertEqual(payloads["status_alias"], payloads["status"])
+            status_without_dynamic_system = dict(payloads["status"])
+            status_alias_without_dynamic_system = dict(payloads["status_alias"])
+            status_without_dynamic_system.pop("system")
+            status_alias_without_dynamic_system.pop("system")
+            self.assertEqual(
+                status_alias_without_dynamic_system, status_without_dynamic_system
+            )
+            self.assertEqual(
+                set(payloads["status_alias"]["system"]),
+                set(payloads["status"]["system"]),
+            )
             self.assertEqual(
                 payloads["version_alias"]["version"], payloads["status"]["version"]
             )
@@ -504,7 +514,16 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(
                 payloads["status_alias"]["node_name"], service_status["node_name"]
             )
-            self.assertEqual(payloads["node"], payloads["node_alias"])
+            node_without_dynamic_system = dict(payloads["node"])
+            node_alias_without_dynamic_system = dict(payloads["node_alias"])
+            node_without_dynamic_system.pop("system")
+            node_alias_without_dynamic_system.pop("system")
+            self.assertEqual(
+                node_alias_without_dynamic_system, node_without_dynamic_system
+            )
+            self.assertEqual(
+                set(payloads["node_alias"]["system"]), set(payloads["node"]["system"])
+            )
             self.assertEqual(payloads["node"]["node_id"], service_status["node_id"])
             self.assertEqual(payloads["node"]["node_name"], service_status["node_name"])
             self.assertRegex(
