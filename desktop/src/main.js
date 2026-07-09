@@ -5,6 +5,7 @@ const path = require('node:path');
 const { BackgroundNodeManager, UPDATE_INTERVAL_MS } = require('./bootstrap/backgroundNodeManager');
 const { CliManager } = require('./bootstrap/cliManager');
 const { LocalApiClient } = require('./bootstrap/apiClient');
+const { sendWindowState } = require('./bootstrap/electronState');
 const { shouldStopTemporaryNode } = require('./bootstrap/lifecycle');
 const { normalizePackageSettings } = require('./bootstrap/packageInstaller');
 const { resolveRuntimeCommand } = require('./bootstrap/runtime');
@@ -49,6 +50,9 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(__dirname, 'ui', 'index.html'));
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
 
 async function bootstrap() {
@@ -524,16 +528,12 @@ async function removeLocalAetherMeshData() {
 function appendBootstrapLog(message) {
   if (!message) return;
   bootstrapState.logs = [...bootstrapState.logs, message].slice(-500);
-  if (mainWindow) {
-    mainWindow.webContents.send('aethermesh:state', bootstrapState);
-  }
+  sendWindowState(mainWindow, 'aethermesh:state', bootstrapState);
 }
 
 function updateBootstrap(partial) {
   bootstrapState = { ...bootstrapState, ...partial };
-  if (mainWindow) {
-    mainWindow.webContents.send('aethermesh:state', bootstrapState);
-  }
+  sendWindowState(mainWindow, 'aethermesh:state', bootstrapState);
 }
 
 ipcMain.handle('aethermesh:get-state', () => bootstrapState);
