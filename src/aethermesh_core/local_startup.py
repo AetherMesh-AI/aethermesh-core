@@ -124,7 +124,12 @@ def start_local_node(
         except IdentityPersistenceError as exc:
             raise LocalStartupError(str(exc)) from exc
     try:
-        identity = load_or_create_identity(identity_path)
+        identity = load_or_create_identity(
+            identity_path,
+            creator_node_id=bootstrap_config.creator_node_id
+            if bootstrap_config is not None and not identity_existed
+            else None,
+        )
     except IdentityPersistenceError as exc:
         raise LocalStartupError(str(exc)) from exc
     identity_document = _load_json_object(identity_path, "identity")

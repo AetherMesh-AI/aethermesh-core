@@ -308,6 +308,7 @@ def load_or_create_identity(
     hardware_inputs: HardwareIdentityInputs | None = None,
     account_id: str | None = None,
     node_id_factory: NodeIdFactory | None = None,
+    creator_node_id: str | None = None,
 ) -> NodeIdentity:
     """Load a versioned local node identity, creating one if the file is missing."""
 
@@ -329,7 +330,7 @@ def load_or_create_identity(
         ),
     )
     try:
-        _save_identity(identity_path, identity)
+        _save_identity(identity_path, identity, creator_node_id=creator_node_id)
     except IdentityPersistenceError as exc:
         if identity_path.exists() and "already exists" in str(exc):
             return _load_identity(identity_path)

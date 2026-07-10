@@ -93,6 +93,53 @@ class LocalNodeStartupTests(unittest.TestCase):
             ):
                 start_local_node(runtime)
 
+    def test_first_start_uses_preexisting_configured_local_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            config = {
+                "version": 1,
+                "runtime_mode": "local_only",
+                "creator_node_id": "configured-creator-1",
+                "identity_path": "ids/creator.json",
+                "manifest_path": "configured/manifests/node.json",
+                "validation_receipts_dir": "audit/receipts",
+                "lineage_dir": "audit/lineage",
+                "contribution_attribution_dir": "audit/contributions",
+                "logs_dir": "audit/logs",
+                "work_inputs_dir": "queue/inputs",
+                "work_outputs_dir": "queue/outputs",
+            }
+            (runtime / "local-runtime-config.json").write_text(
+                json.dumps(config), encoding="utf-8"
+            )
+
+            result = start_local_node(runtime).to_dict()
+
+            self.assertEqual(result["creator_node_id"], "configured-creator-1")
+            self.assertEqual(result["identity_path"], "ids/creator.json")
+            self.assertEqual(result["manifest_path"], "configured/manifests/node.json")
+            self.assertTrue((runtime / "ids" / "creator.json").exists())
+            self.assertTrue(
+                (runtime / "configured" / "manifests" / "node.json").exists()
+            )
+            self.assertTrue(
+                str(result["validation_receipt_path"]).startswith("audit/receipts/")
+            )
+            self.assertTrue(str(result["lineage_path"]).startswith("audit/lineage/"))
+            self.assertEqual(result["log_path"], "audit/logs/startup.log")
+            self.assertEqual(
+                result["runtime_directories"],
+                {
+                    "manifests": "configured/manifests",
+                    "receipts": "audit/receipts",
+                    "logs": "audit/logs",
+                    "work_inputs": "queue/inputs",
+                    "work_outputs": "queue/outputs",
+                    "lineage": "audit/lineage",
+                    "contribution_attribution": "audit/contributions",
+                },
+            )
+
     def test_existing_identity_missing_manifest_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
