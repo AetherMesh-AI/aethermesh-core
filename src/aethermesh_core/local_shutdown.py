@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +29,55 @@ class LocalShutdownError(ValueError):
     """Raised when local node shutdown cannot preserve required state."""
 
 
+class LocalShutdownReportError(LocalShutdownError):
+    """Concise terminal report for a shutdown failure; detail remains in local logs."""
+
+    def __init__(
+        self,
+        *,
+        code: str,
+        component: str,
+        node_id: str,
+        artifact_path: str | None,
+        contribution_records_finalized: bool,
+        shutdown_state: str,
+        detail: str,
+        guidance: str,
+    ) -> None:
+        self.code = code
+        self.component = component
+        self.node_id = node_id
+        self.artifact_path = artifact_path
+        self.contribution_records_finalized = contribution_records_finalized
+        self.shutdown_state = shutdown_state
+        self.detail = detail
+        self.guidance = guidance
+        super().__init__(detail)
+
+    def to_dict(self) -> dict[str, object]:
+        """Return automation-safe shutdown fields without raw local details."""
+
+        return {
+            "summary": "Local node shutdown did not complete safely.",
+            "code": self.code,
+            "component": self.component,
+            "node_id": self.node_id,
+            "artifact_path": self.artifact_path,
+            "contribution_records_finalized": self.contribution_records_finalized,
+            "shutdown_state": self.shutdown_state,
+            "guidance": self.guidance,
+        }
+
+    def __str__(self) -> str:
+        artifact = f" artifact={self.artifact_path}" if self.artifact_path else ""
+        return (
+            f"[{self.code}] shutdown {self.shutdown_state}: {self.component} failed "
+            f"for node={self.node_id}{artifact}; "
+            f"contribution_records_finalized={self.contribution_records_finalized}. "
+            f"Reason: {_redact_local_paths(self.detail)}. Safe next step: {self.guidance}"
+        )
+
+
 @dataclass(frozen=True)
 class LocalShutdownResult:
     """Serializable summary for one local node shutdown request."""
@@ -45,6 +95,7 @@ class LocalShutdownResult:
     interrupted_work_count: int
     repeated_request: bool
     final_status: str
+    shutdown_state: str
 
     def to_dict(self) -> dict[str, object]:
         """Return the local shutdown summary without host-specific absolute paths."""
@@ -63,6 +114,7 @@ class LocalShutdownResult:
             "interrupted_work_count": self.interrupted_work_count,
             "repeated_request": self.repeated_request,
             "final_status": self.final_status,
+            "shutdown_state": self.shutdown_state,
             "accepting_work": False,
         }
 
@@ -72,9 +124,22 @@ def shutdown_local_node(
 ) -> LocalShutdownResult:
     """Persist final local state and mark one runtime stopped idempotently."""
 
+    root = Path(runtime_dir)
+    try:
+        return _shutdown_local_node(root, timeout_seconds=timeout_seconds)
+    except LocalShutdownReportError:
+        raise
+    except LocalShutdownError as exc:
+        report = _shutdown_error_report(root, exc)
+        _append_failure_log(root / "logs" / "shutdown.log", report)
+        raise report from exc
+
+
+def _shutdown_local_node(root: Path, *, timeout_seconds: float) -> LocalShutdownResult:
+    """Perform shutdown; the public wrapper converts failures to stable reports."""
+
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
-    root = Path(runtime_dir)
     config = load_optional_local_runtime_config(root, LocalShutdownError)
     identity_path = configured_runtime_path(root, config, "identity")
     manifest_path = configured_runtime_path(root, config, "manifest")
@@ -120,7 +185,7 @@ def shutdown_local_node(
     if interrupted_work:
         stopped_work_path.parent.mkdir(parents=True, exist_ok=True)
         stopped_work_ref = _relative_ref(root, stopped_work_path)
-        atomic_write_json(
+        _write_shutdown_json(
             stopped_work_path,
             {
                 "version": LOCAL_SHUTDOWN_STATE_VERSION,
@@ -129,6 +194,8 @@ def shutdown_local_node(
                 "status": "stopped_retryable",
                 "work": interrupted_work,
             },
+            "interrupted work receipt",
+            _relative_ref(root, stopped_work_path),
         )
 
     receipt_refs = _artifact_refs(
@@ -155,7 +222,12 @@ def shutdown_local_node(
         "shutdown_timeout_seconds": timeout_seconds,
         "bounded_timeout_reached": time.monotonic() > deadline,
     }
-    atomic_write_json(state_path, final_state)
+    _write_shutdown_json(
+        state_path,
+        final_state,
+        "attribution finalization",
+        _relative_ref(root, state_path),
+    )
     _append_log(
         log_path,
         event="shutdown_persistence_complete",
@@ -194,7 +266,139 @@ def shutdown_local_node(
         interrupted_work_count=len(interrupted_work),
         repeated_request=repeated_request,
         final_status="stopped",
+        shutdown_state=(
+            "forced_shutdown"
+            if final_state["bounded_timeout_reached"]
+            else "clean_shutdown"
+        ),
     )
+
+
+def _shutdown_error_report(
+    root: Path, error: LocalShutdownError
+) -> LocalShutdownReportError:
+    """Classify a failure without modifying any identity or contribution artifact."""
+
+    detail = str(error)
+    lowered = detail.lower()
+    component, code, artifact_path, guidance = _shutdown_failure_fields(lowered)
+    return LocalShutdownReportError(
+        code=code,
+        component=component,
+        node_id=_shutdown_node_id(root),
+        artifact_path=artifact_path,
+        contribution_records_finalized=_contribution_records_finalized(root),
+        shutdown_state=(
+            "partial_shutdown"
+            if _contribution_records_finalized(root)
+            else "unsafe_incomplete_shutdown"
+        ),
+        detail=detail,
+        guidance=guidance,
+    )
+
+
+def _shutdown_failure_fields(detail: str) -> tuple[str, str, str | None, str]:
+    """Map known local shutdown phases to stable, actionable operator fields."""
+
+    if "release runtime resource" in detail:
+        return (
+            "worker_termination",
+            "SHUTDOWN_WORKER_TERMINATION_FAILED",
+            "node.pid",
+            "stop the named local worker, then rerun shutdown; do not delete identity or receipts",
+        )
+    if "interrupted work receipt" in detail:
+        return (
+            "receipt_write",
+            "SHUTDOWN_RECEIPT_WRITE_FAILED",
+            "work/stopped/shutdown-interrupted-work.json",
+            "restore write access and rerun shutdown; existing validation receipts remain unchanged",
+        )
+    if "attribution finalization" in detail:
+        return (
+            "attribution_finalization",
+            "SHUTDOWN_ATTRIBUTION_FINALIZATION_FAILED",
+            "state/shutdown-state.json",
+            "restore write access and rerun shutdown; do not treat contribution attribution as finalized",
+        )
+    if "manifest" in detail:
+        return (
+            "manifest_flush",
+            "SHUTDOWN_MANIFEST_FLUSH_FAILED",
+            "manifests/local-node-manifest.json",
+            "restore the preserved manifest and rerun shutdown; do not replace node identity",
+        )
+    if "identity" in detail:
+        return (
+            "runtime_stop",
+            "SHUTDOWN_IDENTITY_UNAVAILABLE",
+            "identity/local-node-identity.json",
+            "restore readable local identity, then rerun shutdown without resetting creator identity",
+        )
+    return (
+        "runtime_stop",
+        "SHUTDOWN_RUNTIME_STOP_FAILED",
+        None,
+        "resolve the local runtime error and rerun shutdown; preserve identity and artifacts",
+    )
+
+
+def _shutdown_node_id(root: Path) -> str:
+    try:
+        config = load_optional_local_runtime_config(root, LocalShutdownError)
+        identity_path = configured_runtime_path(root, config, "identity")
+        identity = _load_json_object(identity_path, "identity")
+        node = _required_object(identity, "node", "identity")
+        return _required_string(node, "node_id", "identity.node")
+    except LocalShutdownError:
+        return "unknown-local-node"
+
+
+def _contribution_records_finalized(root: Path) -> bool:
+    try:
+        state = _load_json_object(
+            root / "state" / "shutdown-state.json", "shutdown state"
+        )
+    except LocalShutdownError:
+        return False
+    return state.get("status") == "stopped" and isinstance(
+        state.get("contribution_refs"), list
+    )
+
+
+def _append_failure_log(path: Path, report: LocalShutdownReportError) -> None:
+    """Keep raw diagnostic detail local; terminal output uses report.__str__ instead."""
+
+    try:
+        append_json_line(
+            path,
+            {
+                "event": "shutdown_failure",
+                **report.to_dict(),
+                "error_detail": report.detail,
+            },
+            create_parent=True,
+        )
+    except OSError:
+        return
+
+
+def _write_shutdown_json(
+    path: Path, document: dict[str, object], component: str, artifact_path: str
+) -> None:
+    try:
+        atomic_write_json(path, document)
+    except (OSError, TypeError, ValueError) as exc:
+        raise LocalShutdownError(
+            f"{component} failed for {artifact_path}: {exc}"
+        ) from exc
+
+
+def _redact_local_paths(detail: str) -> str:
+    """Retain diagnostic context in a local log without persisting host paths."""
+
+    return re.sub(r"(?<![\w.])(?:[A-Za-z]:[\\/]|/)[^\s'\"]+", "<local-path>", detail)
 
 
 def _shutdown_already_completed(path: Path) -> bool:
@@ -265,7 +469,7 @@ def _release_runtime_resources(*paths: Path) -> list[str]:
             continue
         except OSError as exc:
             raise LocalShutdownError(
-                f"could not release runtime resource: {exc}"
+                f"could not release runtime resource {path.name}: {exc}"
             ) from exc
         released.append(path.name)
     return released

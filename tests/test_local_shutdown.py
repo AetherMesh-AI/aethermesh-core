@@ -4,12 +4,45 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from aethermesh_core import local_shutdown
 from aethermesh_core.cli import main
-from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
+from aethermesh_core.local_shutdown import (
+    LocalShutdownError,
+    LocalShutdownReportError,
+    shutdown_local_node,
+)
 from aethermesh_core.local_startup import start_local_node
 
 
 class LocalShutdownTests(unittest.TestCase):
+    def test_shutdown_rethrows_structured_report_and_ignores_failure_log_error(
+        self,
+    ) -> None:
+        report = LocalShutdownReportError(
+            code="SHUTDOWN_RUNTIME_STOP_FAILED",
+            component="runtime_stop",
+            node_id="node-a",
+            artifact_path=None,
+            contribution_records_finalized=False,
+            shutdown_state="unsafe_incomplete_shutdown",
+            detail="simulated failure",
+            guidance="retry safely",
+        )
+        with (
+            patch(
+                "aethermesh_core.local_shutdown._shutdown_local_node",
+                side_effect=report,
+            ),
+            self.assertRaises(LocalShutdownReportError) as raised,
+        ):
+            shutdown_local_node("unused")
+        self.assertIs(raised.exception, report)
+        with patch(
+            "aethermesh_core.local_shutdown.append_json_line",
+            side_effect=OSError("full"),
+        ):
+            local_shutdown._append_failure_log(Path("unused.log"), report)
+
     def test_shutdown_persists_final_state_preserves_artifacts_and_is_idempotent(
         self,
     ) -> None:
@@ -53,6 +86,7 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(identity_after, identity_before)
         self.assertEqual(manifest_after, manifest_before)
         self.assertEqual(first["final_status"], "stopped")
+        self.assertEqual(first["shutdown_state"], "clean_shutdown")
         self.assertFalse(first["accepting_work"])
         self.assertFalse(first["repeated_request"])
         self.assertTrue(second["repeated_request"])
@@ -138,6 +172,96 @@ class LocalShutdownTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(LocalShutdownError, "node references differ"):
                 shutdown_local_node(root)
+
+    def test_shutdown_reports_worker_termination_failure_and_preserves_attribution(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            identity_path = root / str(start["identity_path"])
+            manifest_path = root / str(start["manifest_path"])
+            identity_before = identity_path.read_text(encoding="utf-8")
+            manifest_before = manifest_path.read_text(encoding="utf-8")
+            (root / "node.pid").write_text("123", encoding="utf-8")
+            with (
+                patch(
+                    "aethermesh_core.local_shutdown.Path.unlink",
+                    side_effect=OSError("busy"),
+                ),
+                self.assertRaises(LocalShutdownReportError) as raised,
+            ):
+                shutdown_local_node(root)
+            report = raised.exception.to_dict()
+            failure_log = (root / "logs" / "shutdown.log").read_text(encoding="utf-8")
+            identity_after = identity_path.read_text(encoding="utf-8")
+            manifest_after = manifest_path.read_text(encoding="utf-8")
+
+        self.assertEqual(report["code"], "SHUTDOWN_WORKER_TERMINATION_FAILED")
+        self.assertEqual(report["component"], "worker_termination")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(report["artifact_path"], "node.pid")
+        self.assertTrue(report["contribution_records_finalized"])
+        self.assertEqual(report["shutdown_state"], "partial_shutdown")
+        self.assertIn('"event": "shutdown_failure"', failure_log)
+        self.assertEqual(identity_after, identity_before)
+        self.assertEqual(manifest_after, manifest_before)
+
+    def test_shutdown_reports_interrupted_work_receipt_write_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            (root / "work" / "in-progress").mkdir(parents=True)
+            (root / "work" / "in-progress" / "active.json").write_text(
+                "{}", encoding="utf-8"
+            )
+            with (
+                patch(
+                    "aethermesh_core.local_shutdown.atomic_write_json",
+                    side_effect=OSError("read-only"),
+                ),
+                self.assertRaises(LocalShutdownReportError) as raised,
+            ):
+                shutdown_local_node(root)
+            report = raised.exception.to_dict()
+
+        self.assertEqual(report["code"], "SHUTDOWN_RECEIPT_WRITE_FAILED")
+        self.assertEqual(report["component"], "receipt_write")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(
+            report["artifact_path"], "work/stopped/shutdown-interrupted-work.json"
+        )
+        self.assertFalse(report["contribution_records_finalized"])
+        self.assertEqual(report["shutdown_state"], "unsafe_incomplete_shutdown")
+
+    def test_shutdown_reports_attribution_finalization_write_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            identity_path = root / str(start["identity_path"])
+            manifest_path = root / str(start["manifest_path"])
+            identity_before = identity_path.read_text(encoding="utf-8")
+            manifest_before = manifest_path.read_text(encoding="utf-8")
+            with (
+                patch(
+                    "aethermesh_core.local_shutdown.atomic_write_json",
+                    side_effect=OSError("read-only"),
+                ),
+                self.assertRaises(LocalShutdownReportError) as raised,
+            ):
+                shutdown_local_node(root)
+            report = raised.exception.to_dict()
+            identity_after = identity_path.read_text(encoding="utf-8")
+            manifest_after = manifest_path.read_text(encoding="utf-8")
+
+        self.assertEqual(report["code"], "SHUTDOWN_ATTRIBUTION_FINALIZATION_FAILED")
+        self.assertEqual(report["component"], "attribution_finalization")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(report["artifact_path"], "state/shutdown-state.json")
+        self.assertFalse(report["contribution_records_finalized"])
+        self.assertEqual(report["shutdown_state"], "unsafe_incomplete_shutdown")
+        self.assertEqual(identity_after, identity_before)
+        self.assertEqual(manifest_after, manifest_before)
 
     def test_shutdown_rejects_bad_timeout_and_resource_release_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
