@@ -644,6 +644,24 @@ class LocalNodeStartupTests(unittest.TestCase):
                 self.assertEqual(error.phase, "storage_check")
                 self.assertIn(field, str(error))
 
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            config["paths"]["validation_receipts"] = "custom/storage"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            (runtime / "custom").mkdir()
+            (runtime / "custom" / "storage").write_text("unavailable", encoding="utf-8")
+
+            with self.assertRaises(LocalStartupError) as caught:
+                start_local_node(runtime)
+
+            error = caught.exception
+            self.assertEqual(error.code, "STARTUP_RECEIPT_STORAGE_UNAVAILABLE")
+            self.assertEqual(error.phase, "storage_check")
+            self.assertIn("paths.validation_receipts", str(error))
+
         for leaked_path in (
             "/Users/example/private/runtime/receipts",
             "/Users/example/Private Runtime/receipts",

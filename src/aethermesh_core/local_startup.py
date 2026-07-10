@@ -85,12 +85,6 @@ def _classify_startup_error(detail: str) -> tuple[str, str, str]:
             "manifest_validation",
             "restore a valid local startup manifest matching the preserved identity",
         )
-    if "config" in lowered:
-        return (
-            "STARTUP_CONFIG_INVALID",
-            "config_load",
-            "correct the named field in runtime-config.json using the expected format",
-        )
     if (
         "creator_node_id" in lowered
         or "creator node identity" in lowered
@@ -118,6 +112,12 @@ def _classify_startup_error(detail: str) -> tuple[str, str, str]:
             "STARTUP_ATTRIBUTION_STORAGE_UNAVAILABLE",
             "storage_check",
             "make config field paths.contribution_attribution a writable local directory",
+        )
+    if "config" in lowered:
+        return (
+            "STARTUP_CONFIG_INVALID",
+            "config_load",
+            "correct the named field in runtime-config.json using the expected format",
         )
     return (
         "STARTUP_STORAGE_UNAVAILABLE",
@@ -387,10 +387,14 @@ def _runtime_dirs(config: LocalRuntimeConfig) -> dict[str, str]:
 
 def _ensure_runtime_dirs(root: Path, config: LocalRuntimeConfig | None) -> None:
     runtime_dirs = (
-        _runtime_dirs(config)
+        {
+            path_key: relative_path
+            for path_key, relative_path in config.paths.items()
+            if path_key in REQUIRED_RUNTIME_DIRS.values()
+        }
         if config is not None
         else {
-            key: (
+            path_key: (
                 Path(DEFAULT_RUNTIME_PATHS[path_key]).parent.as_posix()
                 if key in {"manifests", "logs"}
                 else DEFAULT_RUNTIME_PATHS[path_key]
@@ -398,13 +402,15 @@ def _ensure_runtime_dirs(root: Path, config: LocalRuntimeConfig | None) -> None:
             for key, path_key in REQUIRED_RUNTIME_DIRS.items()
         }
     )
-    for relative_path in runtime_dirs.values():
+    for path_key, relative_path in runtime_dirs.items():
+        if path_key in {"manifest", "log"}:
+            relative_path = Path(relative_path).parent.as_posix()
         path = root / relative_path
         try:
             path.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise LocalStartupError(
-                f"required runtime directory {relative_path!r} is invalid: {exc}"
+                f"config field paths.{path_key} requires a writable local directory: {exc}"
             ) from exc
 
 
