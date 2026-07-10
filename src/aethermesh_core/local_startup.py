@@ -100,10 +100,7 @@ def start_local_node(
         validate_runtime_path_boundaries(root, preloaded_config)
     except LocalRuntimeConfigError as exc:
         raise LocalStartupError(str(exc)) from exc
-    if preloaded_config is None and any(
-        (root / relative_ref).exists() or (root / relative_ref).is_symlink()
-        for relative_ref in DEFAULT_RUNTIME_PATHS.values()
-    ):
+    if preloaded_config is None and root.exists() and any(root.iterdir()):
         raise LocalStartupError(
             "required local runtime config is missing; refusing to reuse existing runtime artifacts"
         )

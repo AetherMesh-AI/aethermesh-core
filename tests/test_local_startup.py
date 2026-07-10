@@ -115,6 +115,22 @@ class LocalNodeStartupTests(unittest.TestCase):
             )
             self.assertEqual(len(tuple((runtime / "lineage").iterdir())), lineage_count)
 
+    def test_missing_config_rejects_nondefault_preserved_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            preserved_identity = runtime / "configured" / "creator-node.json"
+            preserved_identity.parent.mkdir()
+            preserved_identity.write_bytes(b"preserved identity")
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required local runtime config is missing"
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(preserved_identity.read_bytes(), b"preserved identity")
+            self.assertFalse((runtime / "identity" / "creator-node.json").exists())
+            self.assertFalse((runtime / LOCAL_RUNTIME_CONFIG_PATH).exists())
+
     def test_missing_required_runtime_config_fields_fail_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
@@ -578,7 +594,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             (runtime / "logs").parent.mkdir(parents=True, exist_ok=True)
             (runtime / "logs").write_text("not a directory", encoding="utf-8")
             with self.assertRaisesRegex(
-                LocalStartupError, "required runtime directory"
+                LocalStartupError, "required local runtime config"
             ):
                 start_local_node(runtime)
 
