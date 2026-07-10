@@ -227,7 +227,7 @@ class LocalNodeStartupTests(unittest.TestCase):
                 receipt_count,
             )
 
-    def test_overlapping_artifact_paths_fail_before_identity_or_receipt_writes(
+    def test_overlapping_runtime_paths_fail_before_identity_or_receipt_writes(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -243,24 +243,40 @@ class LocalNodeStartupTests(unittest.TestCase):
             lineage_count = len(
                 tuple((runtime / "lineage").glob("startup-lineage-*.json"))
             )
-            config["paths"]["lineage"] = "receipts/lineage"
-            config_path.write_text(json.dumps(config), encoding="utf-8")
-
-            with self.assertRaisesRegex(
-                LocalStartupError,
-                "artifact directories must be separate",
-            ):
-                start_local_node(runtime)
-
-            self.assertEqual(identity_path.read_bytes(), identity_before)
-            self.assertEqual(
-                len(tuple((runtime / "receipts").glob("startup-validation-*.json"))),
-                receipt_count,
+            cases = (
+                ({"lineage": "receipts/lineage"}, "artifact directories"),
+                ({"log": "runtime-config.json"}, "file paths"),
+                (
+                    {"identity": "records", "manifest": "records/manifest.json"},
+                    "file paths",
+                ),
+                ({"log": "work"}, "must not overlap"),
+                ({"work_outputs": "logs"}, "must not overlap"),
             )
-            self.assertEqual(
-                len(tuple((runtime / "lineage").glob("startup-lineage-*.json"))),
-                lineage_count,
-            )
+            for updates, message in cases:
+                with self.subTest(updates=updates):
+                    candidate = json.loads(json.dumps(config))
+                    candidate["paths"].update(updates)
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(LocalStartupError, message):
+                        start_local_node(runtime)
+
+                    self.assertEqual(identity_path.read_bytes(), identity_before)
+                    self.assertEqual(
+                        len(
+                            tuple(
+                                (runtime / "receipts").glob("startup-validation-*.json")
+                            )
+                        ),
+                        receipt_count,
+                    )
+                    self.assertEqual(
+                        len(
+                            tuple((runtime / "lineage").glob("startup-lineage-*.json"))
+                        ),
+                        lineage_count,
+                    )
 
     def test_invalid_manifest_fields_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

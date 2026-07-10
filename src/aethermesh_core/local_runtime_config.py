@@ -6,6 +6,7 @@ import json
 import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from itertools import combinations
 from pathlib import Path
 
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
@@ -229,11 +230,18 @@ def _require_local_ref(value: object, label: str) -> str:
 def _validate_safe_runtime_layout(paths: dict[str, str]) -> None:
     """Reject artifact layouts that could mix or overwrite preserved records."""
 
-    file_refs = {key: Path(paths[key]) for key in ("identity", "manifest", "log")}
-    if len(set(file_refs.values())) != len(file_refs):
-        raise LocalRuntimeConfigError(
-            "local runtime config identity, manifest, and log paths must be distinct"
-        )
+    file_refs = {
+        **{f"paths.{key}": Path(paths[key]) for key in ("identity", "manifest", "log")},
+        "runtime config": Path(LOCAL_RUNTIME_CONFIG_PATH),
+    }
+    for (key, file_ref), (other_key, other_file_ref) in combinations(
+        file_refs.items(), 2
+    ):
+        if _paths_overlap(file_ref, other_file_ref):
+            raise LocalRuntimeConfigError(
+                "local runtime config file paths must be separate: "
+                f"{key} and {other_key}"
+            )
 
     artifact_dirs = {
         key: Path(paths[key])
@@ -247,21 +255,22 @@ def _validate_safe_runtime_layout(paths: dict[str, str]) -> None:
     }
     for key, directory in artifact_dirs.items():
         for file_key, file_ref in file_refs.items():
-            if directory == file_ref or directory in file_ref.parents:
+            if _paths_overlap(directory, file_ref):
                 raise LocalRuntimeConfigError(
-                    f"local runtime config paths.{key} must not contain paths.{file_key}"
+                    f"local runtime config paths.{key} must not overlap {file_key}"
                 )
-    for key, directory in artifact_dirs.items():
-        for other_key, other_directory in artifact_dirs.items():
-            if key < other_key and (
-                directory == other_directory
-                or directory in other_directory.parents
-                or other_directory in directory.parents
-            ):
-                raise LocalRuntimeConfigError(
-                    "local runtime config artifact directories must be separate: "
-                    f"paths.{key} and paths.{other_key}"
-                )
+    for (key, directory), (other_key, other_directory) in combinations(
+        artifact_dirs.items(), 2
+    ):
+        if _paths_overlap(directory, other_directory):
+            raise LocalRuntimeConfigError(
+                "local runtime config artifact directories must be separate: "
+                f"paths.{key} and paths.{other_key}"
+            )
+
+
+def _paths_overlap(left: Path, right: Path) -> bool:
+    return left == right or left in right.parents or right in left.parents
 
 
 def _reject_unknown_fields(
