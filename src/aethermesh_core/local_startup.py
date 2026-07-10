@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import cast
 
 from aethermesh_core.identity import (
     IdentityPersistenceError,
@@ -19,7 +20,6 @@ from aethermesh_core.local_runtime_config import (
     LOCAL_RUNTIME_CONFIG_PATH,
     LocalRuntimeConfig,
     LocalRuntimeConfigError,
-    default_local_runtime_config,
     load_local_runtime_config,
     load_or_create_local_runtime_config,
     validate_runtime_path_boundaries,
@@ -100,6 +100,13 @@ def start_local_node(
         validate_runtime_path_boundaries(root, preloaded_config)
     except LocalRuntimeConfigError as exc:
         raise LocalStartupError(str(exc)) from exc
+    if preloaded_config is None and any(
+        (root / relative_ref).exists() or (root / relative_ref).is_symlink()
+        for relative_ref in DEFAULT_RUNTIME_PATHS.values()
+    ):
+        raise LocalStartupError(
+            "required local runtime config is missing; refusing to reuse existing runtime artifacts"
+        )
     identity_path = _configured_path(root, preloaded_config, "identity")
     manifest_path = _configured_path(root, preloaded_config, "manifest")
     identity_existed = identity_path.exists()
@@ -127,14 +134,12 @@ def start_local_node(
     creator_node_id = _identity_creator_node_id(identity_document)
     try:
         if reset_creator_identity and identity_existed:
-            if preloaded_config is None:
-                config = default_local_runtime_config(identity.node_id, creator_node_id)
-            else:
-                config = LocalRuntimeConfig(
-                    node_id=identity.node_id,
-                    creator_node_id=creator_node_id,
-                    paths=dict(preloaded_config.paths),
-                )
+            existing_config = cast(LocalRuntimeConfig, preloaded_config)
+            config = LocalRuntimeConfig(
+                node_id=identity.node_id,
+                creator_node_id=creator_node_id,
+                paths=dict(existing_config.paths),
+            )
             write_local_runtime_config(config_path, config)
         else:
             config = load_or_create_local_runtime_config(

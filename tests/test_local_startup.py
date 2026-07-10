@@ -389,13 +389,18 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertTrue((runtime / "identity" / "identity-quarantine").exists())
 
             (runtime / LOCAL_RUNTIME_CONFIG_PATH).unlink()
-            reset_without_existing_config = start_local_node(
-                runtime, reset_creator_identity=True
-            )
-            self.assertEqual(reset.node_id, reset_without_existing_config.node_id)
+            identity_path = runtime / reset.identity_path
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required local runtime config is missing"
+            ):
+                start_local_node(runtime, reset_creator_identity=True)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
             self.assertEqual(
-                reset_without_existing_config.manifest_path,
-                "manifests/local-node-manifest.json",
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
             )
 
     def test_cli_starts_local_node_and_reports_startup_errors(self) -> None:
