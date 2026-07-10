@@ -14,6 +14,18 @@ from aethermesh_core.version_metadata import capture_version_metadata
 
 
 class LocalNodeStartupTests(unittest.TestCase):
+    def test_runtime_path_file_fails_with_clear_startup_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir) / "runtime"
+            runtime.write_text("not a directory", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "local runtime path must be a directory"
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(runtime.read_text(encoding="utf-8"), "not a directory")
+
     def test_clean_startup_creates_auditable_artifacts_and_preserves_identity(
         self,
     ) -> None:
@@ -95,23 +107,111 @@ class LocalNodeStartupTests(unittest.TestCase):
             with self.assertRaisesRegex(LocalStartupError, "required startup manifest"):
                 start_local_node(runtime)
 
+    def test_existing_config_missing_identity_fails_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            identity_path = runtime / first.identity_path
+            identity_path.unlink()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+            lineage_count = len(tuple((runtime / "lineage").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required creator node identity is missing"
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse(identity_path.exists())
+            self.assertEqual(
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
+            )
+            self.assertEqual(len(tuple((runtime / "lineage").iterdir())), lineage_count)
+
+    def test_missing_config_rejects_nondefault_preserved_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            preserved_identity = runtime / "configured" / "creator-node.json"
+            preserved_identity.parent.mkdir()
+            preserved_identity.write_bytes(b"preserved identity")
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required local runtime config is missing"
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(preserved_identity.read_bytes(), b"preserved identity")
+            self.assertFalse((runtime / "identity" / "creator-node.json").exists())
+            self.assertFalse((runtime / LOCAL_RUNTIME_CONFIG_PATH).exists())
+
+    def test_missing_config_allows_precreated_empty_runtime_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            for relative_path in ("receipts", "lineage", "work/inputs", "work/outputs"):
+                (runtime / relative_path).mkdir(parents=True, exist_ok=True)
+
+            result = start_local_node(runtime)
+
+            self.assertEqual(result.validation_result, "passed")
+            self.assertTrue((runtime / LOCAL_RUNTIME_CONFIG_PATH).is_file())
+            self.assertTrue((runtime / result.identity_path).is_file())
+
     def test_missing_required_runtime_config_fields_fail_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
             start_local_node(runtime)
             config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
             config = self._load(config_path)
-            paths = config["paths"]
-            self.assertIsInstance(paths, dict)
-            assert isinstance(paths, dict)
-            paths.pop("lineage")
-            config_path.write_text(json.dumps(config), encoding="utf-8")
-
-            with self.assertRaisesRegex(
-                LocalStartupError,
-                "local runtime config paths.lineage must be a non-empty local path",
+            for field in (
+                "identity",
+                "manifest",
+                "validation_receipts",
+                "lineage",
+                "contribution_attribution",
+                "log",
+                "work_inputs",
+                "work_outputs",
             ):
-                start_local_node(runtime)
+                with self.subTest(field=field):
+                    candidate = json.loads(json.dumps(config))
+                    paths = candidate["paths"]
+                    self.assertIsInstance(paths, dict)
+                    assert isinstance(paths, dict)
+                    paths.pop(field)
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(
+                        LocalStartupError,
+                        f"local runtime config paths.{field} must be a non-empty local path",
+                    ):
+                        start_local_node(runtime)
+
+    def test_runtime_config_rejects_malformed_version_and_identity_stability(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            cases = (
+                ({"version": True}, "must contain version 1"),
+                (
+                    {"node.creator_node_id_stability": None},
+                    "must preserve local identity",
+                ),
+            )
+            for updates, message in cases:
+                with self.subTest(updates=updates):
+                    candidate = json.loads(json.dumps(config))
+                    for key, value in updates.items():
+                        if key.startswith("node."):
+                            candidate["node"][key.removeprefix("node.")] = value
+                        else:
+                            candidate[key] = value
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(LocalStartupError, message):
+                        start_local_node(runtime)
 
     def test_runtime_uses_configured_local_artifact_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -215,6 +315,156 @@ class LocalNodeStartupTests(unittest.TestCase):
                 receipt_count,
             )
 
+    def test_overlapping_runtime_paths_fail_before_identity_or_receipt_writes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            identity_path = runtime / "identity" / "creator-node.json"
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(
+                tuple((runtime / "receipts").glob("startup-validation-*.json"))
+            )
+            lineage_count = len(
+                tuple((runtime / "lineage").glob("startup-lineage-*.json"))
+            )
+            cases = (
+                ({"lineage": "receipts/lineage"}, "artifact directories"),
+                ({"log": "runtime-config.json"}, "file paths"),
+                (
+                    {"identity": "records", "manifest": "records/manifest.json"},
+                    "file paths",
+                ),
+                ({"log": "work"}, "must not overlap"),
+                ({"work_outputs": "logs"}, "must not overlap"),
+            )
+            for updates, message in cases:
+                with self.subTest(updates=updates):
+                    candidate = json.loads(json.dumps(config))
+                    candidate["paths"].update(updates)
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(LocalStartupError, message):
+                        start_local_node(runtime)
+
+                    self.assertEqual(identity_path.read_bytes(), identity_before)
+                    self.assertEqual(
+                        len(
+                            tuple(
+                                (runtime / "receipts").glob("startup-validation-*.json")
+                            )
+                        ),
+                        receipt_count,
+                    )
+                    self.assertEqual(
+                        len(
+                            tuple((runtime / "lineage").glob("startup-lineage-*.json"))
+                        ),
+                        lineage_count,
+                    )
+
+    def test_runtime_paths_cannot_escape_root_through_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside = parent / "outside"
+            runtime.mkdir()
+            outside.mkdir()
+            (runtime / "work").symlink_to(outside, target_is_directory=True)
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "paths.work_inputs must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse((runtime / "identity" / "creator-node.json").exists())
+            self.assertEqual(tuple(outside.iterdir()), ())
+
+    def test_configured_symlink_escape_fails_before_preserved_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside = parent / "outside"
+            first = start_local_node(runtime)
+            outside.mkdir()
+            (runtime / "escape").symlink_to(outside, target_is_directory=True)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            config["paths"]["lineage"] = "escape/lineage"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            identity_path = runtime / first.identity_path
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "paths.lineage must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
+            self.assertEqual(
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
+            )
+            self.assertEqual(tuple(outside.iterdir()), ())
+
+    def test_runtime_config_symlink_cannot_escape_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside_config = parent / "outside-config.json"
+            runtime.mkdir()
+            outside_config.write_text("not read", encoding="utf-8")
+            (runtime / LOCAL_RUNTIME_CONFIG_PATH).symlink_to(outside_config)
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "local runtime config must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse((runtime / "identity").exists())
+
+    def test_dangling_runtime_config_symlink_fails_before_startup_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config_path.symlink_to(runtime / "missing-config.json")
+
+            with self.assertRaisesRegex(LocalStartupError, "dangling filesystem link"):
+                start_local_node(runtime)
+
+            self.assertTrue(config_path.is_symlink())
+            self.assertFalse((runtime / "missing-config.json").exists())
+            self.assertFalse((runtime / "identity").exists())
+            self.assertFalse((runtime / "receipts").exists())
+
+    def test_resolved_runtime_paths_cannot_alias_preserved_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            identity_path = runtime / first.identity_path
+            identity_before = identity_path.read_bytes()
+            (runtime / "alias").symlink_to(
+                runtime / "receipts", target_is_directory=True
+            )
+            config["paths"]["lineage"] = "alias"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "artifact directories must be separate",
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
+
     def test_invalid_manifest_fields_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
@@ -241,14 +491,77 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertTrue((runtime / "identity" / "identity-quarantine").exists())
 
             (runtime / LOCAL_RUNTIME_CONFIG_PATH).unlink()
-            reset_without_existing_config = start_local_node(
-                runtime, reset_creator_identity=True
-            )
-            self.assertEqual(reset.node_id, reset_without_existing_config.node_id)
+            identity_path = runtime / reset.identity_path
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required local runtime config is missing"
+            ):
+                start_local_node(runtime, reset_creator_identity=True)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
             self.assertEqual(
-                reset_without_existing_config.manifest_path,
-                "manifests/local-node-manifest.json",
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
             )
+
+    def test_reset_uses_configured_identity_and_receipt_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            manifest = self._load(runtime / first.manifest_path)
+            custom_identity = runtime / "configured" / "identity" / "creator.json"
+            custom_identity.parent.mkdir(parents=True)
+            (runtime / first.identity_path).replace(custom_identity)
+            config["paths"]["identity"] = "configured/identity/creator.json"
+            config["paths"]["validation_receipts"] = "configured/receipts"
+            manifest["work_directories"]["receipts"] = "configured/receipts"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            (runtime / first.manifest_path).write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+
+            reset = start_local_node(runtime, reset_creator_identity=True)
+
+            self.assertEqual(reset.identity_path, "configured/identity/creator.json")
+            self.assertTrue(
+                (runtime / "configured" / "identity" / "identity-quarantine").is_dir()
+            )
+            self.assertTrue(
+                (
+                    runtime / "configured" / "receipts" / "identity-reset-receipts.json"
+                ).is_file()
+            )
+            self.assertFalse(
+                (runtime / "receipts" / "identity-reset-receipts.json").exists()
+            )
+
+    def test_reset_rejects_config_identity_mismatch_before_rotation(self) -> None:
+        for field in ("node_id", "creator_node_id"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temp_dir:
+                runtime = Path(temp_dir)
+                first = start_local_node(runtime)
+                config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+                config = self._load(config_path)
+                config["node"][field] = "mismatched-node-id"
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                identity_path = runtime / first.identity_path
+                identity_before = identity_path.read_bytes()
+
+                with self.assertRaisesRegex(
+                    LocalStartupError, f"node.{field} does not match identity"
+                ):
+                    start_local_node(runtime, reset_creator_identity=True)
+
+                self.assertEqual(identity_path.read_bytes(), identity_before)
+                self.assertFalse(
+                    (identity_path.parent / "identity-quarantine").exists()
+                )
+                self.assertFalse(
+                    (runtime / "receipts" / "identity-reset-receipts.json").exists()
+                )
 
     def test_cli_starts_local_node_and_reports_startup_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -272,6 +585,8 @@ class LocalNodeStartupTests(unittest.TestCase):
     def test_manifest_validation_rejects_bad_shapes(self) -> None:
         cases = (
             ("version", 2, "version 1"),
+            ("version", True, "version 1"),
+            ("version", 1.0, "version 1"),
             ("manifest_type", "other", "manifest_type"),
             ("node", "bad", "node must be an object"),
             ("capabilities", [], "capabilities"),
@@ -328,7 +643,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             (runtime / "logs").parent.mkdir(parents=True, exist_ok=True)
             (runtime / "logs").write_text("not a directory", encoding="utf-8")
             with self.assertRaisesRegex(
-                LocalStartupError, "required runtime directory"
+                LocalStartupError, "required local runtime config"
             ):
                 start_local_node(runtime)
 

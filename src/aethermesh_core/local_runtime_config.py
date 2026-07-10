@@ -6,12 +6,16 @@ import json
 import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from itertools import combinations
 from pathlib import Path
 
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 
 LOCAL_RUNTIME_CONFIG_VERSION = 1
 LOCAL_RUNTIME_CONFIG_PATH = "runtime-config.json"
+CREATOR_NODE_ID_STABILITY = (
+    "stable local identity; do not regenerate during normal local runs"
+)
 DEFAULT_RUNTIME_PATHS = {
     "identity": "identity/creator-node.json",
     "manifest": "manifests/local-node-manifest.json",
@@ -46,9 +50,7 @@ class LocalRuntimeConfig:
             "node": {
                 "node_id": self.node_id,
                 "creator_node_id": self.creator_node_id,
-                "creator_node_id_stability": (
-                    "stable local identity; do not regenerate during normal local runs"
-                ),
+                "creator_node_id_stability": CREATOR_NODE_ID_STABILITY,
             },
             "paths": dict(self.paths),
             "network_mode": "local-only-no-p2p",
@@ -97,7 +99,10 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     _reject_unknown_fields(
         document.keys(), _ALLOWED_TOP_LEVEL_FIELDS, "local runtime config"
     )
-    if document.get("version") != LOCAL_RUNTIME_CONFIG_VERSION:
+    if (
+        type(document.get("version")) is not int
+        or document["version"] != LOCAL_RUNTIME_CONFIG_VERSION
+    ):
         raise LocalRuntimeConfigError("local runtime config must contain version 1")
     if document.get("network_mode") != "local-only-no-p2p":
         raise LocalRuntimeConfigError(
@@ -113,6 +118,10 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     creator_node_id = _require_node_id(
         node.get("creator_node_id"), "node.creator_node_id"
     )
+    if node.get("creator_node_id_stability") != CREATOR_NODE_ID_STABILITY:
+        raise LocalRuntimeConfigError(
+            "local runtime config node.creator_node_id_stability must preserve local identity"
+        )
     paths = document.get("paths")
     if not isinstance(paths, dict):
         raise LocalRuntimeConfigError("local runtime config paths must be an object")
@@ -122,6 +131,7 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     resolved_paths: dict[str, str] = {}
     for key in DEFAULT_RUNTIME_PATHS:
         resolved_paths[key] = _require_local_ref(paths.get(key), f"paths.{key}")
+    _validate_safe_runtime_layout(resolved_paths)
     return LocalRuntimeConfig(
         node_id=node_id,
         creator_node_id=creator_node_id,
@@ -196,6 +206,32 @@ def configured_runtime_path(
     return root / configured_runtime_ref(config, path_key)
 
 
+def validate_runtime_path_boundaries(
+    root: Path, config: LocalRuntimeConfig | None
+) -> None:
+    """Reject configured paths that escape ``root`` through filesystem links."""
+
+    resolved_root = root.resolve()
+    paths = DEFAULT_RUNTIME_PATHS if config is None else config.paths
+    resolved_paths: dict[str, str] = {}
+    for key, relative_ref in paths.items():
+        resolved_path = (root / relative_ref).resolve()
+        if not resolved_path.is_relative_to(resolved_root):
+            raise LocalRuntimeConfigError(
+                f"local runtime config paths.{key} must stay within the runtime directory"
+            )
+        resolved_paths[key] = resolved_path.relative_to(resolved_root).as_posix()
+    resolved_config_path = (root / LOCAL_RUNTIME_CONFIG_PATH).resolve()
+    if not resolved_config_path.is_relative_to(resolved_root):
+        raise LocalRuntimeConfigError(
+            "local runtime config must stay within the runtime directory"
+        )
+    _validate_safe_runtime_layout(
+        resolved_paths,
+        runtime_config_ref=resolved_config_path.relative_to(resolved_root).as_posix(),
+    )
+
+
 def _require_node_id(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise LocalRuntimeConfigError(
@@ -225,6 +261,54 @@ def _require_local_ref(value: object, label: str) -> str:
     return path.as_posix()
 
 
+def _validate_safe_runtime_layout(
+    paths: dict[str, str], *, runtime_config_ref: str = LOCAL_RUNTIME_CONFIG_PATH
+) -> None:
+    """Reject artifact layouts that could mix or overwrite preserved records."""
+
+    file_refs = {
+        **{f"paths.{key}": Path(paths[key]) for key in ("identity", "manifest", "log")},
+        "runtime config": Path(runtime_config_ref),
+    }
+    for (key, file_ref), (other_key, other_file_ref) in combinations(
+        file_refs.items(), 2
+    ):
+        if _paths_overlap(file_ref, other_file_ref):
+            raise LocalRuntimeConfigError(
+                "local runtime config file paths must be separate: "
+                f"{key} and {other_key}"
+            )
+
+    artifact_dirs = {
+        key: Path(paths[key])
+        for key in (
+            "validation_receipts",
+            "lineage",
+            "contribution_attribution",
+            "work_inputs",
+            "work_outputs",
+        )
+    }
+    for key, directory in artifact_dirs.items():
+        for file_key, file_ref in file_refs.items():
+            if _paths_overlap(directory, file_ref):
+                raise LocalRuntimeConfigError(
+                    f"local runtime config paths.{key} must not overlap {file_key}"
+                )
+    for (key, directory), (other_key, other_directory) in combinations(
+        artifact_dirs.items(), 2
+    ):
+        if _paths_overlap(directory, other_directory):
+            raise LocalRuntimeConfigError(
+                "local runtime config artifact directories must be separate: "
+                f"paths.{key} and paths.{other_key}"
+            )
+
+
+def _paths_overlap(left: Path, right: Path) -> bool:
+    return left == right or left in right.parents or right in left.parents
+
+
 def _reject_unknown_fields(
     field_names: Iterable[str], allowed_fields: Iterable[str], label: str
 ) -> None:
@@ -249,5 +333,6 @@ __all__ = [
     "load_or_create_local_runtime_config",
     "load_optional_local_runtime_config",
     "parse_local_runtime_config",
+    "validate_runtime_path_boundaries",
     "write_local_runtime_config",
 ]

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import cast
 
 from aethermesh_core.identity import (
     IdentityPersistenceError,
@@ -19,9 +20,9 @@ from aethermesh_core.local_runtime_config import (
     LOCAL_RUNTIME_CONFIG_PATH,
     LocalRuntimeConfig,
     LocalRuntimeConfigError,
-    default_local_runtime_config,
     load_local_runtime_config,
     load_or_create_local_runtime_config,
+    validate_runtime_path_boundaries,
     write_local_runtime_config,
 )
 from aethermesh_core.version_metadata import (
@@ -88,23 +89,62 @@ def start_local_node(
     """Initialize one local node runtime without external services."""
 
     root = Path(runtime_dir)
+    if root.exists() and not root.is_dir():
+        raise LocalStartupError("local runtime path must be a directory")
     config_path = root / LOCAL_RUNTIME_CONFIG_PATH
+    resolved_root = root.resolve()
+    if not config_path.resolve().is_relative_to(resolved_root):
+        raise LocalStartupError(
+            "local runtime config must stay within the runtime directory"
+        )
     preloaded_config = _load_existing_config(config_path)
+    try:
+        validate_runtime_path_boundaries(root, preloaded_config)
+    except LocalRuntimeConfigError as exc:
+        raise LocalStartupError(str(exc)) from exc
+    if preloaded_config is None and root.exists() and _contains_runtime_artifacts(root):
+        raise LocalStartupError(
+            "required local runtime config is missing; refusing to reuse existing runtime artifacts"
+        )
     identity_path = _configured_path(root, preloaded_config, "identity")
     manifest_path = _configured_path(root, preloaded_config, "manifest")
     identity_existed = identity_path.exists()
+    if preloaded_config is not None and not identity_existed:
+        raise LocalStartupError(
+            "required creator node identity is missing; refusing to regenerate preserved identity"
+        )
     if identity_existed and not reset_creator_identity and not manifest_path.exists():
         raise LocalStartupError(
             "required startup manifest is missing; refusing to recreate manifest for an existing identity"
         )
+    if preloaded_config is not None:
+        try:
+            preserved_identity = load_or_create_identity(identity_path)
+        except IdentityPersistenceError as exc:
+            raise LocalStartupError(str(exc)) from exc
+        preserved_identity_document = _load_json_object(identity_path, "identity")
+        preserved_creator_node_id = _identity_creator_node_id(
+            preserved_identity_document
+        )
+        if preloaded_config.node_id != preserved_identity.node_id:
+            raise LocalStartupError(
+                "local runtime config node.node_id does not match identity"
+            )
+        if preloaded_config.creator_node_id != preserved_creator_node_id:
+            raise LocalStartupError(
+                "local runtime config node.creator_node_id does not match identity"
+            )
     _ensure_runtime_dirs(root, preloaded_config)
     if reset_creator_identity and identity_existed:
         try:
             reset_identity(
                 identity_path,
                 reason="explicit local node startup reset",
-                quarantine_dir=root / "identity" / "identity-quarantine",
-                audit_receipt_path=root / "receipts" / "identity-reset-receipts.json",
+                quarantine_dir=identity_path.parent / "identity-quarantine",
+                audit_receipt_path=(
+                    _configured_path(root, preloaded_config, "validation_receipts")
+                    / "identity-reset-receipts.json"
+                ),
                 rotate_creator_identity=True,
             )
         except IdentityPersistenceError as exc:
@@ -117,14 +157,12 @@ def start_local_node(
     creator_node_id = _identity_creator_node_id(identity_document)
     try:
         if reset_creator_identity and identity_existed:
-            if preloaded_config is None:
-                config = default_local_runtime_config(identity.node_id, creator_node_id)
-            else:
-                config = LocalRuntimeConfig(
-                    node_id=identity.node_id,
-                    creator_node_id=creator_node_id,
-                    paths=dict(preloaded_config.paths),
-                )
+            existing_config = cast(LocalRuntimeConfig, preloaded_config)
+            config = LocalRuntimeConfig(
+                node_id=identity.node_id,
+                creator_node_id=creator_node_id,
+                paths=dict(existing_config.paths),
+            )
             write_local_runtime_config(config_path, config)
         else:
             config = load_or_create_local_runtime_config(
@@ -234,12 +272,22 @@ def start_local_node(
 
 
 def _load_existing_config(path: Path) -> LocalRuntimeConfig | None:
+    if path.is_symlink() and not path.exists():
+        raise LocalStartupError(
+            "local runtime config path is a dangling filesystem link"
+        )
     if not path.exists():
         return None
     try:
         return load_local_runtime_config(path)
     except LocalRuntimeConfigError as exc:
         raise LocalStartupError(str(exc)) from exc
+
+
+def _contains_runtime_artifacts(root: Path) -> bool:
+    """Return whether a config-less root contains more than empty directories."""
+
+    return any(path.is_symlink() or not path.is_dir() for path in root.rglob("*"))
 
 
 def _configured_path(
@@ -371,7 +419,10 @@ def _load_json_object(path: Path, label: str) -> dict[str, object]:
 def _validate_manifest(
     manifest: dict[str, object], *, expected_node_id: str, expected_creator_node_id: str
 ) -> None:
-    if manifest.get("version") != LOCAL_STARTUP_MANIFEST_VERSION:
+    if (
+        type(manifest.get("version")) is not int
+        or manifest["version"] != LOCAL_STARTUP_MANIFEST_VERSION
+    ):
         raise LocalStartupError("startup manifest must contain version 1")
     if manifest.get("manifest_type") != "local_node_startup":
         raise LocalStartupError("startup manifest_type must be local_node_startup")
