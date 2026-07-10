@@ -26,7 +26,7 @@ class LocalRestartTests(unittest.TestCase):
             original_receipt = self._load(root / str(start["validation_receipt_path"]))
             original_lineage = self._load(root / str(start["lineage_path"]))
             contribution_dir = root / "contributions"
-            contribution_dir.mkdir()
+            contribution_dir.mkdir(exist_ok=True)
             contribution = {
                 "node_id": original_node_id,
                 "creator_node_id": original_creator_node_id,

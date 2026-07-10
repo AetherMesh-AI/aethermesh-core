@@ -14,6 +14,12 @@ from aethermesh_core.local_json_helpers import (
     load_json_mapping,
     require_text_field,
 )
+from aethermesh_core.local_runtime_config import (
+    LocalRuntimeConfig,
+    configured_runtime_path,
+    configured_runtime_ref,
+    load_optional_local_runtime_config,
+)
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
 
@@ -69,8 +75,9 @@ def shutdown_local_node(
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
     root = Path(runtime_dir)
-    identity_path = root / "identity" / "creator-node.json"
-    manifest_path = root / "manifests" / "local-node-manifest.json"
+    config = load_optional_local_runtime_config(root, LocalShutdownError)
+    identity_path = configured_runtime_path(root, config, "identity")
+    manifest_path = configured_runtime_path(root, config, "manifest")
     log_path = root / "logs" / "shutdown.log"
     state_dir = root / "state"
     state_path = state_dir / "shutdown-state.json"
@@ -108,7 +115,7 @@ def shutdown_local_node(
             "shutdown refused because identity and manifest node references differ"
         )
 
-    interrupted_work = _interrupted_work_refs(root)
+    interrupted_work = _interrupted_work_refs(root, config)
     stopped_work_ref = None
     if interrupted_work:
         stopped_work_path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,9 +131,13 @@ def shutdown_local_node(
             },
         )
 
-    receipt_refs = _artifact_refs(root, "receipts")
-    lineage_refs = _artifact_refs(root, "lineage")
-    contribution_refs = _artifact_refs(root, "contributions")
+    receipt_refs = _artifact_refs(
+        root, configured_runtime_ref(config, "validation_receipts")
+    )
+    lineage_refs = _artifact_refs(root, configured_runtime_ref(config, "lineage"))
+    contribution_refs = _artifact_refs(
+        root, configured_runtime_ref(config, "contribution_attribution")
+    )
     final_state = {
         "version": LOCAL_SHUTDOWN_STATE_VERSION,
         "node_id": node_id,
@@ -211,10 +222,12 @@ def _required_object(
     return value
 
 
-def _interrupted_work_refs(root: Path) -> list[dict[str, str]]:
+def _interrupted_work_refs(
+    root: Path, config: LocalRuntimeConfig | None
+) -> list[dict[str, str]]:
     in_progress_dir = root / "work" / "in-progress"
-    inputs_dir = root / "work" / "inputs"
-    outputs_dir = root / "work" / "outputs"
+    inputs_dir = configured_runtime_path(root, config, "work_inputs")
+    outputs_dir = configured_runtime_path(root, config, "work_outputs")
     interrupted: list[dict[str, str]] = []
     for path in sorted(_iter_files(in_progress_dir)):
         interrupted.append(
