@@ -1,0 +1,186 @@
+"""Validated Phase 1 local runtime configuration."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+
+LOCAL_RUNTIME_CONFIG_VERSION = 1
+LOCAL_RUNTIME_CONFIG_PATH = "runtime-config.json"
+DEFAULT_RUNTIME_PATHS = {
+    "identity": "identity/creator-node.json",
+    "manifest": "manifests/local-node-manifest.json",
+    "validation_receipts": "receipts",
+    "lineage": "lineage",
+    "contribution_attribution": "contributions",
+    "log": "logs/startup.log",
+    "work_inputs": "work/inputs",
+    "work_outputs": "work/outputs",
+}
+
+
+class LocalRuntimeConfigError(ValueError):
+    """Raised when local runtime config is missing required safe fields."""
+
+
+@dataclass(frozen=True)
+class LocalRuntimeConfig:
+    """One explicit local-only runtime config source for startup artifacts."""
+
+    node_id: str
+    creator_node_id: str
+    paths: dict[str, str]
+
+    def to_document(self) -> dict[str, object]:
+        return {
+            "version": LOCAL_RUNTIME_CONFIG_VERSION,
+            "node": {
+                "node_id": self.node_id,
+                "creator_node_id": self.creator_node_id,
+                "creator_node_id_stability": (
+                    "stable local identity; do not regenerate during normal local runs"
+                ),
+            },
+            "paths": dict(self.paths),
+            "network_mode": "local-only-no-p2p",
+        }
+
+    def resolve_path(self, runtime_root: Path, path_key: str) -> Path:
+        return runtime_root / self.paths[path_key]
+
+
+def default_local_runtime_config(
+    node_id: str, creator_node_id: str
+) -> LocalRuntimeConfig:
+    """Build the minimal Phase 1 local-only config defaults."""
+
+    _require_node_id(node_id, "node.node_id")
+    _require_node_id(creator_node_id, "node.creator_node_id")
+    return LocalRuntimeConfig(
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        paths=dict(DEFAULT_RUNTIME_PATHS),
+    )
+
+
+def load_local_runtime_config(path: Path) -> LocalRuntimeConfig:
+    """Load and validate one local runtime config file."""
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            document = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise LocalRuntimeConfigError(
+            f"local runtime config JSON is malformed: {exc.msg}"
+        ) from exc
+    except OSError as exc:
+        raise LocalRuntimeConfigError(
+            f"could not read local runtime config: {exc}"
+        ) from exc
+    return parse_local_runtime_config(document)
+
+
+def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
+    """Validate a local runtime config document and return its config object."""
+
+    if not isinstance(document, dict):
+        raise LocalRuntimeConfigError("local runtime config must be a JSON object")
+    if document.get("version") != LOCAL_RUNTIME_CONFIG_VERSION:
+        raise LocalRuntimeConfigError("local runtime config must contain version 1")
+    if document.get("network_mode") != "local-only-no-p2p":
+        raise LocalRuntimeConfigError(
+            "local runtime config network_mode must be local-only-no-p2p"
+        )
+    node = document.get("node")
+    if not isinstance(node, dict):
+        raise LocalRuntimeConfigError("local runtime config node must be an object")
+    node_id = _require_node_id(node.get("node_id"), "node.node_id")
+    creator_node_id = _require_node_id(
+        node.get("creator_node_id"), "node.creator_node_id"
+    )
+    paths = document.get("paths")
+    if not isinstance(paths, dict):
+        raise LocalRuntimeConfigError("local runtime config paths must be an object")
+    resolved_paths: dict[str, str] = {}
+    for key in DEFAULT_RUNTIME_PATHS:
+        resolved_paths[key] = _require_local_ref(paths.get(key), f"paths.{key}")
+    return LocalRuntimeConfig(
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        paths=resolved_paths,
+    )
+
+
+def load_or_create_local_runtime_config(
+    path: Path, *, node_id: str, creator_node_id: str
+) -> LocalRuntimeConfig:
+    """Load existing config or create the default config for a new local runtime."""
+
+    if path.exists():
+        config = load_local_runtime_config(path)
+        if config.node_id != node_id:
+            raise LocalRuntimeConfigError(
+                "local runtime config node.node_id does not match identity"
+            )
+        if config.creator_node_id != creator_node_id:
+            raise LocalRuntimeConfigError(
+                "local runtime config node.creator_node_id does not match identity"
+            )
+        return config
+    config = default_local_runtime_config(node_id, creator_node_id)
+    try:
+        atomic_create_json(path, config.to_document())
+    except OSError as exc:
+        raise LocalRuntimeConfigError(
+            f"could not create local runtime config: {exc}"
+        ) from exc
+    return config
+
+
+def write_local_runtime_config(path: Path, config: LocalRuntimeConfig) -> None:
+    """Persist a known-good config, replacing any previous config."""
+
+    try:
+        atomic_write_json(path, config.to_document())
+    except OSError as exc:
+        raise LocalRuntimeConfigError(
+            f"could not write local runtime config: {exc}"
+        ) from exc
+
+
+def _require_node_id(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise LocalRuntimeConfigError(
+            f"local runtime config {label} must be a non-empty string"
+        )
+    return value
+
+
+def _require_local_ref(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise LocalRuntimeConfigError(
+            f"local runtime config {label} must be a non-empty local path"
+        )
+    path = Path(value)
+    if path.is_absolute() or ".." in path.parts:
+        raise LocalRuntimeConfigError(
+            f"local runtime config {label} must be a relative local path"
+        )
+    return path.as_posix()
+
+
+__all__ = [
+    "DEFAULT_RUNTIME_PATHS",
+    "LOCAL_RUNTIME_CONFIG_PATH",
+    "LOCAL_RUNTIME_CONFIG_VERSION",
+    "LocalRuntimeConfig",
+    "LocalRuntimeConfigError",
+    "default_local_runtime_config",
+    "load_local_runtime_config",
+    "load_or_create_local_runtime_config",
+    "parse_local_runtime_config",
+    "write_local_runtime_config",
+]

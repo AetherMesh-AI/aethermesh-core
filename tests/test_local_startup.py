@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import patch
 
 from aethermesh_core.cli import main
+from aethermesh_core.local_runtime_config import LOCAL_RUNTIME_CONFIG_PATH
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
 from aethermesh_core.version_metadata import capture_version_metadata
 
@@ -28,11 +29,49 @@ class LocalNodeStartupTests(unittest.TestCase):
             for relative_path in (
                 "identity/creator-node.json",
                 "manifests/local-node-manifest.json",
+                "receipts",
+                "lineage",
                 "logs/startup.log",
                 "work/inputs",
                 "work/outputs",
             ):
                 self.assertTrue((runtime / relative_path).exists(), relative_path)
+            config = self._load(runtime / LOCAL_RUNTIME_CONFIG_PATH)
+            self.assertEqual(config["node"]["node_id"], first["node_id"])
+            self.assertEqual(
+                config["node"]["creator_node_id"], first["creator_node_id"]
+            )
+            self.assertIn(
+                "do not regenerate",
+                config["node"]["creator_node_id_stability"],
+            )
+            self.assertEqual(
+                config["paths"],
+                {
+                    "identity": "identity/creator-node.json",
+                    "manifest": "manifests/local-node-manifest.json",
+                    "validation_receipts": "receipts",
+                    "lineage": "lineage",
+                    "contribution_attribution": "contributions",
+                    "log": "logs/startup.log",
+                    "work_inputs": "work/inputs",
+                    "work_outputs": "work/outputs",
+                },
+            )
+            self.assertNotIn("token", json.dumps(config).lower())
+            self.assertNotIn("reward", json.dumps(config).lower())
+            self.assertNotIn("dashboard", json.dumps(config).lower())
+            self.assertNotIn(
+                "p2p", config["network_mode"].lower().replace("no-p2p", "")
+            )
+            first_dirs = first["runtime_directories"]
+            self.assertIsInstance(first_dirs, dict)
+            assert isinstance(first_dirs, dict)
+            self.assertEqual(first_dirs["receipts"], "receipts")
+            self.assertEqual(first_dirs["lineage"], "lineage")
+            self.assertEqual(
+                config["paths"]["contribution_attribution"], "contributions"
+            )
             receipt = self._load(runtime / str(first["validation_receipt_path"]))
             lineage = self._load(runtime / str(first["lineage_path"]))
             self.assertEqual(receipt["receipt_type"], "startup_validation")
@@ -54,6 +93,73 @@ class LocalNodeStartupTests(unittest.TestCase):
 
             with self.assertRaisesRegex(LocalStartupError, "required startup manifest"):
                 start_local_node(runtime)
+
+    def test_missing_required_runtime_config_fields_fail_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            paths = config["paths"]
+            self.assertIsInstance(paths, dict)
+            assert isinstance(paths, dict)
+            paths.pop("lineage")
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "local runtime config paths.lineage must be a non-empty local path",
+            ):
+                start_local_node(runtime)
+
+    def test_runtime_uses_configured_local_artifact_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            manifest = self._load(runtime / first.manifest_path)
+            config_paths = config["paths"]
+            self.assertIsInstance(config_paths, dict)
+            assert isinstance(config_paths, dict)
+            config_paths.update(
+                {
+                    "manifest": "configured/manifests/node-manifest.json",
+                    "validation_receipts": "configured/receipts",
+                    "lineage": "configured/lineage",
+                    "contribution_attribution": "configured/contributions",
+                    "log": "configured/logs/startup.log",
+                    "work_inputs": "configured/work/inputs",
+                    "work_outputs": "configured/work/outputs",
+                }
+            )
+            manifest["work_directories"] = {
+                "manifests": "configured/manifests",
+                "receipts": "configured/receipts",
+                "logs": "configured/logs",
+                "work_inputs": "configured/work/inputs",
+                "work_outputs": "configured/work/outputs",
+                "lineage": "configured/lineage",
+            }
+            custom_manifest = runtime / str(config_paths["manifest"])
+            custom_manifest.parent.mkdir(parents=True)
+            custom_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            second = start_local_node(runtime)
+
+            self.assertEqual(second.creator_node_id, first.creator_node_id)
+            self.assertEqual(
+                second.manifest_path, "configured/manifests/node-manifest.json"
+            )
+            self.assertTrue(
+                second.validation_receipt_path.startswith("configured/receipts/")
+            )
+            self.assertTrue(second.lineage_path.startswith("configured/lineage/"))
+            self.assertEqual(second.log_path, "configured/logs/startup.log")
+            self.assertEqual(
+                config_paths["contribution_attribution"], "configured/contributions"
+            )
 
     def test_corrupt_manifest_fails_before_new_receipt_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -99,6 +205,16 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertNotEqual(first.node_id, reset.node_id)
             self.assertEqual(reset.node_id, reset.creator_node_id)
             self.assertTrue((runtime / "identity" / "identity-quarantine").exists())
+
+            (runtime / LOCAL_RUNTIME_CONFIG_PATH).unlink()
+            reset_without_existing_config = start_local_node(
+                runtime, reset_creator_identity=True
+            )
+            self.assertNotEqual(reset.node_id, reset_without_existing_config.node_id)
+            self.assertEqual(
+                reset_without_existing_config.manifest_path,
+                "manifests/local-node-manifest.json",
+            )
 
     def test_cli_starts_local_node_and_reports_startup_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
