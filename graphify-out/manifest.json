@@ -1,22 +1,22 @@
 {
   "pyproject.toml": {
-    "mtime": 1782937811.7215006,
-    "ast_hash": "1ba68878cae43efadb820816db3d0240",
+    "mtime": 1783660151.2559083,
+    "ast_hash": "8b86a798efd9ed1e88c11717dd9f6ada",
     "semantic_hash": ""
   },
   "src/aethermesh_core/__init__.py": {
-    "mtime": 1782751661.0037403,
-    "ast_hash": "fe2774bb92ddd020d6b256370ac049e9",
+    "mtime": 1782948938.372167,
+    "ast_hash": "6cc148ed1705fd39fbbf303cf7d23303",
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1782938675.913976,
-    "ast_hash": "884a7eeb0a4d4b740a5de3bf0081a2f4",
+    "mtime": 1783629562.5617337,
+    "ast_hash": "19b492458becd45dded045e3bdd667ff",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
-    "mtime": 1782937811.72579,
-    "ast_hash": "d81ac715e130513c7e6c803c44d67582",
+    "mtime": 1783572605.8105152,
+    "ast_hash": "ebc3d8261f4f45b4cc7fbaed096e382e",
     "semantic_hash": ""
   },
   "src/aethermesh_core/messages.py": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/models.py": {
-    "mtime": 1782719480.3722756,
-    "ast_hash": "ad76cd90351b879ce1d129c8eb73fda9",
+    "mtime": 1783528253.6387544,
+    "ast_hash": "22218d9ceab6c9aeeb0c9bc1945333dd",
     "semantic_hash": ""
   },
   "src/aethermesh_core/runner.py": {
@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1782938731.0860438,
-    "ast_hash": "44bef218968e8c5bc37e36ad9b036136",
+    "mtime": 1783660151.2637556,
+    "ast_hash": "eafd7b1e3e41ba6658c9bf2bd3d4154f",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "tests/test_simulation.py": {
-    "mtime": 1782937811.7381754,
-    "ast_hash": "df5823a16a943be8a3074d79628eeab8",
+    "mtime": 1783572605.8162503,
+    "ast_hash": "6c3444c24c05da121555f4dd4cf1c4b6",
     "semantic_hash": ""
   },
   "tests/test_validation.py": {
@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782938794.3896332,
-    "ast_hash": "4d78037b6b3104b63b545eb7b99dbba0",
+    "mtime": 1783636342.3505616,
+    "ast_hash": "34c5b7970da9ad3bfdf77e22deca96c8",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -120,13 +120,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/identity.py": {
-    "mtime": 1782939264.5892918,
-    "ast_hash": "bf237817130f2690d5ee539e369e55bd",
+    "mtime": 1783660151.258342,
+    "ast_hash": "366a40b9ddaf69bbc3721dfc3bf27097",
     "semantic_hash": ""
   },
   "tests/test_identity.py": {
-    "mtime": 1782939041.1424208,
-    "ast_hash": "576ec39e9185a3ef99e978842ea86ce7",
+    "mtime": 1783660151.2646823,
+    "ast_hash": "df742fd37b865aedda6daa5712e23161",
     "semantic_hash": ""
   },
   "src/aethermesh_core/message_bus.py": {
@@ -150,13 +150,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_service.py": {
-    "mtime": 1782937811.7292337,
-    "ast_hash": "642c8c651fc5730e4df9fc562a762bd3",
+    "mtime": 1783572605.8112416,
+    "ast_hash": "30e711912211a1d1763da2f28d8345d9",
     "semantic_hash": ""
   },
   "tests/test_node_service.py": {
-    "mtime": 1782937811.7357779,
-    "ast_hash": "cf9f4a284997dbbd15d8915fcdcd7c90",
+    "mtime": 1783572605.8146102,
+    "ast_hash": "47a7c2672b9b65db6247185e939ed281",
     "semantic_hash": ""
   },
   "src/aethermesh_core/message_log.py": {
@@ -190,13 +190,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/receipts.py": {
-    "mtime": 1782937811.7300234,
-    "ast_hash": "5ea0a7f77f19de5d58a71c15b57ca3ba",
+    "mtime": 1783572605.8119917,
+    "ast_hash": "9d6b6f1ebbf08d8deff25aff3df8f8b3",
     "semantic_hash": ""
   },
   "tests/test_receipts.py": {
-    "mtime": 1782937811.7365894,
-    "ast_hash": "21920f1f0a11601439a1c092637e3f8c",
+    "mtime": 1783572605.8152902,
+    "ast_hash": "5d995859557659ba6e4c9c1f39410e86",
     "semantic_hash": ""
   },
   "src/aethermesh_core/peer_registry.py": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/json_io.py": {
-    "mtime": 1782788150.427272,
-    "ast_hash": "a73d90cb6a9657b079fec8757e8c6941",
+    "mtime": 1783577805.4743655,
+    "ast_hash": "0f705340a3469348604b9221e540b9dd",
     "semantic_hash": ""
   },
   "src/aethermesh_core/node_announcement.py": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "tests/test_quality_gate_edges.py": {
-    "mtime": 1782937811.7361667,
-    "ast_hash": "aabb9bf9b9174b4d52afa8382b27c51d",
+    "mtime": 1783394757.603259,
+    "ast_hash": "48f934cd40f0b03b07ecf248045cc661",
     "semantic_hash": ""
   },
   ".github/workflows/python-tests.yml": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "scripts/ci_quality_gates.py": {
-    "mtime": 1782840133.4334853,
-    "ast_hash": "7f40d20aaba2cd0c998d632e9d6e18f9",
+    "mtime": 1782940531.5449226,
+    "ast_hash": "e5802d697b984c60e026090cf8cbfb05",
     "semantic_hash": ""
   },
   "src/aethermesh_core/contribution.py": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/pr-quality-gates.yml": {
-    "mtime": 1782937811.7185366,
-    "ast_hash": "072ade0330c02016c3e18a24248122e2",
+    "mtime": 1783394757.5967145,
+    "ast_hash": "c02af8cbe05204a920452b22b3af342b",
     "semantic_hash": ""
   },
   "examples/peer-heartbeats.json": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "scripts/full_test.py": {
-    "mtime": 1782937811.7221456,
-    "ast_hash": "85f82098318a3be7908addf5c67fc287",
+    "mtime": 1783394757.5986054,
+    "ast_hash": "e7a4827d18649c8457acd5ba36089f9d",
     "semantic_hash": ""
   },
   "scripts/mutmut_early_fail.py": {
@@ -305,13 +305,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1782937811.723836,
-    "ast_hash": "25169f486c684523a6ba6bc1351a1e79",
+    "mtime": 1783535279.9971168,
+    "ast_hash": "a00d87c3830db044b40f7a9a0a14a505",
     "semantic_hash": ""
   },
   "src/aethermesh_core/app_cli.py": {
-    "mtime": 1782937811.724242,
-    "ast_hash": "8db4547bd2203049bd98b9897e7043ad",
+    "mtime": 1783650215.3472552,
+    "ast_hash": "e481cbf9239173076a440aba02ade7a7",
     "semantic_hash": ""
   },
   "src/aethermesh_core/local_validation.py": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1782937811.7308571,
-    "ast_hash": "782beb8f465e467ec0f0ce0dcfcd6645",
+    "mtime": 1783530410.2846909,
+    "ast_hash": "803616742934e23e6734144e5442a359",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -335,8 +335,8 @@
     "semantic_hash": ""
   },
   "tests/test_full_test.py": {
-    "mtime": 1782845925.042811,
-    "ast_hash": "9b06ccac600afbf3b68e18605e2bbdfc",
+    "mtime": 1782948938.3757834,
+    "ast_hash": "a28dcf14c37e415dbce39001d21cdc7e",
     "semantic_hash": ""
   },
   "tests/test_local_validation.py": {
@@ -345,7 +345,7 @@
     "semantic_hash": ""
   },
   "tests/test_models.py": {
-    "mtime": 1782939028.2507477,
+    "mtime": 1782939781.8414216,
     "ast_hash": "a78e043f02d7351aeedd93dadb083422",
     "semantic_hash": ""
   },
@@ -360,18 +360,343 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1782937811.7375965,
-    "ast_hash": "785f7998c7d0b3b0878ae0796fdeb3be",
+    "mtime": 1783660151.2706506,
+    "ast_hash": "0edbe5c12fe83d7fa140dcbfb84b5237",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
-    "mtime": 1782841124.204607,
+    "mtime": 1783032401.6207962,
     "ast_hash": "7a48ab83d0dd1f0431e7a8020fca4fc2",
     "semantic_hash": ""
   },
   "docs/ui-and-cli.md": {
-    "mtime": 1782937811.7207928,
-    "ast_hash": "ac997056f0720623a7032767b5ab6ff2",
+    "mtime": 1782948938.3674896,
+    "ast_hash": "3c8ab6a1550076a162e465669397f3ae",
+    "semantic_hash": ""
+  },
+  "desktop/electron-builder.json": {
+    "mtime": 1782950980.9927528,
+    "ast_hash": "00149d5e92b7ee5aee838293216432ec",
+    "semantic_hash": ""
+  },
+  "desktop/package.json": {
+    "mtime": 1782948938.355952,
+    "ast_hash": "7d0282df1810ca97dabb80200539fc9a",
+    "semantic_hash": ""
+  },
+  "desktop/pyinstaller/aethermesh_node.py": {
+    "mtime": 1782948938.3566504,
+    "ast_hash": "ebf0d91b15bcb1b734de7f7050a45984",
+    "semantic_hash": ""
+  },
+  "desktop/scripts/build-runtime.js": {
+    "mtime": 1783536256.757491,
+    "ast_hash": "f941c7505efd5c706f56dc3b64107637",
+    "semantic_hash": ""
+  },
+  "desktop/scripts/clean.js": {
+    "mtime": 1782950980.9932399,
+    "ast_hash": "14527bf1903ddd96751853c569fe774c",
+    "semantic_hash": ""
+  },
+  "desktop/scripts/copy-runtime.js": {
+    "mtime": 1782948938.3577611,
+    "ast_hash": "90ab48eb5fc61caba9a240bdec38f38b",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/apiClient.js": {
+    "mtime": 1782948938.3582647,
+    "ast_hash": "25a106492aae2b45251120cec182cfd4",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/backgroundNodeManager.js": {
+    "mtime": 1782959973.6466491,
+    "ast_hash": "483f88fbabbbdcf5ef71a54398823eb1",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/cliManager.js": {
+    "mtime": 1782959973.6471717,
+    "ast_hash": "d0823a887b3fb781b92dc0ccca1669d1",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/electronState.js": {
+    "mtime": 1783559281.4604788,
+    "ast_hash": "f8541556738aa3bacb85d1b6ae5b2af9",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/lifecycle.js": {
+    "mtime": 1782959973.647725,
+    "ast_hash": "61818894fa7009909102838c604244cc",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/packageInstaller.js": {
+    "mtime": 1782948938.3585052,
+    "ast_hash": "923042d12cd6bc2befd8f3a81b818495",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/python.js": {
+    "mtime": 1782948938.3588111,
+    "ast_hash": "14c1d5030233ae1d232274ab7320ffe9",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/runtime.js": {
+    "mtime": 1782948938.3611205,
+    "ast_hash": "47e5df41f54407bc819a444d378420e5",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/storage.js": {
+    "mtime": 1782959973.6483147,
+    "ast_hash": "ee34700a460c8661e9812f82b5e0e4af",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/supervisor.js": {
+    "mtime": 1782948938.362743,
+    "ast_hash": "b6ff1080331d1a0c7d1ac85caaafdc19",
+    "semantic_hash": ""
+  },
+  "desktop/src/bootstrap/venv.js": {
+    "mtime": 1782948938.3631132,
+    "ast_hash": "12771a1325b27626565b523e1f811819",
+    "semantic_hash": ""
+  },
+  "desktop/src/main.js": {
+    "mtime": 1783559281.4611514,
+    "ast_hash": "89e91afe72952e27f0b1a519f7114578",
+    "semantic_hash": ""
+  },
+  "desktop/src/platform/index.js": {
+    "mtime": 1782948938.3643553,
+    "ast_hash": "01c74e6665ff1c4363e995f31e2884e0",
+    "semantic_hash": ""
+  },
+  "desktop/src/preload.js": {
+    "mtime": 1782959973.6493108,
+    "ast_hash": "1209119fdae7c8c121432be8b3fefde9",
+    "semantic_hash": ""
+  },
+  "desktop/src/ui/renderer.js": {
+    "mtime": 1782959973.6507473,
+    "ast_hash": "b86e47b34695c99a6fca749dbf56041e",
+    "semantic_hash": ""
+  },
+  "desktop/tests/bootstrap.test.js": {
+    "mtime": 1783559281.4616582,
+    "ast_hash": "2273481e2770ab7d9e9cd4993deeaea6",
+    "semantic_hash": ""
+  },
+  "examples/local-node-identity.json": {
+    "mtime": 1783527293.3789015,
+    "ast_hash": "3bea392102593a071ac1ac27cc305cba",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1782948938.3694358,
+    "ast_hash": "47fb196728d6c9ebca0be819b4e9140f",
+    "semantic_hash": ""
+  },
+  "scripts/release_metadata.py": {
+    "mtime": 1782948938.3716059,
+    "ast_hash": "87fb2d5a42bfb6a24bbc1f386f421472",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/lifecycle.py": {
+    "mtime": 1783596651.584194,
+    "ast_hash": "8eac2b66959f37aa3676f9c520b9786f",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/local_json_helpers.py": {
+    "mtime": 1783622654.8261907,
+    "ast_hash": "537eeb3f06b41274d16311a8424f3992",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/local_restart.py": {
+    "mtime": 1783660151.259678,
+    "ast_hash": "83ff27e2b423f8cdc2eed4751d656521",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/local_runtime_config.py": {
+    "mtime": 1783660151.260888,
+    "ast_hash": "e046bc8ff13c0676e192ed73a2e6a48d",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/local_shutdown.py": {
+    "mtime": 1783660151.2614267,
+    "ast_hash": "eee5af5bd8ee4c160b932f237318046a",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/local_startup.py": {
+    "mtime": 1783660151.2623246,
+    "ast_hash": "d05fe12f5db563d52d0255829ec485a8",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/release_update.py": {
+    "mtime": 1782942781.4188094,
+    "ast_hash": "e5af2daf68e5f3fca430d7ae62f737df",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/runtime.py": {
+    "mtime": 1783660151.2628195,
+    "ast_hash": "33b8b3db66a9e85c5f5a69b90d78323b",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/version_metadata.py": {
+    "mtime": 1783572605.8123493,
+    "ast_hash": "c154100590092a6efa5932de64dfcb45",
+    "semantic_hash": ""
+  },
+  "tests/test_ci_quality_gates.py": {
+    "mtime": 1783567418.7947156,
+    "ast_hash": "1623287f56f0274cdb72300fe2bcab48",
+    "semantic_hash": ""
+  },
+  "tests/test_lifecycle.py": {
+    "mtime": 1783596651.5845287,
+    "ast_hash": "fb503cd62a4b1fe87a142c3ab97f8f5b",
+    "semantic_hash": ""
+  },
+  "tests/test_local_restart.py": {
+    "mtime": 1783660151.2654355,
+    "ast_hash": "55b16f6a1229de8e6ca9eef80dfb9aec",
+    "semantic_hash": ""
+  },
+  "tests/test_local_shutdown.py": {
+    "mtime": 1783660151.265859,
+    "ast_hash": "86b0446d2cebc20c70ecf1ff38834330",
+    "semantic_hash": ""
+  },
+  "tests/test_local_startup.py": {
+    "mtime": 1783660151.2664423,
+    "ast_hash": "4b6c268ffc4186a8af9b607083d139a7",
+    "semantic_hash": ""
+  },
+  "tests/test_pyproject_dependencies.py": {
+    "mtime": 1782948938.3774817,
+    "ast_hash": "561f6aca4ab238c9f0fb6f93d32bd7ab",
+    "semantic_hash": ""
+  },
+  "tests/test_release_metadata.py": {
+    "mtime": 1782948938.3784323,
+    "ast_hash": "4ca9b03f98c2cb3931a83a08d714bc69",
+    "semantic_hash": ""
+  },
+  "tests/test_release_update.py": {
+    "mtime": 1782948938.3791306,
+    "ast_hash": "bac690b9cea8204ef3ae39493584071e",
+    "semantic_hash": ""
+  },
+  "tests/test_runtime.py": {
+    "mtime": 1783660151.2672527,
+    "ast_hash": "dd1777d279480ad881d88b378b933767",
+    "semantic_hash": ""
+  },
+  "tests/test_version_metadata.py": {
+    "mtime": 1783572605.8168356,
+    "ast_hash": "3f1ce815e92a9287dc0a4ea2b5212790",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/architecture_proposal.yml": {
+    "mtime": 1783031667.6303902,
+    "ast_hash": "6d009537b62b88b63a9a884ccc1df1f0",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/bug_report.yml": {
+    "mtime": 1783554871.360098,
+    "ast_hash": "52249b37655e19142aacb2813a2bc398",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/config.yml": {
+    "mtime": 1783031667.6311362,
+    "ast_hash": "c5b0abb955fe57bbc8f09dc4519d8a4b",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/docs_onboarding.yml": {
+    "mtime": 1783031667.6317701,
+    "ast_hash": "25dbb8a8eedf885194fab37249e06854",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/feature_request.yml": {
+    "mtime": 1783031667.6321297,
+    "ast_hash": "762966a1ea7fcece102462230eadac1c",
+    "semantic_hash": ""
+  },
+  ".github/ISSUE_TEMPLATE/node_workload_proposal.yml": {
+    "mtime": 1783031667.6326852,
+    "ast_hash": "93b9890b204f998726156ad85bcfdb4b",
+    "semantic_hash": ""
+  },
+  ".github/PULL_REQUEST_TEMPLATE.md": {
+    "mtime": 1783031667.6329715,
+    "ast_hash": "42bf5c6534dd22c36671225b06098ec8",
+    "semantic_hash": ""
+  },
+  ".github/workflows/desktop-release.yml": {
+    "mtime": 1783567418.7942853,
+    "ast_hash": "193f3eb7e9410474d60828177e4ca812",
+    "semantic_hash": ""
+  },
+  ".local-loop/state/context-1.md": {
+    "mtime": 1782991433.4039438,
+    "ast_hash": "eaa6ca73f24fb9bc9608fdd5134ab713",
+    "semantic_hash": ""
+  },
+  ".local-loop/state/prompt-1.md": {
+    "mtime": 1782991433.4090261,
+    "ast_hash": "f3ce71f89e2ae688e6295cf290a508f6",
+    "semantic_hash": ""
+  },
+  "desktop/docs/background-node.md": {
+    "mtime": 1782959973.6447077,
+    "ast_hash": "765919456131bd142865509faed90441",
+    "semantic_hash": ""
+  },
+  "desktop/docs/cli.md": {
+    "mtime": 1782959973.64531,
+    "ast_hash": "999ca9c0e9d18f12827acc4cf98b0620",
+    "semantic_hash": ""
+  },
+  "desktop/docs/desktop.md": {
+    "mtime": 1782959973.6460156,
+    "ast_hash": "e781b9064ec7541fa3534dd25790437e",
+    "semantic_hash": ""
+  },
+  "desktop/docs/troubleshooting.md": {
+    "mtime": 1782950980.9921372,
+    "ast_hash": "67883082c615b953da91b1e0f2198435",
+    "semantic_hash": ""
+  },
+  "desktop/src/ui/index.html": {
+    "mtime": 1782959973.650121,
+    "ast_hash": "049d9eb0c5b4e15aeff2b6a3fdd4aaa0",
+    "semantic_hash": ""
+  },
+  "docs/local-node-identity.md": {
+    "mtime": 1783579804.9003928,
+    "ast_hash": "9b44d272d8ab51751bdace312848f9e6",
+    "semantic_hash": ""
+  },
+  "docs/local-node-lifecycle.md": {
+    "mtime": 1783596651.583897,
+    "ast_hash": "a38db705740d5efdf0551ece9e5d4781",
+    "semantic_hash": ""
+  },
+  "wordlists/node-names/cpu-traits.txt": {
+    "mtime": 1783418105.2291667,
+    "ast_hash": "5a800cc7701d6937a74d0476d00d5f15",
+    "semantic_hash": ""
+  },
+  "wordlists/node-names/gpu-compute.txt": {
+    "mtime": 1783418105.2300763,
+    "ast_hash": "c7c0b8bb0c30fb5dedd23dfead9f0f18",
+    "semantic_hash": ""
+  },
+  "wordlists/node-names/mac-signals.txt": {
+    "mtime": 1783418105.230908,
+    "ast_hash": "93040c0081430f7c89d146b9f14ed0b5",
+    "semantic_hash": ""
+  },
+  "wordlists/node-names/ram-memory.txt": {
+    "mtime": 1783418105.2320628,
+    "ast_hash": "2bbc8cf60ab0e692931eb1ee9f6c75c1",
     "semantic_hash": ""
   }
 }
