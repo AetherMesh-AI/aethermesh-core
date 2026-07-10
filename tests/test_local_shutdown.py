@@ -5,11 +5,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 from aethermesh_core.cli import main
-from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
+from aethermesh_core.local_shutdown import (
+    LocalShutdownError,
+    _identity_node_id,
+    shutdown_local_node,
+)
 from aethermesh_core.local_startup import start_local_node
 
 
 class LocalShutdownTests(unittest.TestCase):
+    def test_identity_node_id_handles_invalid_identity_shapes(self) -> None:
+        self.assertIsNone(_identity_node_id({}))
+        self.assertIsNone(_identity_node_id({"node": "invalid"}))
+        self.assertIsNone(_identity_node_id({"node": {"node_id": ""}}))
+        self.assertEqual(_identity_node_id({"node": {"node_id": "node-1"}}), "node-1")
+
     def test_shutdown_persists_final_state_preserves_artifacts_and_is_idempotent(
         self,
     ) -> None:
@@ -112,6 +122,54 @@ class LocalShutdownTests(unittest.TestCase):
                 }
             ],
         )
+
+    def test_shutdown_reports_worker_timeout_and_preserves_attribution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            identity_path = root / str(start["identity_path"])
+            contribution_path = root / "contributions" / "contribution-0001.json"
+            contribution_path.write_text('{"job_id":"job-1"}', encoding="utf-8")
+            identity_before = identity_path.read_text(encoding="utf-8")
+            contribution_before = contribution_path.read_text(encoding="utf-8")
+            (root / "work" / "in-progress").mkdir(parents=True)
+            worker_path = root / "work" / "in-progress" / "worker-7.json"
+            worker_path.write_text("{}", encoding="utf-8")
+
+            with self.assertRaises(LocalShutdownError) as caught:
+                shutdown_local_node(root, timeout_seconds=0)
+
+            report = caught.exception.to_dict()
+            identity_after = identity_path.read_text(encoding="utf-8")
+            contribution_after = contribution_path.read_text(encoding="utf-8")
+
+        self.assertEqual(report["code"], "SHUTDOWN_WORKER_TIMEOUT")
+        self.assertEqual(report["component"], "worker_termination")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(report["affected_artifact"], "work/in-progress/worker-7.json")
+        self.assertFalse(report["contribution_records_finalized"])
+        self.assertEqual(report["shutdown_state"], "forced")
+        self.assertEqual(identity_after, identity_before)
+        self.assertEqual(contribution_after, contribution_before)
+
+    def test_shutdown_reports_state_write_failure_with_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            with patch(
+                "aethermesh_core.local_shutdown.atomic_write_json",
+                side_effect=OSError("storage unavailable"),
+            ):
+                with self.assertRaises(LocalShutdownError) as caught:
+                    shutdown_local_node(root)
+
+            report = caught.exception.to_dict()
+
+        self.assertEqual(report["code"], "SHUTDOWN_STATE_WRITE_FAILED")
+        self.assertEqual(report["component"], "attribution_finalization")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(report["affected_artifact"], "state/shutdown-state.json")
+        self.assertFalse(report["contribution_records_finalized"])
 
     def test_shutdown_cli_exits_successfully_and_reports_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

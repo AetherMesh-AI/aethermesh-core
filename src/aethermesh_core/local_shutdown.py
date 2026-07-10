@@ -27,6 +27,45 @@ LOCAL_SHUTDOWN_STATE_VERSION = 1
 class LocalShutdownError(ValueError):
     """Raised when local node shutdown cannot preserve required state."""
 
+    def __init__(
+        self,
+        detail: str,
+        *,
+        code: str = "SHUTDOWN_STATE_UNSAFE",
+        component: str = "shutdown",
+        node_id: str | None = None,
+        artifact_path: str | None = None,
+        contribution_records_finalized: bool = False,
+        shutdown_state: str = "unsafe_incomplete",
+        guidance: str = "inspect the local shutdown log and retry without deleting runtime artifacts",
+    ) -> None:
+        self.code = code
+        self.component = component
+        self.detail = detail
+        self.node_id = node_id
+        self.artifact_path = artifact_path
+        self.contribution_records_finalized = contribution_records_finalized
+        self.shutdown_state = shutdown_state
+        self.guidance = guidance
+        super().__init__(detail)
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a concise, path-safe shutdown failure report for operators."""
+
+        return {
+            "summary": "local node shutdown did not complete safely",
+            "code": self.code,
+            "component": self.component,
+            "node_id": self.node_id,
+            "affected_artifact": self.artifact_path,
+            "contribution_records_finalized": self.contribution_records_finalized,
+            "shutdown_state": self.shutdown_state,
+            "next_action": self.guidance,
+        }
+
+    def __str__(self) -> str:
+        return f"[{self.code}] {self.component}: {self.detail}"
+
 
 @dataclass(frozen=True)
 class LocalShutdownResult:
@@ -99,7 +138,16 @@ def shutdown_local_node(
     )
 
     identity = _load_json_object(identity_path, "identity")
-    manifest = _load_json_object(manifest_path, "manifest")
+    try:
+        manifest = _load_json_object(manifest_path, "manifest")
+    except LocalShutdownError as exc:
+        raise _shutdown_failure(
+            exc,
+            code="SHUTDOWN_MANIFEST_UNAVAILABLE",
+            component="manifest_flush",
+            node_id=_identity_node_id(identity),
+            artifact_path=_relative_ref(root, manifest_path),
+        ) from exc
     identity_node = _required_object(identity, "node", "identity")
     manifest_node = _required_object(manifest, "node", "manifest")
     node_id = _required_string(identity_node, "node_id", "identity.node")
@@ -112,24 +160,39 @@ def shutdown_local_node(
     )
     if manifest_node_id != node_id or manifest_creator_node_id != creator_node_id:
         raise LocalShutdownError(
-            "shutdown refused because identity and manifest node references differ"
+            "shutdown refused because identity and manifest node references differ",
+            code="SHUTDOWN_MANIFEST_IDENTITY_MISMATCH",
+            component="manifest_flush",
+            node_id=node_id,
+            artifact_path=_relative_ref(root, manifest_path),
+            guidance="restore the preserved manifest so its node references match the local identity",
         )
 
     interrupted_work = _interrupted_work_refs(root, config)
+    _terminate_workers(interrupted_work, deadline, node_id)
     stopped_work_ref = None
     if interrupted_work:
         stopped_work_path.parent.mkdir(parents=True, exist_ok=True)
         stopped_work_ref = _relative_ref(root, stopped_work_path)
-        atomic_write_json(
-            stopped_work_path,
-            {
-                "version": LOCAL_SHUTDOWN_STATE_VERSION,
-                "node_id": node_id,
-                "creator_node_id": creator_node_id,
-                "status": "stopped_retryable",
-                "work": interrupted_work,
-            },
-        )
+        try:
+            atomic_write_json(
+                stopped_work_path,
+                {
+                    "version": LOCAL_SHUTDOWN_STATE_VERSION,
+                    "node_id": node_id,
+                    "creator_node_id": creator_node_id,
+                    "status": "stopped_retryable",
+                    "work": interrupted_work,
+                },
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            raise _shutdown_failure(
+                exc,
+                code="SHUTDOWN_WORKER_RECEIPT_WRITE_FAILED",
+                component="worker_termination",
+                node_id=node_id,
+                artifact_path=stopped_work_ref,
+            ) from exc
 
     receipt_refs = _artifact_refs(
         root, configured_runtime_ref(config, "validation_receipts")
@@ -155,7 +218,16 @@ def shutdown_local_node(
         "shutdown_timeout_seconds": timeout_seconds,
         "bounded_timeout_reached": time.monotonic() > deadline,
     }
-    atomic_write_json(state_path, final_state)
+    try:
+        atomic_write_json(state_path, final_state)
+    except (OSError, TypeError, ValueError) as exc:
+        raise _shutdown_failure(
+            exc,
+            code="SHUTDOWN_STATE_WRITE_FAILED",
+            component="attribution_finalization",
+            node_id=node_id,
+            artifact_path=_relative_ref(root, state_path),
+        ) from exc
     _append_log(
         log_path,
         event="shutdown_persistence_complete",
@@ -166,7 +238,17 @@ def shutdown_local_node(
         interrupted_work_count=len(interrupted_work),
     )
 
-    released = _release_runtime_resources(pid_path, lock_path)
+    try:
+        released = _release_runtime_resources(pid_path, lock_path)
+    except LocalShutdownError as exc:
+        raise _shutdown_failure(
+            exc,
+            code="SHUTDOWN_RESOURCE_RELEASE_FAILED",
+            component="runtime_stop",
+            node_id=node_id,
+            artifact_path=exc.artifact_path,
+            contribution_records_finalized=True,
+        ) from exc
     _append_log(
         log_path,
         event="shutdown_resources_released",
@@ -242,6 +324,51 @@ def _interrupted_work_refs(
     return interrupted
 
 
+def _identity_node_id(identity: dict[str, Any]) -> str | None:
+    node = identity.get("node")
+    node_id = node.get("node_id") if isinstance(node, dict) else None
+    return node_id if isinstance(node_id, str) and node_id else None
+
+
+def _terminate_workers(
+    work: list[dict[str, str]], deadline: float, node_id: str
+) -> None:
+    """Fail closed when locally represented active work exceeds the stop deadline."""
+
+    if work and time.monotonic() > deadline:
+        worker_ref = work[0]["work_ref"]
+        raise LocalShutdownError(
+            "worker did not stop before the bounded shutdown timeout",
+            code="SHUTDOWN_WORKER_TIMEOUT",
+            component="worker_termination",
+            node_id=node_id,
+            artifact_path=worker_ref,
+            shutdown_state="forced",
+            guidance="wait for the named worker to stop, then retry without deleting work or attribution records",
+        )
+
+
+def _shutdown_failure(
+    cause: Exception,
+    *,
+    code: str,
+    component: str,
+    node_id: str | None,
+    artifact_path: str | None,
+    contribution_records_finalized: bool = False,
+) -> LocalShutdownError:
+    """Preserve detailed local causes while exposing stable operator fields."""
+
+    return LocalShutdownError(
+        str(cause),
+        code=code,
+        component=component,
+        node_id=node_id,
+        artifact_path=artifact_path,
+        contribution_records_finalized=contribution_records_finalized,
+    )
+
+
 def _artifact_refs(root: Path, directory_name: str) -> list[str]:
     return [
         _relative_ref(root, path)
@@ -265,7 +392,8 @@ def _release_runtime_resources(*paths: Path) -> list[str]:
             continue
         except OSError as exc:
             raise LocalShutdownError(
-                f"could not release runtime resource: {exc}"
+                f"could not release runtime resource {path.name}: {exc}",
+                artifact_path=path.name,
             ) from exc
         released.append(path.name)
     return released
