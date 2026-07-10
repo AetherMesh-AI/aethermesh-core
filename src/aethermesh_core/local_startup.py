@@ -89,6 +89,8 @@ def start_local_node(
     """Initialize one local node runtime without external services."""
 
     root = Path(runtime_dir)
+    if root.exists() and not root.is_dir():
+        raise LocalStartupError("local runtime path must be a directory")
     config_path = root / LOCAL_RUNTIME_CONFIG_PATH
     resolved_root = root.resolve()
     if not config_path.resolve().is_relative_to(resolved_root):

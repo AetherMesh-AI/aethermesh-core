@@ -14,6 +14,18 @@ from aethermesh_core.version_metadata import capture_version_metadata
 
 
 class LocalNodeStartupTests(unittest.TestCase):
+    def test_runtime_path_file_fails_with_clear_startup_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir) / "runtime"
+            runtime.write_text("not a directory", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "local runtime path must be a directory"
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(runtime.read_text(encoding="utf-8"), "not a directory")
+
     def test_clean_startup_creates_auditable_artifacts_and_preserves_identity(
         self,
     ) -> None:
