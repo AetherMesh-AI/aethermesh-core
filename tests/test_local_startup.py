@@ -278,6 +278,91 @@ class LocalNodeStartupTests(unittest.TestCase):
                         lineage_count,
                     )
 
+    def test_runtime_paths_cannot_escape_root_through_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside = parent / "outside"
+            runtime.mkdir()
+            outside.mkdir()
+            (runtime / "work").symlink_to(outside, target_is_directory=True)
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "paths.work_inputs must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse((runtime / "identity" / "creator-node.json").exists())
+            self.assertEqual(tuple(outside.iterdir()), ())
+
+    def test_configured_symlink_escape_fails_before_preserved_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside = parent / "outside"
+            first = start_local_node(runtime)
+            outside.mkdir()
+            (runtime / "escape").symlink_to(outside, target_is_directory=True)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            config["paths"]["lineage"] = "escape/lineage"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            identity_path = runtime / first.identity_path
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "paths.lineage must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
+            self.assertEqual(
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
+            )
+            self.assertEqual(tuple(outside.iterdir()), ())
+
+    def test_runtime_config_symlink_cannot_escape_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            runtime = parent / "runtime"
+            outside_config = parent / "outside-config.json"
+            runtime.mkdir()
+            outside_config.write_text("not read", encoding="utf-8")
+            (runtime / LOCAL_RUNTIME_CONFIG_PATH).symlink_to(outside_config)
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "local runtime config must stay within the runtime directory",
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse((runtime / "identity").exists())
+
+    def test_resolved_runtime_paths_cannot_alias_preserved_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            identity_path = runtime / first.identity_path
+            identity_before = identity_path.read_bytes()
+            (runtime / "alias").symlink_to(
+                runtime / "receipts", target_is_directory=True
+            )
+            config["paths"]["lineage"] = "alias"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "artifact directories must be separate",
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
+
     def test_invalid_manifest_fields_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)

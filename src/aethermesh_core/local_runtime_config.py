@@ -198,6 +198,32 @@ def configured_runtime_path(
     return root / configured_runtime_ref(config, path_key)
 
 
+def validate_runtime_path_boundaries(
+    root: Path, config: LocalRuntimeConfig | None
+) -> None:
+    """Reject configured paths that escape ``root`` through filesystem links."""
+
+    resolved_root = root.resolve()
+    paths = DEFAULT_RUNTIME_PATHS if config is None else config.paths
+    resolved_paths: dict[str, str] = {}
+    for key, relative_ref in paths.items():
+        resolved_path = (root / relative_ref).resolve()
+        if not resolved_path.is_relative_to(resolved_root):
+            raise LocalRuntimeConfigError(
+                f"local runtime config paths.{key} must stay within the runtime directory"
+            )
+        resolved_paths[key] = resolved_path.relative_to(resolved_root).as_posix()
+    resolved_config_path = (root / LOCAL_RUNTIME_CONFIG_PATH).resolve()
+    if not resolved_config_path.is_relative_to(resolved_root):
+        raise LocalRuntimeConfigError(
+            "local runtime config must stay within the runtime directory"
+        )
+    _validate_safe_runtime_layout(
+        resolved_paths,
+        runtime_config_ref=resolved_config_path.relative_to(resolved_root).as_posix(),
+    )
+
+
 def _require_node_id(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise LocalRuntimeConfigError(
@@ -227,12 +253,14 @@ def _require_local_ref(value: object, label: str) -> str:
     return path.as_posix()
 
 
-def _validate_safe_runtime_layout(paths: dict[str, str]) -> None:
+def _validate_safe_runtime_layout(
+    paths: dict[str, str], *, runtime_config_ref: str = LOCAL_RUNTIME_CONFIG_PATH
+) -> None:
     """Reject artifact layouts that could mix or overwrite preserved records."""
 
     file_refs = {
         **{f"paths.{key}": Path(paths[key]) for key in ("identity", "manifest", "log")},
-        "runtime config": Path(LOCAL_RUNTIME_CONFIG_PATH),
+        "runtime config": Path(runtime_config_ref),
     }
     for (key, file_ref), (other_key, other_file_ref) in combinations(
         file_refs.items(), 2
@@ -297,5 +325,6 @@ __all__ = [
     "load_or_create_local_runtime_config",
     "load_optional_local_runtime_config",
     "parse_local_runtime_config",
+    "validate_runtime_path_boundaries",
     "write_local_runtime_config",
 ]

@@ -22,6 +22,7 @@ from aethermesh_core.local_runtime_config import (
     default_local_runtime_config,
     load_local_runtime_config,
     load_or_create_local_runtime_config,
+    validate_runtime_path_boundaries,
     write_local_runtime_config,
 )
 from aethermesh_core.version_metadata import (
@@ -89,7 +90,16 @@ def start_local_node(
 
     root = Path(runtime_dir)
     config_path = root / LOCAL_RUNTIME_CONFIG_PATH
+    resolved_root = root.resolve()
+    if not config_path.resolve().is_relative_to(resolved_root):
+        raise LocalStartupError(
+            "local runtime config must stay within the runtime directory"
+        )
     preloaded_config = _load_existing_config(config_path)
+    try:
+        validate_runtime_path_boundaries(root, preloaded_config)
+    except LocalRuntimeConfigError as exc:
+        raise LocalStartupError(str(exc)) from exc
     identity_path = _configured_path(root, preloaded_config, "identity")
     manifest_path = _configured_path(root, preloaded_config, "manifest")
     identity_existed = identity_path.exists()
