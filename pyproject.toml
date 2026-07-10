@@ -60,7 +60,7 @@ exclude_lines = [
 
 [tool.mutmut]
 source_paths = ["src/aethermesh_core"]
-also_copy = ["examples", "scripts"]
+also_copy = ["examples", "scripts", ".github", "wordlists"]
 pytest_add_cli_args = ["-q", "tests"]
 mutate_only_covered_lines = true
 do_not_mutate = ["src/aethermesh_core/aggregation.py"]

@@ -527,35 +527,40 @@ class IdentityPersistenceTests(unittest.TestCase):
             },
         )
 
-    def test_missing_identity_file_is_created_with_random_local_node_id(self) -> None:
+    def test_missing_identity_file_is_created_with_deterministic_hardware_node_id(
+        self,
+    ) -> None:
         hardware = _hardware()
+        expected_node_id = _expected_node_id(hardware)
         with tempfile.TemporaryDirectory() as temp_dir:
             identity_path = Path(temp_dir) / "deep" / "nested" / "local-node.json"
 
-            identity = load_or_create_identity(
-                identity_path,
-                hardware_inputs=hardware,
-                node_id_factory=lambda: "a" * 64,
-            )
+            with patch(
+                "aethermesh_core.identity._new_local_node_id",
+                side_effect=AssertionError("random node id must not be used"),
+            ):
+                identity = load_or_create_identity(
+                    identity_path, hardware_inputs=hardware
+                )
             persisted = json.loads(identity_path.read_text(encoding="utf-8"))
             second = load_or_create_identity(
                 identity_path,
-                hardware_inputs=hardware,
-                node_id_factory=lambda: "b" * 64,
+                hardware_inputs=_hardware(cpu_brand_or_chip_name="Different CPU"),
             )
             persisted_after_second_load = json.loads(
                 identity_path.read_text(encoding="utf-8")
             )
 
-        self.assertEqual(identity.node_id, "a" * 64)
+        self.assertEqual(identity.node_id, expected_node_id)
         self.assertEqual(second.node_id, identity.node_id)
         self.assertEqual(second.node_name, identity.node_name)
         self.assertEqual(persisted_after_second_load, persisted)
         self.assertEqual(
             identity.node_name,
-            deterministic_machine_node_name(hardware_inputs=hardware, node_id="a" * 64),
+            deterministic_machine_node_name(
+                hardware_inputs=hardware, node_id=expected_node_id
+            ),
         )
-        self.assertNotEqual(identity.node_id, _expected_node_id(hardware))
         self.assertRegex(identity.node_id, r"^[0-9a-f]{64}$")
         self.assertEqual(persisted["version"], 1)
         self.assertEqual(
@@ -609,6 +614,26 @@ class IdentityPersistenceTests(unittest.TestCase):
                 "contribution_refs": [],
             },
         )
+
+    def test_missing_identity_file_can_use_explicit_node_id_factory_override(
+        self,
+    ) -> None:
+        hardware = _hardware()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+
+            identity = load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+
+        self.assertEqual(identity.node_id, "a" * 64)
+        self.assertEqual(
+            identity.node_name,
+            deterministic_machine_node_name(hardware_inputs=hardware, node_id="a" * 64),
+        )
+        self.assertNotEqual(identity.node_id, _expected_node_id(hardware))
 
     def test_identity_creation_refuses_to_overwrite_existing_file_without_reset(
         self,
@@ -863,6 +888,35 @@ class IdentityPersistenceTests(unittest.TestCase):
         self.assertTrue(receipt["full_local_identity_rotation"])
         self.assertEqual(receipt["previous_creator_node_id"], "a" * 64)
         self.assertEqual(receipt["new_creator_node_id"], "b" * 64)
+
+    def test_identity_reset_defaults_to_deterministic_hardware_node_id(self) -> None:
+        hardware = _hardware()
+        expected_node_id = _expected_node_id(hardware)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_path = Path(temp_dir) / "local-node.json"
+            load_or_create_identity(
+                identity_path,
+                hardware_inputs=hardware,
+                node_id_factory=lambda: "a" * 64,
+            )
+
+            with patch(
+                "aethermesh_core.identity._new_local_node_id",
+                side_effect=AssertionError("random node id must not be used"),
+            ):
+                result = reset_identity(identity_path, hardware_inputs=hardware)
+            reset_document = json.loads(identity_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.previous_node_id, "a" * 64)
+        self.assertEqual(result.new_node_id, expected_node_id)
+        self.assertEqual(reset_document["node"]["node_id"], expected_node_id)
+        self.assertEqual(
+            reset_document["node"]["node_name"],
+            deterministic_machine_node_name(
+                hardware_inputs=hardware, node_id=expected_node_id
+            ),
+        )
+        self.assertEqual(reset_document["node"]["creator_node_id"], "a" * 64)
 
     def test_identity_reset_reference_backup_ignores_non_local_or_missing_refs(
         self,

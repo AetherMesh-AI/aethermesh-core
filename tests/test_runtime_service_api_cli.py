@@ -18,6 +18,7 @@ from typer.testing import CliRunner
 
 from aethermesh_core import app_cli
 from aethermesh_core.api import _lifespan, create_app
+from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
@@ -225,8 +226,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(first["node_id"], second["node_id"])
 
     def test_persisted_identity_manifest_survives_restart_without_rewrite(self) -> None:
-        first_node_id = "a" * 64
-        fresh_node_id = "b" * 64
+        first_node_id = deterministic_machine_node_id()
         with tempfile.TemporaryDirectory() as temp_dir:
             home = Path(temp_dir) / "persisted-node"
             service = NodeRuntimeService.from_home(home)
@@ -283,7 +283,9 @@ class RuntimeServiceTests(unittest.TestCase):
             fresh_service._write_config(fresh_config)
             with patch(
                 "aethermesh_core.identity._new_local_node_id",
-                return_value=fresh_node_id,
+                side_effect=AssertionError(
+                    "fresh persisted identity must be deterministic"
+                ),
             ):
                 fresh = fresh_service.initialize_local_node_data()
             fresh_manifest = json.loads(
@@ -324,9 +326,9 @@ class RuntimeServiceTests(unittest.TestCase):
             manifest_after_restart["contribution_attribution"]["contribution_refs"],
             ["contributions/contribution-0001.json"],
         )
-        self.assertEqual(fresh["node_id"], fresh_node_id)
-        self.assertNotEqual(fresh["node_id"], first["node_id"])
-        self.assertEqual(fresh_manifest["node"]["creator_node_id"], fresh_node_id)
+        self.assertEqual(fresh["node_id"], first_node_id)
+        self.assertEqual(fresh["node_id"], first["node_id"])
+        self.assertEqual(fresh_manifest["node"]["creator_node_id"], first_node_id)
 
     def test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work(
         self,

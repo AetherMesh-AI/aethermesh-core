@@ -315,7 +315,18 @@ def load_or_create_identity(
     if identity_path.exists():
         return _load_identity(identity_path)
 
-    node_id = (node_id_factory or _new_local_node_id)()
+    node_id = (
+        node_id_factory()
+        if node_id_factory is not None
+        else deterministic_machine_node_id(
+            goos=goos,
+            read_file=read_file,
+            run_command=run_command,
+            read_hostname=read_hostname,
+            hardware_inputs=hardware_inputs,
+            account_id=account_id,
+        )
+    )
     identity = NodeIdentity(
         node_id=node_id,
         node_name=deterministic_machine_node_name(
@@ -386,7 +397,11 @@ def reset_identity(
         backup_root=backup_root,
     )
 
-    node_id = (node_id_factory or _new_local_node_id)()
+    node_id = (
+        node_id_factory()
+        if node_id_factory is not None
+        else deterministic_machine_node_id(hardware_inputs=hardware_inputs)
+    )
     new_identity = NodeIdentity(
         node_id=node_id,
         node_name=deterministic_machine_node_name(
@@ -442,7 +457,7 @@ def reset_identity(
 
 
 def _new_local_node_id() -> str:
-    """Return a new collision-resistant local node id for first-time manifests."""
+    """Return a legacy collision-resistant local node id for explicit rotations."""
 
     return secrets.token_hex(32)
 
