@@ -56,6 +56,9 @@ class LocalRuntimeConfig:
             "work_inputs": self.relative_ref(self.work_inputs_dir),
             "work_outputs": self.relative_ref(self.work_outputs_dir),
             "lineage": self.relative_ref(self.lineage_dir),
+            "contribution_attribution": self.relative_ref(
+                self.contribution_attribution_dir
+            ),
         }
 
 

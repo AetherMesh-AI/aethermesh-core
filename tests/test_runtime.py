@@ -26,6 +26,7 @@ class LocalRuntimeBoundaryTests(unittest.TestCase):
             root = Path(temp_dir)
 
             startup = start_local_node_runtime(root)
+            (root / "contributions").rmdir()
             inspected = inspect_local_node_runtime(root)
             stopped = stop_local_node_runtime(root)
             restarted = restart_local_node_runtime(root)

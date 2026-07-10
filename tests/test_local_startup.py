@@ -32,6 +32,7 @@ class LocalNodeStartupTests(unittest.TestCase):
                 "logs/startup.log",
                 "work/inputs",
                 "work/outputs",
+                "contributions",
             ):
                 self.assertTrue((runtime / relative_path).exists(), relative_path)
             config = self._load(runtime / "local-runtime-config.json")
@@ -47,8 +48,16 @@ class LocalNodeStartupTests(unittest.TestCase):
                 raise AssertionError("runtime_directories must be a dict")
             self.assertEqual(runtime_directories["receipts"], "receipts")
             self.assertEqual(runtime_directories["lineage"], "lineage")
+            self.assertEqual(
+                runtime_directories["contribution_attribution"], "contributions"
+            )
             receipt = self._load(runtime / str(first["validation_receipt_path"]))
             lineage = self._load(runtime / str(first["lineage_path"]))
+            manifest = self._load(runtime / str(first["manifest_path"]))
+            self.assertEqual(
+                manifest["work_directories"]["contribution_attribution"],
+                "contributions",
+            )
             self.assertEqual(receipt["receipt_type"], "startup_validation")
             self.assertEqual(receipt["node_id"], first["node_id"])
             self.assertEqual(receipt["creator_node_id"], first["creator_node_id"])

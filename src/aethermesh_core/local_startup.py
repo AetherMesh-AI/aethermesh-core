@@ -39,6 +39,7 @@ REQUIRED_RUNTIME_DIRS = {
     "work_inputs": "work/inputs",
     "work_outputs": "work/outputs",
     "lineage": "lineage",
+    "contribution_attribution": "contributions",
 }
 
 
@@ -148,6 +149,7 @@ def start_local_node(
             node_id=identity.node_id,
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
+            runtime_directories=config.runtime_directories(),
         )
     elif not manifest_path.exists():
         _create_default_manifest(
@@ -155,6 +157,7 @@ def start_local_node(
             node_id=identity.node_id,
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
+            runtime_directories=config.runtime_directories(),
         )
     manifest = _load_manifest(manifest_path)
     _validate_manifest(
@@ -273,11 +276,13 @@ def _create_default_manifest(
     node_id: str,
     creator_node_id: str,
     runtime_metadata: dict[str, object],
+    runtime_directories: dict[str, str] | None = None,
 ) -> None:
     document = _default_manifest_document(
         node_id=node_id,
         creator_node_id=creator_node_id,
         runtime_metadata=runtime_metadata,
+        runtime_directories=runtime_directories,
     )
     try:
         atomic_create_json(path, document)
@@ -291,11 +296,13 @@ def _write_default_manifest(
     node_id: str,
     creator_node_id: str,
     runtime_metadata: dict[str, object],
+    runtime_directories: dict[str, str] | None = None,
 ) -> None:
     document = _default_manifest_document(
         node_id=node_id,
         creator_node_id=creator_node_id,
         runtime_metadata=runtime_metadata,
+        runtime_directories=runtime_directories,
     )
     try:
         atomic_write_json(path, document)
@@ -304,7 +311,11 @@ def _write_default_manifest(
 
 
 def _default_manifest_document(
-    *, node_id: str, creator_node_id: str, runtime_metadata: dict[str, object]
+    *,
+    node_id: str,
+    creator_node_id: str,
+    runtime_metadata: dict[str, object],
+    runtime_directories: dict[str, str] | None = None,
 ) -> dict[str, object]:
     return {
         "version": LOCAL_STARTUP_MANIFEST_VERSION,
@@ -312,7 +323,7 @@ def _default_manifest_document(
         "node": {"node_id": node_id, "creator_node_id": creator_node_id},
         "runtime_version": runtime_metadata,
         "capabilities": list(DEFAULT_LOCAL_CAPABILITIES),
-        "work_directories": dict(REQUIRED_RUNTIME_DIRS),
+        "work_directories": dict(runtime_directories or REQUIRED_RUNTIME_DIRS),
         "validation": {
             "startup_validation_required": True,
             "fail_closed": True,
