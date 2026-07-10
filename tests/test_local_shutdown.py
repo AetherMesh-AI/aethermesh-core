@@ -126,7 +126,9 @@ class LocalShutdownTests(unittest.TestCase):
 
     def test_shutdown_fails_closed_for_missing_or_mismatched_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaisesRegex(LocalShutdownError, "identity file is missing"):
+            with self.assertRaisesRegex(
+                LocalShutdownError, "shutdown.identity_load_failed"
+            ):
                 shutdown_local_node(Path(temp_dir))
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -150,10 +152,79 @@ class LocalShutdownTests(unittest.TestCase):
                     "aethermesh_core.local_shutdown.Path.unlink",
                     side_effect=OSError("busy"),
                 ),
-                self.assertRaisesRegex(LocalShutdownError, "release runtime resource"),
+                self.assertRaisesRegex(
+                    LocalShutdownError, "shutdown.worker_termination_failed"
+                ),
             ):
                 (root / "node.pid").write_text("123", encoding="utf-8")
                 shutdown_local_node(root)
+
+    def test_shutdown_worker_failure_reports_worker_and_preserves_attribution(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            identity_path = root / str(start["identity_path"])
+            manifest_path = root / str(start["manifest_path"])
+            identity_before = identity_path.read_text(encoding="utf-8")
+            manifest_before = manifest_path.read_text(encoding="utf-8")
+            contribution_path = root / "contributions" / "attribution.json"
+            contribution_path.parent.mkdir(exist_ok=True)
+            contribution_before = '{"job_id":"job-1"}'
+            contribution_path.write_text(contribution_before, encoding="utf-8")
+            (root / "node.pid").write_text("123", encoding="utf-8")
+
+            with (
+                patch(
+                    "aethermesh_core.local_shutdown._release_runtime_resources",
+                    side_effect=LocalShutdownError("worker process refused to stop"),
+                ),
+                self.assertRaises(LocalShutdownError) as raised,
+            ):
+                shutdown_local_node(root)
+
+            report = raised.exception.to_dict()
+            identity_after = identity_path.read_text(encoding="utf-8")
+            manifest_after = manifest_path.read_text(encoding="utf-8")
+            contribution_after = contribution_path.read_text(encoding="utf-8")
+
+        self.assertEqual(report["code"], "shutdown.worker_termination_failed")
+        self.assertEqual(report["component"], "worker_termination")
+        self.assertEqual(report["node_id"], start["node_id"])
+        self.assertEqual(report["artifact_path"], "node.pid")
+        self.assertTrue(report["contribution_records_finalized"])
+        self.assertEqual(identity_after, identity_before)
+        self.assertEqual(manifest_after, manifest_before)
+        self.assertEqual(contribution_after, contribution_before)
+
+    def test_shutdown_receipt_write_failure_identifies_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            original_write = __import__(
+                "aethermesh_core.local_shutdown", fromlist=["atomic_write_json"]
+            ).atomic_write_json
+
+            def fail_shutdown_receipt(path: Path, document: object) -> None:
+                if path.name == "shutdown-receipt.json":
+                    raise OSError("disk full")
+                original_write(path, document)
+
+            with (
+                patch(
+                    "aethermesh_core.local_shutdown.atomic_write_json",
+                    side_effect=fail_shutdown_receipt,
+                ),
+                self.assertRaises(LocalShutdownError) as raised,
+            ):
+                shutdown_local_node(root)
+
+        report = raised.exception.to_dict()
+        self.assertEqual(report["code"], "shutdown.receipt_write_failed")
+        self.assertEqual(report["artifact_path"], "state/shutdown-receipt.json")
+        self.assertEqual(report["shutdown_state"], "partial")
+        self.assertEqual(report["node_id"], start["node_id"])
 
     def test_shutdown_cli_reports_errors_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
