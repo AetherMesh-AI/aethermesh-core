@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -166,6 +166,36 @@ def write_local_runtime_config(path: Path, config: LocalRuntimeConfig) -> None:
         ) from exc
 
 
+def load_optional_local_runtime_config(
+    root: Path, error_type: Callable[[str], Exception]
+) -> LocalRuntimeConfig | None:
+    """Load ``root`` config when present, translating validation errors."""
+
+    config_path = root / LOCAL_RUNTIME_CONFIG_PATH
+    if not config_path.exists():
+        return None
+    try:
+        return load_local_runtime_config(config_path)
+    except LocalRuntimeConfigError as exc:
+        raise error_type(str(exc)) from exc
+
+
+def configured_runtime_ref(config: LocalRuntimeConfig | None, path_key: str) -> str:
+    """Return configured local path reference or the Phase 1 default."""
+
+    if config is None:
+        return DEFAULT_RUNTIME_PATHS[path_key]
+    return config.paths[path_key]
+
+
+def configured_runtime_path(
+    root: Path, config: LocalRuntimeConfig | None, path_key: str
+) -> Path:
+    """Resolve a configured local runtime path under ``root``."""
+
+    return root / configured_runtime_ref(config, path_key)
+
+
 def _require_node_id(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise LocalRuntimeConfigError(
@@ -212,9 +242,12 @@ __all__ = [
     "LOCAL_RUNTIME_CONFIG_VERSION",
     "LocalRuntimeConfig",
     "LocalRuntimeConfigError",
+    "configured_runtime_path",
+    "configured_runtime_ref",
     "default_local_runtime_config",
     "load_local_runtime_config",
     "load_or_create_local_runtime_config",
+    "load_optional_local_runtime_config",
     "parse_local_runtime_config",
     "write_local_runtime_config",
 ]

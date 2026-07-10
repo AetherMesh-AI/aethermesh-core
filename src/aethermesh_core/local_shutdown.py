@@ -15,11 +15,10 @@ from aethermesh_core.local_json_helpers import (
     require_text_field,
 )
 from aethermesh_core.local_runtime_config import (
-    DEFAULT_RUNTIME_PATHS,
-    LOCAL_RUNTIME_CONFIG_PATH,
     LocalRuntimeConfig,
-    LocalRuntimeConfigError,
-    load_local_runtime_config,
+    configured_runtime_path,
+    configured_runtime_ref,
+    load_optional_local_runtime_config,
 )
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
@@ -76,9 +75,9 @@ def shutdown_local_node(
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
     root = Path(runtime_dir)
-    config = _load_runtime_config(root)
-    identity_path = _configured_path(root, config, "identity")
-    manifest_path = _configured_path(root, config, "manifest")
+    config = load_optional_local_runtime_config(root, LocalShutdownError)
+    identity_path = configured_runtime_path(root, config, "identity")
+    manifest_path = configured_runtime_path(root, config, "manifest")
     log_path = root / "logs" / "shutdown.log"
     state_dir = root / "state"
     state_path = state_dir / "shutdown-state.json"
@@ -132,10 +131,12 @@ def shutdown_local_node(
             },
         )
 
-    receipt_refs = _artifact_refs(root, _configured_ref(config, "validation_receipts"))
-    lineage_refs = _artifact_refs(root, _configured_ref(config, "lineage"))
+    receipt_refs = _artifact_refs(
+        root, configured_runtime_ref(config, "validation_receipts")
+    )
+    lineage_refs = _artifact_refs(root, configured_runtime_ref(config, "lineage"))
     contribution_refs = _artifact_refs(
-        root, _configured_ref(config, "contribution_attribution")
+        root, configured_runtime_ref(config, "contribution_attribution")
     )
     final_state = {
         "version": LOCAL_SHUTDOWN_STATE_VERSION,
@@ -208,28 +209,6 @@ def _load_json_object(path: Path, label: str) -> dict[str, Any]:
     return load_json_mapping(path, label, LocalShutdownError)
 
 
-def _load_runtime_config(root: Path) -> LocalRuntimeConfig | None:
-    config_path = root / LOCAL_RUNTIME_CONFIG_PATH
-    if not config_path.exists():
-        return None
-    try:
-        return load_local_runtime_config(config_path)
-    except LocalRuntimeConfigError as exc:
-        raise LocalShutdownError(str(exc)) from exc
-
-
-def _configured_ref(config: LocalRuntimeConfig | None, path_key: str) -> str:
-    if config is None:
-        return DEFAULT_RUNTIME_PATHS[path_key]
-    return config.paths[path_key]
-
-
-def _configured_path(
-    root: Path, config: LocalRuntimeConfig | None, path_key: str
-) -> Path:
-    return root / _configured_ref(config, path_key)
-
-
 def _required_string(document: dict[str, Any], field_name: str, label: str) -> str:
     return require_text_field(document, field_name, label, LocalShutdownError)
 
@@ -247,8 +226,8 @@ def _interrupted_work_refs(
     root: Path, config: LocalRuntimeConfig | None
 ) -> list[dict[str, str]]:
     in_progress_dir = root / "work" / "in-progress"
-    inputs_dir = _configured_path(root, config, "work_inputs")
-    outputs_dir = _configured_path(root, config, "work_outputs")
+    inputs_dir = configured_runtime_path(root, config, "work_inputs")
+    outputs_dir = configured_runtime_path(root, config, "work_outputs")
     interrupted: list[dict[str, str]] = []
     for path in sorted(_iter_files(in_progress_dir)):
         interrupted.append(
