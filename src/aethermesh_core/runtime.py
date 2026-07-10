@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.local_json_helpers import load_json_mapping
+from aethermesh_core.local_runtime_config import (
+    DEFAULT_RUNTIME_PATHS,
+    LOCAL_RUNTIME_CONFIG_PATH,
+    LocalRuntimeConfig,
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+)
 from aethermesh_core.local_restart import LocalRestartError, LocalRestartResult
 from aethermesh_core.local_restart import restart_local_node as _restart_local_node
 from aethermesh_core.local_shutdown import LocalShutdownError, LocalShutdownResult
@@ -70,8 +77,9 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
     """Inspect local identity, manifest, receipt, lineage, and attribution refs."""
 
     root = Path(runtime_dir)
-    identity_path = root / "identity" / "creator-node.json"
-    manifest_path = root / "manifests" / "local-node-manifest.json"
+    config = _load_runtime_config(root)
+    identity_path = _configured_path(root, config, "identity")
+    manifest_path = _configured_path(root, config, "manifest")
     identity = _load_runtime_json(identity_path, "identity")
     manifest = _load_runtime_json(manifest_path, "manifest")
     node = _required_mapping(identity, "node", "identity")
@@ -94,14 +102,16 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
             "identity contribution_attribution must be an object"
         )
 
-    receipt_refs = _artifact_refs(root, "receipts")
-    lineage_refs = _artifact_refs(root, "lineage")
-    contribution_refs = _artifact_refs(root, "contributions")
+    receipt_refs = _artifact_refs(root, _configured_ref(config, "validation_receipts"))
+    lineage_refs = _artifact_refs(root, _configured_ref(config, "lineage"))
+    contribution_refs = _artifact_refs(
+        root, _configured_ref(config, "contribution_attribution")
+    )
     return {
         "node_id": node_id,
         "creator_node_id": creator_node_id,
-        "identity_path": "identity/creator-node.json",
-        "manifest_path": "manifests/local-node-manifest.json",
+        "identity_path": _relative_ref(root, identity_path),
+        "manifest_path": _relative_ref(root, manifest_path),
         "manifest_matches_identity": manifest_node_id == node_id
         and manifest_creator_node_id == creator_node_id,
         "manifest_refs": _string_list(references.get("manifest_refs")),
@@ -122,6 +132,32 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
 
 def _load_runtime_json(path: Path, label: str) -> dict[str, Any]:
     return load_json_mapping(path, label, LocalRuntimeInspectError)
+
+
+def _load_runtime_config(root: Path) -> LocalRuntimeConfig | None:
+    config_path = root / LOCAL_RUNTIME_CONFIG_PATH
+    if not config_path.exists():
+        return None
+    try:
+        return load_local_runtime_config(config_path)
+    except LocalRuntimeConfigError as exc:
+        raise LocalRuntimeInspectError(str(exc)) from exc
+
+
+def _configured_ref(config: LocalRuntimeConfig | None, path_key: str) -> str:
+    if config is None:
+        return DEFAULT_RUNTIME_PATHS[path_key]
+    return config.paths[path_key]
+
+
+def _configured_path(
+    root: Path, config: LocalRuntimeConfig | None, path_key: str
+) -> Path:
+    return root / _configured_ref(config, path_key)
+
+
+def _relative_ref(root: Path, path: Path) -> str:
+    return path.relative_to(root).as_posix()
 
 
 def _required_mapping(
@@ -152,12 +188,12 @@ def _string_list(value: object) -> list[str]:
     return list(value)
 
 
-def _artifact_refs(root: Path, directory: str) -> list[str]:
-    path = root / directory
+def _artifact_refs(root: Path, directory_ref: str) -> list[str]:
+    path = root / directory_ref
     if not path.exists():
         return []
     return [
-        f"{directory}/{child.name}"
+        f"{directory_ref}/{child.name}"
         for child in sorted(path.iterdir())
         if child.is_file() and child.suffix == ".json"
     ]

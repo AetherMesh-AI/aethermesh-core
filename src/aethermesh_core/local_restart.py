@@ -14,6 +14,13 @@ from aethermesh_core.local_json_helpers import (
     load_json_mapping,
     require_text_field,
 )
+from aethermesh_core.local_runtime_config import (
+    DEFAULT_RUNTIME_PATHS,
+    LOCAL_RUNTIME_CONFIG_PATH,
+    LocalRuntimeConfig,
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+)
 from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
 
@@ -81,6 +88,7 @@ def restart_local_node(
 
     root = Path(runtime_dir)
     timestamp = _now()
+    config = _load_runtime_config(root)
     try:
         shutdown = shutdown_local_node(root, timeout_seconds=timeout_seconds)
     except LocalShutdownError as exc:
@@ -115,7 +123,7 @@ def restart_local_node(
             "restart changed creator_node_id; refusing recovered runtime"
         )
 
-    restart_receipt_ref = _next_restart_receipt_ref(root, timestamp)
+    restart_receipt_ref = _next_restart_receipt_ref(root, config, timestamp)
     restart_receipt_path = root / restart_receipt_ref
     receipt = {
         "version": LOCAL_RESTART_RECEIPT_VERSION,
@@ -221,16 +229,33 @@ def _load_json_object(path: Path, label: str) -> dict[str, Any]:
     return load_json_mapping(path, label, LocalRestartError)
 
 
+def _load_runtime_config(root: Path) -> LocalRuntimeConfig | None:
+    config_path = root / LOCAL_RUNTIME_CONFIG_PATH
+    if not config_path.exists():
+        return None
+    try:
+        return load_local_runtime_config(config_path)
+    except LocalRuntimeConfigError as exc:
+        raise LocalRestartError(str(exc)) from exc
+
+
 def _required_string(document: dict[str, Any], field_name: str, label: str) -> str:
     return require_text_field(document, field_name, label, LocalRestartError)
 
 
-def _next_restart_receipt_ref(root: Path, timestamp: str) -> str:
-    directory = root / "receipts"
+def _next_restart_receipt_ref(
+    root: Path, config: LocalRuntimeConfig | None, timestamp: str
+) -> str:
+    receipt_dir = (
+        DEFAULT_RUNTIME_PATHS["validation_receipts"]
+        if config is None
+        else config.paths["validation_receipts"]
+    )
+    directory = root / receipt_dir
     directory.mkdir(parents=True, exist_ok=True)
     slug = timestamp.replace(":", "").replace("+", "Z")
     index = len(tuple(directory.glob("local-restart-*.json"))) + 1
-    return f"receipts/local-restart-{slug}-{index:04d}.json"
+    return f"{receipt_dir}/local-restart-{slug}-{index:04d}.json"
 
 
 def _append_log(path: Path, **payload: object) -> None:

@@ -23,7 +23,7 @@ class LocalShutdownTests(unittest.TestCase):
             receipt_before = sorted((root / "receipts").glob("*.json"))
             lineage_before = sorted((root / "lineage").glob("*.json"))
             contribution_dir = root / "contributions"
-            contribution_dir.mkdir()
+            contribution_dir.mkdir(exist_ok=True)
             (contribution_dir / "contribution-0001.json").write_text(
                 json.dumps({"job_id": "job-1", "status": "completed"}),
                 encoding="utf-8",

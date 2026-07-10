@@ -29,6 +29,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             for relative_path in (
                 "identity/creator-node.json",
                 "manifests/local-node-manifest.json",
+                "contributions",
                 "receipts",
                 "lineage",
                 "logs/startup.log",
@@ -140,6 +141,7 @@ class LocalNodeStartupTests(unittest.TestCase):
                 "work_inputs": "configured/work/inputs",
                 "work_outputs": "configured/work/outputs",
                 "lineage": "configured/lineage",
+                "contribution_attribution": "configured/contributions",
             }
             custom_manifest = runtime / str(config_paths["manifest"])
             custom_manifest.parent.mkdir(parents=True)

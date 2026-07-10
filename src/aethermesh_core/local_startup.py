@@ -41,6 +41,7 @@ REQUIRED_RUNTIME_DIRS = {
     "work_inputs": "work_inputs",
     "work_outputs": "work_outputs",
     "lineage": "lineage",
+    "contribution_attribution": "contribution_attribution",
 }
 
 
