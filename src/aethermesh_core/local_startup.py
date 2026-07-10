@@ -110,6 +110,10 @@ def start_local_node(
     identity_path = _configured_path(root, preloaded_config, "identity")
     manifest_path = _configured_path(root, preloaded_config, "manifest")
     identity_existed = identity_path.exists()
+    if preloaded_config is not None and not identity_existed:
+        raise LocalStartupError(
+            "required creator node identity is missing; refusing to regenerate preserved identity"
+        )
     if identity_existed and not reset_creator_identity and not manifest_path.exists():
         raise LocalStartupError(
             "required startup manifest is missing; refusing to recreate manifest for an existing identity"

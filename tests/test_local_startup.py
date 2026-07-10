@@ -95,6 +95,26 @@ class LocalNodeStartupTests(unittest.TestCase):
             with self.assertRaisesRegex(LocalStartupError, "required startup manifest"):
                 start_local_node(runtime)
 
+    def test_existing_config_missing_identity_fails_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            identity_path = runtime / first.identity_path
+            identity_path.unlink()
+            receipt_count = len(tuple((runtime / "receipts").iterdir()))
+            lineage_count = len(tuple((runtime / "lineage").iterdir()))
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "required creator node identity is missing"
+            ):
+                start_local_node(runtime)
+
+            self.assertFalse(identity_path.exists())
+            self.assertEqual(
+                len(tuple((runtime / "receipts").iterdir())), receipt_count
+            )
+            self.assertEqual(len(tuple((runtime / "lineage").iterdir())), lineage_count)
+
     def test_missing_required_runtime_config_fields_fail_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
