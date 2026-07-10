@@ -124,8 +124,11 @@ def start_local_node(
             reset_identity(
                 identity_path,
                 reason="explicit local node startup reset",
-                quarantine_dir=root / "identity" / "identity-quarantine",
-                audit_receipt_path=root / "receipts" / "identity-reset-receipts.json",
+                quarantine_dir=identity_path.parent / "identity-quarantine",
+                audit_receipt_path=(
+                    _configured_path(root, preloaded_config, "validation_receipts")
+                    / "identity-reset-receipts.json"
+                ),
                 rotate_creator_identity=True,
             )
         except IdentityPersistenceError as exc:

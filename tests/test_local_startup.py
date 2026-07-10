@@ -423,6 +423,39 @@ class LocalNodeStartupTests(unittest.TestCase):
                 len(tuple((runtime / "receipts").iterdir())), receipt_count
             )
 
+    def test_reset_uses_configured_identity_and_receipt_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            manifest = self._load(runtime / first.manifest_path)
+            custom_identity = runtime / "configured" / "identity" / "creator.json"
+            custom_identity.parent.mkdir(parents=True)
+            (runtime / first.identity_path).replace(custom_identity)
+            config["paths"]["identity"] = "configured/identity/creator.json"
+            config["paths"]["validation_receipts"] = "configured/receipts"
+            manifest["work_directories"]["receipts"] = "configured/receipts"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            (runtime / first.manifest_path).write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+
+            reset = start_local_node(runtime, reset_creator_identity=True)
+
+            self.assertEqual(reset.identity_path, "configured/identity/creator.json")
+            self.assertTrue(
+                (runtime / "configured" / "identity" / "identity-quarantine").is_dir()
+            )
+            self.assertTrue(
+                (
+                    runtime / "configured" / "receipts" / "identity-reset-receipts.json"
+                ).is_file()
+            )
+            self.assertFalse(
+                (runtime / "receipts" / "identity-reset-receipts.json").exists()
+            )
+
     def test_cli_starts_local_node_and_reports_startup_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             stdout = io.StringIO()
