@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -50,6 +51,7 @@ class LocalStartupError(ValueError):
     """Raised when local node startup cannot fail closed safely."""
 
     def __init__(self, detail: str) -> None:
+        detail = _redact_local_paths(detail)
         self.code, self.phase, self.guidance = _classify_startup_error(detail)
         self.detail = detail
         super().__init__(detail)
@@ -59,6 +61,13 @@ class LocalStartupError(ValueError):
             f"[{self.code}] startup phase {self.phase} failed: {self.detail}. "
             f"Local fix: {self.guidance}"
         )
+
+
+def _redact_local_paths(detail: str) -> str:
+    """Keep startup errors shareable by removing absolute host paths."""
+
+    detail = re.sub(r"(?<![\w.])(?:[A-Za-z]:[\\/]|/)[^\s'\"]+", "<local-path>", detail)
+    return re.sub(r"(?<![\w.])~/[^\s'\"]+", "<local-path>", detail)
 
 
 def _classify_startup_error(detail: str) -> tuple[str, str, str]:
