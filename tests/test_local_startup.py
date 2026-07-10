@@ -101,17 +101,29 @@ class LocalNodeStartupTests(unittest.TestCase):
             start_local_node(runtime)
             config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
             config = self._load(config_path)
-            paths = config["paths"]
-            self.assertIsInstance(paths, dict)
-            assert isinstance(paths, dict)
-            paths.pop("lineage")
-            config_path.write_text(json.dumps(config), encoding="utf-8")
-
-            with self.assertRaisesRegex(
-                LocalStartupError,
-                "local runtime config paths.lineage must be a non-empty local path",
+            for field in (
+                "identity",
+                "manifest",
+                "validation_receipts",
+                "lineage",
+                "contribution_attribution",
+                "log",
+                "work_inputs",
+                "work_outputs",
             ):
-                start_local_node(runtime)
+                with self.subTest(field=field):
+                    candidate = json.loads(json.dumps(config))
+                    paths = candidate["paths"]
+                    self.assertIsInstance(paths, dict)
+                    assert isinstance(paths, dict)
+                    paths.pop(field)
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(
+                        LocalStartupError,
+                        f"local runtime config paths.{field} must be a non-empty local path",
+                    ):
+                        start_local_node(runtime)
 
     def test_runtime_uses_configured_local_artifact_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -213,6 +225,41 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertEqual(
                 len(tuple((runtime / "receipts").glob("startup-validation-*.json"))),
                 receipt_count,
+            )
+
+    def test_overlapping_artifact_paths_fail_before_identity_or_receipt_writes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            identity_path = runtime / "identity" / "creator-node.json"
+            identity_before = identity_path.read_bytes()
+            receipt_count = len(
+                tuple((runtime / "receipts").glob("startup-validation-*.json"))
+            )
+            lineage_count = len(
+                tuple((runtime / "lineage").glob("startup-lineage-*.json"))
+            )
+            config["paths"]["lineage"] = "receipts/lineage"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                LocalStartupError,
+                "artifact directories must be separate",
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(identity_path.read_bytes(), identity_before)
+            self.assertEqual(
+                len(tuple((runtime / "receipts").glob("startup-validation-*.json"))),
+                receipt_count,
+            )
+            self.assertEqual(
+                len(tuple((runtime / "lineage").glob("startup-lineage-*.json"))),
+                lineage_count,
             )
 
     def test_invalid_manifest_fields_fail_closed(self) -> None:

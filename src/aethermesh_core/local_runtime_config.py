@@ -122,6 +122,7 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     resolved_paths: dict[str, str] = {}
     for key in DEFAULT_RUNTIME_PATHS:
         resolved_paths[key] = _require_local_ref(paths.get(key), f"paths.{key}")
+    _validate_safe_runtime_layout(resolved_paths)
     return LocalRuntimeConfig(
         node_id=node_id,
         creator_node_id=creator_node_id,
@@ -223,6 +224,44 @@ def _require_local_ref(value: object, label: str) -> str:
             f"local runtime config {label} must be a relative local path"
         )
     return path.as_posix()
+
+
+def _validate_safe_runtime_layout(paths: dict[str, str]) -> None:
+    """Reject artifact layouts that could mix or overwrite preserved records."""
+
+    file_refs = {key: Path(paths[key]) for key in ("identity", "manifest", "log")}
+    if len(set(file_refs.values())) != len(file_refs):
+        raise LocalRuntimeConfigError(
+            "local runtime config identity, manifest, and log paths must be distinct"
+        )
+
+    artifact_dirs = {
+        key: Path(paths[key])
+        for key in (
+            "validation_receipts",
+            "lineage",
+            "contribution_attribution",
+            "work_inputs",
+            "work_outputs",
+        )
+    }
+    for key, directory in artifact_dirs.items():
+        for file_key, file_ref in file_refs.items():
+            if directory == file_ref or directory in file_ref.parents:
+                raise LocalRuntimeConfigError(
+                    f"local runtime config paths.{key} must not contain paths.{file_key}"
+                )
+    for key, directory in artifact_dirs.items():
+        for other_key, other_directory in artifact_dirs.items():
+            if key < other_key and (
+                directory == other_directory
+                or directory in other_directory.parents
+                or other_directory in directory.parents
+            ):
+                raise LocalRuntimeConfigError(
+                    "local runtime config artifact directories must be separate: "
+                    f"paths.{key} and paths.{other_key}"
+                )
 
 
 def _reject_unknown_fields(
