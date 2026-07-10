@@ -144,14 +144,16 @@ def start_local_node(
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
             runtime_dirs=runtime_dirs,
+            replace_existing=True,
         )
     elif not manifest_path.exists():
-        _create_default_manifest(
+        _write_default_manifest(
             manifest_path,
             node_id=identity.node_id,
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
             runtime_dirs=runtime_dirs,
+            replace_existing=False,
         )
     manifest = _load_manifest(manifest_path)
     _validate_manifest(
@@ -300,26 +302,6 @@ def _ensure_manifest_directories(
             )
 
 
-def _create_default_manifest(
-    path: Path,
-    *,
-    node_id: str,
-    creator_node_id: str,
-    runtime_metadata: dict[str, object],
-    runtime_dirs: dict[str, str],
-) -> None:
-    document = _default_manifest_document(
-        node_id=node_id,
-        creator_node_id=creator_node_id,
-        runtime_metadata=runtime_metadata,
-        runtime_dirs=runtime_dirs,
-    )
-    try:
-        atomic_create_json(path, document)
-    except OSError as exc:
-        raise LocalStartupError(f"could not create startup manifest: {exc}") from exc
-
-
 def _write_default_manifest(
     path: Path,
     *,
@@ -327,6 +309,7 @@ def _write_default_manifest(
     creator_node_id: str,
     runtime_metadata: dict[str, object],
     runtime_dirs: dict[str, str],
+    replace_existing: bool,
 ) -> None:
     document = _default_manifest_document(
         node_id=node_id,
@@ -334,10 +317,14 @@ def _write_default_manifest(
         runtime_metadata=runtime_metadata,
         runtime_dirs=runtime_dirs,
     )
+    action = "write" if replace_existing else "create"
     try:
-        atomic_write_json(path, document)
+        if replace_existing:
+            atomic_write_json(path, document)
+        else:
+            atomic_create_json(path, document)
     except OSError as exc:
-        raise LocalStartupError(f"could not write startup manifest: {exc}") from exc
+        raise LocalStartupError(f"could not {action} startup manifest: {exc}") from exc
 
 
 def _default_manifest_document(
