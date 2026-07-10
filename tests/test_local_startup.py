@@ -163,6 +163,38 @@ class LocalNodeStartupTests(unittest.TestCase):
                 config_paths["contribution_attribution"], "configured/contributions"
             )
 
+    def test_runtime_config_rejects_unsupported_fields_and_nonlocal_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+
+            for field_name in ("tokenomics", "reward_policy", "dashboard"):
+                with self.subTest(field=field_name):
+                    candidate = dict(config)
+                    candidate[field_name] = {"enabled": True}
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        LocalStartupError, "unsupported fields"
+                    ):
+                        start_local_node(runtime)
+
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            for bad_path in (
+                "~/aethermesh",
+                "C:/Users/trevoroler/aethermesh",
+                "https://example.invalid/config.json",
+            ):
+                with self.subTest(path=bad_path):
+                    candidate = json.loads(json.dumps(config))
+                    candidate["paths"]["lineage"] = bad_path
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        LocalStartupError, "relative local path"
+                    ):
+                        start_local_node(runtime)
+
     def test_corrupt_manifest_fails_before_new_receipt_is_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,6 +22,10 @@ DEFAULT_RUNTIME_PATHS = {
     "work_inputs": "work/inputs",
     "work_outputs": "work/outputs",
 }
+_ALLOWED_TOP_LEVEL_FIELDS = frozenset({"version", "node", "paths", "network_mode"})
+_ALLOWED_NODE_FIELDS = frozenset(
+    {"node_id", "creator_node_id", "creator_node_id_stability"}
+)
 
 
 class LocalRuntimeConfigError(ValueError):
@@ -88,6 +94,9 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
 
     if not isinstance(document, dict):
         raise LocalRuntimeConfigError("local runtime config must be a JSON object")
+    _reject_unknown_fields(
+        document.keys(), _ALLOWED_TOP_LEVEL_FIELDS, "local runtime config"
+    )
     if document.get("version") != LOCAL_RUNTIME_CONFIG_VERSION:
         raise LocalRuntimeConfigError("local runtime config must contain version 1")
     if document.get("network_mode") != "local-only-no-p2p":
@@ -97,6 +106,9 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     node = document.get("node")
     if not isinstance(node, dict):
         raise LocalRuntimeConfigError("local runtime config node must be an object")
+    _reject_unknown_fields(
+        node.keys(), _ALLOWED_NODE_FIELDS, "local runtime config node"
+    )
     node_id = _require_node_id(node.get("node_id"), "node.node_id")
     creator_node_id = _require_node_id(
         node.get("creator_node_id"), "node.creator_node_id"
@@ -104,6 +116,9 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     paths = document.get("paths")
     if not isinstance(paths, dict):
         raise LocalRuntimeConfigError("local runtime config paths must be an object")
+    _reject_unknown_fields(
+        paths.keys(), DEFAULT_RUNTIME_PATHS.keys(), "local runtime config paths"
+    )
     resolved_paths: dict[str, str] = {}
     for key in DEFAULT_RUNTIME_PATHS:
         resolved_paths[key] = _require_local_ref(paths.get(key), f"paths.{key}")
@@ -164,12 +179,31 @@ def _require_local_ref(value: object, label: str) -> str:
         raise LocalRuntimeConfigError(
             f"local runtime config {label} must be a non-empty local path"
         )
+    if value != value.strip() or "://" in value or value.startswith("~"):
+        raise LocalRuntimeConfigError(
+            f"local runtime config {label} must be a relative local path"
+        )
+    if re.match(r"^[A-Za-z]:[\\/]", value) is not None:
+        raise LocalRuntimeConfigError(
+            f"local runtime config {label} must be a relative local path"
+        )
     path = Path(value)
     if path.is_absolute() or ".." in path.parts:
         raise LocalRuntimeConfigError(
             f"local runtime config {label} must be a relative local path"
         )
     return path.as_posix()
+
+
+def _reject_unknown_fields(
+    field_names: Iterable[str], allowed_fields: Iterable[str], label: str
+) -> None:
+    field_set = set(field_names)
+    unknown = sorted(field_set - set(allowed_fields))
+    if unknown:
+        raise LocalRuntimeConfigError(
+            f"{label} contains unsupported fields: {', '.join(unknown)}"
+        )
 
 
 __all__ = [
