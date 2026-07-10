@@ -783,6 +783,53 @@ class AppCliTests(unittest.TestCase):
             self.assertIn("already running", result.output)
             serve.assert_not_called()
 
+    def test_cli_ui_reuses_existing_local_api_without_runtime_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runner = CliRunner(env={"AETHERMESH_HOME": temp_dir})
+            identity_path = Path(temp_dir) / "identity.json"
+            identity_path.write_text(
+                json.dumps(
+                    {
+                        "node": {"creator_node_id": "creator-node"},
+                        "references": {
+                            "manifest_refs": ["manifests/local-batch.json"],
+                            "validation_receipt_refs": ["receipts/validation.json"],
+                        },
+                        "lineage": {"lineage_links": ["lineage/link.json"]},
+                        "contribution_attribution": {
+                            "creator_node_id": "creator-node",
+                            "contribution_refs": ["contributions/local.json"],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            before = identity_path.read_text(encoding="utf-8")
+            with (
+                patch(
+                    "aethermesh_core.app_cli._local_api_is_aethermesh",
+                    return_value=True,
+                ),
+                patch("aethermesh_core.app_cli._serve") as serve,
+                patch("aethermesh_core.app_cli.webbrowser.open") as open_browser,
+            ):
+                result = runner.invoke(app_cli.app, ["ui"])
+                self.assertEqual(result.exit_code, 0, result.output)
+                self.assertIn(
+                    "Using already-running AetherMesh local API", result.output
+                )
+                open_browser.assert_called_once_with("http://127.0.0.1:7280")
+                serve.assert_not_called()
+                self.assertEqual(identity_path.read_text(encoding="utf-8"), before)
+
+                open_browser.reset_mock()
+                no_open_result = runner.invoke(app_cli.app, ["ui", "--no-open"])
+                self.assertEqual(no_open_result.exit_code, 0, no_open_result.output)
+                self.assertIn("Using already-running", no_open_result.output)
+                open_browser.assert_not_called()
+                serve.assert_not_called()
+                self.assertEqual(identity_path.read_text(encoding="utf-8"), before)
+
     def test_background_control_helper_platforms_and_errors(self) -> None:
         calls: list[list[str]] = []
 

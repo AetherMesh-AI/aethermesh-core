@@ -199,11 +199,22 @@ def ui(
         bool, typer.Option(help="Print the dashboard URL without starting the server.")
     ] = False,
 ) -> None:
-    """Open the local dashboard UI backed by the local API."""
+    """Open the local dashboard UI backed by the runtime-owned local API.
+
+    The UI is a presentation client only: it reuses an already-running local
+    node API when one is available and otherwise starts the same runtime API
+    used by ``aethermesh node start``. Runtime identity, manifests, validation
+    receipts, lineage, and contribution artifacts stay owned by the node layer.
+    """
 
     url = f"http://{host}:{port}"
     if dry_run:
         console.print(url)
+        return
+    if _local_api_is_aethermesh(host=host, port=port):
+        console.print(f"Using already-running AetherMesh local API at {url}")
+        if not no_open:
+            webbrowser.open(url)
         return
     _serve(host=host, port=port, open_browser=not no_open)
 
