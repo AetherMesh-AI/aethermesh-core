@@ -49,6 +49,68 @@ REQUIRED_RUNTIME_DIRS = {
 class LocalStartupError(ValueError):
     """Raised when local node startup cannot fail closed safely."""
 
+    def __init__(self, detail: str) -> None:
+        self.code, self.phase, self.guidance = _classify_startup_error(detail)
+        self.detail = detail
+        super().__init__(detail)
+
+    def __str__(self) -> str:
+        return (
+            f"[{self.code}] startup phase {self.phase} failed: {self.detail}. "
+            f"Local fix: {self.guidance}"
+        )
+
+
+def _classify_startup_error(detail: str) -> tuple[str, str, str]:
+    """Attach stable automation fields without including local configuration values."""
+
+    lowered = detail.lower()
+    if "manifest" in lowered:
+        return (
+            "STARTUP_MANIFEST_INVALID",
+            "manifest_validation",
+            "restore a valid local startup manifest matching the preserved identity",
+        )
+    if "config" in lowered:
+        return (
+            "STARTUP_CONFIG_INVALID",
+            "config_load",
+            "correct the named field in runtime-config.json using the expected format",
+        )
+    if (
+        "creator_node_id" in lowered
+        or "creator node identity" in lowered
+        or "identity" in lowered
+    ):
+        return (
+            "STARTUP_IDENTITY_INVALID",
+            "identity_load",
+            "restore the preserved local identity and its non-empty node.creator_node_id",
+        )
+    if "validation receipt" in lowered or "receipts" in lowered:
+        return (
+            "STARTUP_RECEIPT_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.validation_receipts a writable local directory",
+        )
+    if "lineage" in lowered:
+        return (
+            "STARTUP_LINEAGE_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.lineage a writable local directory",
+        )
+    if "contribution" in lowered or "attribution" in lowered:
+        return (
+            "STARTUP_ATTRIBUTION_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.contribution_attribution a writable local directory",
+        )
+    return (
+        "STARTUP_STORAGE_UNAVAILABLE",
+        "storage_check",
+        "correct the named local runtime path and ensure it is writable",
+    )
+
 
 @dataclass(frozen=True)
 class LocalStartupResult:

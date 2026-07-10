@@ -581,6 +581,68 @@ class LocalNodeStartupTests(unittest.TestCase):
                     exit_code = main(["start-local-node", "--runtime-dir", temp_dir])
             self.assertEqual(exit_code, 1)
             self.assertIn("manifest bad", stderr.getvalue())
+            self.assertIn("STARTUP_MANIFEST_INVALID", stderr.getvalue())
+            self.assertIn("manifest_validation", stderr.getvalue())
+
+    def test_fatal_startup_errors_are_stable_nonsecret_and_do_not_attribute(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            result = start_local_node(runtime)
+            identity_path = runtime / result.identity_path
+            identity = self._load(identity_path)
+            identity["node"].pop("creator_node_id")
+            identity_path.write_text(json.dumps(identity), encoding="utf-8")
+
+            with self.assertRaises(LocalStartupError) as caught:
+                start_local_node(runtime)
+
+            error = caught.exception
+            self.assertEqual(error.code, "STARTUP_IDENTITY_INVALID")
+            self.assertEqual(error.phase, "identity_load")
+            self.assertIn("creator_node_id", str(error))
+            self.assertEqual(tuple((runtime / "contributions").iterdir()), ())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            receipts = runtime / "receipts"
+            for child in receipts.iterdir():
+                child.unlink()
+            receipts.rmdir()
+            receipts.write_text(
+                "private-key-material-must-not-appear", encoding="utf-8"
+            )
+
+            with self.assertRaises(LocalStartupError) as caught:
+                start_local_node(runtime)
+
+            error = caught.exception
+            self.assertEqual(error.code, "STARTUP_RECEIPT_STORAGE_UNAVAILABLE")
+            self.assertEqual(error.phase, "storage_check")
+            self.assertIn("paths.validation_receipts", str(error))
+            self.assertNotIn("private-key-material-must-not-appear", str(error))
+            self.assertEqual(tuple((runtime / "contributions").iterdir()), ())
+
+        classifications = (
+            (
+                "lineage store unavailable",
+                "STARTUP_LINEAGE_STORAGE_UNAVAILABLE",
+                "paths.lineage",
+            ),
+            (
+                "contribution attribution store unavailable",
+                "STARTUP_ATTRIBUTION_STORAGE_UNAVAILABLE",
+                "paths.contribution_attribution",
+            ),
+        )
+        for detail, code, field in classifications:
+            with self.subTest(code=code):
+                error = LocalStartupError(detail)
+                self.assertEqual(error.code, code)
+                self.assertEqual(error.phase, "storage_check")
+                self.assertIn(field, str(error))
 
     def test_manifest_validation_rejects_bad_shapes(self) -> None:
         cases = (
