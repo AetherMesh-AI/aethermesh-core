@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -48,6 +49,81 @@ REQUIRED_RUNTIME_DIRS = {
 
 class LocalStartupError(ValueError):
     """Raised when local node startup cannot fail closed safely."""
+
+    def __init__(self, detail: str) -> None:
+        detail = _redact_local_paths(detail)
+        self.code, self.phase, self.guidance = _classify_startup_error(detail)
+        self.detail = detail
+        super().__init__(detail)
+
+    def __str__(self) -> str:
+        return (
+            f"[{self.code}] startup phase {self.phase} failed: {self.detail}. "
+            f"Local fix: {self.guidance}"
+        )
+
+
+def _redact_local_paths(detail: str) -> str:
+    """Keep startup errors shareable by removing absolute host paths."""
+
+    detail = re.sub(
+        r"(?P<quote>['\"])(?:[A-Za-z]:[\\/]|/|~/).*?(?P=quote)",
+        r"\g<quote><local-path>\g<quote>",
+        detail,
+    )
+    detail = re.sub(r"(?<![\w.])(?:[A-Za-z]:[\\/]|/)[^\s'\"]+", "<local-path>", detail)
+    return re.sub(r"(?<![\w.])~/[^\s'\"]+", "<local-path>", detail)
+
+
+def _classify_startup_error(detail: str) -> tuple[str, str, str]:
+    """Attach stable automation fields without including local configuration values."""
+
+    lowered = detail.lower()
+    if "local runtime config" in lowered:
+        return (
+            "STARTUP_CONFIG_INVALID",
+            "config_load",
+            "correct the named field in runtime-config.json using the expected format",
+        )
+    if "manifest" in lowered:
+        return (
+            "STARTUP_MANIFEST_INVALID",
+            "manifest_validation",
+            "restore a valid local startup manifest matching the preserved identity",
+        )
+    if (
+        "creator_node_id" in lowered
+        or "creator node identity" in lowered
+        or "identity" in lowered
+    ):
+        return (
+            "STARTUP_IDENTITY_INVALID",
+            "identity_load",
+            "restore the preserved local identity and its non-empty node.creator_node_id",
+        )
+    if "validation receipt" in lowered or "receipts" in lowered:
+        return (
+            "STARTUP_RECEIPT_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.validation_receipts a writable local directory",
+        )
+    if "lineage" in lowered:
+        return (
+            "STARTUP_LINEAGE_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.lineage a writable local directory",
+        )
+    if "contribution" in lowered or "attribution" in lowered:
+        return (
+            "STARTUP_ATTRIBUTION_STORAGE_UNAVAILABLE",
+            "storage_check",
+            "make config field paths.contribution_attribution a writable local directory",
+        )
+    return (
+        "STARTUP_STORAGE_UNAVAILABLE",
+        "storage_check",
+        "correct the named local runtime path and ensure it is writable",
+    )
 
 
 @dataclass(frozen=True)
@@ -311,10 +387,14 @@ def _runtime_dirs(config: LocalRuntimeConfig) -> dict[str, str]:
 
 def _ensure_runtime_dirs(root: Path, config: LocalRuntimeConfig | None) -> None:
     runtime_dirs = (
-        _runtime_dirs(config)
+        {
+            path_key: relative_path
+            for path_key, relative_path in config.paths.items()
+            if path_key in REQUIRED_RUNTIME_DIRS.values()
+        }
         if config is not None
         else {
-            key: (
+            path_key: (
                 Path(DEFAULT_RUNTIME_PATHS[path_key]).parent.as_posix()
                 if key in {"manifests", "logs"}
                 else DEFAULT_RUNTIME_PATHS[path_key]
@@ -322,13 +402,15 @@ def _ensure_runtime_dirs(root: Path, config: LocalRuntimeConfig | None) -> None:
             for key, path_key in REQUIRED_RUNTIME_DIRS.items()
         }
     )
-    for relative_path in runtime_dirs.values():
+    for path_key, relative_path in runtime_dirs.items():
+        if path_key in {"manifest", "log"}:
+            relative_path = Path(relative_path).parent.as_posix()
         path = root / relative_path
         try:
             path.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise LocalStartupError(
-                f"required runtime directory {relative_path!r} is invalid: {exc}"
+                f"config field paths.{path_key} requires a writable local directory: {exc}"
             ) from exc
 
 
