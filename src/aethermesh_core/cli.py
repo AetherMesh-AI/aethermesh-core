@@ -1422,7 +1422,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.runtime_dir, timeout_seconds=args.timeout_seconds
             ).to_dict()
         except LocalShutdownError as exc:
-            print(f"error: {exc}", file=sys.stderr)
+            if exc.report is not None:
+                print(
+                    json.dumps({"error": exc.report.to_dict()}, sort_keys=True),
+                    file=sys.stderr,
+                )
+            else:
+                print(f"error: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(payload, sort_keys=True))
         return 0

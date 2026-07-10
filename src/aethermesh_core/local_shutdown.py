@@ -27,6 +27,39 @@ LOCAL_SHUTDOWN_STATE_VERSION = 1
 class LocalShutdownError(ValueError):
     """Raised when local node shutdown cannot preserve required state."""
 
+    def __init__(
+        self, message: str, *, report: "LocalShutdownFailure | None" = None
+    ) -> None:
+        super().__init__(message)
+        self.report = report
+
+
+@dataclass(frozen=True)
+class LocalShutdownFailure:
+    """Safe operator-facing description of an incomplete local shutdown."""
+
+    code: str
+    component: str
+    node_id: str | None
+    artifact_path: str | None
+    worker_name: str | None
+    contribution_records_finalized: bool
+    shutdown_state: str
+    next_action: str
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "summary": "Local node shutdown did not complete cleanly.",
+            "code": self.code,
+            "component": self.component,
+            "node_id": self.node_id,
+            "artifact_path": self.artifact_path,
+            "worker_name": self.worker_name,
+            "contribution_records_finalized": self.contribution_records_finalized,
+            "shutdown_state": self.shutdown_state,
+            "next_action": self.next_action,
+        }
+
 
 @dataclass(frozen=True)
 class LocalShutdownResult:
@@ -72,9 +105,24 @@ def shutdown_local_node(
 ) -> LocalShutdownResult:
     """Persist final local state and mark one runtime stopped idempotently."""
 
+    root = Path(runtime_dir)
+    try:
+        return _shutdown_local_node(root, timeout_seconds=timeout_seconds)
+    except LocalShutdownError as exc:
+        if exc.report is not None:
+            raise
+        raise _shutdown_failure(root, exc) from exc
+    except Exception as exc:
+        raise _shutdown_failure(root, exc) from exc
+
+
+def _shutdown_local_node(
+    root: Path, *, timeout_seconds: float = 5.0
+) -> LocalShutdownResult:
+    """Perform the shutdown; the public entry point formats unexpected failures."""
+
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
-    root = Path(runtime_dir)
     config = load_optional_local_runtime_config(root, LocalShutdownError)
     identity_path = configured_runtime_path(root, config, "identity")
     manifest_path = configured_runtime_path(root, config, "manifest")
@@ -286,6 +334,91 @@ def _relative_ref(root: Path, path: Path) -> str:
         raise LocalShutdownError(
             "shutdown artifacts must stay inside runtime dir"
         ) from exc
+
+
+def _shutdown_failure(root: Path, cause: Exception) -> LocalShutdownError:
+    """Create a stable, path-safe failure report without altering audit artifacts."""
+
+    detail = str(cause).lower()
+    node_id = _failure_node_id(root)
+    component = "attribution_finalization"
+    code = "SHUTDOWN_ATTRIBUTION_FINALIZATION_FAILED"
+    artifact_path: str | None = "state/shutdown-state.json"
+    worker_name: str | None = None
+    finalized = False
+    state = "unsafe_incomplete"
+    next_action = (
+        "Keep existing artifacts, inspect the local shutdown log, then retry shutdown."
+    )
+    if "timeout" in detail:
+        component = "signal_handling"
+        code = "SHUTDOWN_SIGNAL_HANDLING_FAILED"
+        artifact_path = None
+        next_action = (
+            "Keep the runtime running, resolve the signal timeout, then retry shutdown."
+        )
+    elif "release runtime resource" in detail:
+        component = "worker_termination"
+        code = "SHUTDOWN_WORKER_TERMINATION_FAILED"
+        artifact_path = None
+        worker_name = "node.pid"
+        finalized = (root / "state" / "shutdown-state.json").is_file()
+        state = "partial_shutdown" if finalized else "unsafe_incomplete"
+        next_action = (
+            "Confirm the named local worker has stopped before retrying shutdown."
+        )
+    elif "receipt" in detail:
+        component = "receipt_write"
+        code = "SHUTDOWN_RECEIPT_WRITE_FAILED"
+        artifact_path = "receipts"
+        next_action = "Keep existing receipts unchanged, repair receipt storage, then retry shutdown."
+    elif "manifest" in detail:
+        component = "manifest_flush"
+        code = "SHUTDOWN_MANIFEST_FLUSH_FAILED"
+        artifact_path = "manifests/local-node-manifest.json"
+        next_action = "Keep the manifest unchanged, repair it or its storage, then retry shutdown."
+
+    report = LocalShutdownFailure(
+        code=code,
+        component=component,
+        node_id=node_id,
+        artifact_path=artifact_path,
+        worker_name=worker_name,
+        contribution_records_finalized=finalized,
+        shutdown_state=state,
+        next_action=next_action,
+    )
+    _append_failure_log(root / "logs" / "shutdown.log", report, cause)
+    return LocalShutdownError(f"{report.code}: {cause}", report=report)
+
+
+def _failure_node_id(root: Path) -> str | None:
+    """Best-effort identity lookup for an error report; never masks the original failure."""
+
+    try:
+        identity = _load_json_object(
+            root / "identity" / "creator-node.json", "identity"
+        )
+        node = _required_object(identity, "node", "identity")
+        return _required_string(node, "node_id", "identity.node")
+    except (LocalShutdownError, OSError):
+        return None
+
+
+def _append_failure_log(
+    log_path: Path, report: LocalShutdownFailure, cause: Exception
+) -> None:
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        _append_log(
+            log_path,
+            event="shutdown_failure",
+            **report.to_dict(),
+            error_detail=repr(cause),
+        )
+    except OSError:
+        # Error reporting must not replace a shutdown failure with a logging failure.
+        pass
 
 
 def _now() -> str:
