@@ -644,12 +644,16 @@ class LocalNodeStartupTests(unittest.TestCase):
                 self.assertEqual(error.phase, "storage_check")
                 self.assertIn(field, str(error))
 
-        leaked_path = "/Users/example/private/runtime/receipts"
-        error = LocalStartupError(
-            f"could not create startup validation receipt at {leaked_path}"
-        )
-        self.assertNotIn(leaked_path, str(error))
-        self.assertIn("<local-path>", str(error))
+        for leaked_path in (
+            "/Users/example/private/runtime/receipts",
+            "/Users/example/Private Runtime/receipts",
+        ):
+            with self.subTest(leaked_path=leaked_path):
+                error = LocalStartupError(
+                    f"could not create startup validation receipt at '{leaked_path}'"
+                )
+                self.assertNotIn(leaked_path, str(error))
+                self.assertIn("<local-path>", str(error))
 
     def test_manifest_validation_rejects_bad_shapes(self) -> None:
         cases = (

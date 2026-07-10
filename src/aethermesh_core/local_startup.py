@@ -66,6 +66,11 @@ class LocalStartupError(ValueError):
 def _redact_local_paths(detail: str) -> str:
     """Keep startup errors shareable by removing absolute host paths."""
 
+    detail = re.sub(
+        r"(?P<quote>['\"])(?:[A-Za-z]:[\\/]|/|~/).*?(?P=quote)",
+        r"\g<quote><local-path>\g<quote>",
+        detail,
+    )
     detail = re.sub(r"(?<![\w.])(?:[A-Za-z]:[\\/]|/)[^\s'\"]+", "<local-path>", detail)
     return re.sub(r"(?<![\w.])~/[^\s'\"]+", "<local-path>", detail)
 
