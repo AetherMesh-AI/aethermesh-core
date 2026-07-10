@@ -389,6 +389,20 @@ class LocalNodeStartupTests(unittest.TestCase):
 
             self.assertFalse((runtime / "identity").exists())
 
+    def test_dangling_runtime_config_symlink_fails_before_startup_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config_path.symlink_to(runtime / "missing-config.json")
+
+            with self.assertRaisesRegex(LocalStartupError, "dangling filesystem link"):
+                start_local_node(runtime)
+
+            self.assertTrue(config_path.is_symlink())
+            self.assertFalse((runtime / "missing-config.json").exists())
+            self.assertFalse((runtime / "identity").exists())
+            self.assertFalse((runtime / "receipts").exists())
+
     def test_resolved_runtime_paths_cannot_alias_preserved_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)

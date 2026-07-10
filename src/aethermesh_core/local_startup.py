@@ -256,6 +256,10 @@ def start_local_node(
 
 
 def _load_existing_config(path: Path) -> LocalRuntimeConfig | None:
+    if path.is_symlink() and not path.exists():
+        raise LocalStartupError(
+            "local runtime config path is a dangling filesystem link"
+        )
     if not path.exists():
         return None
     try:
