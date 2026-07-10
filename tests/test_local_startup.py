@@ -26,6 +26,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertEqual(first["creator_node_id"], second["creator_node_id"])
             self.assertEqual(first["network_mode"], "local-only-no-p2p")
             for relative_path in (
+                "local-runtime-config.json",
                 "identity/creator-node.json",
                 "manifests/local-node-manifest.json",
                 "logs/startup.log",
@@ -33,6 +34,19 @@ class LocalNodeStartupTests(unittest.TestCase):
                 "work/outputs",
             ):
                 self.assertTrue((runtime / relative_path).exists(), relative_path)
+            config = self._load(runtime / "local-runtime-config.json")
+            self.assertEqual(config["creator_node_id"], first["creator_node_id"])
+            self.assertEqual(config["identity_path"], first["identity_path"])
+            self.assertEqual(config["manifest_path"], first["manifest_path"])
+            self.assertEqual(config["validation_receipts_dir"], "receipts")
+            self.assertEqual(config["lineage_dir"], "lineage")
+            self.assertEqual(config["contribution_attribution_dir"], "contributions")
+            runtime_directories = first["runtime_directories"]
+            self.assertIsInstance(runtime_directories, dict)
+            if not isinstance(runtime_directories, dict):
+                raise AssertionError("runtime_directories must be a dict")
+            self.assertEqual(runtime_directories["receipts"], "receipts")
+            self.assertEqual(runtime_directories["lineage"], "lineage")
             receipt = self._load(runtime / str(first["validation_receipt_path"]))
             lineage = self._load(runtime / str(first["lineage_path"]))
             self.assertEqual(receipt["receipt_type"], "startup_validation")
@@ -44,7 +58,31 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertNotIn("private", json.dumps(receipt).lower())
             self.assertEqual(lineage["lineage_type"], "local_node_startup")
             self.assertEqual(lineage["inputs"]["manifest_hash"], first["manifest_hash"])
+            self.assertEqual(
+                lineage["inputs"]["configuration"], "local-runtime-config.json"
+            )
             self.assertFalse(lineage["contribution_attribution"]["scoring_applied"])
+
+    def test_existing_config_missing_required_field_fails_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            runtime.mkdir(parents=True, exist_ok=True)
+            (runtime / "local-runtime-config.json").write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "runtime_mode": "local_only",
+                        "creator_node_id": "creator",
+                        "identity_path": "identity/creator-node.json",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "missing required field 'manifest_path'"
+            ):
+                start_local_node(runtime)
 
     def test_existing_identity_missing_manifest_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

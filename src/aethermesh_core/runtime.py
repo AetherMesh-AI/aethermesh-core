@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from aethermesh_core.local_json_helpers import load_json_mapping
+from aethermesh_core.local_runtime_config import (
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+)
 from aethermesh_core.local_restart import LocalRestartError, LocalRestartResult
 from aethermesh_core.local_restart import restart_local_node as _restart_local_node
 from aethermesh_core.local_shutdown import LocalShutdownError, LocalShutdownResult
@@ -70,8 +74,12 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
     """Inspect local identity, manifest, receipt, lineage, and attribution refs."""
 
     root = Path(runtime_dir)
-    identity_path = root / "identity" / "creator-node.json"
-    manifest_path = root / "manifests" / "local-node-manifest.json"
+    try:
+        config = load_local_runtime_config(root)
+    except LocalRuntimeConfigError as exc:
+        raise LocalRuntimeInspectError(str(exc)) from exc
+    identity_path = config.identity_path
+    manifest_path = config.manifest_path
     identity = _load_runtime_json(identity_path, "identity")
     manifest = _load_runtime_json(manifest_path, "manifest")
     node = _required_mapping(identity, "node", "identity")
@@ -94,14 +102,18 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
             "identity contribution_attribution must be an object"
         )
 
-    receipt_refs = _artifact_refs(root, "receipts")
-    lineage_refs = _artifact_refs(root, "lineage")
-    contribution_refs = _artifact_refs(root, "contributions")
+    receipt_refs = _artifact_refs(
+        root, config.relative_ref(config.validation_receipts_dir)
+    )
+    lineage_refs = _artifact_refs(root, config.relative_ref(config.lineage_dir))
+    contribution_refs = _artifact_refs(
+        root, config.relative_ref(config.contribution_attribution_dir)
+    )
     return {
         "node_id": node_id,
         "creator_node_id": creator_node_id,
-        "identity_path": "identity/creator-node.json",
-        "manifest_path": "manifests/local-node-manifest.json",
+        "identity_path": config.relative_ref(identity_path),
+        "manifest_path": config.relative_ref(manifest_path),
         "manifest_matches_identity": manifest_node_id == node_id
         and manifest_creator_node_id == creator_node_id,
         "manifest_refs": _string_list(references.get("manifest_refs")),

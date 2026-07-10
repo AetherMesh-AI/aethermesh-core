@@ -14,6 +14,14 @@ from aethermesh_core.identity import (
     reset_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+from aethermesh_core.local_runtime_config import (
+    LOCAL_RUNTIME_CONFIG_FILE,
+    LocalRuntimeConfig,
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+    load_or_create_local_runtime_config,
+    write_local_runtime_config,
+)
 from aethermesh_core.version_metadata import (
     VersionMetadataError,
     capture_version_metadata,
@@ -77,16 +85,32 @@ def start_local_node(
     """Initialize one local node runtime without external services."""
 
     root = Path(runtime_dir)
-    identity_path = root / "identity" / "creator-node.json"
+    config_path = root / LOCAL_RUNTIME_CONFIG_FILE
+    try:
+        bootstrap_config = (
+            load_local_runtime_config(root) if config_path.exists() else None
+        )
+    except LocalRuntimeConfigError as exc:
+        raise LocalStartupError(str(exc)) from exc
+    identity_path = (
+        bootstrap_config.identity_path
+        if bootstrap_config is not None
+        else root / "identity" / "creator-node.json"
+    )
     manifest_path = (
-        root / REQUIRED_RUNTIME_DIRS["manifests"] / "local-node-manifest.json"
+        bootstrap_config.manifest_path
+        if bootstrap_config is not None
+        else root / REQUIRED_RUNTIME_DIRS["manifests"] / "local-node-manifest.json"
     )
     identity_existed = identity_path.exists()
     if identity_existed and not reset_creator_identity and not manifest_path.exists():
         raise LocalStartupError(
             "required startup manifest is missing; refusing to recreate manifest for an existing identity"
         )
-    _ensure_runtime_dirs(root)
+    if bootstrap_config is None:
+        _ensure_runtime_dirs(root)
+    else:
+        _ensure_runtime_dirs(root, bootstrap_config)
     if reset_creator_identity and identity_existed:
         try:
             reset_identity(
@@ -104,6 +128,20 @@ def start_local_node(
         raise LocalStartupError(str(exc)) from exc
     identity_document = _load_json_object(identity_path, "identity")
     creator_node_id = _identity_creator_node_id(identity_document)
+    if reset_creator_identity and identity_existed and bootstrap_config is not None:
+        try:
+            write_local_runtime_config(
+                bootstrap_config, creator_node_id=creator_node_id
+            )
+        except LocalRuntimeConfigError as exc:
+            raise LocalStartupError(str(exc)) from exc
+    try:
+        config = load_or_create_local_runtime_config(
+            root, creator_node_id=creator_node_id
+        )
+    except LocalRuntimeConfigError as exc:
+        raise LocalStartupError(str(exc)) from exc
+    manifest_path = config.manifest_path
     if reset_creator_identity and identity_existed:
         _write_default_manifest(
             manifest_path,
@@ -124,18 +162,22 @@ def start_local_node(
         expected_node_id=identity.node_id,
         expected_creator_node_id=creator_node_id,
     )
-    _ensure_manifest_directories(root, manifest)
+    _ensure_manifest_directories(config, manifest)
     timestamp = datetime.now(UTC).replace(microsecond=0).isoformat()
     manifest_hash = _document_hash(manifest)
-    receipt_ref = _next_artifact_ref(root, "receipts", "startup-validation", timestamp)
-    lineage_ref = _next_artifact_ref(root, "lineage", "startup-lineage", timestamp)
+    receipt_ref = _next_artifact_ref(
+        config, config.validation_receipts_dir, "startup-validation", timestamp
+    )
+    lineage_ref = _next_artifact_ref(
+        config, config.lineage_dir, "startup-lineage", timestamp
+    )
     receipt_path = root / receipt_ref
     lineage_path = root / lineage_ref
-    log_path = root / REQUIRED_RUNTIME_DIRS["logs"] / "startup.log"
+    log_path = config.startup_log_path
     receipt = _startup_receipt(
         node_id=identity.node_id,
         creator_node_id=creator_node_id,
-        manifest_ref=_relative_ref(root, manifest_path),
+        manifest_ref=config.relative_ref(manifest_path),
         manifest_hash=manifest_hash,
         runtime_metadata=validate_version_metadata(manifest["runtime_version"]),
         timestamp=timestamp,
@@ -149,7 +191,7 @@ def start_local_node(
     lineage = _startup_lineage(
         node_id=identity.node_id,
         creator_node_id=creator_node_id,
-        manifest_ref=_relative_ref(root, manifest_path),
+        manifest_ref=config.relative_ref(manifest_path),
         manifest_hash=manifest_hash,
         receipt_ref=receipt_ref,
         runtime_metadata=validate_version_metadata(manifest["runtime_version"]),
@@ -179,19 +221,24 @@ def start_local_node(
     return LocalStartupResult(
         node_id=identity.node_id,
         creator_node_id=creator_node_id,
-        identity_path=_relative_ref(root, identity_path),
-        manifest_path=_relative_ref(root, manifest_path),
+        identity_path=config.relative_ref(identity_path),
+        manifest_path=config.relative_ref(manifest_path),
         manifest_hash=manifest_hash,
         validation_receipt_path=receipt_ref,
         lineage_path=lineage_ref,
-        log_path=_relative_ref(root, log_path),
-        runtime_directories=dict(REQUIRED_RUNTIME_DIRS),
+        log_path=config.relative_ref(log_path),
+        runtime_directories=config.runtime_directories(),
         validation_result="passed",
     )
 
 
-def _ensure_runtime_dirs(root: Path) -> None:
-    for relative_path in REQUIRED_RUNTIME_DIRS.values():
+def _ensure_runtime_dirs(root: Path, config: LocalRuntimeConfig | None = None) -> None:
+    paths = (
+        config.runtime_directories().values()
+        if config is not None
+        else REQUIRED_RUNTIME_DIRS.values()
+    )
+    for relative_path in paths:
         path = root / relative_path
         try:
             path.mkdir(parents=True, exist_ok=True)
@@ -201,17 +248,19 @@ def _ensure_runtime_dirs(root: Path) -> None:
             ) from exc
 
 
-def _ensure_manifest_directories(root: Path, manifest: dict[str, object]) -> None:
+def _ensure_manifest_directories(
+    config: LocalRuntimeConfig, manifest: dict[str, object]
+) -> None:
     directories = manifest["work_directories"]
     if not isinstance(directories, dict):
         raise LocalStartupError("startup manifest work_directories must be an object")
-    for key, expected in REQUIRED_RUNTIME_DIRS.items():
+    for key, expected in config.runtime_directories().items():
         value = directories.get(key)
         if value != expected:
             raise LocalStartupError(
                 f"startup manifest work_directories.{key} must be {expected!r}"
             )
-        path = root / expected
+        path = config.root / expected
         if not path.is_dir():
             raise LocalStartupError(
                 f"required runtime directory {expected!r} is not a directory"
@@ -355,16 +404,11 @@ def _document_hash(document: dict[str, object]) -> str:
 
 
 def _next_artifact_ref(
-    root: Path, directory_key: str, stem: str, timestamp: str
+    config: LocalRuntimeConfig, directory: Path, stem: str, timestamp: str
 ) -> str:
-    directory = REQUIRED_RUNTIME_DIRS[directory_key]
     slug = timestamp.replace(":", "").replace("+", "Z")
-    index = len(tuple((root / directory).glob(f"{stem}-*.json"))) + 1
-    return f"{directory}/{stem}-{slug}-{index:04d}.json"
-
-
-def _relative_ref(root: Path, path: Path) -> str:
-    return path.relative_to(root).as_posix()
+    index = len(tuple(directory.glob(f"{stem}-*.json"))) + 1
+    return f"{config.relative_ref(directory)}/{stem}-{slug}-{index:04d}.json"
 
 
 def _startup_receipt(
@@ -420,7 +464,7 @@ def _startup_lineage(
             "manifest_ref": manifest_ref,
             "manifest_hash": manifest_hash,
             "runtime_version": runtime_metadata,
-            "configuration": "default-local-startup",
+            "configuration": LOCAL_RUNTIME_CONFIG_FILE,
         },
         "outputs": {"validation_receipt_ref": receipt_ref},
         "contribution_attribution": {
