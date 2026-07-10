@@ -236,7 +236,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             second = start_local_node(runtime)
             self.assertEqual(first.node_id, second.node_id)
             reset = start_local_node(runtime, reset_creator_identity=True)
-            self.assertNotEqual(first.node_id, reset.node_id)
+            self.assertEqual(first.node_id, reset.node_id)
             self.assertEqual(reset.node_id, reset.creator_node_id)
             self.assertTrue((runtime / "identity" / "identity-quarantine").exists())
 
@@ -244,7 +244,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             reset_without_existing_config = start_local_node(
                 runtime, reset_creator_identity=True
             )
-            self.assertNotEqual(reset.node_id, reset_without_existing_config.node_id)
+            self.assertEqual(reset.node_id, reset_without_existing_config.node_id)
             self.assertEqual(
                 reset_without_existing_config.manifest_path,
                 "manifests/local-node-manifest.json",

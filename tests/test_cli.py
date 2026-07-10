@@ -1531,7 +1531,10 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(payload["previous_node_id"], original["node"]["node_id"])
         self.assertEqual(payload["new_node_id"], reset_document["node"]["node_id"])
-        self.assertNotEqual(payload["new_node_id"], payload["previous_node_id"])
+        self.assertEqual(payload["new_node_id"], payload["previous_node_id"])
+        self.assertEqual(
+            reset_document["node"]["node_name"], original["node"]["node_name"]
+        )
         self.assertEqual(backup_document, original)
         receipt = receipt_document["reset_receipts"][0]
         self.assertEqual(receipt["previous_node_id"], payload["previous_node_id"])
