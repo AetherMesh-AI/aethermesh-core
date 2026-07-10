@@ -102,7 +102,7 @@ def start_local_node(
         validate_runtime_path_boundaries(root, preloaded_config)
     except LocalRuntimeConfigError as exc:
         raise LocalStartupError(str(exc)) from exc
-    if preloaded_config is None and root.exists() and any(root.iterdir()):
+    if preloaded_config is None and root.exists() and _contains_runtime_artifacts(root):
         raise LocalStartupError(
             "required local runtime config is missing; refusing to reuse existing runtime artifacts"
         )
@@ -282,6 +282,12 @@ def _load_existing_config(path: Path) -> LocalRuntimeConfig | None:
         return load_local_runtime_config(path)
     except LocalRuntimeConfigError as exc:
         raise LocalStartupError(str(exc)) from exc
+
+
+def _contains_runtime_artifacts(root: Path) -> bool:
+    """Return whether a config-less root contains more than empty directories."""
+
+    return any(path.is_symlink() or not path.is_dir() for path in root.rglob("*"))
 
 
 def _configured_path(

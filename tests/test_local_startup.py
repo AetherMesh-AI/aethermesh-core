@@ -143,6 +143,18 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertFalse((runtime / "identity" / "creator-node.json").exists())
             self.assertFalse((runtime / LOCAL_RUNTIME_CONFIG_PATH).exists())
 
+    def test_missing_config_allows_precreated_empty_runtime_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            for relative_path in ("receipts", "lineage", "work/inputs", "work/outputs"):
+                (runtime / relative_path).mkdir(parents=True, exist_ok=True)
+
+            result = start_local_node(runtime)
+
+            self.assertEqual(result.validation_result, "passed")
+            self.assertTrue((runtime / LOCAL_RUNTIME_CONFIG_PATH).is_file())
+            self.assertTrue((runtime / result.identity_path).is_file())
+
     def test_missing_required_runtime_config_fields_fail_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)
