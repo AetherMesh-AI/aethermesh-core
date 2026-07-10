@@ -145,6 +145,34 @@ class LocalNodeStartupTests(unittest.TestCase):
                     ):
                         start_local_node(runtime)
 
+    def test_runtime_config_rejects_malformed_version_and_identity_stability(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+            config = self._load(config_path)
+            cases = (
+                ({"version": True}, "must contain version 1"),
+                (
+                    {"node.creator_node_id_stability": None},
+                    "must preserve local identity",
+                ),
+            )
+            for updates, message in cases:
+                with self.subTest(updates=updates):
+                    candidate = json.loads(json.dumps(config))
+                    for key, value in updates.items():
+                        if key.startswith("node."):
+                            candidate["node"][key.removeprefix("node.")] = value
+                        else:
+                            candidate[key] = value
+                    config_path.write_text(json.dumps(candidate), encoding="utf-8")
+
+                    with self.assertRaisesRegex(LocalStartupError, message):
+                        start_local_node(runtime)
+
     def test_runtime_uses_configured_local_artifact_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)

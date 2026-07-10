@@ -13,6 +13,9 @@ from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 
 LOCAL_RUNTIME_CONFIG_VERSION = 1
 LOCAL_RUNTIME_CONFIG_PATH = "runtime-config.json"
+CREATOR_NODE_ID_STABILITY = (
+    "stable local identity; do not regenerate during normal local runs"
+)
 DEFAULT_RUNTIME_PATHS = {
     "identity": "identity/creator-node.json",
     "manifest": "manifests/local-node-manifest.json",
@@ -47,9 +50,7 @@ class LocalRuntimeConfig:
             "node": {
                 "node_id": self.node_id,
                 "creator_node_id": self.creator_node_id,
-                "creator_node_id_stability": (
-                    "stable local identity; do not regenerate during normal local runs"
-                ),
+                "creator_node_id_stability": CREATOR_NODE_ID_STABILITY,
             },
             "paths": dict(self.paths),
             "network_mode": "local-only-no-p2p",
@@ -98,7 +99,10 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     _reject_unknown_fields(
         document.keys(), _ALLOWED_TOP_LEVEL_FIELDS, "local runtime config"
     )
-    if document.get("version") != LOCAL_RUNTIME_CONFIG_VERSION:
+    if (
+        type(document.get("version")) is not int
+        or document["version"] != LOCAL_RUNTIME_CONFIG_VERSION
+    ):
         raise LocalRuntimeConfigError("local runtime config must contain version 1")
     if document.get("network_mode") != "local-only-no-p2p":
         raise LocalRuntimeConfigError(
@@ -114,6 +118,10 @@ def parse_local_runtime_config(document: object) -> LocalRuntimeConfig:
     creator_node_id = _require_node_id(
         node.get("creator_node_id"), "node.creator_node_id"
     )
+    if node.get("creator_node_id_stability") != CREATOR_NODE_ID_STABILITY:
+        raise LocalRuntimeConfigError(
+            "local runtime config node.creator_node_id_stability must preserve local identity"
+        )
     paths = document.get("paths")
     if not isinstance(paths, dict):
         raise LocalRuntimeConfigError("local runtime config paths must be an object")
