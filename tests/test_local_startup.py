@@ -514,6 +514,31 @@ class LocalNodeStartupTests(unittest.TestCase):
                 (runtime / "receipts" / "identity-reset-receipts.json").exists()
             )
 
+    def test_reset_rejects_config_identity_mismatch_before_rotation(self) -> None:
+        for field in ("node_id", "creator_node_id"):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temp_dir:
+                runtime = Path(temp_dir)
+                first = start_local_node(runtime)
+                config_path = runtime / LOCAL_RUNTIME_CONFIG_PATH
+                config = self._load(config_path)
+                config["node"][field] = "mismatched-node-id"
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                identity_path = runtime / first.identity_path
+                identity_before = identity_path.read_bytes()
+
+                with self.assertRaisesRegex(
+                    LocalStartupError, f"node.{field} does not match identity"
+                ):
+                    start_local_node(runtime, reset_creator_identity=True)
+
+                self.assertEqual(identity_path.read_bytes(), identity_before)
+                self.assertFalse(
+                    (identity_path.parent / "identity-quarantine").exists()
+                )
+                self.assertFalse(
+                    (runtime / "receipts" / "identity-reset-receipts.json").exists()
+                )
+
     def test_cli_starts_local_node_and_reports_startup_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             stdout = io.StringIO()

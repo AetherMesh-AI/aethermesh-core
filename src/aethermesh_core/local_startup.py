@@ -115,6 +115,23 @@ def start_local_node(
         raise LocalStartupError(
             "required startup manifest is missing; refusing to recreate manifest for an existing identity"
         )
+    if preloaded_config is not None:
+        try:
+            preserved_identity = load_or_create_identity(identity_path)
+        except IdentityPersistenceError as exc:
+            raise LocalStartupError(str(exc)) from exc
+        preserved_identity_document = _load_json_object(identity_path, "identity")
+        preserved_creator_node_id = _identity_creator_node_id(
+            preserved_identity_document
+        )
+        if preloaded_config.node_id != preserved_identity.node_id:
+            raise LocalStartupError(
+                "local runtime config node.node_id does not match identity"
+            )
+        if preloaded_config.creator_node_id != preserved_creator_node_id:
+            raise LocalStartupError(
+                "local runtime config node.creator_node_id does not match identity"
+            )
     _ensure_runtime_dirs(root, preloaded_config)
     if reset_creator_identity and identity_existed:
         try:
