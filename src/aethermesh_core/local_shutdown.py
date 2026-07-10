@@ -14,6 +14,11 @@ from aethermesh_core.local_json_helpers import (
     load_json_mapping,
     require_text_field,
 )
+from aethermesh_core.local_runtime_config import (
+    LocalRuntimeConfig,
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+)
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
 
@@ -69,9 +74,10 @@ def shutdown_local_node(
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
     root = Path(runtime_dir)
-    identity_path = root / "identity" / "creator-node.json"
-    manifest_path = root / "manifests" / "local-node-manifest.json"
-    log_path = root / "logs" / "shutdown.log"
+    config = _load_shutdown_config(root)
+    identity_path = config.identity_path
+    manifest_path = config.manifest_path
+    log_path = config.logs_dir / "shutdown.log"
     state_dir = root / "state"
     state_path = state_dir / "shutdown-state.json"
     stopped_work_path = root / "work" / "stopped" / "shutdown-interrupted-work.json"
@@ -108,11 +114,11 @@ def shutdown_local_node(
             "shutdown refused because identity and manifest node references differ"
         )
 
-    interrupted_work = _interrupted_work_refs(root)
+    interrupted_work = _interrupted_work_refs(config)
     stopped_work_ref = None
     if interrupted_work:
         stopped_work_path.parent.mkdir(parents=True, exist_ok=True)
-        stopped_work_ref = _relative_ref(root, stopped_work_path)
+        stopped_work_ref = config.relative_ref(stopped_work_path)
         atomic_write_json(
             stopped_work_path,
             {
@@ -124,16 +130,16 @@ def shutdown_local_node(
             },
         )
 
-    receipt_refs = _artifact_refs(root, "receipts")
-    lineage_refs = _artifact_refs(root, "lineage")
-    contribution_refs = _artifact_refs(root, "contributions")
+    receipt_refs = _artifact_refs(config, config.validation_receipts_dir)
+    lineage_refs = _artifact_refs(config, config.lineage_dir)
+    contribution_refs = _artifact_refs(config, config.contribution_attribution_dir)
     final_state = {
         "version": LOCAL_SHUTDOWN_STATE_VERSION,
         "node_id": node_id,
         "creator_node_id": creator_node_id,
         "status": "stopped",
         "accepting_work": False,
-        "manifest_ref": _relative_ref(root, manifest_path),
+        "manifest_ref": config.relative_ref(manifest_path),
         "manifest_hash": _document_hash(manifest),
         "validation_receipt_refs": receipt_refs,
         "lineage_refs": lineage_refs,
@@ -172,11 +178,11 @@ def shutdown_local_node(
     return LocalShutdownResult(
         node_id=node_id,
         creator_node_id=creator_node_id,
-        manifest_path=_relative_ref(root, manifest_path),
+        manifest_path=config.relative_ref(manifest_path),
         manifest_hash=str(final_state["manifest_hash"]),
-        state_path=_relative_ref(root, state_path),
+        state_path=config.relative_ref(state_path),
         stopped_work_path=stopped_work_ref,
-        log_path=_relative_ref(root, log_path),
+        log_path=config.relative_ref(log_path),
         validation_receipt_count=len(receipt_refs),
         lineage_record_count=len(lineage_refs),
         contribution_record_count=len(contribution_refs),
@@ -192,6 +198,26 @@ def _shutdown_already_completed(path: Path) -> bool:
     except LocalShutdownError:
         return False
     return document.get("status") == "stopped"
+
+
+def _load_shutdown_config(root: Path) -> LocalRuntimeConfig:
+    try:
+        return load_local_runtime_config(root)
+    except LocalRuntimeConfigError as exc:
+        if str(exc) != "local runtime config is missing":
+            raise LocalShutdownError(str(exc)) from exc
+    return LocalRuntimeConfig(
+        root=root,
+        creator_node_id="legacy-local-runtime-without-config",
+        identity_path=root / "identity" / "creator-node.json",
+        manifest_path=root / "manifests" / "local-node-manifest.json",
+        validation_receipts_dir=root / "receipts",
+        lineage_dir=root / "lineage",
+        contribution_attribution_dir=root / "contributions",
+        logs_dir=root / "logs",
+        work_inputs_dir=root / "work" / "inputs",
+        work_outputs_dir=root / "work" / "outputs",
+    )
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
@@ -211,10 +237,11 @@ def _required_object(
     return value
 
 
-def _interrupted_work_refs(root: Path) -> list[dict[str, str]]:
+def _interrupted_work_refs(config: LocalRuntimeConfig) -> list[dict[str, str]]:
+    root = config.root
     in_progress_dir = root / "work" / "in-progress"
-    inputs_dir = root / "work" / "inputs"
-    outputs_dir = root / "work" / "outputs"
+    inputs_dir = config.work_inputs_dir
+    outputs_dir = config.work_outputs_dir
     interrupted: list[dict[str, str]] = []
     for path in sorted(_iter_files(in_progress_dir)):
         interrupted.append(
@@ -229,10 +256,10 @@ def _interrupted_work_refs(root: Path) -> list[dict[str, str]]:
     return interrupted
 
 
-def _artifact_refs(root: Path, directory_name: str) -> list[str]:
+def _artifact_refs(config: LocalRuntimeConfig, directory: Path) -> list[str]:
     return [
-        _relative_ref(root, path)
-        for path in sorted(_iter_files(root / directory_name))
+        config.relative_ref(path)
+        for path in sorted(_iter_files(directory))
         if path.suffix == ".json"
     ]
 

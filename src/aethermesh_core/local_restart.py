@@ -14,6 +14,11 @@ from aethermesh_core.local_json_helpers import (
     load_json_mapping,
     require_text_field,
 )
+from aethermesh_core.local_runtime_config import (
+    LocalRuntimeConfig,
+    LocalRuntimeConfigError,
+    load_local_runtime_config,
+)
 from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
 from aethermesh_core.local_startup import LocalStartupError, start_local_node
 
@@ -114,8 +119,12 @@ def restart_local_node(
         raise LocalRestartError(
             "restart changed creator_node_id; refusing recovered runtime"
         )
+    try:
+        config = load_local_runtime_config(root)
+    except LocalRuntimeConfigError as exc:
+        raise LocalRestartError(str(exc)) from exc
 
-    restart_receipt_ref = _next_restart_receipt_ref(root, timestamp)
+    restart_receipt_ref = _next_restart_receipt_ref(config, timestamp)
     restart_receipt_path = root / restart_receipt_ref
     receipt = {
         "version": LOCAL_RESTART_RECEIPT_VERSION,
@@ -145,7 +154,7 @@ def restart_local_node(
     try:
         atomic_create_json(restart_receipt_path, receipt)
         _append_log(
-            root / "logs" / "restart.log",
+            config.logs_dir / "restart.log",
             event="local_node_restart",
             timestamp=timestamp,
             node_id=startup.node_id,
@@ -225,12 +234,12 @@ def _required_string(document: dict[str, Any], field_name: str, label: str) -> s
     return require_text_field(document, field_name, label, LocalRestartError)
 
 
-def _next_restart_receipt_ref(root: Path, timestamp: str) -> str:
-    directory = root / "receipts"
+def _next_restart_receipt_ref(config: LocalRuntimeConfig, timestamp: str) -> str:
+    directory = config.validation_receipts_dir
     directory.mkdir(parents=True, exist_ok=True)
     slug = timestamp.replace(":", "").replace("+", "Z")
     index = len(tuple(directory.glob("local-restart-*.json"))) + 1
-    return f"receipts/local-restart-{slug}-{index:04d}.json"
+    return f"{config.relative_ref(directory)}/local-restart-{slug}-{index:04d}.json"
 
 
 def _append_log(path: Path, **payload: object) -> None:
