@@ -79,6 +79,12 @@ def _classify_startup_error(detail: str) -> tuple[str, str, str]:
     """Attach stable automation fields without including local configuration values."""
 
     lowered = detail.lower()
+    if "local runtime config" in lowered:
+        return (
+            "STARTUP_CONFIG_INVALID",
+            "config_load",
+            "correct the named field in runtime-config.json using the expected format",
+        )
     if "manifest" in lowered:
         return (
             "STARTUP_MANIFEST_INVALID",
@@ -112,12 +118,6 @@ def _classify_startup_error(detail: str) -> tuple[str, str, str]:
             "STARTUP_ATTRIBUTION_STORAGE_UNAVAILABLE",
             "storage_check",
             "make config field paths.contribution_attribution a writable local directory",
-        )
-    if "config" in lowered:
-        return (
-            "STARTUP_CONFIG_INVALID",
-            "config_load",
-            "correct the named field in runtime-config.json using the expected format",
         )
     return (
         "STARTUP_STORAGE_UNAVAILABLE",

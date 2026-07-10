@@ -182,8 +182,10 @@ class LocalNodeStartupTests(unittest.TestCase):
                     with self.assertRaisesRegex(
                         LocalStartupError,
                         f"local runtime config paths.{field} must be a non-empty local path",
-                    ):
+                    ) as caught:
                         start_local_node(runtime)
+                    self.assertEqual(caught.exception.code, "STARTUP_CONFIG_INVALID")
+                    self.assertEqual(caught.exception.phase, "config_load")
 
     def test_runtime_config_rejects_malformed_version_and_identity_stability(
         self,
