@@ -506,6 +506,8 @@ class LocalNodeStartupTests(unittest.TestCase):
     def test_manifest_validation_rejects_bad_shapes(self) -> None:
         cases = (
             ("version", 2, "version 1"),
+            ("version", True, "version 1"),
+            ("version", 1.0, "version 1"),
             ("manifest_type", "other", "manifest_type"),
             ("node", "bad", "node must be an object"),
             ("capabilities", [], "capabilities"),

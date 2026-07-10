@@ -393,7 +393,10 @@ def _load_json_object(path: Path, label: str) -> dict[str, object]:
 def _validate_manifest(
     manifest: dict[str, object], *, expected_node_id: str, expected_creator_node_id: str
 ) -> None:
-    if manifest.get("version") != LOCAL_STARTUP_MANIFEST_VERSION:
+    if (
+        type(manifest.get("version")) is not int
+        or manifest["version"] != LOCAL_STARTUP_MANIFEST_VERSION
+    ):
         raise LocalStartupError("startup manifest must contain version 1")
     if manifest.get("manifest_type") != "local_node_startup":
         raise LocalStartupError("startup manifest_type must be local_node_startup")
