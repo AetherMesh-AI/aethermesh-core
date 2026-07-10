@@ -185,6 +185,9 @@ class LocalShutdownTests(unittest.TestCase):
                 shutdown_local_node(root)
 
             report = raised.exception.to_dict()
+            shutdown_state = json.loads(
+                (root / "state" / "shutdown-state.json").read_text(encoding="utf-8")
+            )
             identity_after = identity_path.read_text(encoding="utf-8")
             manifest_after = manifest_path.read_text(encoding="utf-8")
             contribution_after = contribution_path.read_text(encoding="utf-8")
@@ -193,7 +196,8 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(report["component"], "worker_termination")
         self.assertEqual(report["node_id"], start["node_id"])
         self.assertEqual(report["artifact_path"], "node.pid")
-        self.assertTrue(report["contribution_records_finalized"])
+        self.assertFalse(report["contribution_records_finalized"])
+        self.assertEqual(shutdown_state["status"], "partial")
         self.assertEqual(identity_after, identity_before)
         self.assertEqual(manifest_after, manifest_before)
         self.assertEqual(contribution_after, contribution_before)

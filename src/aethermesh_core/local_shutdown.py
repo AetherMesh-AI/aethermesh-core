@@ -271,19 +271,6 @@ def shutdown_local_node(
             artifact_path=_relative_ref(root, shutdown_receipt_path),
             shutdown_state="partial",
         ) from exc
-    final_state["status"] = "stopped"
-    try:
-        atomic_write_json(state_path, final_state)
-    except OSError as exc:
-        raise _shutdown_failure(
-            exc,
-            code="shutdown.manifest_flush_failed",
-            summary="Could not finalize shutdown state for the local manifest.",
-            component="manifest_flush",
-            node_id=node_id,
-            artifact_path=_relative_ref(root, manifest_path),
-            shutdown_state="partial",
-        ) from exc
     _append_log(
         log_path,
         event="shutdown_persistence_complete",
@@ -305,7 +292,20 @@ def shutdown_local_node(
             node_id=node_id,
             artifact_path=_relative_ref(root, pid_path),
             shutdown_state="partial",
-            contribution_records_finalized=True,
+            contribution_records_finalized=False,
+        ) from exc
+    final_state["status"] = "stopped"
+    try:
+        atomic_write_json(state_path, final_state)
+    except OSError as exc:
+        raise _shutdown_failure(
+            exc,
+            code="shutdown.manifest_flush_failed",
+            summary="Could not finalize shutdown state for the local manifest.",
+            component="manifest_flush",
+            node_id=node_id,
+            artifact_path=_relative_ref(root, manifest_path),
+            shutdown_state="partial",
         ) from exc
     _append_log(
         log_path,
