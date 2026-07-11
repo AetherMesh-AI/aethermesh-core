@@ -129,8 +129,12 @@ class LocalShutdownTests(unittest.TestCase):
 
     def test_shutdown_fails_closed_for_missing_or_mismatched_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaisesRegex(LocalShutdownError, "runtime_stop"):
+            with self.assertRaisesRegex(LocalShutdownError, "runtime_stop") as raised:
                 shutdown_local_node(Path(temp_dir))
+            self.assertEqual(
+                raised.exception.to_dict()["affected_artifact"],
+                "identity/creator-node.json",
+            )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

@@ -138,7 +138,7 @@ def _shutdown_local_node(
     config = load_optional_local_runtime_config(root, LocalShutdownError)
     identity_path = configured_runtime_path(root, config, "identity")
     manifest_path = configured_runtime_path(root, config, "manifest")
-    progress["artifact"] = _relative_ref(root, manifest_path)
+    progress["artifact"] = _relative_ref(root, identity_path)
     log_path = root / "logs" / "shutdown.log"
     state_dir = root / "state"
     state_path = state_dir / "shutdown-state.json"
@@ -161,6 +161,7 @@ def _shutdown_local_node(
 
     identity = _load_json_object(identity_path, "identity")
     progress["component"] = "manifest_flush"
+    progress["artifact"] = _relative_ref(root, manifest_path)
     manifest = _load_json_object(manifest_path, "manifest")
     identity_node = _required_object(identity, "node", "identity")
     manifest_node = _required_object(manifest, "node", "manifest")
