@@ -356,6 +356,12 @@ class NodeRuntimeService:
     def _model_manifest_summary(self, path: Path) -> dict[str, Any]:
         manifest_ref = f"data/model-manifests/{path.name}"
         errors: list[str] = []
+        if path.is_symlink():
+            return {
+                "manifest_ref": manifest_ref,
+                "inspection_status": "degraded",
+                "errors": ["model manifest must not be a symbolic link"],
+            }
         try:
             document = self._load_local_job_document(path, "model manifest")
         except RuntimeServiceError as exc:
@@ -393,6 +399,15 @@ class NodeRuntimeService:
         if not isinstance(timestamps, dict):
             errors.append("timestamps must be an object")
             timestamps = {}
+        timestamp_values: dict[str, str | int | None] = {}
+        for name in ("created_at", "updated_at"):
+            value = timestamps.get(name)
+            if value is not None and (
+                not isinstance(value, (str, int)) or isinstance(value, bool)
+            ):
+                errors.append(f"timestamps.{name} must be a string or integer")
+                value = None
+            timestamp_values[name] = value
         validation = document.get("validation", {})
         if not isinstance(validation, dict):
             errors.append("validation must be an object")
@@ -421,6 +436,29 @@ class NodeRuntimeService:
         if not isinstance(attribution, dict):
             errors.append("contribution_attribution must be an object")
             attribution = {}
+        attribution_creator_node_id = attribution.get("creator_node_id")
+        if attribution_creator_node_id is not None and (
+            not isinstance(attribution_creator_node_id, str)
+            or not attribution_creator_node_id.strip()
+        ):
+            errors.append(
+                "contribution_attribution.creator_node_id must be a non-empty string"
+            )
+            attribution_creator_node_id = None
+        contributor_node_ids = attribution.get("contributor_node_ids", [])
+        if not isinstance(contributor_node_ids, list) or not all(
+            isinstance(item, str) and item.strip() for item in contributor_node_ids
+        ):
+            errors.append(
+                "contribution_attribution.contributor_node_ids must be a string list"
+            )
+            contributor_node_ids = []
+        attribution_source = attribution.get("source")
+        if attribution_source is not None and (
+            not isinstance(attribution_source, str) or not attribution_source.strip()
+        ):
+            errors.append("contribution_attribution.source must be a non-empty string")
+            attribution_source = None
 
         # Whitelist fields deliberately: manifests may contain credentials or
         # absolute implementation paths that are not part of this local API.
@@ -432,16 +470,13 @@ class NodeRuntimeService:
             "artifact_ref": artifact_ref,
             "manifest_ref": manifest_ref,
             "creator_node_id": creator_node_id,
-            "timestamps": {
-                "created_at": timestamps.get("created_at"),
-                "updated_at": timestamps.get("updated_at"),
-            },
+            "timestamps": timestamp_values,
             "validation": {"status": status, "receipt_refs": receipt_refs},
             "lineage": {"parent_manifest_ids": parent_manifest_ids},
             "contribution_attribution": {
-                "creator_node_id": attribution.get("creator_node_id"),
-                "contributor_node_ids": attribution.get("contributor_node_ids", []),
-                "source": attribution.get("source"),
+                "creator_node_id": attribution_creator_node_id,
+                "contributor_node_ids": contributor_node_ids,
+                "source": attribution_source,
             },
             "inspection_status": "degraded" if errors else "ok",
             "errors": errors,
@@ -1387,6 +1422,9 @@ def _safe_local_artifact_ref(value: object) -> bool:
     path = Path(value)
     return (
         not path.is_absolute()
+        and not value.startswith("~")
+        and "://" not in value
+        and "\\" not in value
         and ".." not in path.parts
         and not path.name.lower().endswith((".key", ".pem", ".env"))
     )

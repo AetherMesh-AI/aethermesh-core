@@ -153,6 +153,47 @@ class ModelManifestInspectionTests(unittest.TestCase):
             self.assertEqual(unsafe["validation"]["receipt_refs"], [])
             self.assertEqual(unsafe["lineage"]["parent_manifest_ids"], [])
 
+    def test_untrusted_nested_values_and_symlinks_are_not_exposed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            directory = home / "data" / "model-manifests"
+            directory.mkdir(parents=True)
+            (directory / "invalid-nested.json").write_text(
+                json.dumps(
+                    {
+                        "manifest_id": "nested",
+                        "version": 1,
+                        "expert_type": "test",
+                        "artifact_ref": "https://example.invalid/model?token=secret",
+                        "creator_node_id": "node-a",
+                        "timestamps": {"created_at": {"secret": "timestamp-secret"}},
+                        "contribution_attribution": {
+                            "creator_node_id": {"secret": "creator-secret"},
+                            "contributor_node_ids": [{"secret": "contributor-secret"}],
+                            "source": {"secret": "source-secret"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            outside = home / "outside.json"
+            outside.write_text('{"api_token": "symlink-secret"}', encoding="utf-8")
+            (directory / "linked.json").symlink_to(outside)
+
+            response = NodeRuntimeService.from_home(home).inspect_model_manifests()
+            rendered = json.dumps(response)
+
+            self.assertEqual(response["manifest_count"], 2)
+            for secret in (
+                "timestamp-secret",
+                "creator-secret",
+                "contributor-secret",
+                "source-secret",
+                "symlink-secret",
+            ):
+                self.assertNotIn(secret, rendered)
+            self.assertIn("model manifest must not be a symbolic link", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()
