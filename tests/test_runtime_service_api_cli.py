@@ -25,6 +25,7 @@ from aethermesh_core.runtime_service import (
     RuntimeServiceError,
     _config_api_host,
     _config_api_port,
+    _config_enabled_work_types,
     _config_identity_path,
     _config_identity_persistence_enabled,
     _config_node_id,
@@ -169,6 +170,10 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 config["identity"],
                 {"persist": False, "path": str(Path(temp_dir) / "identity.json")},
+            )
+            self.assertEqual(
+                config["capabilities"]["enabled_work_types"],
+                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
             )
 
             with patch.object(
@@ -346,18 +351,34 @@ class RuntimeServiceTests(unittest.TestCase):
                     "note": "No peer discovery source is configured for the local daemon yet.",
                 },
             )
+            capabilities = service.list_capabilities()
+            self.assertEqual(capabilities["schema_version"], 1)
+            self.assertEqual(capabilities["network_mode"], "local-only-no-p2p")
+            self.assertFalse(capabilities["advertised"])
+            self.assertTrue(
+                all(
+                    {"identifier", "description", "status", "schema_version"}
+                    <= capability.keys()
+                    for capability in capabilities["capabilities"]
+                )
+            )
             self.assertEqual(
-                service.list_capabilities(),
                 {
-                    "capabilities": [
-                        "echo",
-                        "keyword_extract",
-                        "text_chunk",
-                        "text_embed",
-                        "text_stats",
-                    ],
-                    "advertised": False,
-                    "note": "Local prototype capabilities are available but not advertised to a live network yet.",
+                    capability["identifier"]: capability["status"]
+                    for capability in capabilities["capabilities"]
+                },
+                {
+                    "work.echo": "enabled",
+                    "work.keyword_extract": "enabled",
+                    "work.text_chunk": "enabled",
+                    "work.text_embed": "enabled",
+                    "work.text_stats": "enabled",
+                    "provenance.creator_node_id": "disabled",
+                    "provenance.manifest": "enabled",
+                    "provenance.validation_receipt": "enabled",
+                    "provenance.lineage_reference": "enabled",
+                    "provenance.contribution_attribution": "enabled",
+                    "provenance.end_to_end_runtime_lineage": "disabled",
                 },
             )
             self.assertEqual(
@@ -386,6 +407,34 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(service.health()["ok"], True)
             self.assertEqual(service.health()["bind_host"], "127.0.0.1")
+
+    def test_capability_listing_uses_configured_work_type_enablement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            service.initialize_local_node_data()
+            config = service.load_config()
+            config["capabilities"] = {"enabled_work_types": ["echo"]}
+            service._write_config(config)
+
+            capabilities = {
+                entry["identifier"]: entry["status"]
+                for entry in service.list_capabilities()["capabilities"]
+            }
+
+            self.assertEqual(capabilities["work.echo"], "enabled")
+            self.assertEqual(capabilities["work.text_stats"], "disabled")
+            self.assertEqual(capabilities["provenance.creator_node_id"], "disabled")
+            self.assertEqual(capabilities["provenance.manifest"], "enabled")
+
+            config["identity"]["persist"] = True
+            service._write_config(config)
+            persistent_capabilities = {
+                entry["identifier"]: entry["status"]
+                for entry in service.list_capabilities()["capabilities"]
+            }
+            self.assertEqual(
+                persistent_capabilities["provenance.creator_node_id"], "enabled"
+            )
 
     def test_existing_config_is_merged_and_logs_are_limited(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -508,6 +557,26 @@ class RuntimeServiceTests(unittest.TestCase):
         self.assertEqual(_config_api_port({"api": {"port": True}}), 7280)
         self.assertEqual(_config_api_port({"api": {"port": 9999}}), 9999)
         self.assertEqual(_config_api_port({}), 7280)
+        self.assertEqual(
+            _config_enabled_work_types({}),
+            {"echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"},
+        )
+        self.assertEqual(
+            _config_enabled_work_types({"capabilities": {}}),
+            {"echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"},
+        )
+        self.assertEqual(
+            _config_enabled_work_types(
+                {"capabilities": {"enabled_work_types": ["echo"]}}
+            ),
+            {"echo"},
+        )
+        with self.assertRaisesRegex(
+            RuntimeServiceError, "capabilities' must be an object"
+        ):
+            _config_enabled_work_types({"capabilities": []})
+        with self.assertRaisesRegex(RuntimeServiceError, "enabled_work_types"):
+            _config_enabled_work_types({"capabilities": {"enabled_work_types": [""]}})
         self.assertFalse(_config_identity_persistence_enabled({}))
         self.assertTrue(
             _config_identity_persistence_enabled({"identity": {"persist": True}})
@@ -645,9 +714,25 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(payloads["peers"]["peers"], [])
             self.assertEqual(payloads["jobs"]["current"], [])
             self.assertEqual(payloads["capabilities"], payloads["capabilities_alias"])
+            self.assertEqual(payloads["capabilities"]["schema_version"], 1)
             self.assertEqual(
-                payloads["capabilities"]["capabilities"],
-                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                payloads["capabilities"]["network_mode"], "local-only-no-p2p"
+            )
+            self.assertTrue(
+                all(
+                    {"identifier", "description", "status", "schema_version"}
+                    <= capability.keys()
+                    for capability in payloads["capabilities"]["capabilities"]
+                )
+            )
+            self.assertEqual(
+                next(
+                    capability["status"]
+                    for capability in payloads["capabilities"]["capabilities"]
+                    if capability["identifier"]
+                    == "provenance.end_to_end_runtime_lineage"
+                ),
+                "disabled",
             )
             self.assertEqual(payloads["package"]["name"], "aethermesh")
             self.assertEqual(payloads["package"]["source"], "installed")
