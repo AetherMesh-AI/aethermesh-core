@@ -480,6 +480,168 @@ class NodeRuntimeService:
             "network_mode": "local-only-no-p2p",
         }
 
+    def contribution_summary(self) -> dict[str, Any]:
+        """Read local job evidence into a deterministic, non-mutating summary."""
+
+        manifests = self.paths.data_dir / "job-submissions"
+        statuses = self.paths.data_dir / "job-status"
+        job_ids = sorted(
+            {
+                path.stem
+                for directory in (manifests, statuses)
+                if directory.exists()
+                for path in directory.glob("*.json")
+            }
+        )
+        items = [self._contribution_summary_item(job_id) for job_id in job_ids]
+        accepted_work_count = sum(
+            1 for item in items if item["acceptance_status"] == "accepted"
+        )
+        return {
+            "network_mode": "local-only-no-p2p",
+            "summary_status": "empty" if not items else "recorded",
+            "accepted_work_count": accepted_work_count,
+            "non_accepted_work_count": len(items) - accepted_work_count,
+            "items": items,
+        }
+
+    def _contribution_summary_item(self, job_id: str) -> dict[str, Any]:
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        status_ref = f"data/job-status/{job_id}.json"
+        expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
+        status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
+        evidence_errors: list[str] = []
+        manifest = self._load_summary_document(
+            manifest_path, "job submission manifest", evidence_errors
+        )
+        status = (
+            self._load_summary_document(
+                status_path, "job status record", evidence_errors
+            )
+            if status_path.exists()
+            else {}
+        )
+        status_validation = status.get("validation")
+        validation = status_validation if isinstance(status_validation, dict) else {}
+        receipt_ref = validation.get("receipt_ref")
+        receipt = {}
+        if isinstance(receipt_ref, str) and receipt_ref:
+            if receipt_ref != expected_receipt_ref:
+                evidence_errors.append(
+                    "validation receipt reference does not match work item"
+                )
+            else:
+                receipt = self._load_summary_document(
+                    self.paths.home / receipt_ref,
+                    "validation receipt",
+                    evidence_errors,
+                )
+        elif status:
+            evidence_errors.append(
+                "job status record has no validation receipt reference"
+            )
+
+        receipt_passed = (
+            isinstance(receipt.get("validation"), dict)
+            and receipt["validation"].get("valid") is True
+        )
+        manifest_job = manifest.get("job")
+        if manifest:
+            if not isinstance(manifest_job, dict):
+                evidence_errors.append(
+                    "job submission manifest has invalid job evidence"
+                )
+            elif manifest_job.get("job_id") != job_id:
+                evidence_errors.append(
+                    "job submission manifest does not match work item"
+                )
+        if status and status.get("job_id") != job_id:
+            evidence_errors.append("job status record does not match work item")
+        if receipt and receipt.get("job_id") != job_id:
+            evidence_errors.append("validation receipt does not match work item")
+        expected_result_ref = f"data/job-results/{job_id}.json"
+        if receipt and receipt.get("result_ref") != expected_result_ref:
+            evidence_errors.append("validation receipt does not match work result")
+        accepted = (
+            not evidence_errors
+            and status.get("status") == "succeeded"
+            and validation.get("passed") is True
+            and receipt_passed
+        )
+        attribution = status.get("contribution_attribution")
+        if not isinstance(attribution, dict):
+            manifest_attribution = manifest.get("contribution_attribution")
+            attribution = (
+                manifest_attribution if isinstance(manifest_attribution, dict) else {}
+            )
+        creator_node_id = attribution.get("creator_node_id")
+        contributing_node_id = attribution.get(
+            "worker_node_id", status.get("worker_node_id")
+        )
+        if manifest and not isinstance(creator_node_id, str):
+            evidence_errors.append("contribution attribution has no creator node ID")
+        elif manifest and creator_node_id != manifest.get("creator_node_id"):
+            evidence_errors.append(
+                "contribution attribution creator does not match manifest"
+            )
+        if status.get("status") == "succeeded" and not isinstance(
+            contributing_node_id, str
+        ):
+            evidence_errors.append(
+                "contribution attribution has no contributing node ID"
+            )
+        elif status and contributing_node_id != status.get("worker_node_id"):
+            evidence_errors.append(
+                "contribution attribution worker does not match job status"
+            )
+        if receipt and receipt.get("validator_id") != status.get("worker_node_id"):
+            evidence_errors.append("validation receipt validator does not match worker")
+        lineage = manifest.get("lineage")
+        if not isinstance(lineage, dict):
+            lineage = {}
+            if manifest:
+                evidence_errors.append(
+                    "job submission manifest has invalid lineage evidence"
+                )
+        lineage_links = lineage.get("parent_refs", [])
+        if not isinstance(lineage_links, list):
+            evidence_errors.append("job submission manifest has invalid lineage links")
+            lineage_links = []
+        accepted = accepted and not evidence_errors
+        return {
+            "work_item_id": job_id,
+            "status": status.get("status", "incomplete"),
+            "acceptance_status": "accepted"
+            if accepted
+            else "degraded"
+            if evidence_errors
+            else "not_accepted",
+            "creator_node_id": creator_node_id,
+            "contributing_node_id": contributing_node_id,
+            "manifest_ref": manifest_ref,
+            "status_ref": status_ref if status_path.exists() else None,
+            "validation_receipt_ref": receipt_ref
+            if isinstance(receipt_ref, str)
+            else None,
+            "lineage_links": lineage_links,
+            "timestamps": {"submitted_at": manifest.get("submitted_at")},
+            "evidence_errors": evidence_errors,
+        }
+
+    @staticmethod
+    def _load_summary_document(
+        path: Path, label: str, evidence_errors: list[str]
+    ) -> dict[str, Any]:
+        if not path.exists():
+            evidence_errors.append(f"missing {label}: {path.name}")
+            return {}
+        try:
+            return NodeRuntimeService._load_local_job_document(path, label)
+        except RuntimeServiceError as exc:
+            evidence_errors.append(str(exc))
+            return {}
+
     def execute_submitted_local_job(
         self, job_id: str, worker_node_id: str
     ) -> dict[str, Any]:
