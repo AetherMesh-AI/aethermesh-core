@@ -164,7 +164,7 @@ class ModelManifestInspectionTests(unittest.TestCase):
                         "manifest_id": "nested",
                         "version": 1,
                         "expert_type": "test",
-                        "artifact_ref": "https://example.invalid/model?token=secret",
+                        "artifact_ref": "models/model.gguf?token=artifact-secret",
                         "creator_node_id": "node-a",
                         "timestamps": {"created_at": {"secret": "timestamp-secret"}},
                         "contribution_attribution": {
@@ -189,6 +189,7 @@ class ModelManifestInspectionTests(unittest.TestCase):
                 "creator-secret",
                 "contributor-secret",
                 "source-secret",
+                "artifact-secret",
                 "symlink-secret",
             ):
                 self.assertNotIn(secret, rendered)

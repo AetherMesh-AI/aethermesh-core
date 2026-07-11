@@ -365,10 +365,13 @@ class NodeRuntimeService:
         try:
             document = self._load_local_job_document(path, "model manifest")
         except RuntimeServiceError as exc:
+            error = str(exc)
+            if error.startswith("could not read model manifest:"):
+                error = "could not read model manifest"
             return {
                 "manifest_ref": manifest_ref,
                 "inspection_status": "degraded",
-                "errors": [str(exc)],
+                "errors": [error],
             }
 
         def required_string(name: str) -> str | None:
@@ -1424,6 +1427,7 @@ def _safe_local_artifact_ref(value: object) -> bool:
         not path.is_absolute()
         and not value.startswith("~")
         and "://" not in value
+        and not any(character in value for character in ("?", "#", "@"))
         and "\\" not in value
         and ".." not in path.parts
         and not path.name.lower().endswith((".key", ".pem", ".env"))

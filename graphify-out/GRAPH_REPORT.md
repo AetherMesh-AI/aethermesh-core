@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-11)
 
 ## Corpus Check
-- 129 files · ~176,739 words
+- 129 files · ~176,767 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2128 nodes · 5759 edges · 100 communities (86 shown, 14 thin omitted)
+- 2128 nodes · 5759 edges · 99 communities (86 shown, 13 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 395 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `03102318`
+- Built from commit: `2d014ede`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -102,7 +102,6 @@
 - [[_COMMUNITY_Community 84|Community 84]]
 - [[_COMMUNITY_Community 85|Community 85]]
 - [[_COMMUNITY_Community 86|Community 86]]
-- [[_COMMUNITY_Community 87|Community 87]]
 - [[_COMMUNITY_Community 88|Community 88]]
 - [[_COMMUNITY_Community 89|Community 89]]
 - [[_COMMUNITY_Community 90|Community 90]]
@@ -141,7 +140,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (100 total, 14 thin omitted)
+## Communities (99 total, 13 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.16
@@ -248,8 +247,8 @@ Cohesion: 0.14
 Nodes (14): AetherMesh Core Persistent Goal, AI Direction, Build Direction, Contribution Tracking Direction, Current Priority Bias, Decision Rule For Every Interval, Development Philosophy, Early Prototype Target (+6 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.10
-Nodes (22): run_demo(), _canonical_root_json(), _component_hashes(), _default_goos(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, HardwareIdentityInputs (+14 more)
+Cohesion: 0.09
+Nodes (24): run_demo(), _canonical_root_json(), _component_hashes(), _default_goos(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, HardwareIdentityInputs (+16 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.18
@@ -289,7 +288,7 @@ Nodes (24): isDestroyedElectronObject(), isDestroyedError(), sendWindowState(), 
 
 ### Community 37 - "Community 37"
 Cohesion: 0.08
-Nodes (12): _identity_document(), load_or_create_identity(), _new_local_node_id(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., Return a legacy collision-resistant local node id for explicit rotations., _required_identity_string() (+4 more)
+Nodes (11): _identity_document(), load_or_create_identity(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., _required_identity_string(), _run_command(), _save_identity() (+3 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.17
@@ -348,8 +347,8 @@ Cohesion: 0.13
 Nodes (12): NodeRuntimeService, Raised when a requested local validation receipt is not stored., Run a queued local submission; this is not a daemon or remote boundary., Central service for local node config, lifecycle status, peers, and jobs., Accept one local job request without dispatching or validating it., Read one submission and its optional local execution evidence., Read derived local job audit events without mutating stored evidence., Read local job evidence into a deterministic, non-mutating summary. (+4 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.12
-Nodes (36): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _gpu_input(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _is_darwin_physical_ethernet_or_wifi_port() (+28 more)
+Cohesion: 0.09
+Nodes (43): _append_identity_reset_receipt(), _backup_identity_referenced_artifacts(), _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), _identity_reset_artifact_ref() (+35 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.20
@@ -424,15 +423,15 @@ Cohesion: 0.29
 Nodes (6): _canonical_json_bytes(), Return the canonical lowercase SHA-256 digest for a ``JobResult``.      The hash, Hash the canonical result fields used by result messages and audits., result_hash(), result_hash_from_fields(), ResultHashTests
 
 ### Community 76 - "Community 76"
-Cohesion: 0.11
-Nodes (16): _append_identity_reset_receipt(), _backup_identity_referenced_artifacts(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), _local_identity_ref_path(), Return a local audit reference without leaking host-specific directories. (+8 more)
+Cohesion: 0.25
+Nodes (7): _gpu_input(), _join_normalized(), _new_local_node_id(), _normalize_value(), Return a legacy collision-resistant local node id for explicit rotations., _round_installed_ram_gb(), _rounded_gb_input()
 
 ### Community 77 - "Community 77"
 Cohesion: 0.39
 Nodes (7): detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(), parsePythonVersion(), { promisify }, runVersion()
 
 ### Community 78 - "Community 78"
-Cohesion: 0.25
+Cohesion: 0.29
 Nodes (7): Local Node Identity Format, Local prototype reset procedure, Manifest linkage, Minimal example, Private key material, Version 1 document shape, Versioning rules
 
 ### Community 79 - "Community 79"
@@ -468,8 +467,8 @@ Cohesion: 0.67
 Nodes (3): _require_non_empty_string(), _require_supported_message_type(), _validate_json_compatible()
 
 ### Community 92 - "Community 92"
-Cohesion: 0.12
-Nodes (16): LocalNodeIdentity, Validated version 1 public local node identity document., Return the public identity document without private key material., capture_version_metadata(), _node_software_version(), Locally observable software and runtime version metadata., Raised when local version metadata is missing or malformed., Return factual local software/runtime metadata for one node run. (+8 more)
+Cohesion: 0.10
+Nodes (19): IdentityResetResult, LocalNodeIdentity, Validated version 1 public local node identity document., Return the public identity document without private key material., Local audit details for an explicit identity reset., Return JSON-serializable reset details for CLI/API callers., capture_version_metadata(), _node_software_version() (+11 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.18
@@ -482,14 +481,14 @@ Nodes (11): _lifespan(), Local FastAPI app for the AetherMesh node dashboard., _
 ## Knowledge Gaps
 - **236 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+231 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Job` connect `Community 3` to `Community 32`, `Community 0`, `Community 66`, `Community 5`, `Community 6`, `Community 71`, `Community 46`, `Community 47`, `Community 16`, `models.py`, `Community 53`, `Community 22`, `Community 24`, `Community 27`, `Community 28`, `Community 29`?**
   _High betweenness centrality (0.054) - this node is a cross-community bridge._
-- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 6`, `Community 10`, `Community 44`, `Community 76`, `Community 46`, `Community 14`, `Community 45`, `Community 50`, `Community 24`, `Community 25`, `Community 27`, `Community 28`?**
+- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 6`, `Community 10`, `Community 44`, `Community 45`, `Community 46`, `Community 14`, `Community 50`, `Community 54`, `Community 24`, `Community 25`, `Community 27`, `Community 28`?**
   _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Why does `MeshMessage` connect `Community 57` to `Community 32`, `Community 1`, `Community 2`, `Community 99`, `Community 5`, `Community 8`, `Community 43`, `Community 46`, `Community 14`, `Community 16`, `models.py`, `Community 24`, `Community 89`, `Community 28`, `Community 29`, `Community 25`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
