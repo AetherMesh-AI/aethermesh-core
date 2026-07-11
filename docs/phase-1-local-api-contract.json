@@ -1,0 +1,59 @@
+{
+  "contract_version": 1,
+  "compatibility_policy": "Phase 1 contract changes are deliberate: additive optional fields may retain contract_version 1; required-field removals, renamed fields, changed meanings, or type changes require a new contract_version, migration note, and updated examples.",
+  "scope": "Local-only HTTP and local runtime boundaries. No route implies peer networking, consensus, or rewards.",
+  "schemas": {
+    "local_node_startup_response": {
+      "required": ["node_id", "creator_node_id", "identity_path", "manifest_path", "manifest_hash", "validation_receipt_path", "lineage_path", "runtime_directories", "validation_result", "network_mode"],
+      "properties": {"node_id": "string", "creator_node_id": "string", "identity_path": "string", "manifest_path": "string", "manifest_hash": "string", "validation_receipt_path": "string", "lineage_path": "string", "runtime_directories": "object", "validation_result": "string", "network_mode": "string"}
+    },
+    "job_submission_request": {
+      "required": ["job_type", "payload", "creator_node_id", "requested_validation_mode"],
+      "properties": {"job_type": "string", "payload": "object", "creator_node_id": "string", "requested_validation_mode": "string", "lineage_parent_refs": "array[string]", "attribution_metadata": "object"}
+    },
+    "job_submission_manifest": {
+      "required": ["version", "manifest_type", "network_mode", "submitted_at", "job", "creator_node_id", "requested_validation_mode", "lineage", "contribution_attribution"],
+      "properties": {"version": "integer", "manifest_type": "string", "network_mode": "string", "submitted_at": "integer", "job": "object", "creator_node_id": "string", "requested_validation_mode": "string", "lineage": "object", "contribution_attribution": "object"}
+    },
+    "job_submission_response": {
+      "required": ["job_id", "status", "manifest_ref", "next_validation_expectation", "network_mode"],
+      "properties": {"job_id": "string", "status": "string", "manifest_ref": "string", "next_validation_expectation": "string", "network_mode": "string"}
+    },
+    "validation_receipt_response": {
+      "required": ["receipt_id", "creator_node_id", "manifest_ref", "lineage_parent_ids", "validation_status", "validator_identity", "contribution_attribution", "validation_scope", "evidence", "validation_timestamp", "validation_timestamp_source"],
+      "properties": {"receipt_id": "string", "creator_node_id": "string", "manifest_ref": "string", "lineage_parent_ids": "array[string]", "validation_status": "string", "validator_identity": "string", "contribution_attribution": "object", "validation_scope": "string", "evidence": "object", "validation_timestamp": "integer", "validation_timestamp_source": "string"}
+    },
+    "contribution_lookup_response": {
+      "required": ["network_mode", "summary_status", "accepted_work_count", "non_accepted_work_count", "items"],
+      "properties": {"network_mode": "string", "summary_status": "string", "accepted_work_count": "integer", "non_accepted_work_count": "integer", "items": "array[object]"}
+    }
+  },
+  "operations": [
+    {"boundary": "start_local_node_runtime", "http": null, "request_schema": null, "response_schema": "local_node_startup_response"},
+    {"boundary": "health", "http": "GET /health", "request_schema": null, "response_schema": null},
+    {"boundary": "status", "http": "GET /status, GET /api/status, GET /node, GET /api/node", "request_schema": null, "response_schema": null},
+    {"boundary": "version", "http": "GET /version, GET /api/package", "request_schema": null, "response_schema": null},
+    {"boundary": "peers", "http": "GET /peers, GET /api/peers", "request_schema": null, "response_schema": null},
+    {"boundary": "jobs", "http": "GET /api/jobs", "request_schema": null, "response_schema": null},
+    {"boundary": "job_submission", "http": "POST /api/jobs", "request_schema": "job_submission_request", "response_schema": "job_submission_response"},
+    {"boundary": "job_status", "http": "GET /api/jobs/{job_id}", "request_schema": null, "response_schema": null},
+    {"boundary": "contribution_lookup", "http": "GET /api/contributions", "request_schema": null, "response_schema": "contribution_lookup_response"},
+    {"boundary": "validation_receipt_lookup", "http": "GET /api/validation-receipts", "request_schema": null, "response_schema": "validation_receipt_response"},
+    {"boundary": "audit_events", "http": "GET /api/audit-events", "request_schema": null, "response_schema": null},
+    {"boundary": "capabilities", "http": "GET /capabilities, GET /api/capabilities", "request_schema": null, "response_schema": null},
+    {"boundary": "model_manifests", "http": "GET /api/model-manifests", "request_schema": null, "response_schema": null},
+    {"boundary": "network", "http": "GET /api/network", "request_schema": null, "response_schema": null},
+    {"boundary": "logs", "http": "GET /logs, GET /api/logs, GET /api/events", "request_schema": null, "response_schema": null},
+    {"boundary": "shutdown", "http": "POST /shutdown", "request_schema": null, "response_schema": null},
+    {"boundary": "restart", "http": "POST /restart", "request_schema": null, "response_schema": null}
+  ],
+  "required_route_paths": ["/health", "/status", "/api/status", "/version", "/node", "/api/node", "/peers", "/api/peers", "/api/jobs", "/api/jobs/{job_id}", "/api/contributions", "/api/validation-receipts", "/api/audit-events", "/capabilities", "/api/capabilities", "/api/model-manifests", "/api/package", "/api/network", "/logs", "/api/logs", "/api/events", "/shutdown", "/restart"],
+  "examples": {
+    "local_node_startup": {"schema": "local_node_startup_response", "payload": {"node_id": "node-local-example", "creator_node_id": "node-local-example", "identity_path": "identity/creator-node.json", "manifest_path": "manifests/local-node-manifest.json", "manifest_hash": "sha256:example", "validation_receipt_path": "receipts/startup-validation-example.json", "lineage_path": "lineage/startup-lineage-example.json", "runtime_directories": {}, "validation_result": "passed", "network_mode": "local-only-no-p2p"}},
+    "job_submission": {"schema": "job_submission_request", "payload": {"job_type": "echo", "payload": {"message": "hello"}, "creator_node_id": "node-local-example", "requested_validation_mode": "deterministic-local", "lineage_parent_refs": ["data/prior-job.json"], "attribution_metadata": {"source": "contract-example"}}},
+    "job_submission_response": {"schema": "job_submission_response", "payload": {"job_id": "local-job-00000000000000000000000000000000", "status": "accepted_pending_execution", "manifest_ref": "data/job-submissions/local-job-00000000000000000000000000000000.json", "next_validation_expectation": "pending_requested_local_validation", "network_mode": "local-only-no-p2p"}},
+    "job_submission_manifest": {"schema": "job_submission_manifest", "payload": {"version": 1, "manifest_type": "local_job_submission", "network_mode": "local-only-no-p2p", "submitted_at": 1, "job": {"job_id": "local-job-00000000000000000000000000000000", "job_type": "echo", "payload": {"message": "hello"}}, "creator_node_id": "node-local-example", "requested_validation_mode": "deterministic-local", "lineage": {"parent_refs": ["data/prior-job.json"]}, "contribution_attribution": {"creator_node_id": "node-local-example", "metadata": {"source": "contract-example"}}}},
+    "validation_receipt_lookup": {"schema": "validation_receipt_response", "payload": {"receipt_id": "local-validation-receipt-example", "creator_node_id": "node-local-example", "manifest_ref": "data/job-submissions/local-job-example.json", "lineage_parent_ids": ["data/prior-job.json"], "validation_status": "passed", "validator_identity": "worker-local-example", "contribution_attribution": {"creator_node_id": "node-local-example"}, "validation_scope": "local-only-not-consensus", "evidence": {"receipt_ref": "data/job-validation-receipts/local-job-example.json"}, "validation_timestamp": 1, "validation_timestamp_source": "receipt_record"}},
+    "contribution_lookup": {"schema": "contribution_lookup_response", "payload": {"network_mode": "local-only-no-p2p", "summary_status": "empty", "accepted_work_count": 0, "non_accepted_work_count": 0, "items": []}}
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "contract_version": 1,
+  "examples": {
+    "contribution_lookup": "passed",
+    "job_submission": "passed",
+    "job_submission_manifest": "passed",
+    "job_submission_response": "passed",
+    "local_node_startup": "passed",
+    "validation_receipt_lookup": "passed"
+  },
+  "missing_required_field_checks": {
+    "job_submission:creator_node_id": "rejected",
+    "job_submission_manifest:manifest_type": "rejected",
+    "validation_receipt_lookup:contribution_attribution": "rejected",
+    "validation_receipt_lookup:lineage_parent_ids": "rejected",
+    "validation_receipt_lookup:validation_status": "rejected"
+  },
+  "openapi_route_match": "passed",
+  "receipt_kind": "phase_1_api_contract_validation",
+  "result": "passed",
+  "route_count": 23
+}

@@ -4,6 +4,8 @@ Phase 1 exposes a deliberately small, local-only boundary for a runnable prototy
 
 The dashboard HTTP app is a separate localhost status surface. Its status/dashboard routes are read-only (except local process shutdown and restart signals). `POST /api/jobs` is the single local work-submission exception; it records a request but does not execute it, issue receipts, or award contribution credit.
 
+The stable field-level contract, examples, compatibility rule, and local validation receipt procedure are in [Phase 1 API Schema Stability](phase-1-api-schema-stability.md) and `phase-1-local-api-contract.json`. This boundary describes behavior; the versioned contract is the source for required fields and published-route checks.
+
 ## Scope and locality
 
 Every path in this document is an operator-selected local filesystem path. Artifact references written by the runtime are relative to the selected runtime directory. The supported runtime mode is `local-only-no-p2p`; no operation contacts an external service.
