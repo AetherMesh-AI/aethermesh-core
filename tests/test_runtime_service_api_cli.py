@@ -160,6 +160,118 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(rejected.status_code, 400)
             self.assertIn("creator_node_id", rejected.json()["detail"])
 
+    def test_local_job_status_tracks_queued_succeeded_failed_and_not_found(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "job_type": "echo",
+                "payload": {"message": "hello"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            accepted = service.submit_local_job(request)
+            queued = service.get_local_job_status(accepted["job_id"])
+            succeeded = service.execute_submitted_local_job(
+                accepted["job_id"], "worker-local-a"
+            )
+            failed_request = {**request, "job_type": "not-supported"}
+            failed_accepted = service.submit_local_job(failed_request)
+            failed = service.execute_submitted_local_job(
+                failed_accepted["job_id"], "worker-local-b"
+            )
+
+            self.assertEqual(queued["status"], "queued")
+            self.assertEqual(queued["manifest_ref"], accepted["manifest_ref"])
+            self.assertEqual(queued["creator_node_id"], "creator-local-a")
+            self.assertIsNone(queued["worker_node_id"])
+            self.assertEqual(
+                queued["lineage"], {"parent_refs": ["data/prior-job.json"]}
+            )
+            self.assertEqual(
+                queued["contribution_attribution"]["metadata"], {"project": "prototype"}
+            )
+            self.assertIsNone(queued["validation"])
+            self.assertIsNone(queued["result"])
+            self.assertEqual(succeeded["status"], "succeeded")
+            self.assertEqual(succeeded["worker_node_id"], "worker-local-a")
+            self.assertEqual(
+                succeeded["result"],
+                {
+                    "ref": f"data/job-results/{accepted['job_id']}.json",
+                    "summary": "hello",
+                },
+            )
+            self.assertEqual(
+                succeeded["validation"],
+                {
+                    "receipt_ref": f"data/job-validation-receipts/{accepted['job_id']}.json",
+                    "passed": True,
+                    "reason": "ok",
+                },
+            )
+            self.assertEqual(
+                succeeded["contribution_attribution"]["validated_contribution_units"], 1
+            )
+            self.assertIsNone(succeeded["error"])
+            self.assertEqual(failed["status"], "failed")
+            self.assertFalse(failed["validation"]["passed"])
+            self.assertEqual(
+                failed["contribution_attribution"]["creator_node_id"], "creator-local-a"
+            )
+            self.assertIn("Unsupported job type", str(failed["error"]))
+            self.assertEqual(
+                service.get_local_job_status("missing-job"),
+                {
+                    "job_id": "missing-job",
+                    "status": "not_found",
+                    "error": "local job not found",
+                },
+            )
+            self.assertEqual(
+                service.get_local_job_status(""),
+                {"job_id": "", "status": "not_found", "error": "local job not found"},
+            )
+
+    def test_local_job_status_api_returns_success_and_stable_not_found(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            api = create_app(service)
+
+            async def fetch() -> tuple[httpx.Response, httpx.Response]:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    accepted = await client.post(
+                        "/api/jobs",
+                        json={
+                            "job_type": "echo",
+                            "payload": {"message": "hello"},
+                            "creator_node_id": "creator-local-a",
+                            "requested_validation_mode": "deterministic-local",
+                        },
+                    )
+                    known = await client.get(f"/api/jobs/{accepted.json()['job_id']}")
+                    missing = await client.get("/api/jobs/missing-job")
+                    return known, missing
+
+            known, missing = asyncio.run(fetch())
+            self.assertEqual(known.status_code, 200)
+            self.assertEqual(known.json()["status"], "queued")
+            self.assertEqual(missing.status_code, 200)
+            self.assertEqual(
+                missing.json(),
+                {
+                    "job_id": "missing-job",
+                    "status": "not_found",
+                    "error": "local job not found",
+                },
+            )
+
     def test_init_creates_reusable_local_node_data_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))

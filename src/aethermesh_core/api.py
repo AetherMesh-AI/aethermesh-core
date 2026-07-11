@@ -69,6 +69,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         except RuntimeServiceError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/api/jobs/{job_id}")
+    def job_status(job_id: str) -> dict[str, Any]:
+        """Return one local submitted job's lifecycle and preserved evidence."""
+
+        return runtime_service.get_local_job_status(job_id)
+
     @app.get("/capabilities")
     @app.get("/api/capabilities")
     def capabilities() -> dict[str, Any]:
