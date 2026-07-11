@@ -104,11 +104,15 @@ For startup validation, the receipt additionally records `timestamp`, `creator_n
 
 A failed validation is returned as failed/invalid evidence with its reason and must not receive validated contribution credit. A receipt is evidence of local validation only, not consensus.
 
-## Traceability rule
+## Traceability rule and required planned binding
 
 `audit-local-flow` can follow a work output from the batch-manifest reference and assignment through its result, flow receipt, validation message, contribution message, and ledger record. Separately, `inspect_local_node_runtime` can follow a startup runtime through its preserved creator node ID, startup manifest, startup receipt, startup lineage, and startup attribution references.
 
-No current function proves that a `run-local-flow` worker is the same preserved creator identity inspected by `inspect_local_node_runtime`, and flow receipts do not contain startup-lineage references. Callers must not combine those two audit chains or claim end-to-end creator/lineage traceability. Adding an explicit runtime-to-flow binding, followed by an audit check for that binding, is required before Phase 1 can claim that every work output traces to a creator node ID and startup lineage entry.
+No current function proves that a `run-local-flow` worker is the same preserved creator identity inspected by `inspect_local_node_runtime`, and flow receipts do not contain startup-lineage references. Callers must not combine those two audit chains or claim end-to-end creator/lineage traceability.
+
+Phase 1 therefore reserves one planned function/CLI boundary, not yet exposed: `run_local_runtime_flow(runtime_dir, manifest_path, output_dir)` / `run-local-runtime-flow`. It must load the preserved identity and accepted startup manifest from `runtime_dir`, require the selected batch worker to match that local node, and return the normal flow summary plus `creator_node_id`, `startup_manifest_ref`, `startup_manifest_hash`, `startup_lineage_ref`, and `startup_receipt_ref`. The same immutable references must be copied into each flow receipt so an output has one audit chain to its manifest, creator identity, validation evidence, lineage, and contribution record.
+
+Before writing assignments, results, receipts, or contribution records, this boundary must reject a missing or mismatched identity, startup manifest, startup receipt, startup lineage record, worker node, or existing output artifact set. `audit-local-flow` must then verify all runtime references and hashes. Until that implementation and its failure-without-mutation tests exist, the currently exposed operations satisfy the two separate audit chains only; they do not satisfy the planned end-to-end traceability boundary.
 
 ## Explicitly out of scope
 
