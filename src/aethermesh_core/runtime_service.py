@@ -488,16 +488,16 @@ class NodeRuntimeService:
     def inspect_local_audit_events(
         self,
         *,
+        limit: int = 50,
+        offset: int = 0,
         start_time: int | None = None,
         end_time: int | None = None,
-        event_type: str | None = None,
         node_id: str | None = None,
+        event_type: str | None = None,
         manifest_id: str | None = None,
         receipt_id: str | None = None,
         lineage_id: str | None = None,
         contribution_attribution_id: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
     ) -> dict[str, Any]:
         """Read derived local job audit events without mutating stored evidence."""
         filters = {
@@ -631,17 +631,18 @@ class NodeRuntimeService:
         receipt_ref = (
             validation.get("receipt_ref") if isinstance(validation, dict) else None
         )
+        expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         worker = status.get("worker_node_id")
         if (
             status.get("job_id") != job_id
             or not isinstance(worker, str)
             or not worker
             or not isinstance(validation, dict)
-            or not isinstance(receipt_ref, str)
+            or receipt_ref != expected_receipt_ref
         ):
             raise RuntimeServiceError("job status has invalid audit evidence")
         receipt = self._load_local_job_document(
-            self.paths.home / receipt_ref, "validation receipt"
+            self.paths.home / expected_receipt_ref, "validation receipt"
         )
         validated_at = receipt.get("validated_at")
         if (

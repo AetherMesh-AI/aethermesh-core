@@ -1,4 +1,5 @@
 import asyncio
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -60,6 +61,13 @@ class AuditInspectionTests(unittest.TestCase):
                 service.inspect_local_audit_events(event_type="unknown")
             with self.assertRaisesRegex(RuntimeServiceError, "limit"):
                 service.inspect_local_audit_events(limit=0)
+
+            status_path = home / "data" / "job-status" / f"{accepted['job_id']}.json"
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            status["validation"]["receipt_ref"] = "../outside.json"
+            status_path.write_text(json.dumps(status), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeServiceError, "job status"):
+                service.inspect_local_audit_events()
 
     def test_endpoint_returns_events_and_clear_filter_errors(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
