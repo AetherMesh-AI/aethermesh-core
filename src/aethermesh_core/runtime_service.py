@@ -24,7 +24,9 @@ from aethermesh_core.identity import (
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
-from aethermesh_core.models import NodeIdentity
+from aethermesh_core.models import Job, NodeIdentity
+from aethermesh_core.runner import LocalRunner
+from aethermesh_core.validation import validate_job_result
 
 CONFIG_SCHEMA_VERSION = 1
 DEFAULT_API_HOST = "127.0.0.1"
@@ -435,6 +437,145 @@ class NodeRuntimeService:
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
         }
+
+    def get_local_job_status(self, job_id: str) -> dict[str, Any]:
+        """Read one submission and its optional local execution evidence."""
+
+        missing = {
+            "job_id": job_id,
+            "status": "not_found",
+            "error": "local job not found",
+        }
+        if not self._is_local_job_id(job_id):
+            return missing
+        manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
+        if not manifest_path.exists():
+            return missing
+        manifest = self._load_local_job_document(
+            manifest_path, "job submission manifest"
+        )
+        if manifest.get("job", {}).get("job_id") != job_id:
+            raise RuntimeServiceError(
+                "job submission manifest job_id does not match its path"
+            )
+        status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
+        status = (
+            self._load_local_job_document(status_path, "job status record")
+            if status_path.exists()
+            else {}
+        )
+        return {
+            "job_id": job_id,
+            "status": status.get("status", "queued"),
+            "manifest_ref": f"data/job-submissions/{job_id}.json",
+            "creator_node_id": manifest["creator_node_id"],
+            "worker_node_id": status.get("worker_node_id"),
+            "lineage": manifest["lineage"],
+            "contribution_attribution": status.get(
+                "contribution_attribution", manifest["contribution_attribution"]
+            ),
+            "validation": status.get("validation"),
+            "result": status.get("result"),
+            "error": status.get("error"),
+            "network_mode": "local-only-no-p2p",
+        }
+
+    def execute_submitted_local_job(
+        self, job_id: str, worker_node_id: str
+    ) -> dict[str, Any]:
+        """Run a queued local submission; this is not a daemon or remote boundary."""
+
+        before = self.get_local_job_status(job_id)
+        if before["status"] == "not_found":
+            raise RuntimeServiceError("local job not found")
+        if before["status"] != "queued":
+            raise RuntimeServiceError("local job is not queued")
+        if not isinstance(worker_node_id, str) or not worker_node_id.strip():
+            raise RuntimeServiceError("worker_node_id must be a non-empty string")
+        manifest = self._load_local_job_document(
+            self.paths.data_dir / "job-submissions" / f"{job_id}.json",
+            "job submission manifest",
+        )
+        job_data = manifest["job"]
+        job = Job(
+            job_id=job_id, job_type=job_data["job_type"], payload=job_data["payload"]
+        )
+        result = LocalRunner(NodeIdentity(node_id=worker_node_id)).run(job)
+        validation = validate_job_result(job, result)
+        result_ref = f"data/job-results/{job_id}.json"
+        receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        atomic_create_json(
+            self.paths.data_dir / "job-results" / f"{job_id}.json",
+            {
+                "version": 1,
+                "job_id": job_id,
+                "worker_node_id": worker_node_id,
+                "result": result.to_dict(),
+            },
+        )
+        atomic_create_json(
+            self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
+            {
+                "version": 1,
+                "job_id": job_id,
+                "result_ref": result_ref,
+                "validator_id": worker_node_id,
+                "validation": validation.to_dict(),
+            },
+        )
+        succeeded = result.status == "completed" and validation.valid
+        atomic_create_json(
+            self.paths.data_dir / "job-status" / f"{job_id}.json",
+            {
+                "version": 1,
+                "job_id": job_id,
+                "status": "succeeded" if succeeded else "failed",
+                "worker_node_id": worker_node_id,
+                "result": {
+                    "ref": result_ref,
+                    "summary": result.output if succeeded else None,
+                },
+                "validation": {
+                    "receipt_ref": receipt_ref,
+                    "passed": validation.valid,
+                    "reason": validation.reason,
+                },
+                "contribution_attribution": {
+                    **manifest["contribution_attribution"],
+                    "worker_node_id": worker_node_id,
+                    "validated_contribution_units": result.contribution_units
+                    if succeeded
+                    else 0,
+                },
+                "error": result.error
+                or (None if succeeded else f"validation failed: {validation.reason}"),
+            },
+        )
+        self._append_event(f"executed local job submission {job_id}")
+        return self.get_local_job_status(job_id)
+
+    @staticmethod
+    def _is_local_job_id(job_id: object) -> bool:
+        prefix = "local-job-"
+        suffix = job_id[len(prefix) :] if isinstance(job_id, str) else ""
+        return (
+            isinstance(job_id, str)
+            and job_id.startswith(prefix)
+            and len(suffix) == 32
+            and all(character in "0123456789abcdef" for character in suffix)
+        )
+
+    @staticmethod
+    def _load_local_job_document(path: Path, label: str) -> dict[str, Any]:
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise RuntimeServiceError(f"{label} JSON is malformed: {exc.msg}") from exc
+        except OSError as exc:
+            raise RuntimeServiceError(f"could not read {label}: {exc}") from exc
+        if not isinstance(document, dict):
+            raise RuntimeServiceError(f"{label} JSON must be an object")
+        return document
 
     def health(self) -> dict[str, Any]:
         config = self.load_config()
