@@ -67,6 +67,99 @@ async def _fetch_api_payloads(api_app: FastAPI) -> dict[str, Any]:
 
 
 class RuntimeServiceTests(unittest.TestCase):
+    def test_local_job_submission_persists_provenance_without_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+
+            response = service.submit_local_job(
+                {
+                    "job_type": "echo",
+                    "payload": {"message": "hello"},
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": ["data/prior-job.json"],
+                    "attribution_metadata": {"project": "prototype"},
+                }
+            )
+
+            self.assertRegex(response["job_id"], r"^local-job-[a-f0-9]{32}$")
+            self.assertEqual(response["status"], "accepted_pending_execution")
+            self.assertEqual(
+                response["next_validation_expectation"],
+                "pending_requested_local_validation",
+            )
+            self.assertEqual(response["network_mode"], "local-only-no-p2p")
+            manifest_path = Path(temp_dir) / response["manifest_ref"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["job"]["job_id"], response["job_id"])
+            self.assertEqual(manifest["job"]["payload"], {"message": "hello"})
+            self.assertEqual(
+                manifest["lineage"]["parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                manifest["contribution_attribution"],
+                {
+                    "creator_node_id": "creator-local-a",
+                    "metadata": {"project": "prototype"},
+                },
+            )
+            self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
+
+    def test_local_job_submission_rejects_invalid_request_without_manifest(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "job_type": "echo",
+                "payload": {"message": "hello"},
+                "requested_validation_mode": "deterministic-local",
+            }
+
+            with self.assertRaisesRegex(RuntimeServiceError, "creator_node_id"):
+                service.submit_local_job(request)
+            request["creator_node_id"] = "creator-local-a"
+            request["payload"] = ["not", "an", "object"]
+            with self.assertRaisesRegex(RuntimeServiceError, "payload"):
+                service.submit_local_job(request)
+
+            self.assertFalse((Path(temp_dir) / "data" / "job-submissions").exists())
+
+    def test_local_job_submission_api_reports_local_validation_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            api = create_app(service)
+
+            async def submit() -> tuple[httpx.Response, httpx.Response]:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    accepted = await client.post(
+                        "/api/jobs",
+                        json={
+                            "job_type": "echo",
+                            "payload": {},
+                            "creator_node_id": "creator-local-a",
+                            "requested_validation_mode": "deterministic-local",
+                        },
+                    )
+                    rejected = await client.post(
+                        "/api/jobs",
+                        json={
+                            "job_type": "echo",
+                            "payload": {},
+                            "requested_validation_mode": "deterministic-local",
+                        },
+                    )
+                    return accepted, rejected
+
+            accepted, rejected = asyncio.run(submit())
+            self.assertEqual(accepted.status_code, 200)
+            self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
+            self.assertEqual(rejected.status_code, 400)
+            self.assertIn("creator_node_id", rejected.json()["detail"])
+
     def test_init_creates_reusable_local_node_data_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))

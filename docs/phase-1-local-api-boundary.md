@@ -1,8 +1,8 @@
 # Phase 1 Local API Boundary
 
-Phase 1 exposes a deliberately small, local-only boundary for a runnable prototype. Here, “API” means the supported Python function and CLI contracts plus their local JSON artifacts. It does not promise HTTP work-submission routes, remote peers, or a platform control plane.
+Phase 1 exposes a deliberately small, local-only boundary for a runnable prototype. Here, “API” means the supported Python function, localhost route, and CLI contracts plus their local JSON artifacts. It does not promise remote peers or a platform control plane.
 
-The dashboard HTTP app is a separate localhost status surface. Its routes are read-only status/dashboard routes (except local process shutdown and restart signals); it does not accept manifests, work, receipts, or contribution records. Callers that need prototype work behavior must use the function/CLI boundary below.
+The dashboard HTTP app is a separate localhost status surface. Its status/dashboard routes are read-only (except local process shutdown and restart signals). `POST /api/jobs` is the single local work-submission exception; it records a request but does not execute it, issue receipts, or award contribution credit.
 
 ## Scope and locality
 
@@ -15,6 +15,7 @@ Phase 1 supports these operations only:
 | Create or load node | `start_local_node_runtime(runtime_dir, reset_creator_identity=False)` | `start-local-node --runtime-dir <dir>` | Create a new local runtime or load its preserved identity and startup artifacts. |
 | Inspect node provenance | `inspect_local_node_runtime(runtime_dir)` and `local_node_status(runtime_dir)` | none | Read identity, manifest, receipt, lineage, and attribution references without mutation. |
 | Stop or restart node | `stop_local_node_runtime(...)`, `restart_local_node_runtime(...)` | `shutdown-local-node`, `restart-local-node` | Persist local lifecycle evidence while retaining identity and audit links. |
+| Submit one local job | `NodeRuntimeService.submit_local_job(request)` | none | Validate and atomically record one local submission for later execution and validation. Also available as `POST /api/jobs`. |
 | Submit deterministic local batch work | `dispatch_local_batch_command(manifest_path, message_log_path)` or `run_local_flow(manifest_path, output_dir, ...)` | `dispatch-local-batch` or `run-local-flow` | Validate a version 1 batch manifest, then dispatch or execute it locally. |
 | Validate completed local work | `validate_local_node_results(assignment_log_path, result_log_path, validation_log_path)` | `validate-local-results` | Replay local assignment/result logs and write a deterministic validation report. |
 | Read validated result history | `audit_local_flow(output_dir)` | `audit-local-flow` | Verify a completed local-flow artifact set. |
@@ -79,7 +80,9 @@ The runtime owns startup manifests, startup receipts, and startup lineage record
 
 ## Submission, acceptance, and rejection
 
-A local work submission is an invocation of `dispatch-local-batch` or `run-local-flow` with a version 1 job-batch manifest. It is accepted only after manifest parsing confirms the version, non-empty unique node roster, non-empty jobs, and each job’s non-empty `job_id`/`job_type` plus object payload. Execution additionally rejects unsupported job types.
+`POST /api/jobs` is a localhost-only submission route backed by `NodeRuntimeService.submit_local_job(request)`. Its request is a JSON object with non-empty `job_type`, object `payload`, non-empty `creator_node_id`, non-empty `requested_validation_mode`, optional `lineage_parent_refs` (a list of non-empty strings), and optional object `attribution_metadata`. It writes one immutable `data/job-submissions/<job-id>.json` manifest only after validation and returns `job_id`, `status: accepted_pending_execution`, `manifest_ref`, `next_validation_expectation: pending_requested_local_validation`, and `network_mode: local-only-no-p2p`. Submission does not dispatch work, create a receipt, complete validation, contact peers, or award credit.
+
+A local batch submission is an invocation of `dispatch-local-batch` or `run-local-flow` with a version 1 job-batch manifest. It is accepted only after manifest parsing confirms the version, non-empty unique node roster, non-empty jobs, and each job’s non-empty `job_id`/`job_type` plus object payload. Execution additionally rejects unsupported job types.
 
 Accepted work is linked by the deterministic assignment/result/validation/contribution message IDs. `run-local-flow` writes its result artifacts under its supplied output directory and produces a receipt document whose entries include `job_id`, `job_type`, `node_id`, `assignment_message_id`, `result_message_id`, `validation_message_id`, `contribution_message_id`, `result_hash`, validation state, and credited units.
 
@@ -124,7 +127,7 @@ Before writing assignments, results, receipts, or contribution records, this bou
 
 Phase 1 does not expose or imply:
 
-- HTTP endpoints to create nodes, upload manifests, submit work, or mutate receipts;
+- HTTP endpoints to create nodes, upload manifests, or mutate receipts; `POST /api/jobs` is the one local-only submission route documented above;
 - remote transport, peer discovery, remote consensus, or distributed validation;
 - tokenomics, reward math, balances, payouts, or public reputation;
 - public dashboards or external-facing administration;
