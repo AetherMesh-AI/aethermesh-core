@@ -141,6 +141,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def capabilities() -> dict[str, Any]:
         return runtime_service.list_capabilities()
 
+    @app.get("/api/model-manifests")
+    def model_manifests() -> dict[str, Any]:
+        """Inspect redacted summaries of local model/expert manifests."""
+
+        return runtime_service.inspect_model_manifests()
+
     @app.get("/api/package")
     def package() -> dict[str, Any]:
         return runtime_service.package_info()
