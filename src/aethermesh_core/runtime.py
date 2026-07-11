@@ -7,6 +7,8 @@ responsible only for parsing arguments, formatting results, and exit codes.
 
 from __future__ import annotations
 
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -130,6 +132,56 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
     }
 
 
+def local_node_status(runtime_dir: str | Path) -> dict[str, object]:
+    """Return a fresh, read-only status snapshot for one local startup runtime.
+
+    This reports only artifacts produced by the local runtime. It intentionally
+    does not infer peer, reward, or network-wide state.
+    """
+
+    root = Path(runtime_dir)
+    config = load_optional_local_runtime_config(root, LocalRuntimeInspectError)
+    identity_path = configured_runtime_path(root, config, "identity")
+    manifest_path = configured_runtime_path(root, config, "manifest")
+    identity = _load_runtime_json(identity_path, "identity")
+    manifest = _load_runtime_json(manifest_path, "manifest")
+    node = _required_mapping(identity, "node", "identity")
+    runtime_version = manifest.get("runtime_version")
+    if not isinstance(runtime_version, dict):
+        raise LocalRuntimeInspectError("manifest runtime_version must be an object")
+
+    receipt_refs = _artifact_refs(
+        root, configured_runtime_ref(config, "validation_receipts")
+    )
+    lineage_refs = _artifact_refs(root, configured_runtime_ref(config, "lineage"))
+    contribution_refs = _artifact_refs(
+        root, configured_runtime_ref(config, "contribution_attribution")
+    )
+    latest_receipt = _load_latest_artifact(root, receipt_refs)
+    latest_lineage = _load_latest_artifact(root, lineage_refs)
+    start_timestamp = _optional_text(latest_lineage, "timestamp")
+    return {
+        "status": "local_ready",
+        "mode": "local-only-no-p2p",
+        "observed_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "local_start_timestamp": start_timestamp,
+        "uptime_seconds": _uptime_seconds(start_timestamp),
+        "creator_node_id": _required_text(node, "creator_node_id", "identity.node"),
+        "node_id": _required_text(node, "node_id", "identity.node"),
+        "manifest_id": None,
+        "manifest_path": _relative_ref(root, manifest_path),
+        "runtime_version": dict(runtime_version),
+        "active_work_count": 0,
+        "last_validation_result": _validation_result(latest_receipt),
+        "last_error_summary": _error_summary(latest_receipt),
+        "lineage_root_or_parent_run_id": _lineage_parent(latest_lineage),
+        "contribution_attribution_id": _attribution_id(latest_lineage),
+        "validation_receipt_refs": receipt_refs,
+        "lineage_refs": lineage_refs,
+        "contribution_attribution_refs": contribution_refs,
+    }
+
+
 def _load_runtime_json(path: Path, label: str) -> dict[str, Any]:
     return load_json_mapping(path, label, LocalRuntimeInspectError)
 
@@ -177,6 +229,73 @@ def _artifact_refs(root: Path, directory_ref: str) -> list[str]:
     ]
 
 
+def _load_latest_artifact(root: Path, refs: list[str]) -> dict[str, Any] | None:
+    if not refs:
+        return None
+    return _load_runtime_json(root / refs[-1], "runtime artifact")
+
+
+def _optional_text(document: dict[str, Any] | None, field_name: str) -> str | None:
+    if document is None:
+        return None
+    value = document.get(field_name)
+    return value if isinstance(value, str) and value else None
+
+
+def _uptime_seconds(start_timestamp: str | None) -> int | None:
+    if start_timestamp is None:
+        return None
+    try:
+        started_at = datetime.fromisoformat(start_timestamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if started_at.tzinfo is None:
+        return None
+    return max(0, int(time.time() - started_at.timestamp()))
+
+
+def _validation_result(document: dict[str, Any] | None) -> object | None:
+    if document is None:
+        return None
+    result = document.get("validation_result")
+    return result if isinstance(result, (str, dict)) else None
+
+
+def _error_summary(document: dict[str, Any] | None) -> str | None:
+    if document is None:
+        return None
+    for field_name in ("error", "reason"):
+        value = document.get(field_name)
+        if isinstance(value, str) and value:
+            return value
+    result = document.get("validation_result")
+    if isinstance(result, dict):
+        reason = result.get("reason")
+        if isinstance(reason, str) and reason:
+            return reason
+    return None
+
+
+def _lineage_parent(document: dict[str, Any] | None) -> str | None:
+    if document is None:
+        return None
+    for field_name in ("lineage_root_id", "parent_run_id"):
+        value = document.get(field_name)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _attribution_id(document: dict[str, Any] | None) -> str | None:
+    if document is None:
+        return None
+    attribution = document.get("contribution_attribution")
+    if not isinstance(attribution, dict):
+        return None
+    value = attribution.get("attribution_node_id")
+    return value if isinstance(value, str) and value else None
+
+
 __all__ = [
     "LocalRestartError",
     "LocalRestartResult",
@@ -187,6 +306,7 @@ __all__ = [
     "LocalStartupResult",
     "LocalValidationError",
     "inspect_local_node_runtime",
+    "local_node_status",
     "restart_local_node_runtime",
     "start_local_node_runtime",
     "stop_local_node_runtime",
