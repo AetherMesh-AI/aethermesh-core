@@ -542,14 +542,22 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission requested_validation_mode must be a non-empty string"
             )
-        lineage_parent_refs = request.get("lineage_parent_refs", [])
+        if "lineage_parent_refs" not in request:
+            raise RuntimeServiceError(
+                "job submission lineage_parent_refs is required for provenance"
+            )
+        lineage_parent_refs = request["lineage_parent_refs"]
         if not isinstance(lineage_parent_refs, list) or not all(
             isinstance(ref, str) and ref.strip() for ref in lineage_parent_refs
         ):
             raise RuntimeServiceError(
                 "job submission lineage_parent_refs must be a list of non-empty strings"
             )
-        attribution_metadata = request.get("attribution_metadata", {})
+        if "attribution_metadata" not in request:
+            raise RuntimeServiceError(
+                "job submission attribution_metadata is required for attribution"
+            )
+        attribution_metadata = request["attribution_metadata"]
         if not isinstance(attribution_metadata, dict):
             raise RuntimeServiceError(
                 "job submission attribution_metadata must be a JSON object"

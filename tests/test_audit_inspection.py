@@ -86,6 +86,8 @@ class AuditInspectionTests(unittest.TestCase):
                     "payload": {},
                     "creator_node_id": "creator-a",
                     "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
                 }
             )
 

@@ -114,6 +114,8 @@ class RuntimeServiceTests(unittest.TestCase):
                 "job_type": "echo",
                 "payload": {"message": "hello"},
                 "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
             }
 
             with self.assertRaisesRegex(RuntimeServiceError, "creator_node_id"):
@@ -121,6 +123,14 @@ class RuntimeServiceTests(unittest.TestCase):
             request["creator_node_id"] = "creator-local-a"
             request["payload"] = ["not", "an", "object"]
             with self.assertRaisesRegex(RuntimeServiceError, "payload"):
+                service.submit_local_job(request)
+            request["payload"] = {"message": "hello"}
+            request.pop("lineage_parent_refs")
+            with self.assertRaisesRegex(RuntimeServiceError, "lineage_parent_refs"):
+                service.submit_local_job(request)
+            request["lineage_parent_refs"] = []
+            request.pop("attribution_metadata")
+            with self.assertRaisesRegex(RuntimeServiceError, "attribution_metadata"):
                 service.submit_local_job(request)
 
             self.assertFalse((Path(temp_dir) / "data" / "job-submissions").exists())
@@ -142,6 +152,8 @@ class RuntimeServiceTests(unittest.TestCase):
                             "payload": {},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
+                            "lineage_parent_refs": [],
+                            "attribution_metadata": {},
                         },
                     )
                     rejected = await client.post(
@@ -265,6 +277,8 @@ class RuntimeServiceTests(unittest.TestCase):
                             "payload": {"message": "hello"},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
+                            "lineage_parent_refs": [],
+                            "attribution_metadata": {},
                         },
                     )
                     known = await client.get(f"/api/jobs/{accepted.json()['job_id']}")
@@ -429,6 +443,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {},
             }
             accepted = service.submit_local_job(request)
             service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
@@ -541,6 +556,8 @@ class RuntimeServiceTests(unittest.TestCase):
                     "payload": {"message": "hello"},
                     "creator_node_id": "creator-local-a",
                     "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
                 }
             )
             job_id = accepted["job_id"]
