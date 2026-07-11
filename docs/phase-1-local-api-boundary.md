@@ -63,11 +63,11 @@ Work output is not written back into the input manifest. Local execution writes 
 | Work type and input | Job-batch `jobs[].job_type` and `jobs[].payload` |
 | Output and output hash | Result record and receipt `output_summary` / `result_hash` |
 | Timestamps | Local mesh messages and startup/lineage/receipt records |
-| Runtime and creator identity | Startup identity and startup manifest `node` section |
+| Worker identity | Job-batch node roster and result/receipt `node_id` |
 | Manifest link | Startup receipt `manifest_ref` and `manifest_hash`; flow message-log manifest reference |
-| Lineage link | Startup lineage record plus its local `receipt_ref` and manifest link |
+| Startup lineage link | Startup lineage record plus its local `receipt_ref` and startup-manifest link; this is not currently linked to batch work |
 | Validation link | Startup receipt or flow receipt `validation_message_id` and `validation` result |
-| Contribution attribution | Startup receipt/lineage attribution metadata and validated flow receipt `contribution_message_id` / `credited_units` |
+| Contribution attribution | Validated flow receipt `contribution_message_id` / `credited_units`; startup attribution is a separate lifecycle record |
 
 The runtime owns startup manifests, startup receipts, and startup lineage records. Batch manifests are input-only. Receipt and lineage writers validate before atomic creation/replacement; callers must not edit an accepted artifact in place to alter provenance.
 
@@ -81,7 +81,9 @@ Invalid manifests, malformed existing receipt documents, and invalid runtime ide
 
 ## Validation response contract
 
-`validate-local-results` accepts only existing local assignment and result logs plus a new local validation-report path. Its response/report is deterministic and identifies validation per local work item. A validation-linked receipt expresses the result as:
+`validate-local-results` accepts only existing local assignment and result logs plus a new local validation-report path. Its response/report is deterministic and identifies each checked result by assignment ID, result ID, job ID, correlation ID, and result sender. The report's `kind: local_validation_report` identifies the local replay validator boundary; it does not currently carry a node validator identity or create/link a flow receipt.
+
+During `run-local-flow`, the emitted `job_validated` message carries `validator_id` (the local worker node ID). A validation-linked flow receipt expresses the result as:
 
 ```json
 {
@@ -98,13 +100,15 @@ Invalid manifests, malformed existing receipt documents, and invalid runtime ide
 }
 ```
 
-For startup validation, the receipt additionally records `timestamp`, `creator_node_id`, `manifest_ref`, `manifest_hash`, and `validation_result` with `accepted`, `status`, and `fail_closed`. The validator identity is the local runtime `node_id`; Phase 1 does not claim an independent remote validator. Evidence is a local message ID and result/manifest hash; failure detail is the validation reason/error stored in the local report or receipt.
+For startup validation, the receipt additionally records `timestamp`, `creator_node_id`, `manifest_ref`, `manifest_hash`, and `validation_result` with `accepted`, `status`, and `fail_closed`. For flow validation, validator identity is read from the linked `job_validated` message rather than duplicated in the receipt. It is the local worker node ID, not an independent validator or remote consensus participant. Evidence is a local message ID and result hash; failure detail is the validation reason/error stored in the local report or flow receipt. Startup validation is a separate lifecycle check tied to the startup manifest hash.
 
 A failed validation is returned as failed/invalid evidence with its reason and must not receive validated contribution credit. A receipt is evidence of local validation only, not consensus.
 
 ## Traceability rule
 
-Before treating a local work output as complete, `audit-local-flow` must be able to follow its assignment and result through a validation receipt and contribution message, while `inspect_local_node_runtime` must show the preserved creator node ID, active manifest, startup receipt, lineage, and attribution references. This is the Phase 1 traceability boundary; it is intentionally file-backed and deterministic enough for tests without external services.
+`audit-local-flow` can follow a work output from the batch-manifest reference and assignment through its result, flow receipt, validation message, contribution message, and ledger record. Separately, `inspect_local_node_runtime` can follow a startup runtime through its preserved creator node ID, startup manifest, startup receipt, startup lineage, and startup attribution references.
+
+No current function proves that a `run-local-flow` worker is the same preserved creator identity inspected by `inspect_local_node_runtime`, and flow receipts do not contain startup-lineage references. Callers must not combine those two audit chains or claim end-to-end creator/lineage traceability. Adding an explicit runtime-to-flow binding, followed by an audit check for that binding, is required before Phase 1 can claim that every work output traces to a creator node ID and startup lineage entry.
 
 ## Explicitly out of scope
 
@@ -126,4 +130,4 @@ The boundary is exercised by focused tests:
 - `tests/test_local_startup.py`: startup creates local identity, manifest, receipt, lineage, work directories, and preserves the creator ID; invalid existing identity/manifest state fails without replacement.
 - `tests/test_runtime.py`: runtime start/stop/restart preserves identity, manifest, receipt, lineage, and attribution references; status reports local-only provenance.
 - `tests/test_cli.py`: malformed manifests and malformed existing receipt artifacts fail without overwriting dependent dispatch/receipt artifacts; local flow produces deterministic receipts.
-- `tests/test_receipts.py` and `tests/test_flow_audit.py`: receipt structure, validation-gated credit, deterministic ordering, and end-to-end artifact audit.
+- `tests/test_receipts.py` and `tests/test_flow_audit.py`: receipt structure, validation-gated credit, deterministic ordering, and flow-artifact audit. They do not test a startup creator/lineage binding because that boundary does not exist yet.
