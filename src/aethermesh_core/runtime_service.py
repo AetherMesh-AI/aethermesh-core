@@ -36,6 +36,58 @@ DEFAULT_LOCAL_CAPABILITIES = (
     "text_stats",
 )
 PUBLIC_VERSION = "0.2.0-alpha"
+CAPABILITY_LIST_SCHEMA_VERSION = 1
+
+# These definitions are the local runtime's source of truth. A configured work
+# type is enabled only when it is registered here; provenance entries describe
+# the local artifact contracts implemented by the Phase 1 runtime.
+LOCAL_CAPABILITY_DEFINITIONS = (
+    ("work.echo", "Run deterministic local echo jobs.", "echo"),
+    (
+        "work.keyword_extract",
+        "Run deterministic local keyword extraction jobs.",
+        "keyword_extract",
+    ),
+    ("work.text_chunk", "Run deterministic local text chunking jobs.", "text_chunk"),
+    (
+        "work.text_embed",
+        "Run deterministic local text embedding helper jobs.",
+        "text_embed",
+    ),
+    ("work.text_stats", "Run deterministic local text statistics jobs.", "text_stats"),
+)
+LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS = (
+    (
+        "provenance.creator_node_id",
+        "Preserve a creator node ID in local runtime identity artifacts.",
+        "enabled",
+    ),
+    (
+        "provenance.manifest",
+        "Create and validate local startup and batch manifests.",
+        "enabled",
+    ),
+    (
+        "provenance.validation_receipt",
+        "Write local validation receipts; these are not consensus evidence.",
+        "enabled",
+    ),
+    (
+        "provenance.lineage_reference",
+        "Write and inspect local startup lineage references.",
+        "enabled",
+    ),
+    (
+        "provenance.contribution_attribution",
+        "Record local validation-gated contribution attribution fields.",
+        "enabled",
+    ),
+    (
+        "provenance.end_to_end_runtime_lineage",
+        "Bind a flow receipt to preserved creator and startup lineage evidence.",
+        "disabled",
+    ),
+)
 
 
 class RuntimeServiceError(ValueError):
@@ -230,12 +282,46 @@ class NodeRuntimeService:
         }
 
     def list_capabilities(self) -> dict[str, Any]:
-        """Return local prototype capabilities exposed to desktop/API frontends."""
+        """Return the versioned local capability response used by ``/capabilities``.
 
+        Response shape::
+
+            {"schema_version": 1, "network_mode": "local-only-no-p2p",
+             "capabilities": [{"identifier": str, "description": str,
+                                "status": "enabled" | "disabled",
+                                "schema_version": 1}], "advertised": False}
+
+        Work entries are enabled from ``config.capabilities.enabled_work_types``;
+        provenance entries come from the registered local artifact contracts.
+        No entry represents remote discovery, consensus, or network advertising.
+        """
+
+        enabled_work_types = _config_enabled_work_types(self.load_config())
+        capabilities = [
+            {
+                "identifier": identifier,
+                "description": description,
+                "status": "enabled" if work_type in enabled_work_types else "disabled",
+                "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
+                "work_type": work_type,
+            }
+            for identifier, description, work_type in LOCAL_CAPABILITY_DEFINITIONS
+        ]
+        capabilities.extend(
+            {
+                "identifier": identifier,
+                "description": description,
+                "status": status,
+                "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
+            }
+            for identifier, description, status in LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS
+        )
         return {
-            "capabilities": list(DEFAULT_LOCAL_CAPABILITIES),
+            "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
+            "network_mode": "local-only-no-p2p",
+            "capabilities": capabilities,
             "advertised": False,
-            "note": "Local prototype capabilities are available but not advertised to a live network yet.",
+            "note": "Capabilities are local-only registered definitions and are not advertised to a live network.",
         }
 
     def package_info(self) -> dict[str, Any]:
@@ -320,6 +406,7 @@ class NodeRuntimeService:
             },
             "api": {"host": DEFAULT_API_HOST, "port": DEFAULT_API_PORT},
             "identity": {"persist": False, "path": str(self.paths.identity_path)},
+            "capabilities": {"enabled_work_types": list(DEFAULT_LOCAL_CAPABILITIES)},
         }
 
     def _write_config(self, document: dict[str, Any]) -> None:
@@ -376,6 +463,22 @@ def _config_node_id(config: dict[str, Any]) -> str | None:
         return None
     node_id = node.get("node_id")
     return node_id if isinstance(node_id, str) and node_id else None
+
+
+def _config_enabled_work_types(config: dict[str, Any]) -> set[str]:
+    capabilities = config.get("capabilities")
+    if capabilities is None:
+        return set(DEFAULT_LOCAL_CAPABILITIES)
+    if not isinstance(capabilities, dict):
+        raise RuntimeServiceError("config JSON field 'capabilities' must be an object")
+    value = capabilities.get("enabled_work_types", list(DEFAULT_LOCAL_CAPABILITIES))
+    if not isinstance(value, list) or not all(
+        isinstance(work_type, str) and work_type for work_type in value
+    ):
+        raise RuntimeServiceError(
+            "config JSON field 'capabilities.enabled_work_types' must be a list of non-empty strings"
+        )
+    return set(value)
 
 
 def _config_identity_persistence_enabled(config: dict[str, Any]) -> bool:

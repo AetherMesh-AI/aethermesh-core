@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783530410.2846909,
-    "ast_hash": "803616742934e23e6734144e5442a359",
+    "mtime": 1783797423.4494562,
+    "ast_hash": "07fdbad51d71a44cf77f7e465df34edd",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783660151.2706506,
-    "ast_hash": "0edbe5c12fe83d7fa140dcbfb84b5237",
+    "mtime": 1783797423.4502902,
+    "ast_hash": "3d8ea6277fe529caf07267d261120767",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -535,7 +535,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime.py": {
-    "mtime": 1783794289.296386,
+    "mtime": 1783794664.3316095,
     "ast_hash": "5e12054e0b76e9b203a5272334c9af54",
     "semantic_hash": ""
   },
@@ -585,7 +585,7 @@
     "semantic_hash": ""
   },
   "tests/test_runtime.py": {
-    "mtime": 1783793553.1551194,
+    "mtime": 1783794664.331887,
     "ast_hash": "f2e553a5d48e1b2e853ca8440f0ada98",
     "semantic_hash": ""
   },
@@ -697,6 +697,11 @@
   "wordlists/node-names/ram-memory.txt": {
     "mtime": 1783418105.2320628,
     "ast_hash": "2bbc8cf60ab0e692931eb1ee9f6c75c1",
+    "semantic_hash": ""
+  },
+  "docs/phase-1-local-api-boundary.md": {
+    "mtime": 1783797323.446959,
+    "ast_hash": "00e7162b8f406fb352cf49f1bc6b1b26",
     "semantic_hash": ""
   }
 }
