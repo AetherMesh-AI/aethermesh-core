@@ -1,0 +1,47 @@
+{
+  "contract_version": "1.0.0",
+  "scope": "Localhost-only Phase 1 API; no route represents peer networking or consensus.",
+  "compatibility": "Additive fields are compatible. Removing, renaming, or changing a required field requires a contract version bump, updated examples, and a migration note in migration_notes.",
+  "migration_notes": [],
+  "routes": {
+    "GET /health": {"response": "HealthResponse"},
+    "GET /status": {"response": "NodeResponse"},
+    "GET /api/status": {"response": "NodeResponse"},
+    "GET /version": {"response": "PackageResponse"},
+    "GET /node": {"response": "NodeResponse"},
+    "GET /api/node": {"response": "NodeResponse"},
+    "GET /peers": {"response": "PeersResponse"},
+    "GET /api/peers": {"response": "PeersResponse"},
+    "GET /api/jobs": {"response": "JobsResponse"},
+    "POST /api/jobs": {"request": "WorkSubmission", "response": "WorkAccepted"},
+    "GET /api/jobs/{job_id}": {"response": "WorkStatus"},
+    "GET /api/contributions": {"response": "ContributionLookup"},
+    "GET /api/validation-receipts": {"response": "ValidationReceipt", "query": "Exactly one of receipt_id, work_id, or latest=true is required."},
+    "GET /api/audit-events": {"response": "AuditEventsResponse"},
+    "GET /capabilities": {"response": "CapabilitiesResponse"},
+    "GET /api/capabilities": {"response": "CapabilitiesResponse"},
+    "GET /api/model-manifests": {"response": "ManifestInspection"},
+    "GET /api/package": {"response": "PackageResponse"},
+    "GET /api/network": {"response": "NetworkResponse"},
+    "GET /logs": {"response": "LogsResponse"},
+    "GET /api/logs": {"response": "LogsResponse"},
+    "GET /api/events": {"response": "LogsResponse"},
+    "POST /shutdown": {"response": "LifecycleResponse"},
+    "POST /restart": {"response": "LifecycleResponse"},
+    "GET /": {"response": "DashboardHtml"}
+  },
+  "schemas": {
+    "WorkSubmission": {"type":"object","required":["job_type","payload","creator_node_id","requested_validation_mode","lineage_parent_refs","attribution_metadata"],"properties":{"job_type":{"type":"string"},"payload":{"type":"object"},"creator_node_id":{"type":"string"},"requested_validation_mode":{"type":"string"},"lineage_parent_refs":{"type":"array","items":{"type":"string"}},"attribution_metadata":{"type":"object"}}},
+    "WorkAccepted": {"type":"object","required":["job_id","status","manifest_ref","next_validation_expectation","network_mode"],"properties":{"job_id":{"type":"string"},"status":{"type":"string"},"manifest_ref":{"type":"string"},"next_validation_expectation":{"type":"string"},"network_mode":{"type":"string"}}},
+    "ValidationReceipt": {"type":"object","required":["schema_version","receipt_id","work_id","creator_node_id","manifest_ref","validation_status","validation","validator_identity","lineage_parent_ids","contribution_attribution","evidence"],"properties":{"schema_version":{"type":"integer"},"receipt_id":{"type":"string"},"work_id":{"type":"string"},"creator_node_id":{"type":"string"},"manifest_ref":{"type":"string"},"validation_status":{"type":"string"},"validation":{"type":"object"},"validator_identity":{"type":"string"},"lineage_parent_ids":{"type":"array","items":{"type":"string"}},"contribution_attribution":{"type":"object","required":["creator_node_id"]},"evidence":{"type":"object","required":["receipt_ref","result_ref","status_ref"]}}},
+    "ContributionLookup": {"type":"object","required":["network_mode","summary_status","accepted_work_count","non_accepted_work_count","items"],"properties":{"network_mode":{"type":"string"},"summary_status":{"type":"string"},"accepted_work_count":{"type":"integer"},"non_accepted_work_count":{"type":"integer"},"items":{"type":"array"}}},
+    "ManifestInspection": {"type":"object","required":["schema_version","network_mode","manifest_count","manifests"],"properties":{"schema_version":{"type":"integer"},"network_mode":{"type":"string"},"manifest_count":{"type":"integer"},"manifests":{"type":"array"}}},
+    "HealthResponse":{"type":"object"}, "NodeResponse":{"type":"object"}, "PackageResponse":{"type":"object"}, "PeersResponse":{"type":"object"}, "JobsResponse":{"type":"object"}, "WorkStatus":{"type":"object"}, "AuditEventsResponse":{"type":"object"}, "CapabilitiesResponse":{"type":"object"}, "NetworkResponse":{"type":"object"}, "LogsResponse":{"type":"object"}, "LifecycleResponse":{"type":"object"}, "DashboardHtml":{"type":"string"}
+  },
+  "examples": {
+    "local_node_registration": {"schema":"NodeResponse","payload":{"initialized":true,"node_id":"local-node-a","status":"running","version":"0.2.0a0"}},
+    "work_submission": {"schema":"WorkSubmission","payload":{"job_type":"echo","payload":{"message":"hello"},"creator_node_id":"creator-local-a","requested_validation_mode":"deterministic-local","lineage_parent_refs":["data/prior-job.json"],"attribution_metadata":{"project":"prototype"}}},
+    "validation_result_recording": {"schema":"ValidationReceipt","payload":{"schema_version":1,"receipt_id":"local-validation-receipt-local-job-a","work_id":"local-job-a","creator_node_id":"creator-local-a","manifest_ref":"data/job-submissions/local-job-a.json","validation_status":"passed","validation":{"valid":true},"validator_identity":"worker-local-a","lineage_parent_ids":["data/prior-job.json"],"contribution_attribution":{"creator_node_id":"creator-local-a"},"evidence":{"receipt_ref":"data/job-validation-receipts/local-job-a.json","result_ref":"data/job-results/local-job-a.json","status_ref":"data/job-status/local-job-a.json"}}},
+    "contribution_lookup": {"schema":"ContributionLookup","payload":{"network_mode":"local-only-no-p2p","summary_status":"recorded","accepted_work_count":1,"non_accepted_work_count":0,"items":[]}}
+  }
+}

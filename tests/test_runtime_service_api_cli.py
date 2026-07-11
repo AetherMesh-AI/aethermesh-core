@@ -142,6 +142,8 @@ class RuntimeServiceTests(unittest.TestCase):
                             "payload": {},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
+                            "lineage_parent_refs": [],
+                            "attribution_metadata": {},
                         },
                     )
                     rejected = await client.post(
@@ -265,6 +267,8 @@ class RuntimeServiceTests(unittest.TestCase):
                             "payload": {"message": "hello"},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
+                            "lineage_parent_refs": [],
+                            "attribution_metadata": {},
                         },
                     )
                     known = await client.get(f"/api/jobs/{accepted.json()['job_id']}")
@@ -429,6 +433,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {},
             }
             accepted = service.submit_local_job(request)
             service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
@@ -541,6 +546,8 @@ class RuntimeServiceTests(unittest.TestCase):
                     "payload": {"message": "hello"},
                     "creator_node_id": "creator-local-a",
                     "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
                 }
             )
             job_id = accepted["job_id"]

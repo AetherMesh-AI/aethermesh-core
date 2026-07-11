@@ -95,8 +95,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1783811136.8119545,
-    "ast_hash": "c95ee0744b7454eac6becb81220cf55e",
+    "mtime": 1783636342.3505616,
+    "ast_hash": "34c5b7970da9ad3bfdf77e22deca96c8",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -305,7 +305,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1783810939.02192,
+    "mtime": 1783809573.929762,
     "ast_hash": "b435cafc372d8a5b3944a32b0563cd8e",
     "semantic_hash": ""
   },
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783811060.5247927,
-    "ast_hash": "43fe46a2b8d3f05f171714e42f8c11e9",
+    "mtime": 1783810548.7722907,
+    "ast_hash": "16d9b4cc2582d05521180083f901f4b8",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783811183.8703125,
-    "ast_hash": "90cedb2093054ae3ddf85228fca53141",
+    "mtime": 1783807252.811409,
+    "ast_hash": "416ba012feb07c42a3a6a0948efcfe2a",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -705,28 +705,13 @@
     "semantic_hash": ""
   },
   "tests/test_audit_inspection.py": {
-    "mtime": 1783811184.3095882,
-    "ast_hash": "afcf10f6321a61c1637984689ad8a9e1",
+    "mtime": 1783809415.1557536,
+    "ast_hash": "2b6a438688a8fae755cb80a1b5b513d3",
     "semantic_hash": ""
   },
   "tests/test_model_manifest_inspection.py": {
-    "mtime": 1783810939.022507,
+    "mtime": 1783810549.2680502,
     "ast_hash": "6582f4dc91d581113b840c235f44bdf6",
-    "semantic_hash": ""
-  },
-  "docs/local-api-schema-v1.json": {
-    "mtime": 1783811108.374066,
-    "ast_hash": "c1f1643338e5eca29d4bbea062d0a2d7",
-    "semantic_hash": ""
-  },
-  "scripts/validate_local_api_schema.py": {
-    "mtime": 1783811369.5337245,
-    "ast_hash": "a66c32992608925febb24e9ae9803c53",
-    "semantic_hash": ""
-  },
-  "validation-receipts/step-36-schema-validation.json": {
-    "mtime": 1783811369.744853,
-    "ast_hash": "a7422d3d7e14eacacc29646264edf071",
     "semantic_hash": ""
   }
 }

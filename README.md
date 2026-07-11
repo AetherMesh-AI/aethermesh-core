@@ -152,6 +152,7 @@ Start here:
 - [CLI and local UI](docs/ui-and-cli.md)
 - [Local node identity](docs/local-node-identity.md)
 - [Local node lifecycle](docs/local-node-lifecycle.md)
+- [Local API schema contract](docs/local-api-schema-v1.json)
 - [Desktop launcher](desktop/docs/desktop.md)
 
 ## Development principles
