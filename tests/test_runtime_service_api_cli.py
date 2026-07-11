@@ -399,6 +399,15 @@ class RuntimeServiceTests(unittest.TestCase):
             for response in (malformed, missing, bad_latest):
                 self.assertEqual(response.status_code, 400)
 
+            stored_receipt["result_ref"] = (
+                "data/job-results/local-job-" + "0" * 32 + ".json"
+            )
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "validation receipt does not match its work result"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
+
     def test_contribution_summary_is_deterministic_and_honest_about_evidence(
         self,
     ) -> None:

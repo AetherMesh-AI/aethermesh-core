@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-11)
 
 ## Corpus Check
-- 127 files · ~174,498 words
+- 127 files · ~174,536 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2110 nodes · 5715 edges · 106 communities (88 shown, 18 thin omitted)
+- 2110 nodes · 5715 edges · 107 communities (89 shown, 18 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 392 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `eb860b2a`
+- Built from commit: `d8c3cc79`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -119,6 +119,7 @@
 - [[_COMMUNITY_Community 103|Community 103]]
 - [[_COMMUNITY_Community 104|Community 104]]
 - [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Job` - 155 edges
@@ -147,7 +148,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (106 total, 18 thin omitted)
+## Communities (107 total, 18 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.15
@@ -354,8 +355,8 @@ Cohesion: 0.15
 Nodes (11): NodeRuntimeService, Raised when a requested local validation receipt is not stored., Central service for local node config, lifecycle status, peers, and jobs., Accept one local job request without dispatching or validating it., Read one submission and its optional local execution evidence., Read local job evidence into a deterministic, non-mutating summary., Return one stored local receipt without creating validation evidence., Run a queued local submission; this is not a daemon or remote boundary. (+3 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.14
-Nodes (24): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _load_identity(), _load_identity_document() (+16 more)
+Cohesion: 0.15
+Nodes (23): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _load_identity(), _load_identity_document() (+15 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.33
@@ -434,8 +435,8 @@ Cohesion: 0.29
 Nodes (4): _canonical_json_bytes(), Hash the canonical result fields used by result messages and audits., result_hash_from_fields(), ResultHashTests
 
 ### Community 76 - "Community 76"
-Cohesion: 0.09
-Nodes (16): _append_identity_reset_receipt(), _backup_identity_referenced_artifacts(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), _local_identity_ref_path(), Return a local audit reference without leaking host-specific directories. (+8 more)
+Cohesion: 0.11
+Nodes (12): _append_identity_reset_receipt(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), Return a local audit reference without leaking host-specific directories., Local audit details for an explicit identity reset., Return JSON-serializable reset details for CLI/API callers. (+4 more)
 
 ### Community 77 - "Community 77"
 Cohesion: 0.39
@@ -492,6 +493,10 @@ Nodes (3): LocalDispatchResult, Structured result for local assignment-only disp
 ### Community 98 - "Community 98"
 Cohesion: 0.50
 Nodes (3): LocalStartupResult, Serializable summary for one accepted local node startup., Return a JSON-serializable startup summary with local-only refs.
+
+### Community 102 - "Community 102"
+Cohesion: 0.32
+Nodes (5): _backup_identity_referenced_artifacts(), _load_local_identity_ref_document_if_exists(), _local_identity_ref_path(), _string_list_from_section(), _unique_reset_artifact_path()
 
 ## Knowledge Gaps
 - **235 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+230 more)

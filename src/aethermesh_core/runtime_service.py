@@ -545,8 +545,11 @@ class NodeRuntimeService:
         validation = receipt.get("validation")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
-        if not isinstance(result_ref, str) or not result_ref:
-            raise RuntimeServiceError("validation receipt has no result reference")
+        expected_result_ref = f"data/job-results/{job_id}.json"
+        if result_ref != expected_result_ref:
+            raise RuntimeServiceError(
+                "validation receipt does not match its work result"
+            )
         if not isinstance(validator_id, str) or not validator_id:
             raise RuntimeServiceError("validation receipt has no validator identity")
         if not isinstance(validation, dict) or not isinstance(
@@ -573,9 +576,11 @@ class NodeRuntimeService:
         if (
             not isinstance(manifest.get("creator_node_id"), str)
             or manifest.get("job", {}).get("job_id") != job_id
+            or status.get("job_id") != job_id
             or not isinstance(lineage, dict)
             or not isinstance(lineage.get("parent_refs"), list)
             or not isinstance(attribution, dict)
+            or attribution.get("creator_node_id") != manifest.get("creator_node_id")
         ):
             raise RuntimeServiceError(
                 "validation receipt has incomplete provenance evidence"
