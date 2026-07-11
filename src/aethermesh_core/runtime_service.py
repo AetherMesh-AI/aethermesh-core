@@ -485,6 +485,204 @@ class NodeRuntimeService:
             "network_mode": "local-only-no-p2p",
         }
 
+    def inspect_local_audit_events(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+        start_time: int | None = None,
+        end_time: int | None = None,
+        node_id: str | None = None,
+        event_type: str | None = None,
+        manifest_id: str | None = None,
+        receipt_id: str | None = None,
+        lineage_id: str | None = None,
+        contribution_attribution_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Read derived local job audit events without mutating stored evidence."""
+        filters = {
+            "event_type": event_type,
+            "node_id": node_id,
+            "manifest_id": manifest_id,
+            "receipt_id": receipt_id,
+            "lineage_id": lineage_id,
+            "contribution_attribution_id": contribution_attribution_id,
+        }
+        for name, value in filters.items():
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise RuntimeServiceError(f"{name} must be a non-empty string")
+        for name, time_value in (("start_time", start_time), ("end_time", end_time)):
+            if time_value is not None and (
+                not isinstance(time_value, int) or isinstance(time_value, bool)
+            ):
+                raise RuntimeServiceError(f"{name} must be an integer Unix timestamp")
+        if start_time is not None and end_time is not None and start_time > end_time:
+            raise RuntimeServiceError("start_time must not be greater than end_time")
+        if (
+            not isinstance(limit, int)
+            or isinstance(limit, bool)
+            or not 1 <= limit <= 100
+        ):
+            raise RuntimeServiceError("limit must be an integer between 1 and 100")
+        if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+            raise RuntimeServiceError("offset must be a non-negative integer")
+        if event_type is not None and event_type not in {
+            "job_submitted",
+            "job_executed",
+        }:
+            raise RuntimeServiceError(
+                "event_type must be job_submitted or job_executed"
+            )
+        directory = self.paths.data_dir / "job-submissions"
+        events = (
+            [
+                event
+                for path in sorted(directory.glob("*.json"))
+                for event in self._audit_events_for_manifest(path)
+            ]
+            if directory.exists()
+            else []
+        )
+
+        def matches(event: dict[str, Any]) -> bool:
+            artifacts = event["artifacts"]
+            return (
+                (start_time is None or event["timestamp"] >= start_time)
+                and (end_time is None or event["timestamp"] <= end_time)
+                and (event_type is None or event["event_type"] == event_type)
+                and (
+                    node_id is None
+                    or node_id in {event["actor_node_id"], event["creator_node_id"]}
+                )
+                and (manifest_id is None or artifacts["manifest_id"] == manifest_id)
+                and (receipt_id is None or artifacts["receipt_id"] == receipt_id)
+                and (lineage_id is None or artifacts["lineage_id"] == lineage_id)
+                and (
+                    contribution_attribution_id is None
+                    or artifacts["contribution_attribution_id"]
+                    == contribution_attribution_id
+                )
+            )
+
+        events = [event for event in events if matches(event)]
+        events.sort(
+            key=lambda event: (event["timestamp"], event["event_id"]), reverse=True
+        )
+        return {
+            "schema_version": 1,
+            "network_mode": "local-only-no-p2p",
+            "query": {
+                **filters,
+                "start_time": start_time,
+                "end_time": end_time,
+                "limit": limit,
+                "offset": offset,
+            },
+            "total_matching": len(events),
+            "events": events[offset : offset + limit],
+        }
+
+    def _audit_events_for_manifest(self, manifest_path: Path) -> list[dict[str, Any]]:
+        manifest = self._load_local_job_document(
+            manifest_path, "job submission manifest"
+        )
+        job_id = manifest.get("job", {}).get("job_id")
+        creator = manifest.get("creator_node_id")
+        submitted_at = manifest.get("submitted_at")
+        lineage = manifest.get("lineage")
+        attribution = manifest.get("contribution_attribution")
+        if (
+            not self._is_local_job_id(job_id)
+            or manifest_path.stem != job_id
+            or not isinstance(creator, str)
+            or not creator
+            or not isinstance(submitted_at, int)
+            or isinstance(submitted_at, bool)
+            or not isinstance(lineage, dict)
+            or not isinstance(lineage.get("parent_refs"), list)
+            or not isinstance(attribution, dict)
+            or attribution.get("creator_node_id") != creator
+        ):
+            raise RuntimeServiceError(
+                "job submission manifest has invalid audit evidence"
+            )
+        artifacts: dict[str, Any] = {
+            "manifest_id": job_id,
+            "manifest_ref": f"data/job-submissions/{job_id}.json",
+            "receipt_id": None,
+            "receipt_ref": None,
+            "lineage_id": f"local-lineage-{job_id}",
+            "lineage_parent_refs": list(lineage["parent_refs"]),
+            "contribution_attribution_id": f"local-contribution-{job_id}",
+            "contribution_attribution": attribution,
+        }
+        events = [
+            {
+                "event_id": f"local-audit-{job_id}-submitted",
+                "timestamp": submitted_at,
+                "event_type": "job_submitted",
+                "actor_node_id": creator,
+                "creator_node_id": creator,
+                "artifacts": artifacts,
+                "validation_status": "pending",
+            }
+        ]
+        status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
+        if not status_path.exists():
+            return events
+        status = self._load_local_job_document(status_path, "job status record")
+        validation = status.get("validation")
+        receipt_ref = (
+            validation.get("receipt_ref") if isinstance(validation, dict) else None
+        )
+        expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        worker = status.get("worker_node_id")
+        if (
+            status.get("job_id") != job_id
+            or not isinstance(worker, str)
+            or not worker
+            or not isinstance(validation, dict)
+            or receipt_ref != expected_receipt_ref
+        ):
+            raise RuntimeServiceError("job status has invalid audit evidence")
+        receipt = self._load_local_job_document(
+            self.paths.home / expected_receipt_ref, "validation receipt"
+        )
+        validated_at = receipt.get("validated_at")
+        receipt_validation = receipt.get("validation")
+        status_attribution = status.get("contribution_attribution")
+        if (
+            receipt.get("job_id") != job_id
+            or receipt.get("receipt_id") != self._receipt_id_for_job(job_id)
+            or not isinstance(validated_at, int)
+            or isinstance(validated_at, bool)
+            or not isinstance(receipt_validation, dict)
+            or not isinstance(receipt_validation.get("valid"), bool)
+            or validation.get("passed") is not receipt_validation["valid"]
+            or not isinstance(status_attribution, dict)
+            or status_attribution.get("creator_node_id") != creator
+        ):
+            raise RuntimeServiceError("validation receipt has invalid audit evidence")
+        events.append(
+            {
+                "event_id": f"local-audit-{job_id}-executed",
+                "timestamp": validated_at,
+                "event_type": "job_executed",
+                "actor_node_id": worker,
+                "creator_node_id": creator,
+                "artifacts": {
+                    **artifacts,
+                    "receipt_id": receipt["receipt_id"],
+                    "receipt_ref": receipt_ref,
+                    "contribution_attribution": status_attribution,
+                },
+                "validation_status": (
+                    "passed" if receipt_validation["valid"] else "failed"
+                ),
+            }
+        )
+        return events
+
     def contribution_summary(self) -> dict[str, Any]:
         """Read local job evidence into a deterministic, non-mutating summary."""
 

@@ -19,6 +19,7 @@ Phase 1 supports these operations only:
 | Submit deterministic local batch work | `dispatch_local_batch_command(manifest_path, message_log_path)` or `run_local_flow(manifest_path, output_dir, ...)` | `dispatch-local-batch` or `run-local-flow` | Validate a version 1 batch manifest, then dispatch or execute it locally. |
 | Validate completed local work | `validate_local_node_results(assignment_log_path, result_log_path, validation_log_path)` | `validate-local-results` | Replay local assignment/result logs and write a deterministic validation report. |
 | Read validated result history | `audit_local_flow(output_dir)` | `audit-local-flow` | Verify a completed local-flow artifact set. |
+| Inspect local job audit evidence | `NodeRuntimeService.inspect_local_audit_events(...)` | none | Read paginated submission/execution evidence without writing artifacts. |
 
 The `run-local-batch` simulation command is also supported as a local deterministic execution helper, but it is not a daemon queue or network submission endpoint.
 
@@ -87,6 +88,12 @@ The runtime owns startup manifests, startup receipts, and startup lineage record
 A local batch submission is an invocation of `dispatch-local-batch` or `run-local-flow` with a version 1 job-batch manifest. It is accepted only after manifest parsing confirms the version, non-empty unique node roster, non-empty jobs, and each job’s non-empty `job_id`/`job_type` plus object payload. Execution additionally rejects unsupported job types.
 
 Accepted work is linked by the deterministic assignment/result/validation/contribution message IDs. `run-local-flow` writes its result artifacts under its supplied output directory and produces a receipt document whose entries include `job_id`, `job_type`, `node_id`, `assignment_message_id`, `result_message_id`, `validation_message_id`, `contribution_message_id`, `result_hash`, validation state, and credited units.
+
+## Local audit inspection
+
+`GET /api/audit-events` and `NodeRuntimeService.inspect_local_audit_events(...)` provide a read-only, local-only inspection surface for submitted local jobs. Optional filters are integer Unix-second `start_time` and `end_time`; non-empty `event_type` (`job_submitted` or `job_executed`), `node_id`, `manifest_id`, `receipt_id`, `lineage_id`, and `contribution_attribution_id`; and pagination with `limit` (1 through 100, default 50) and non-negative `offset` (default 0).
+
+The response is versioned and contains the normalized query, `total_matching`, and a newest-first event page. Every event contains its timestamp, event type, actor and creator node IDs, validation status, relative artifact references, lineage parent references, and preserved contribution attribution. `manifest_id` is the local job ID; `lineage_id` and `contribution_attribution_id` are stable local IDs derived from it. Pending submissions have no receipt; executed entries preserve receipt ID/reference and passed or failed validation. Inspection only reads existing submission, status, and receipt JSON: it does not create, edit, delete, normalize, or append audit logs, manifests, receipts, lineage records, or attribution data. Invalid filters, reversed time ranges, malformed local evidence, and unknown event types return a clear local error; this is local evidence, not consensus.
 
 Invalid manifests, malformed existing receipt documents, and invalid runtime identity/manifest relationships fail with a concrete error before writing the dependent manifest, dispatch log, or receipt. In particular, an existing persisted runtime with a missing creator identity or startup manifest is rejected rather than silently replaced.
 
