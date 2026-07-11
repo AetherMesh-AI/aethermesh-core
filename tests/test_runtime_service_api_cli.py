@@ -284,6 +284,130 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
 
+    def test_validation_receipt_api_reads_stored_evidence_and_rejects_bad_lookups(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "job_type": "echo",
+                "payload": {"message": "hello"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            accepted = service.submit_local_job(request)
+            pending = service.submit_local_job(request)
+            service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
+            api = create_app(service)
+
+            async def fetch() -> tuple[httpx.Response, ...]:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    receipt_id = f"local-validation-receipt-{accepted['job_id']}"
+                    return (
+                        await client.get(
+                            "/api/validation-receipts",
+                            params={"receipt_id": receipt_id},
+                        ),
+                        await client.get(
+                            "/api/validation-receipts",
+                            params={"work_id": accepted["job_id"]},
+                        ),
+                        await client.get(
+                            "/api/validation-receipts", params={"latest": "true"}
+                        ),
+                        await client.get(
+                            "/api/validation-receipts",
+                            params={"work_id": pending["job_id"]},
+                        ),
+                        await client.get(
+                            "/api/validation-receipts",
+                            params={"receipt_id": "not-a-receipt"},
+                        ),
+                        await client.get("/api/validation-receipts"),
+                        await client.get(
+                            "/api/validation-receipts", params={"latest": "yes"}
+                        ),
+                    )
+
+            (
+                by_receipt,
+                by_work,
+                latest,
+                pending_response,
+                malformed,
+                missing,
+                bad_latest,
+            ) = asyncio.run(fetch())
+            self.assertEqual(by_receipt.status_code, 200)
+            payload = by_receipt.json()
+            self.assertEqual(payload, by_work.json())
+            self.assertEqual(payload, latest.json())
+            self.assertEqual(
+                payload["receipt_id"], f"local-validation-receipt-{accepted['job_id']}"
+            )
+            self.assertEqual(payload["creator_node_id"], "creator-local-a")
+            self.assertEqual(payload["manifest_ref"], accepted["manifest_ref"])
+            self.assertEqual(payload["lineage_parent_ids"], ["data/prior-job.json"])
+            self.assertEqual(payload["validation_status"], "passed")
+            self.assertEqual(payload["validator_identity"], "worker-local-a")
+            self.assertEqual(
+                payload["contribution_attribution"]["metadata"],
+                {"project": "prototype"},
+            )
+            self.assertEqual(payload["validation_scope"], "local-only-not-consensus")
+            self.assertEqual(
+                payload["evidence"]["receipt_ref"],
+                f"data/job-validation-receipts/{accepted['job_id']}.json",
+            )
+            self.assertIsInstance(payload["validation_timestamp"], int)
+            self.assertEqual(payload["validation_timestamp_source"], "receipt_record")
+            receipt_path = (
+                Path(temp_dir)
+                / "data"
+                / "job-validation-receipts"
+                / f"{accepted['job_id']}.json"
+            )
+            stored_receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            stored_receipt.pop("validated_at")
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+
+            async def fetch_legacy() -> httpx.Response:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return await client.get(
+                        "/api/validation-receipts",
+                        params={"work_id": accepted["job_id"]},
+                    )
+
+            legacy = asyncio.run(fetch_legacy())
+            self.assertEqual(legacy.status_code, 200)
+            self.assertEqual(
+                legacy.json()["validation_timestamp_source"],
+                "receipt_file_mtime_legacy",
+            )
+            self.assertEqual(pending_response.status_code, 404)
+            self.assertEqual(
+                pending_response.json()["detail"], "local validation receipt not found"
+            )
+            for response in (malformed, missing, bad_latest):
+                self.assertEqual(response.status_code, 400)
+
+            stored_receipt["result_ref"] = (
+                "data/job-results/local-job-" + "0" * 32 + ".json"
+            )
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "validation receipt does not match its work result"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
+
     def test_contribution_summary_is_deterministic_and_honest_about_evidence(
         self,
     ) -> None:

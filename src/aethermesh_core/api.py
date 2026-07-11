@@ -9,7 +9,11 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
-from aethermesh_core.runtime_service import NodeRuntimeService, RuntimeServiceError
+from aethermesh_core.runtime_service import (
+    NodeRuntimeService,
+    RuntimeServiceError,
+    ValidationReceiptNotFoundError,
+)
 
 
 @asynccontextmanager
@@ -80,6 +84,27 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         """Return read-only local contribution attribution and validation evidence."""
 
         return runtime_service.contribution_summary()
+
+    @app.get("/api/validation-receipts")
+    def validation_receipt(
+        receipt_id: str | None = None,
+        work_id: str | None = None,
+        latest: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one persisted local validation receipt; never create one."""
+
+        if latest not in (None, "true"):
+            raise HTTPException(
+                status_code=400, detail="latest must be true when provided"
+            )
+        try:
+            return runtime_service.get_local_validation_receipt(
+                receipt_id=receipt_id, work_id=work_id, latest=latest == "true"
+            )
+        except ValidationReceiptNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except RuntimeServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/capabilities")
     @app.get("/api/capabilities")
