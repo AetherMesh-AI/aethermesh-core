@@ -452,6 +452,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     "validation receipt does not match work item",
                 ),
                 (
+                    receipt_path,
+                    {**receipt, "result_ref": "data/job-results/other.json"},
+                    "validation receipt does not match work result",
+                ),
+                (
                     manifest_path,
                     {**manifest, "job": []},
                     "job submission manifest has invalid job evidence",
@@ -465,12 +470,39 @@ class RuntimeServiceTests(unittest.TestCase):
                     status_path,
                     {
                         **status,
+                        "contribution_attribution": {
+                            **status["contribution_attribution"],
+                            "creator_node_id": "other",
+                        },
+                    },
+                    "contribution attribution creator does not match manifest",
+                ),
+                (
+                    status_path,
+                    {
+                        **status,
                         "worker_node_id": None,
                         "contribution_attribution": {
                             "creator_node_id": "creator-local-a"
                         },
                     },
                     "contribution attribution has no contributing node ID",
+                ),
+                (
+                    status_path,
+                    {
+                        **status,
+                        "contribution_attribution": {
+                            **status["contribution_attribution"],
+                            "worker_node_id": "other",
+                        },
+                    },
+                    "contribution attribution worker does not match job status",
+                ),
+                (
+                    receipt_path,
+                    {**receipt, "validator_id": "other"},
+                    "validation receipt validator does not match worker",
                 ),
                 (
                     manifest_path,

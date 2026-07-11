@@ -560,6 +560,9 @@ class NodeRuntimeService:
             evidence_errors.append("job status record does not match work item")
         if receipt and receipt.get("job_id") != job_id:
             evidence_errors.append("validation receipt does not match work item")
+        expected_result_ref = f"data/job-results/{job_id}.json"
+        if receipt and receipt.get("result_ref") != expected_result_ref:
+            evidence_errors.append("validation receipt does not match work result")
         accepted = (
             not evidence_errors
             and status.get("status") == "succeeded"
@@ -578,12 +581,22 @@ class NodeRuntimeService:
         )
         if manifest and not isinstance(creator_node_id, str):
             evidence_errors.append("contribution attribution has no creator node ID")
+        elif manifest and creator_node_id != manifest.get("creator_node_id"):
+            evidence_errors.append(
+                "contribution attribution creator does not match manifest"
+            )
         if status.get("status") == "succeeded" and not isinstance(
             contributing_node_id, str
         ):
             evidence_errors.append(
                 "contribution attribution has no contributing node ID"
             )
+        elif status and contributing_node_id != status.get("worker_node_id"):
+            evidence_errors.append(
+                "contribution attribution worker does not match job status"
+            )
+        if receipt and receipt.get("validator_id") != status.get("worker_node_id"):
+            evidence_errors.append("validation receipt validator does not match worker")
         lineage = manifest.get("lineage")
         if not isinstance(lineage, dict):
             lineage = {}

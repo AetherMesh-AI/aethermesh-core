@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1783798580.3230793,
-    "ast_hash": "a9c7c43355c18eda235a1ab12f5d32ef",
+    "mtime": 1783802957.1937337,
+    "ast_hash": "9941b5149a75c3ee8d7d8b06e795a627",
     "semantic_hash": ""
   },
   "src/aethermesh_core/app_cli.py": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783798797.6857061,
-    "ast_hash": "0f2f91b7c2f643b7d80ce2c10461684e",
+    "mtime": 1783804581.4464467,
+    "ast_hash": "01f29c02679912a6c215ca62e6111253",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783798798.0516393,
-    "ast_hash": "04cf9672110040ff397182dd29eaf38f",
+    "mtime": 1783804582.2076757,
+    "ast_hash": "8b668a34a44975e5b73e49abeeea8ed3",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -700,8 +700,8 @@
     "semantic_hash": ""
   },
   "docs/phase-1-local-api-boundary.md": {
-    "mtime": 1783798598.2120514,
-    "ast_hash": "0416b542ff602351c5b7c75cbad150e8",
+    "mtime": 1783802777.3481317,
+    "ast_hash": "cc030fce05f782fd3557f4a13e431b8e",
     "semantic_hash": ""
   }
 }
