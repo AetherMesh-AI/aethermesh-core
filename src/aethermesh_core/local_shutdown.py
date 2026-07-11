@@ -27,6 +27,45 @@ LOCAL_SHUTDOWN_STATE_VERSION = 1
 class LocalShutdownError(ValueError):
     """Raised when local node shutdown cannot preserve required state."""
 
+    def __init__(
+        self,
+        summary: str,
+        *,
+        detail: str | None = None,
+        error_code: str = "SHUTDOWN_RUNTIME_STOP_FAILED",
+        failing_component: str = "runtime_stop",
+        node_id: str | None = None,
+        affected_artifact: str | None = None,
+        contribution_records_finalized: bool = False,
+        shutdown_outcome: str = "unsafe_incomplete",
+    ) -> None:
+        self.summary = summary
+        self.detail = detail
+        super().__init__(f"{summary} {detail}" if detail else summary)
+        self.error_code = error_code
+        self.failing_component = failing_component
+        self.node_id = node_id
+        self.affected_artifact = affected_artifact
+        self.contribution_records_finalized = contribution_records_finalized
+        self.shutdown_outcome = shutdown_outcome
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a concise, path-safe shutdown failure report for operators."""
+
+        return {
+            "summary": self.summary,
+            "error_code": self.error_code,
+            "failing_component": self.failing_component,
+            "node_id": self.node_id,
+            "affected_artifact": self.affected_artifact,
+            "contribution_records_finalized": self.contribution_records_finalized,
+            "shutdown_outcome": self.shutdown_outcome,
+            "next_action": (
+                "Keep local artifacts intact, inspect logs/shutdown.log, resolve the "
+                "reported component, then retry shutdown."
+            ),
+        }
+
 
 @dataclass(frozen=True)
 class LocalShutdownResult:
@@ -45,6 +84,7 @@ class LocalShutdownResult:
     interrupted_work_count: int
     repeated_request: bool
     final_status: str
+    shutdown_outcome: str
 
     def to_dict(self) -> dict[str, object]:
         """Return the local shutdown summary without host-specific absolute paths."""
@@ -63,6 +103,7 @@ class LocalShutdownResult:
             "interrupted_work_count": self.interrupted_work_count,
             "repeated_request": self.repeated_request,
             "final_status": self.final_status,
+            "shutdown_outcome": self.shutdown_outcome,
             "accepting_work": False,
         }
 
@@ -72,12 +113,32 @@ def shutdown_local_node(
 ) -> LocalShutdownResult:
     """Persist final local state and mark one runtime stopped idempotently."""
 
+    root = Path(runtime_dir)
+    progress: dict[str, object] = {
+        "component": "runtime_stop",
+        "node_id": None,
+        "artifact": None,
+        "contribution_records_finalized": False,
+    }
+    try:
+        return _shutdown_local_node(
+            root, timeout_seconds=timeout_seconds, progress=progress
+        )
+    except (LocalShutdownError, OSError) as exc:
+        raise _structured_shutdown_error(root, progress, exc) from exc
+
+
+def _shutdown_local_node(
+    root: Path, *, timeout_seconds: float, progress: dict[str, object]
+) -> LocalShutdownResult:
+    """Perform shutdown while retaining enough context for a safe error report."""
+
     if timeout_seconds < 0:
         raise LocalShutdownError("shutdown timeout must be non-negative")
-    root = Path(runtime_dir)
     config = load_optional_local_runtime_config(root, LocalShutdownError)
     identity_path = configured_runtime_path(root, config, "identity")
     manifest_path = configured_runtime_path(root, config, "manifest")
+    progress["artifact"] = _relative_ref(root, manifest_path)
     log_path = root / "logs" / "shutdown.log"
     state_dir = root / "state"
     state_path = state_dir / "shutdown-state.json"
@@ -99,6 +160,7 @@ def shutdown_local_node(
     )
 
     identity = _load_json_object(identity_path, "identity")
+    progress["component"] = "manifest_flush"
     manifest = _load_json_object(manifest_path, "manifest")
     identity_node = _required_object(identity, "node", "identity")
     manifest_node = _required_object(manifest, "node", "manifest")
@@ -106,6 +168,7 @@ def shutdown_local_node(
     creator_node_id = _required_string(
         identity_node, "creator_node_id", "identity.node"
     )
+    progress["node_id"] = node_id
     manifest_node_id = _required_string(manifest_node, "node_id", "manifest.node")
     manifest_creator_node_id = _required_string(
         manifest_node, "creator_node_id", "manifest.node"
@@ -115,6 +178,7 @@ def shutdown_local_node(
             "shutdown refused because identity and manifest node references differ"
         )
 
+    progress["component"] = "worker_termination"
     interrupted_work = _interrupted_work_refs(root, config)
     stopped_work_ref = None
     if interrupted_work:
@@ -131,6 +195,8 @@ def shutdown_local_node(
             },
         )
 
+    progress["component"] = "attribution_finalization"
+    progress["artifact"] = configured_runtime_ref(config, "validation_receipts")
     receipt_refs = _artifact_refs(
         root, configured_runtime_ref(config, "validation_receipts")
     )
@@ -138,6 +204,8 @@ def shutdown_local_node(
     contribution_refs = _artifact_refs(
         root, configured_runtime_ref(config, "contribution_attribution")
     )
+    progress["contribution_records_finalized"] = True
+    shutdown_outcome = "forced" if time.monotonic() > deadline else "clean"
     final_state = {
         "version": LOCAL_SHUTDOWN_STATE_VERSION,
         "node_id": node_id,
@@ -153,8 +221,11 @@ def shutdown_local_node(
         "interrupted_work_count": len(interrupted_work),
         "shutdown_started_at": started_at,
         "shutdown_timeout_seconds": timeout_seconds,
-        "bounded_timeout_reached": time.monotonic() > deadline,
+        "bounded_timeout_reached": shutdown_outcome == "forced",
+        "shutdown_outcome": shutdown_outcome,
     }
+    progress["component"] = "manifest_flush"
+    progress["artifact"] = _relative_ref(root, state_path)
     atomic_write_json(state_path, final_state)
     _append_log(
         log_path,
@@ -166,6 +237,8 @@ def shutdown_local_node(
         interrupted_work_count=len(interrupted_work),
     )
 
+    progress["component"] = "worker_termination"
+    progress["artifact"] = _relative_ref(root, pid_path)
     released = _release_runtime_resources(pid_path, lock_path)
     _append_log(
         log_path,
@@ -194,7 +267,53 @@ def shutdown_local_node(
         interrupted_work_count=len(interrupted_work),
         repeated_request=repeated_request,
         final_status="stopped",
+        shutdown_outcome=shutdown_outcome,
     )
+
+
+def _structured_shutdown_error(
+    root: Path, progress: dict[str, object], error: Exception
+) -> LocalShutdownError:
+    component = str(progress["component"])
+    node_id = progress["node_id"]
+    artifact = progress["artifact"]
+    contribution_records_finalized = bool(progress["contribution_records_finalized"])
+    error_code = {
+        "runtime_stop": "SHUTDOWN_RUNTIME_STOP_FAILED",
+        "manifest_flush": "SHUTDOWN_MANIFEST_FLUSH_FAILED",
+        "worker_termination": "SHUTDOWN_WORKER_TERMINATION_FAILED",
+        "attribution_finalization": "SHUTDOWN_ATTRIBUTION_FINALIZATION_FAILED",
+    }[component]
+    shutdown_outcome = (
+        "partial_shutdown" if contribution_records_finalized else "unsafe_incomplete"
+    )
+    _record_shutdown_error(
+        root,
+        error_code=error_code,
+        failing_component=component,
+        node_id=node_id if isinstance(node_id, str) else None,
+        affected_artifact=artifact if isinstance(artifact, str) else None,
+        contribution_records_finalized=contribution_records_finalized,
+        shutdown_outcome=shutdown_outcome,
+        original_error=str(error),
+    )
+    return LocalShutdownError(
+        f"Local shutdown incomplete while finalizing {component}.",
+        detail=str(error),
+        error_code=error_code,
+        failing_component=component,
+        node_id=node_id if isinstance(node_id, str) else None,
+        affected_artifact=artifact if isinstance(artifact, str) else None,
+        contribution_records_finalized=contribution_records_finalized,
+        shutdown_outcome=shutdown_outcome,
+    )
+
+
+def _record_shutdown_error(root: Path, **payload: object) -> None:
+    try:
+        _append_log(root / "logs" / "shutdown.log", event="shutdown_error", **payload)
+    except OSError:
+        pass
 
 
 def _shutdown_already_completed(path: Path) -> bool:
