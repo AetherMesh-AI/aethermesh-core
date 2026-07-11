@@ -78,10 +78,9 @@ def inspect_local_node_runtime(runtime_dir: str | Path) -> dict[str, object]:
 
     root = Path(runtime_dir)
     config = load_optional_local_runtime_config(root, LocalRuntimeInspectError)
-    identity_path = configured_runtime_path(root, config, "identity")
-    manifest_path = configured_runtime_path(root, config, "manifest")
-    identity = _load_runtime_json(identity_path, "identity")
-    manifest = _load_runtime_json(manifest_path, "manifest")
+    identity_path, manifest_path, identity, manifest = _load_identity_and_manifest(
+        root, config
+    )
     node = _required_mapping(identity, "node", "identity")
     manifest_node = _required_mapping(manifest, "node", "manifest")
     node_id = _required_text(node, "node_id", "identity.node")
@@ -141,10 +140,9 @@ def local_node_status(runtime_dir: str | Path) -> dict[str, object]:
 
     root = Path(runtime_dir)
     config = load_optional_local_runtime_config(root, LocalRuntimeInspectError)
-    identity_path = configured_runtime_path(root, config, "identity")
-    manifest_path = configured_runtime_path(root, config, "manifest")
-    identity = _load_runtime_json(identity_path, "identity")
-    manifest = _load_runtime_json(manifest_path, "manifest")
+    identity_path, manifest_path, identity, manifest = _load_identity_and_manifest(
+        root, config
+    )
     node = _required_mapping(identity, "node", "identity")
     runtime_version = manifest.get("runtime_version")
     if not isinstance(runtime_version, dict):
@@ -184,6 +182,19 @@ def local_node_status(runtime_dir: str | Path) -> dict[str, object]:
 
 def _load_runtime_json(path: Path, label: str) -> dict[str, Any]:
     return load_json_mapping(path, label, LocalRuntimeInspectError)
+
+
+def _load_identity_and_manifest(
+    root: Path, config: Any
+) -> tuple[Path, Path, dict[str, Any], dict[str, Any]]:
+    identity_path = configured_runtime_path(root, config, "identity")
+    manifest_path = configured_runtime_path(root, config, "manifest")
+    return (
+        identity_path,
+        manifest_path,
+        _load_runtime_json(identity_path, "identity"),
+        _load_runtime_json(manifest_path, "manifest"),
+    )
 
 
 def _relative_ref(root: Path, path: Path) -> str:
