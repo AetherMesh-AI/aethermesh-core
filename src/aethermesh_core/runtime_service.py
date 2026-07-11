@@ -508,6 +508,7 @@ class NodeRuntimeService:
     def _contribution_summary_item(self, job_id: str) -> dict[str, Any]:
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
+        expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
         status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
         evidence_errors: list[str] = []
@@ -526,11 +527,16 @@ class NodeRuntimeService:
         receipt_ref = validation.get("receipt_ref")
         receipt = {}
         if isinstance(receipt_ref, str) and receipt_ref:
-            receipt = self._load_summary_document(
-                self.paths.home / receipt_ref,
-                "validation receipt",
-                evidence_errors,
-            )
+            if receipt_ref != expected_receipt_ref:
+                evidence_errors.append(
+                    "validation receipt reference does not match work item"
+                )
+            else:
+                receipt = self._load_summary_document(
+                    self.paths.home / receipt_ref,
+                    "validation receipt",
+                    evidence_errors,
+                )
         elif status:
             evidence_errors.append(
                 "job status record has no validation receipt reference"
@@ -540,6 +546,12 @@ class NodeRuntimeService:
             isinstance(receipt.get("validation"), dict)
             and receipt["validation"].get("valid") is True
         )
+        if manifest and manifest.get("job", {}).get("job_id") != job_id:
+            evidence_errors.append("job submission manifest does not match work item")
+        if status and status.get("job_id") != job_id:
+            evidence_errors.append("job status record does not match work item")
+        if receipt and receipt.get("job_id") != job_id:
+            evidence_errors.append("validation receipt does not match work item")
         accepted = (
             not evidence_errors
             and status.get("status") == "succeeded"

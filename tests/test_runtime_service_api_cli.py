@@ -320,7 +320,20 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             missing_reference_status.parent.mkdir(parents=True, exist_ok=True)
             missing_reference_status.write_text(
-                '{"status":"succeeded"}', encoding="utf-8"
+                json.dumps(
+                    {
+                        "job_id": missing_reference["job_id"],
+                        "status": "succeeded",
+                        "validation": {
+                            "passed": True,
+                            "receipt_ref": (
+                                "data/job-validation-receipts/"
+                                f"{accepted['job_id']}.json"
+                            ),
+                        },
+                    }
+                ),
+                encoding="utf-8",
             )
             missing_receipt = service.submit_local_job(request)
             service.execute_submitted_local_job(
@@ -364,7 +377,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 items[missing_reference["job_id"]]["acceptance_status"], "degraded"
             )
             self.assertIn(
-                "no validation receipt reference",
+                "validation receipt reference does not match work item",
                 " ".join(items[missing_reference["job_id"]]["evidence_errors"]),
             )
             self.assertEqual(
@@ -394,6 +407,58 @@ class RuntimeServiceTests(unittest.TestCase):
             response = asyncio.run(fetch())
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), summary)
+
+    def test_contribution_summary_rejects_mismatched_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            accepted = service.submit_local_job(
+                {
+                    "job_type": "echo",
+                    "payload": {"message": "hello"},
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                }
+            )
+            job_id = accepted["job_id"]
+            service.execute_submitted_local_job(job_id, "worker-local-a")
+            manifest_path = Path(temp_dir) / accepted["manifest_ref"]
+            status_path = Path(temp_dir) / "data" / "job-status" / f"{job_id}.json"
+            receipt_path = (
+                Path(temp_dir) / "data" / "job-validation-receipts" / f"{job_id}.json"
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+
+            for path, document, expected_error in (
+                (
+                    status_path,
+                    {**status, "validation": {"passed": True}},
+                    "job status record has no validation receipt reference",
+                ),
+                (
+                    manifest_path,
+                    {**manifest, "job": {**manifest["job"], "job_id": "other"}},
+                    "job submission manifest does not match work item",
+                ),
+                (
+                    status_path,
+                    {**status, "job_id": "other"},
+                    "job status record does not match work item",
+                ),
+                (
+                    receipt_path,
+                    {**receipt, "job_id": "other"},
+                    "validation receipt does not match work item",
+                ),
+            ):
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                status_path.write_text(json.dumps(status), encoding="utf-8")
+                receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+                path.write_text(json.dumps(document), encoding="utf-8")
+                item = service.contribution_summary()["items"][0]
+                self.assertEqual(item["acceptance_status"], "degraded")
+                self.assertIn(expected_error, item["evidence_errors"])
 
     def test_init_creates_reusable_local_node_data_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
