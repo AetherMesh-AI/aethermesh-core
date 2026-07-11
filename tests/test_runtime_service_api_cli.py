@@ -284,6 +284,117 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
 
+    def test_contribution_summary_is_deterministic_and_honest_about_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            self.assertEqual(
+                service.contribution_summary(),
+                {
+                    "network_mode": "local-only-no-p2p",
+                    "summary_status": "empty",
+                    "accepted_work_count": 0,
+                    "non_accepted_work_count": 0,
+                    "items": [],
+                },
+            )
+            request = {
+                "job_type": "echo",
+                "payload": {"message": "hello"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+            }
+            accepted = service.submit_local_job(request)
+            service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
+            failed = service.submit_local_job({**request, "job_type": "not-supported"})
+            service.execute_submitted_local_job(failed["job_id"], "worker-local-b")
+            queued = service.submit_local_job(request)
+            missing_reference = service.submit_local_job(request)
+            missing_reference_status = (
+                Path(temp_dir)
+                / "data"
+                / "job-status"
+                / f"{missing_reference['job_id']}.json"
+            )
+            missing_reference_status.parent.mkdir(parents=True, exist_ok=True)
+            missing_reference_status.write_text(
+                '{"status":"succeeded"}', encoding="utf-8"
+            )
+            missing_receipt = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                missing_receipt["job_id"], "worker-local-c"
+            )
+            (
+                Path(temp_dir)
+                / "data"
+                / "job-validation-receipts"
+                / f"{missing_receipt['job_id']}.json"
+            ).unlink()
+            missing_manifest = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                missing_manifest["job_id"], "worker-local-d"
+            )
+            (Path(temp_dir) / missing_manifest["manifest_ref"]).unlink()
+
+            summary = service.contribution_summary()
+            self.assertEqual(summary, service.contribution_summary())
+            self.assertEqual(summary["accepted_work_count"], 1)
+            self.assertEqual(summary["non_accepted_work_count"], 5)
+            items = {item["work_item_id"]: item for item in summary["items"]}
+            accepted_item = items[accepted["job_id"]]
+            self.assertEqual(accepted_item["acceptance_status"], "accepted")
+            self.assertEqual(accepted_item["creator_node_id"], "creator-local-a")
+            self.assertEqual(accepted_item["contributing_node_id"], "worker-local-a")
+            self.assertEqual(accepted_item["manifest_ref"], accepted["manifest_ref"])
+            self.assertEqual(
+                accepted_item["validation_receipt_ref"],
+                f"data/job-validation-receipts/{accepted['job_id']}.json",
+            )
+            self.assertEqual(accepted_item["lineage_links"], ["data/prior-job.json"])
+            self.assertIsInstance(accepted_item["timestamps"]["submitted_at"], int)
+            self.assertEqual(
+                items[failed["job_id"]]["acceptance_status"], "not_accepted"
+            )
+            self.assertEqual(
+                items[queued["job_id"]]["acceptance_status"], "not_accepted"
+            )
+            self.assertEqual(
+                items[missing_reference["job_id"]]["acceptance_status"], "degraded"
+            )
+            self.assertIn(
+                "no validation receipt reference",
+                " ".join(items[missing_reference["job_id"]]["evidence_errors"]),
+            )
+            self.assertEqual(
+                items[missing_receipt["job_id"]]["acceptance_status"], "degraded"
+            )
+            self.assertIn(
+                "missing validation receipt",
+                " ".join(items[missing_receipt["job_id"]]["evidence_errors"]),
+            )
+            self.assertEqual(
+                items[missing_manifest["job_id"]]["acceptance_status"], "degraded"
+            )
+            self.assertIn(
+                "missing job submission manifest",
+                " ".join(items[missing_manifest["job_id"]]["evidence_errors"]),
+            )
+
+            api = create_app(service)
+
+            async def fetch() -> httpx.Response:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return await client.get("/api/contributions")
+
+            response = asyncio.run(fetch())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), summary)
+
     def test_init_creates_reusable_local_node_data_and_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))

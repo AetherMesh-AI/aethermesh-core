@@ -75,6 +75,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
 
         return runtime_service.get_local_job_status(job_id)
 
+    @app.get("/api/contributions")
+    def contributions() -> dict[str, Any]:
+        """Return read-only local contribution attribution and validation evidence."""
+
+        return runtime_service.contribution_summary()
+
     @app.get("/capabilities")
     @app.get("/api/capabilities")
     def capabilities() -> dict[str, Any]:
