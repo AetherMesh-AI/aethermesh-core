@@ -6,10 +6,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
-from aethermesh_core.runtime_service import NodeRuntimeService
+from aethermesh_core.runtime_service import NodeRuntimeService, RuntimeServiceError
 
 
 @asynccontextmanager
@@ -59,6 +59,15 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     @app.get("/api/jobs")
     def jobs() -> dict[str, Any]:
         return runtime_service.list_jobs()
+
+    @app.post("/api/jobs")
+    def submit_job(request: dict[str, Any]) -> dict[str, Any]:
+        """Submit one local-only job for later execution and validation."""
+
+        try:
+            return runtime_service.submit_local_job(request)
+        except RuntimeServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/capabilities")
     @app.get("/api/capabilities")

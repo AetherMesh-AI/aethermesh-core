@@ -16,13 +16,14 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from aethermesh_core.identity import (
     deterministic_machine_node_id,
     deterministic_machine_node_name,
     load_or_create_identity,
 )
-from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.models import NodeIdentity
 
 CONFIG_SCHEMA_VERSION = 1
@@ -362,6 +363,77 @@ class NodeRuntimeService:
             "failed": [],
             "validation_status": "not_active",
             "note": "No persistent daemon job queue is active yet.",
+        }
+
+    def submit_local_job(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Accept one local job request without dispatching or validating it."""
+
+        if not isinstance(request, dict):
+            raise RuntimeServiceError("job submission must be a JSON object")
+        creator_node_id = request.get("creator_node_id")
+        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+            raise RuntimeServiceError(
+                "job submission creator_node_id must be a non-empty string"
+            )
+        job_type = request.get("job_type")
+        if not isinstance(job_type, str) or not job_type.strip():
+            raise RuntimeServiceError(
+                "job submission job_type must be a non-empty string"
+            )
+        payload = request.get("payload")
+        if not isinstance(payload, dict):
+            raise RuntimeServiceError("job submission payload must be a JSON object")
+        validation_mode = request.get("requested_validation_mode")
+        if not isinstance(validation_mode, str) or not validation_mode.strip():
+            raise RuntimeServiceError(
+                "job submission requested_validation_mode must be a non-empty string"
+            )
+        lineage_parent_refs = request.get("lineage_parent_refs", [])
+        if not isinstance(lineage_parent_refs, list) or not all(
+            isinstance(ref, str) and ref.strip() for ref in lineage_parent_refs
+        ):
+            raise RuntimeServiceError(
+                "job submission lineage_parent_refs must be a list of non-empty strings"
+            )
+        attribution_metadata = request.get("attribution_metadata", {})
+        if not isinstance(attribution_metadata, dict):
+            raise RuntimeServiceError(
+                "job submission attribution_metadata must be a JSON object"
+            )
+        try:
+            json.dumps(request, sort_keys=True)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeServiceError(
+                "job submission must contain JSON-compatible data"
+            ) from exc
+
+        job_id = f"local-job-{uuid4().hex}"
+        manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        atomic_create_json(
+            manifest_path,
+            {
+                "version": 1,
+                "manifest_type": "local_job_submission",
+                "network_mode": "local-only-no-p2p",
+                "submitted_at": int(time.time()),
+                "job": {"job_id": job_id, "job_type": job_type, "payload": payload},
+                "creator_node_id": creator_node_id,
+                "requested_validation_mode": validation_mode,
+                "lineage": {"parent_refs": lineage_parent_refs},
+                "contribution_attribution": {
+                    "creator_node_id": creator_node_id,
+                    "metadata": attribution_metadata,
+                },
+            },
+        )
+        self._append_event(f"accepted local job submission {job_id}")
+        return {
+            "job_id": job_id,
+            "status": "accepted_pending_execution",
+            "manifest_ref": manifest_ref,
+            "next_validation_expectation": "pending_requested_local_validation",
+            "network_mode": "local-only-no-p2p",
         }
 
     def health(self) -> dict[str, Any]:
