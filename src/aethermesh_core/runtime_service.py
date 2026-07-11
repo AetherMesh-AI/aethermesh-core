@@ -40,6 +40,7 @@ DEFAULT_LOCAL_CAPABILITIES = (
 )
 PUBLIC_VERSION = "0.2.0-alpha"
 CAPABILITY_LIST_SCHEMA_VERSION = 1
+VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 
 # These definitions are the local runtime's source of truth. A configured work
 # type is enabled only when it is registered here; provenance entries describe
@@ -95,6 +96,10 @@ LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS = (
 
 class RuntimeServiceError(ValueError):
     """Raised when local runtime state cannot be safely loaded or written."""
+
+
+class ValidationReceiptNotFoundError(RuntimeServiceError):
+    """Raised when a requested local validation receipt is not stored."""
 
 
 @dataclass(frozen=True)
@@ -505,6 +510,143 @@ class NodeRuntimeService:
             "items": items,
         }
 
+    def get_local_validation_receipt(
+        self,
+        *,
+        receipt_id: str | None = None,
+        work_id: str | None = None,
+        latest: bool = False,
+    ) -> dict[str, Any]:
+        """Return one stored local receipt without creating validation evidence."""
+
+        selectors = sum(value is not None for value in (receipt_id, work_id)) + int(
+            latest
+        )
+        if selectors != 1:
+            raise RuntimeServiceError(
+                "exactly one of receipt_id, work_id, or latest is required"
+            )
+        if receipt_id is not None:
+            job_id = self._job_id_from_receipt_id(receipt_id)
+        elif work_id is not None:
+            if not self._is_local_job_id(work_id):
+                raise RuntimeServiceError("work_id must be a local job ID")
+            job_id = work_id
+        else:
+            job_id = self._latest_validation_receipt_work_id()
+
+        receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        receipt_path = self.paths.home / receipt_ref
+        if not receipt_path.exists():
+            raise ValidationReceiptNotFoundError("local validation receipt not found")
+        receipt = self._load_local_job_document(receipt_path, "validation receipt")
+        result_ref = receipt.get("result_ref")
+        validator_id = receipt.get("validator_id")
+        validation = receipt.get("validation")
+        if receipt.get("job_id") != job_id:
+            raise RuntimeServiceError("validation receipt does not match its work ID")
+        if not isinstance(result_ref, str) or not result_ref:
+            raise RuntimeServiceError("validation receipt has no result reference")
+        if not isinstance(validator_id, str) or not validator_id:
+            raise RuntimeServiceError("validation receipt has no validator identity")
+        if not isinstance(validation, dict) or not isinstance(
+            validation.get("valid"), bool
+        ):
+            raise RuntimeServiceError(
+                "validation receipt has invalid validation evidence"
+            )
+
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        status_ref = f"data/job-status/{job_id}.json"
+        manifest_path = self.paths.home / manifest_ref
+        status_path = self.paths.home / status_ref
+        if not manifest_path.exists() or not status_path.exists():
+            raise RuntimeServiceError(
+                "validation receipt has incomplete local evidence"
+            )
+        manifest = self._load_local_job_document(
+            manifest_path, "job submission manifest"
+        )
+        status = self._load_local_job_document(status_path, "job status record")
+        lineage = manifest.get("lineage")
+        attribution = status.get("contribution_attribution")
+        if (
+            not isinstance(manifest.get("creator_node_id"), str)
+            or manifest.get("job", {}).get("job_id") != job_id
+            or not isinstance(lineage, dict)
+            or not isinstance(lineage.get("parent_refs"), list)
+            or not isinstance(attribution, dict)
+        ):
+            raise RuntimeServiceError(
+                "validation receipt has incomplete provenance evidence"
+            )
+        if status.get("validation", {}).get("receipt_ref") != receipt_ref:
+            raise RuntimeServiceError(
+                "job status does not reference validation receipt"
+            )
+
+        validated_at = receipt.get("validated_at")
+        timestamp_source = "receipt_record"
+        if not isinstance(validated_at, int) or isinstance(validated_at, bool):
+            validated_at = int(receipt_path.stat().st_mtime)
+            timestamp_source = "receipt_file_mtime_legacy"
+        return {
+            "schema_version": 1,
+            "network_mode": "local-only-no-p2p",
+            "validation_scope": "local-only-not-consensus",
+            "receipt_id": self._receipt_id_for_job(job_id),
+            "work_id": job_id,
+            "creator_node_id": manifest["creator_node_id"],
+            "manifest_ref": manifest_ref,
+            "validation_status": "passed" if validation["valid"] else "failed",
+            "validation": validation,
+            "validation_timestamp": validated_at,
+            "validation_timestamp_source": timestamp_source,
+            "validator_identity": validator_id,
+            "lineage_parent_ids": lineage["parent_refs"],
+            "contribution_attribution": attribution,
+            "evidence": {
+                "receipt_ref": receipt_ref,
+                "result_ref": result_ref,
+                "status_ref": status_ref,
+            },
+        }
+
+    @staticmethod
+    def _receipt_id_for_job(job_id: str) -> str:
+        return f"{VALIDATION_RECEIPT_ID_PREFIX}{job_id}"
+
+    def _job_id_from_receipt_id(self, receipt_id: str) -> str:
+        if not isinstance(receipt_id, str) or not receipt_id.startswith(
+            VALIDATION_RECEIPT_ID_PREFIX
+        ):
+            raise RuntimeServiceError(
+                "receipt_id must be a local validation receipt ID"
+            )
+        job_id = receipt_id.removeprefix(VALIDATION_RECEIPT_ID_PREFIX)
+        if not self._is_local_job_id(job_id):
+            raise RuntimeServiceError(
+                "receipt_id must be a local validation receipt ID"
+            )
+        return job_id
+
+    def _latest_validation_receipt_work_id(self) -> str:
+        directory = self.paths.data_dir / "job-validation-receipts"
+        candidates = (
+            [
+                path
+                for path in directory.glob("*.json")
+                if self._is_local_job_id(path.stem)
+            ]
+            if directory.exists()
+            else []
+        )
+        if not candidates:
+            raise ValidationReceiptNotFoundError("local validation receipt not found")
+        return max(
+            candidates, key=lambda path: (path.stat().st_mtime_ns, path.name)
+        ).stem
+
     def _contribution_summary_item(self, job_id: str) -> dict[str, Any]:
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
@@ -680,9 +822,11 @@ class NodeRuntimeService:
             {
                 "version": 1,
                 "job_id": job_id,
+                "receipt_id": self._receipt_id_for_job(job_id),
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "validation": validation.to_dict(),
+                "validated_at": int(time.time()),
             },
         )
         succeeded = result.status == "completed" and validation.valid
