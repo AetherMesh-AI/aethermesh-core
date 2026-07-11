@@ -590,6 +590,7 @@ class NodeRuntimeService:
         creator = manifest.get("creator_node_id")
         submitted_at = manifest.get("submitted_at")
         lineage = manifest.get("lineage")
+        attribution = manifest.get("contribution_attribution")
         if (
             not self._is_local_job_id(job_id)
             or manifest_path.stem != job_id
@@ -599,6 +600,8 @@ class NodeRuntimeService:
             or isinstance(submitted_at, bool)
             or not isinstance(lineage, dict)
             or not isinstance(lineage.get("parent_refs"), list)
+            or not isinstance(attribution, dict)
+            or attribution.get("creator_node_id") != creator
         ):
             raise RuntimeServiceError(
                 "job submission manifest has invalid audit evidence"
@@ -611,6 +614,7 @@ class NodeRuntimeService:
             "lineage_id": f"local-lineage-{job_id}",
             "lineage_parent_refs": list(lineage["parent_refs"]),
             "contribution_attribution_id": f"local-contribution-{job_id}",
+            "contribution_attribution": attribution,
         }
         events = [
             {
@@ -645,11 +649,18 @@ class NodeRuntimeService:
             self.paths.home / expected_receipt_ref, "validation receipt"
         )
         validated_at = receipt.get("validated_at")
+        receipt_validation = receipt.get("validation")
+        status_attribution = status.get("contribution_attribution")
         if (
             receipt.get("job_id") != job_id
             or receipt.get("receipt_id") != self._receipt_id_for_job(job_id)
             or not isinstance(validated_at, int)
             or isinstance(validated_at, bool)
+            or not isinstance(receipt_validation, dict)
+            or not isinstance(receipt_validation.get("valid"), bool)
+            or validation.get("passed") is not receipt_validation["valid"]
+            or not isinstance(status_attribution, dict)
+            or status_attribution.get("creator_node_id") != creator
         ):
             raise RuntimeServiceError("validation receipt has invalid audit evidence")
         events.append(
@@ -663,8 +674,11 @@ class NodeRuntimeService:
                     **artifacts,
                     "receipt_id": receipt["receipt_id"],
                     "receipt_ref": receipt_ref,
+                    "contribution_attribution": status_attribution,
                 },
-                "validation_status": "passed" if validation.get("passed") else "failed",
+                "validation_status": (
+                    "passed" if receipt_validation["valid"] else "failed"
+                ),
             }
         )
         return events

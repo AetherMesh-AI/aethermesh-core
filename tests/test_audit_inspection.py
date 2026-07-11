@@ -52,6 +52,14 @@ class AuditInspectionTests(unittest.TestCase):
             self.assertEqual(
                 event["artifacts"]["lineage_parent_refs"], ["data/prior-job.json"]
             )
+            self.assertEqual(
+                event["artifacts"]["contribution_attribution"]["metadata"],
+                {"project": "prototype"},
+            )
+            self.assertEqual(
+                event["artifacts"]["contribution_attribution"]["worker_node_id"],
+                "worker-local-a",
+            )
             self.assertEqual(event["validation_status"], "passed")
             self.assertEqual(filtered["total_matching"], 1)
             self.assertEqual(before, after)
