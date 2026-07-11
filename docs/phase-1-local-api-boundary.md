@@ -25,7 +25,7 @@ The `run-local-batch` simulation command is also supported as a local determinis
 
 `GET /capabilities` (also `/api/capabilities`) and `NodeRuntimeService.list_capabilities()` return a local, versioned capability response. Its `capabilities` entries each contain `identifier`, `description`, `status` (`enabled` or `disabled`), and `schema_version`. Work entries are enabled only when their work type is configured in the local runtime's `capabilities.enabled_work_types`; provenance entries are registered local artifact contracts.
 
-The list explicitly reports local creator-node-ID handling, manifests, validation receipts, lineage references, and contribution-attribution metadata. `provenance.end_to_end_runtime_lineage` is deliberately `disabled`: the planned runtime-flow binding described below has not been implemented. The response has `network_mode: local-only-no-p2p` and `advertised: false`; it neither contacts external services nor claims peer discovery, consensus, or decentralization.
+The list explicitly reports local creator-node-ID handling, manifests, validation receipts, lineage references, and contribution-attribution metadata. `provenance.creator_node_id` is enabled only when identity persistence is enabled in the current local runtime configuration. `provenance.end_to_end_runtime_lineage` is deliberately `disabled`: the planned runtime-flow binding described below has not been implemented. The response has `network_mode: local-only-no-p2p` and `advertised: false`; it neither contacts external services nor claims peer discovery, consensus, or decentralization.
 
 ## Node create/load contract
 

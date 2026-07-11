@@ -296,7 +296,8 @@ class NodeRuntimeService:
         No entry represents remote discovery, consensus, or network advertising.
         """
 
-        enabled_work_types = _config_enabled_work_types(self.load_config())
+        config = self.load_config()
+        enabled_work_types = _config_enabled_work_types(config)
         capabilities = [
             {
                 "identifier": identifier,
@@ -311,7 +312,12 @@ class NodeRuntimeService:
             {
                 "identifier": identifier,
                 "description": description,
-                "status": status,
+                "status": (
+                    "disabled"
+                    if identifier == "provenance.creator_node_id"
+                    and not _config_identity_persistence_enabled(config)
+                    else status
+                ),
                 "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
             }
             for identifier, description, status in LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS

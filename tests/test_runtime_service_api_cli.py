@@ -373,7 +373,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     "work.text_chunk": "enabled",
                     "work.text_embed": "enabled",
                     "work.text_stats": "enabled",
-                    "provenance.creator_node_id": "enabled",
+                    "provenance.creator_node_id": "disabled",
                     "provenance.manifest": "enabled",
                     "provenance.validation_receipt": "enabled",
                     "provenance.lineage_reference": "enabled",
@@ -423,7 +423,18 @@ class RuntimeServiceTests(unittest.TestCase):
 
             self.assertEqual(capabilities["work.echo"], "enabled")
             self.assertEqual(capabilities["work.text_stats"], "disabled")
+            self.assertEqual(capabilities["provenance.creator_node_id"], "disabled")
             self.assertEqual(capabilities["provenance.manifest"], "enabled")
+
+            config["identity"]["persist"] = True
+            service._write_config(config)
+            persistent_capabilities = {
+                entry["identifier"]: entry["status"]
+                for entry in service.list_capabilities()["capabilities"]
+            }
+            self.assertEqual(
+                persistent_capabilities["provenance.creator_node_id"], "enabled"
+            )
 
     def test_existing_config_is_merged_and_logs_are_limited(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
