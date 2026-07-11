@@ -184,6 +184,7 @@ def _shutdown_local_node(
     if interrupted_work:
         stopped_work_path.parent.mkdir(parents=True, exist_ok=True)
         stopped_work_ref = _relative_ref(root, stopped_work_path)
+        progress["artifact"] = stopped_work_ref
         atomic_write_json(
             stopped_work_path,
             {
@@ -200,11 +201,12 @@ def _shutdown_local_node(
     receipt_refs = _artifact_refs(
         root, configured_runtime_ref(config, "validation_receipts")
     )
+    progress["artifact"] = configured_runtime_ref(config, "lineage")
     lineage_refs = _artifact_refs(root, configured_runtime_ref(config, "lineage"))
+    progress["artifact"] = configured_runtime_ref(config, "contribution_attribution")
     contribution_refs = _artifact_refs(
         root, configured_runtime_ref(config, "contribution_attribution")
     )
-    progress["contribution_records_finalized"] = True
     shutdown_outcome = "forced" if time.monotonic() > deadline else "clean"
     final_state = {
         "version": LOCAL_SHUTDOWN_STATE_VERSION,
@@ -227,6 +229,7 @@ def _shutdown_local_node(
     progress["component"] = "manifest_flush"
     progress["artifact"] = _relative_ref(root, state_path)
     atomic_write_json(state_path, final_state)
+    progress["contribution_records_finalized"] = True
     _append_log(
         log_path,
         event="shutdown_persistence_complete",

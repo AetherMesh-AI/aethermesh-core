@@ -206,7 +206,8 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(report["error_code"], "SHUTDOWN_MANIFEST_FLUSH_FAILED")
         self.assertEqual(report["affected_artifact"], "state/shutdown-state.json")
         self.assertEqual(report["node_id"], start["node_id"])
-        self.assertTrue(report["contribution_records_finalized"])
+        self.assertFalse(report["contribution_records_finalized"])
+        self.assertEqual(report["shutdown_outcome"], "unsafe_incomplete")
         self.assertIn("disk full", log)
         self.assertEqual(identity_after, identity_before)
 
