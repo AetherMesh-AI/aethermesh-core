@@ -546,8 +546,16 @@ class NodeRuntimeService:
             isinstance(receipt.get("validation"), dict)
             and receipt["validation"].get("valid") is True
         )
-        if manifest and manifest.get("job", {}).get("job_id") != job_id:
-            evidence_errors.append("job submission manifest does not match work item")
+        manifest_job = manifest.get("job")
+        if manifest:
+            if not isinstance(manifest_job, dict):
+                evidence_errors.append(
+                    "job submission manifest has invalid job evidence"
+                )
+            elif manifest_job.get("job_id") != job_id:
+                evidence_errors.append(
+                    "job submission manifest does not match work item"
+                )
         if status and status.get("job_id") != job_id:
             evidence_errors.append("job status record does not match work item")
         if receipt and receipt.get("job_id") != job_id:
@@ -564,9 +572,30 @@ class NodeRuntimeService:
             attribution = (
                 manifest_attribution if isinstance(manifest_attribution, dict) else {}
             )
+        creator_node_id = attribution.get("creator_node_id")
+        contributing_node_id = attribution.get(
+            "worker_node_id", status.get("worker_node_id")
+        )
+        if manifest and not isinstance(creator_node_id, str):
+            evidence_errors.append("contribution attribution has no creator node ID")
+        if status.get("status") == "succeeded" and not isinstance(
+            contributing_node_id, str
+        ):
+            evidence_errors.append(
+                "contribution attribution has no contributing node ID"
+            )
         lineage = manifest.get("lineage")
         if not isinstance(lineage, dict):
             lineage = {}
+            if manifest:
+                evidence_errors.append(
+                    "job submission manifest has invalid lineage evidence"
+                )
+        lineage_links = lineage.get("parent_refs", [])
+        if not isinstance(lineage_links, list):
+            evidence_errors.append("job submission manifest has invalid lineage links")
+            lineage_links = []
+        accepted = accepted and not evidence_errors
         return {
             "work_item_id": job_id,
             "status": status.get("status", "incomplete"),
@@ -575,16 +604,14 @@ class NodeRuntimeService:
             else "degraded"
             if evidence_errors
             else "not_accepted",
-            "creator_node_id": attribution.get("creator_node_id"),
-            "contributing_node_id": attribution.get(
-                "worker_node_id", status.get("worker_node_id")
-            ),
+            "creator_node_id": creator_node_id,
+            "contributing_node_id": contributing_node_id,
             "manifest_ref": manifest_ref,
             "status_ref": status_ref if status_path.exists() else None,
             "validation_receipt_ref": receipt_ref
             if isinstance(receipt_ref, str)
             else None,
-            "lineage_links": lineage.get("parent_refs", []),
+            "lineage_links": lineage_links,
             "timestamps": {"submitted_at": manifest.get("submitted_at")},
             "evidence_errors": evidence_errors,
         }

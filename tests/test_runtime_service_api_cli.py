@@ -451,6 +451,37 @@ class RuntimeServiceTests(unittest.TestCase):
                     {**receipt, "job_id": "other"},
                     "validation receipt does not match work item",
                 ),
+                (
+                    manifest_path,
+                    {**manifest, "job": []},
+                    "job submission manifest has invalid job evidence",
+                ),
+                (
+                    status_path,
+                    {**status, "contribution_attribution": {}},
+                    "contribution attribution has no creator node ID",
+                ),
+                (
+                    status_path,
+                    {
+                        **status,
+                        "worker_node_id": None,
+                        "contribution_attribution": {
+                            "creator_node_id": "creator-local-a"
+                        },
+                    },
+                    "contribution attribution has no contributing node ID",
+                ),
+                (
+                    manifest_path,
+                    {**manifest, "lineage": []},
+                    "job submission manifest has invalid lineage evidence",
+                ),
+                (
+                    manifest_path,
+                    {**manifest, "lineage": {"parent_refs": "not-a-list"}},
+                    "job submission manifest has invalid lineage links",
+                ),
             ):
                 manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
                 status_path.write_text(json.dumps(status), encoding="utf-8")
