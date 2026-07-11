@@ -106,6 +106,36 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         except RuntimeServiceError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.get("/api/audit-events")
+    def audit_events(
+        start_time: int | None = None,
+        end_time: int | None = None,
+        event_type: str | None = None,
+        node_id: str | None = None,
+        manifest_id: str | None = None,
+        receipt_id: str | None = None,
+        lineage_id: str | None = None,
+        contribution_attribution_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Read local audit evidence; this route never writes runtime artifacts."""
+        try:
+            return runtime_service.inspect_local_audit_events(
+                start_time=start_time,
+                end_time=end_time,
+                event_type=event_type,
+                node_id=node_id,
+                manifest_id=manifest_id,
+                receipt_id=receipt_id,
+                lineage_id=lineage_id,
+                contribution_attribution_id=contribution_attribution_id,
+                limit=limit,
+                offset=offset,
+            )
+        except RuntimeServiceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/capabilities")
     @app.get("/api/capabilities")
     def capabilities() -> dict[str, Any]:
