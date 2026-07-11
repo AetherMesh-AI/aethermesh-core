@@ -224,9 +224,11 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertIn("Unsupported job type", str(failed["error"]))
             self.assertEqual(
-                service.get_local_job_status("missing-job"),
+                service.get_local_job_status(
+                    "local-job-00000000000000000000000000000000"
+                ),
                 {
-                    "job_id": "missing-job",
+                    "job_id": "local-job-00000000000000000000000000000000",
                     "status": "not_found",
                     "error": "local job not found",
                 },
@@ -234,6 +236,16 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 service.get_local_job_status(""),
                 {"job_id": "", "status": "not_found", "error": "local job not found"},
+            )
+            escaped_path = service.paths.data_dir / "outside-submission-directory.json"
+            escaped_path.write_text("not JSON", encoding="utf-8")
+            self.assertEqual(
+                service.get_local_job_status("../outside-submission-directory"),
+                {
+                    "job_id": "../outside-submission-directory",
+                    "status": "not_found",
+                    "error": "local job not found",
+                },
             )
 
     def test_local_job_status_api_returns_success_and_stable_not_found(self) -> None:

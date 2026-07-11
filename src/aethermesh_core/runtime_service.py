@@ -446,7 +446,7 @@ class NodeRuntimeService:
             "status": "not_found",
             "error": "local job not found",
         }
-        if not isinstance(job_id, str) or not job_id.strip():
+        if not self._is_local_job_id(job_id):
             return missing
         manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
         if not manifest_path.exists():
@@ -553,6 +553,17 @@ class NodeRuntimeService:
         )
         self._append_event(f"executed local job submission {job_id}")
         return self.get_local_job_status(job_id)
+
+    @staticmethod
+    def _is_local_job_id(job_id: object) -> bool:
+        prefix = "local-job-"
+        suffix = job_id[len(prefix) :] if isinstance(job_id, str) else ""
+        return (
+            isinstance(job_id, str)
+            and job_id.startswith(prefix)
+            and len(suffix) == 32
+            and all(character in "0123456789abcdef" for character in suffix)
+        )
 
     @staticmethod
     def _load_local_job_document(path: Path, label: str) -> dict[str, Any]:
