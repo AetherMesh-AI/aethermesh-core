@@ -13,6 +13,7 @@ from aethermesh_core.scheduler import (
     DEFAULT_LOCAL_CAPABILITIES,
     NodeStatus,
     ScheduledNode,
+    SUPPORTED_LOCAL_JOB_TYPES,
 )
 
 
@@ -183,6 +184,11 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
     if not isinstance(job_type, str) or not job_type.strip():
         raise ManifestError(
             f"manifest jobs[{index}].job_type must be a non-empty string"
+        )
+    if job_type not in SUPPORTED_LOCAL_JOB_TYPES:
+        supported_types = ", ".join(SUPPORTED_LOCAL_JOB_TYPES)
+        raise ManifestError(
+            f"manifest jobs[{index}].job_type must be one of: {supported_types}"
         )
 
     payload = entry.get("payload", {})

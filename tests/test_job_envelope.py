@@ -40,6 +40,17 @@ class JobEnvelopeTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.envelope))
         self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(
+            schema["properties"]["job_type"]["enum"],
+            [
+                "echo",
+                "keyword_extract",
+                "text_chunk",
+                "text_embed",
+                "text_retrieve",
+                "text_stats",
+            ],
+        )
         self.assertIn(
             "sha256",
             schema["properties"]["input_manifest"]["properties"]["files"]["items"][
@@ -92,6 +103,17 @@ class JobEnvelopeTests(unittest.TestCase):
         document = copy.deepcopy(self.envelope)
         document["job_id"] = "sha256:" + "a" * 64
         self.assertIs(validate_job_envelope(document), document)
+
+    def test_job_type_requires_a_supported_local_capability(self) -> None:
+        for job_type, message in (
+            ("", "non-empty string"),
+            ("future_job", "must be one of"),
+        ):
+            with self.subTest(job_type=job_type):
+                document = copy.deepcopy(self.envelope)
+                document["job_type"] = job_type
+                with self.assertRaisesRegex(JobEnvelopeError, message):
+                    validate_job_envelope(document)
 
     def test_explicit_lineage_receipts_and_contribution_artifacts_are_accepted(
         self,

@@ -702,7 +702,6 @@ def run_local_batch(
     batch = load_job_manifest(manifest_path)
     simulation = run_local_simulation(node_ids=batch.nodes, jobs=batch.jobs)
     result = simulation.to_dict()
-    unsupported_count = int(result["validation_summary"]["unsupported"])
     if ledger_path is not None:
         ledger, extra_fields = load_ledger_document(ledger_path)
         for job, accounted_result, validation in zip(
@@ -728,19 +727,6 @@ def run_local_batch(
         )
         write_message_log(message_log_path, message_log_document)
         result["message_log_path"] = message_log_path
-
-    if unsupported_count:
-        unsupported_errors = sorted(
-            {
-                str(item["error"])
-                for item in result["results"]
-                if item.get("status") == "failed"
-                and isinstance(item.get("error"), str)
-                and item["error"].startswith("Unsupported job type:")
-            }
-        )
-        details = "; ".join(unsupported_errors) or "unsupported job type"
-        raise ManifestError(f"local batch execution failed: {details}")
 
     return result
 

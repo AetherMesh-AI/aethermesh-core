@@ -20,6 +20,11 @@ DEFAULT_LOCAL_CAPABILITIES = (
     "text_stats",
 )
 
+# A local job's type is its required worker capability. Keeping this constrained
+# makes local routing explicit and prevents manifests from claiming work no
+# bundled worker can perform.
+SUPPORTED_LOCAL_JOB_TYPES = DEFAULT_LOCAL_CAPABILITIES
+
 
 class NodeStatus(str, Enum):
     """Availability states needed by the local scheduler."""
