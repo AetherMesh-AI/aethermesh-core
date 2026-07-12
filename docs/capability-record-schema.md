@@ -12,6 +12,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | --- | --- |
 | `schema_version` | Integer `1`. |
 | `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
+| `capability_version` | Required Semantic Versioning 2.0 value for the capability contract, such as `1.0.0`; it is not release status, reputation, or reward value. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
@@ -21,12 +22,17 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `manifest_refs` | Non-empty list of safe local relative references backing the claim. |
 | `validation.status` | One of `unvalidated`, `passed`, `failed`. |
 | `validation.receipt_ids` | List of stable local receipt IDs. |
+| `validation.receipt_evidence` | Required list aligned with `receipt_ids`; each receipt records its ID, advertised capability name and version, creator node ID, and source manifest reference. |
 | `lineage.source_manifest_ref` | Safe local relative reference for the source manifest. |
 | `contribution_attribution.creator_node_id` | Required and exactly equal to top-level `creator_node_id`. |
 | `contribution_attribution.maintainer_node_id` | Stable local identifier. |
 | `contribution_attribution.work_receipt_ids` | List of stable local work receipt IDs. |
 
 A safe local reference is non-empty, relative, and cannot begin with `/` or `~`, contain `..`, or contain a URI scheme. This keeps records portable without treating a filesystem reference as a network location.
+
+## Capability-version changes
+
+Use Semantic Versioning for the capability interface or behavior only: increment the major version for incompatible contract changes, the minor version for backwards-compatible inputs, outputs, or behavior, and the patch version for compatible corrections. After a contract-affecting change, update the source manifest and rerun local validation so receipt evidence records the new version. Existing records without `capability_version` fail local validation and must be migrated with an explicit version and matching fresh receipt evidence.
 
 ## Conditional validation fields
 
@@ -44,6 +50,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "capability_version": "1.0.0",
   "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",
@@ -61,6 +68,13 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
   "validation": {
     "status": "passed",
     "receipt_ids": ["receipt.echo-smoke-01"],
+    "receipt_evidence": [{
+      "receipt_id": "receipt.echo-smoke-01",
+      "capability_name": "Local echo worker",
+      "capability_version": "1.0.0",
+      "creator_node_id": "node.local-01",
+      "manifest_ref": "manifests/local-echo-worker.json"
+    }],
     "last_validated_at": "2026-07-11T12:05:00Z",
     "check_name": "echo-smoke-test"
   },
@@ -79,6 +93,6 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 
 ## Valid unvalidated record
 
-Set `validation.status` to `unvalidated` and `validation.receipt_ids` to `[]`; omit `last_validated_at`, `check_name`, and `failure_reason`. This remains a local claim, not a trusted or network-advertised capability.
+Set `validation.status` to `unvalidated`, `validation.receipt_ids` to `[]`, and `validation.receipt_evidence` to `[]`; omit `last_validated_at`, `check_name`, and `failure_reason`. This remains a local claim, not a trusted or network-advertised capability.
 
 Validation requires the persisted identity's ID as `local_node_id`. The record is rejected unless its required `node_id` exactly matches that source of truth.
