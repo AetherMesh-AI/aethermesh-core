@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import os
 import shutil
@@ -33,6 +34,14 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
                     schema_directory / schema_name,
                 )
             record = json.loads(source.read_text(encoding="utf-8"))
+            for schema in (
+                record["metadata"]["supported_input_schemas"]
+                + record["metadata"]["supported_output_schemas"]
+            ):
+                schema_path = Path(temp_dir) / schema["schema_ref"]
+                schema["schema_digest"] = (
+                    f"sha256:{hashlib.sha256(schema_path.read_bytes()).hexdigest()}"
+                )
             record["node_id"] = initialized["node_id"]
             record["creator_node_id"] = initialized["node_id"]
             record["contribution_attribution"]["creator_node_id"] = initialized[
