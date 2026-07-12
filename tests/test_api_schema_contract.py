@@ -152,7 +152,7 @@ class ApiSchemaContractTests(unittest.TestCase):
 
             self.assertEqual(accepted.status_code, 200)
             self.assertEqual(accepted.json()["schema_version"], 1)
-            self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
+            self.assertEqual(accepted.json()["status"], "queued")
             for response in (
                 missing_version,
                 boolean_version,

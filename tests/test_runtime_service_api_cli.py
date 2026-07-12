@@ -88,7 +88,7 @@ class RuntimeServiceTests(unittest.TestCase):
             )
 
             self.assertRegex(response["job_id"], r"^local-job-[a-f0-9]{32}$")
-            self.assertEqual(response["status"], "accepted_pending_execution")
+            self.assertEqual(response["status"], "queued")
             self.assertEqual(
                 response["next_validation_expectation"],
                 "pending_requested_local_validation",
@@ -117,6 +117,74 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
+
+    def test_local_job_states_are_auditable_and_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            submission = service.submit_local_job(request)
+            job_id = submission["job_id"]
+            manifest_path = root / submission["manifest_ref"]
+            manifest_before = manifest_path.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "invalid local job state transition"
+            ):
+                service._transition_local_job_state(job_id, "succeeded")
+            completed = service.execute_submitted_local_job(job_id, "worker-local-a")
+            self.assertEqual(completed["status"], "succeeded")
+            self.assertEqual(manifest_path.read_text(encoding="utf-8"), manifest_before)
+            self.assertEqual(completed["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                completed["lineage"]["parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                completed["contribution_attribution"]["creator_node_id"],
+                "creator-local-a",
+            )
+            self.assertEqual(
+                set(completed["timestamps"]),
+                {"created_at", "queued_at", "running_at", "succeeded_at"},
+            )
+            audit_path = root / completed["state_audit_refs"][0]
+            audit_states = [
+                json.loads(line)["state"]
+                for line in audit_path.read_text().splitlines()
+            ]
+            self.assertEqual(audit_states, ["queued", "running", "succeeded"])
+            self.assertEqual(len(completed["state_audit_refs"]), 3)
+
+            with self.assertRaisesRegex(RuntimeServiceError, "not queued"):
+                service.execute_submitted_local_job(job_id, "worker-local-a")
+            with self.assertRaisesRegex(RuntimeServiceError, "terminal local job"):
+                service.cancel_submitted_local_job(job_id)
+
+            canceled = service.submit_local_job(request)
+            self.assertEqual(
+                service.cancel_submitted_local_job(canceled["job_id"])["status"],
+                "canceled",
+            )
+
+            missing_status = service.submit_local_job(request)
+            service._job_status_path(missing_status["job_id"]).unlink()
+            self.assertEqual(
+                service.inspect_local_audit_events(
+                    manifest_id=missing_status["job_id"]
+                )["total_matching"],
+                1,
+            )
 
     def test_local_job_requester_identity_preserves_request_origin(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -327,7 +395,7 @@ class RuntimeServiceTests(unittest.TestCase):
 
             accepted, rejected = asyncio.run(submit())
             self.assertEqual(accepted.status_code, 200)
-            self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
+            self.assertEqual(accepted.json()["status"], "queued")
             self.assertEqual(rejected.status_code, 400)
             self.assertEqual(rejected.json()["error"]["code"], "INVALID_INPUT")
 

@@ -46,7 +46,7 @@ Required request fields are `schema_version` (integer `1`), `job_type` (non-empt
 
 Version 1 intentionally accepts unknown additive submission fields for forward compatibility, but does not persist them in the local submission manifest. Unknown query parameters are likewise ignored by the local read-only routes. Known path and audit artifact IDs remain strict: job/manifest IDs, receipt IDs, lineage IDs, and contribution-attribution IDs must use their documented local ID forms.
 
-Successful response required fields are `schema_version` (`1`), `job_id`, `status` (`accepted_pending_execution`), `manifest_ref`, `next_validation_expectation`, and `network_mode` (`local-only-no-p2p`).
+Successful response required fields are `schema_version` (`1`), `job_id`, `status` (`queued`), `manifest_ref`, `next_validation_expectation`, and `network_mode` (`local-only-no-p2p`).
 
 Example request:
 
@@ -65,7 +65,11 @@ Example request:
 
 ## Local Job Status v1
 
-A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `requester_identity`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
+A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `requester_identity`, `worker_node_id`, `lineage`, `contribution_attribution`, `timestamps`, `state_audit_refs`, `validation`, `result`, `error`, and `network_mode`. Every persisted status record retains its creator ID, manifest reference, lineage, contribution attribution, timestamps, and append-only local state-audit reference.
+
+The only local job states are: `created` (a submission manifest and initial local record exist), `queued` (the created record is ready for one local execution attempt), `running` (a worker is executing the queued job), `succeeded` (execution and local validation completed successfully), `failed` (execution or local validation completed unsuccessfully), and `canceled` (the job was stopped locally before a terminal result). Valid transitions are only `created -> queued`, `queued -> running`, `running -> succeeded`, `running -> failed`, and `created`, `queued`, or `running -> canceled`. Terminal `succeeded`, `failed`, and `canceled` jobs cannot be executed or restarted in place; a replacement must be a new job with explicit lineage back to the prior job. Each transition appends a local audit entry before the current status record is updated; manifests and inherited attribution are never overwritten by a transition.
+
+Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 
