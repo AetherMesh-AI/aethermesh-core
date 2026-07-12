@@ -135,8 +135,10 @@ def _object(value: object, context: str, required: frozenset[str]) -> dict[str, 
 def _identifier(value: object, context: str) -> str:
     if not isinstance(value, str):
         raise JobFailureSchemaError(f"{context} must be a non-empty identifier")
-    if not value or value != value.strip() or any(
-        character.isspace() for character in value
+    if (
+        not value
+        or value != value.strip()
+        or any(character.isspace() for character in value)
     ):
         raise JobFailureSchemaError(f"{context} must be a non-empty identifier")
     return value
