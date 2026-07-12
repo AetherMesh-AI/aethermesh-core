@@ -151,15 +151,15 @@ class ApiSchemaContractTests(unittest.TestCase):
             self.assertEqual(accepted.status_code, 200)
             self.assertEqual(accepted.json()["schema_version"], 1)
             self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
-            for response, field in (
-                (missing_version, "schema_version"),
-                (boolean_version, "schema_version"),
-                (missing_creator, "creator_node_id"),
-                (missing_lineage, "lineage_parent_refs"),
-                (missing_attribution, "attribution_metadata"),
+            for response in (
+                missing_version,
+                boolean_version,
+                missing_creator,
+                missing_lineage,
+                missing_attribution,
             ):
                 self.assertEqual(response.status_code, 400)
-                self.assertIn(field, response.json()["detail"])
+                self.assertEqual(response.json()["error"]["code"], "INVALID_INPUT")
 
             status_payload = status.json()
             self.assertEqual(status_payload["schema_version"], 1)

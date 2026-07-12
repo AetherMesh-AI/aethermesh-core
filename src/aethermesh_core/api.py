@@ -4,16 +4,67 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import logging
 from typing import Any
+from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
     RuntimeServiceError,
     ValidationReceiptNotFoundError,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _request_id(request: Request) -> str:
+    return getattr(request.state, "request_id", "unavailable")
+
+
+def _error_response(
+    request: Request,
+    *,
+    status_code: int,
+    code: str,
+    message: str,
+) -> JSONResponse:
+    """Return the stable, deliberately non-provenance API error envelope."""
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {"code": code, "message": message, "details": {}},
+            "request_id": _request_id(request),
+        },
+    )
+
+
+def _runtime_error_code(
+    request: Request, error: RuntimeServiceError
+) -> tuple[int, str, str]:
+    """Classify expected local runtime failures without exposing their text."""
+
+    diagnostic = str(error).lower()
+    if request.url.path == "/api/jobs" and request.method == "POST":
+        return 400, "INVALID_INPUT", "The request is invalid."
+    if request.url.path == "/api/validation-receipts":
+        return 400, "VALIDATION_FAILURE", "Local validation evidence could not be read."
+    if "contribution_attribution" in diagnostic:
+        return (
+            400,
+            "CONTRIBUTION_ATTRIBUTION_FAILURE",
+            "Contribution attribution could not be read.",
+        )
+    if "lineage" in diagnostic:
+        return 400, "LINEAGE_LOOKUP_FAILURE", "Lineage evidence could not be read."
+    if "manifest" in diagnostic:
+        return 404, "MISSING_MANIFEST", "A required local manifest is unavailable."
+    return 400, "INVALID_INPUT", "The request is invalid."
 
 
 @asynccontextmanager
@@ -36,6 +87,100 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         lifespan=_lifespan,
     )
     app.state.service = runtime_service
+
+    @app.middleware("http")
+    async def assign_request_id(request: Request, call_next: Any) -> Any:
+        request.state.request_id = uuid4().hex
+        return await call_next(request)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input_handler(
+        request: Request, error: RequestValidationError
+    ) -> JSONResponse:
+        logger.warning(
+            "local API invalid input request_id=%s path=%s errors=%s",
+            _request_id(request),
+            request.url.path,
+            error.errors(),
+        )
+        return _error_response(
+            request,
+            status_code=400,
+            code="INVALID_INPUT",
+            message="The request is invalid.",
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error_handler(
+        request: Request, error: StarletteHTTPException
+    ) -> JSONResponse:
+        code = "NOT_FOUND" if error.status_code == 404 else "INVALID_INPUT"
+        message = (
+            "The local API route was not found."
+            if code == "NOT_FOUND"
+            else "The request is invalid."
+        )
+        logger.warning(
+            "local API HTTP failure request_id=%s path=%s status=%s",
+            _request_id(request),
+            request.url.path,
+            error.status_code,
+        )
+        return _error_response(
+            request,
+            status_code=error.status_code,
+            code=code,
+            message=message,
+        )
+
+    @app.exception_handler(ValidationReceiptNotFoundError)
+    async def missing_receipt_handler(
+        request: Request, error: ValidationReceiptNotFoundError
+    ) -> JSONResponse:
+        logger.warning(
+            "local API validation receipt missing request_id=%s path=%s error=%s",
+            _request_id(request),
+            request.url.path,
+            error,
+        )
+        return _error_response(
+            request,
+            status_code=404,
+            code="VALIDATION_FAILURE",
+            message="Local validation evidence was not found.",
+        )
+
+    @app.exception_handler(RuntimeServiceError)
+    async def runtime_error_handler(
+        request: Request, error: RuntimeServiceError
+    ) -> JSONResponse:
+        status_code, code, message = _runtime_error_code(request, error)
+        logger.warning(
+            "local API runtime failure request_id=%s path=%s code=%s error=%s",
+            _request_id(request),
+            request.url.path,
+            code,
+            error,
+        )
+        return _error_response(
+            request, status_code=status_code, code=code, message=message
+        )
+
+    @app.exception_handler(Exception)
+    async def internal_error_handler(
+        request: Request, error: Exception
+    ) -> JSONResponse:
+        logger.exception(
+            "local API internal failure request_id=%s path=%s",
+            _request_id(request),
+            request.url.path,
+        )
+        return _error_response(
+            request,
+            status_code=500,
+            code="INTERNAL_ERROR",
+            message="An internal local API error occurred.",
+        )
 
     @app.get("/health")
     def health() -> dict[str, Any]:
@@ -68,10 +213,7 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def submit_job(request: dict[str, Any]) -> dict[str, Any]:
         """Submit one local-only job for later execution and validation."""
 
-        try:
-            return runtime_service.submit_local_job(request)
-        except RuntimeServiceError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return runtime_service.submit_local_job(request)
 
     @app.get("/api/jobs/{job_id}")
     def job_status(job_id: str) -> dict[str, Any]:
@@ -94,17 +236,10 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         """Read one persisted local validation receipt; never create one."""
 
         if latest not in (None, "true"):
-            raise HTTPException(
-                status_code=400, detail="latest must be true when provided"
-            )
-        try:
-            return runtime_service.get_local_validation_receipt(
-                receipt_id=receipt_id, work_id=work_id, latest=latest == "true"
-            )
-        except ValidationReceiptNotFoundError as exc:
-            raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except RuntimeServiceError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise RuntimeServiceError("latest must be true when provided")
+        return runtime_service.get_local_validation_receipt(
+            receipt_id=receipt_id, work_id=work_id, latest=latest == "true"
+        )
 
     @app.get("/api/audit-events")
     def audit_events(
@@ -120,21 +255,18 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         offset: int = 0,
     ) -> dict[str, Any]:
         """Read local audit evidence; this route never writes runtime artifacts."""
-        try:
-            return runtime_service.inspect_local_audit_events(
-                start_time=start_time,
-                end_time=end_time,
-                event_type=event_type,
-                node_id=node_id,
-                manifest_id=manifest_id,
-                receipt_id=receipt_id,
-                lineage_id=lineage_id,
-                contribution_attribution_id=contribution_attribution_id,
-                limit=limit,
-                offset=offset,
-            )
-        except RuntimeServiceError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return runtime_service.inspect_local_audit_events(
+            start_time=start_time,
+            end_time=end_time,
+            event_type=event_type,
+            node_id=node_id,
+            manifest_id=manifest_id,
+            receipt_id=receipt_id,
+            lineage_id=lineage_id,
+            contribution_attribution_id=contribution_attribution_id,
+            limit=limit,
+            offset=offset,
+        )
 
     @app.get("/capabilities")
     @app.get("/api/capabilities")

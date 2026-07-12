@@ -168,7 +168,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(accepted.status_code, 200)
             self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
             self.assertEqual(rejected.status_code, 400)
-            self.assertIn("creator_node_id", rejected.json()["detail"])
+            self.assertEqual(rejected.json()["error"]["code"], "INVALID_INPUT")
 
     def test_local_job_status_tracks_queued_succeeded_failed_and_not_found(
         self,
@@ -417,7 +417,7 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(pending_response.status_code, 404)
             self.assertEqual(
-                pending_response.json()["detail"], "local validation receipt not found"
+                pending_response.json()["error"]["code"], "VALIDATION_FAILURE"
             )
             for response in (malformed, missing, bad_latest):
                 self.assertEqual(response.status_code, 400)
