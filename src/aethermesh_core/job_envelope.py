@@ -221,6 +221,8 @@ def _relative_path(value: object) -> str:
     path = _non_empty_text(value, "local path")
     if (
         path.startswith("/")
+        or "\\" in path
+        or re.match(r"[A-Za-z]:", path)
         or "://" in path
         or any(part in {"", ".", ".."} for part in path.split("/"))
     ):

@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import re
 import unittest
 from pathlib import Path
 from typing import Any
@@ -51,6 +52,12 @@ class JobEnvelopeTests(unittest.TestCase):
                 "items"
             ]["required"],
         )
+        path_pattern = schema["properties"]["input_manifest"]["properties"]["files"][
+            "items"
+        ]["properties"]["path"]["pattern"]
+        self.assertIsNotNone(re.fullmatch(path_pattern, "inputs/local.json"))
+        for unsafe_path in ("/private/input.json", "../input.json", "C:\\input.json"):
+            self.assertIsNone(re.fullmatch(path_pattern, unsafe_path))
         schema_text = json.dumps(schema).lower()
         for excluded_term in ("token", "dashboard", "frontier", "mixture-of-experts"):
             with self.subTest(excluded_term=excluded_term):
@@ -100,6 +107,7 @@ class JobEnvelopeTests(unittest.TestCase):
                 "safe relative paths",
             ),
             ("lineage.source_manifests", ["../parent.json"], "safe relative paths"),
+            ("lineage.source_manifests", ["C:\\parent.json"], "safe relative paths"),
             ("contribution.creator_node_id", "node.other-01", "must match"),
             (
                 "contribution.produced_artifacts",
