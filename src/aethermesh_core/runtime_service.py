@@ -16,7 +16,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from aethermesh_core.capability_record import (
@@ -972,16 +972,12 @@ class NodeRuntimeService:
             or not creator
             or not isinstance(submitted_at, int)
             or isinstance(submitted_at, bool)
-            or not isinstance(lineage, dict)
-            or lineage.get("job_id") != job_id
-            or not isinstance(lineage.get("parent_refs"), list)
-            or not isinstance(attribution, dict)
-            or attribution.get("job_id") != job_id
-            or attribution.get("creator_node_id") != creator
+            or not _provenance_matches_job(lineage, attribution, job_id, creator)
         ):
             raise RuntimeServiceError(
                 "job submission manifest has invalid audit evidence"
             )
+        lineage = cast(dict[str, Any], lineage)
         artifacts: dict[str, Any] = {
             "manifest_id": job_id,
             "manifest_ref": f"data/job-submissions/{job_id}.json",
@@ -1152,16 +1148,14 @@ class NodeRuntimeService:
             not isinstance(manifest.get("creator_node_id"), str)
             or manifest.get("job", {}).get("job_id") != job_id
             or status.get("job_id") != job_id
-            or not isinstance(lineage, dict)
-            or lineage.get("job_id") != job_id
-            or not isinstance(lineage.get("parent_refs"), list)
-            or not isinstance(attribution, dict)
-            or attribution.get("job_id") != job_id
-            or attribution.get("creator_node_id") != manifest.get("creator_node_id")
+            or not _provenance_matches_job(
+                lineage, attribution, job_id, manifest.get("creator_node_id")
+            )
         ):
             raise RuntimeServiceError(
                 "validation receipt has incomplete provenance evidence"
             )
+        lineage = cast(dict[str, Any], lineage)
         if status.get("validation", {}).get("receipt_ref") != receipt_ref:
             raise RuntimeServiceError(
                 "job status does not reference validation receipt"
@@ -1773,6 +1767,23 @@ def _pid_is_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+def _provenance_matches_job(
+    lineage: object,
+    attribution: object,
+    job_id: object,
+    creator_node_id: object,
+) -> bool:
+    """Return whether local lineage and attribution retain one job identity."""
+    return (
+        isinstance(lineage, dict)
+        and lineage.get("job_id") == job_id
+        and isinstance(lineage.get("parent_refs"), list)
+        and isinstance(attribution, dict)
+        and attribution.get("job_id") == job_id
+        and attribution.get("creator_node_id") == creator_node_id
+    )
 
 
 def _safe_local_artifact_ref(value: object) -> bool:

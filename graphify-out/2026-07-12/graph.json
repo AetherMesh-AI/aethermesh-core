@@ -1160,7 +1160,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_python",
-      "community": 76,
+      "community": 7,
       "norm_label": "python.js"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_python_execfile",
-      "community": 76,
+      "community": 7,
       "norm_label": "{ execfile }"
     },
     {
@@ -1180,7 +1180,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "bootstrap_python_promisify",
-      "community": 76,
+      "community": 7,
       "norm_label": "{ promisify }"
     },
     {
@@ -1190,7 +1190,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "bootstrap_python_execfileasync",
-      "community": 76,
+      "community": 7,
       "norm_label": "execfileasync"
     },
     {
@@ -1200,7 +1200,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "bootstrap_python_parsepythonversion",
-      "community": 76,
+      "community": 7,
       "norm_label": "parsepythonversion()"
     },
     {
@@ -1210,7 +1210,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "bootstrap_python_isusablepythonversion",
-      "community": 76,
+      "community": 7,
       "norm_label": "isusablepythonversion()"
     },
     {
@@ -1220,7 +1220,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "bootstrap_python_detectpython",
-      "community": 76,
+      "community": 7,
       "norm_label": "detectpython()"
     },
     {
@@ -1230,7 +1230,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "bootstrap_python_runversion",
-      "community": 76,
+      "community": 7,
       "norm_label": "runversion()"
     },
     {
@@ -1240,7 +1240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_runtime",
-      "community": 7,
+      "community": 49,
       "norm_label": "runtime.js"
     },
     {
@@ -1250,7 +1250,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_runtime_fs",
-      "community": 7,
+      "community": 49,
       "norm_label": "fs"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "bootstrap_runtime_path",
-      "community": 7,
+      "community": 49,
       "norm_label": "path"
     },
     {
@@ -1270,7 +1270,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "bootstrap_runtime_getruntimeexecutablename",
-      "community": 7,
+      "community": 49,
       "norm_label": "getruntimeexecutablename()"
     },
     {
@@ -1280,7 +1280,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "bootstrap_runtime_getbundledruntimepath",
-      "community": 7,
+      "community": 49,
       "norm_label": "getbundledruntimepath()"
     },
     {
@@ -1290,7 +1290,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "bootstrap_runtime_resolveruntimecommand",
-      "community": 7,
+      "community": 49,
       "norm_label": "resolveruntimecommand()"
     },
     {
@@ -4443,7 +4443,7 @@
       "source_location": "L669",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_default_local_simulation",
-      "community": 49,
+      "community": 0,
       "norm_label": "run_default_local_simulation()"
     },
     {
@@ -4453,7 +4453,7 @@
       "source_location": "L695",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_local_batch",
-      "community": 49,
+      "community": 56,
       "norm_label": "run_local_batch()"
     },
     {
@@ -4663,7 +4663,7 @@
       "source_location": "L670",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_670",
-      "community": 49,
+      "community": 0,
       "norm_label": "run the fixed local simulation demo used by the cli command."
     },
     {
@@ -4673,7 +4673,7 @@
       "source_location": "L700",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_700",
-      "community": 49,
+      "community": 56,
       "norm_label": "run a local simulation from a validated json manifest."
     },
     {
@@ -5413,7 +5413,7 @@
       "source_location": "L459",
       "_origin": "ast",
       "id": "aethermesh_core_identity_new_local_node_id",
-      "community": 37,
+      "community": 54,
       "norm_label": "_new_local_node_id()"
     },
     {
@@ -5643,7 +5643,7 @@
       "source_location": "L829",
       "_origin": "ast",
       "id": "aethermesh_core_identity_default_goos",
-      "community": 27,
+      "community": 73,
       "norm_label": "_default_goos()"
     },
     {
@@ -6153,7 +6153,7 @@
       "source_location": "L1483",
       "_origin": "ast",
       "id": "aethermesh_core_identity_unique_reset_artifact_path",
-      "community": 37,
+      "community": 54,
       "norm_label": "_unique_reset_artifact_path()"
     },
     {
@@ -6363,7 +6363,7 @@
       "source_location": "L460",
       "_origin": "ast",
       "id": "aethermesh_core_identity_rationale_460",
-      "community": 37,
+      "community": 54,
       "norm_label": "return a legacy collision-resistant local node id for explicit rotations."
     },
     {
@@ -9223,7 +9223,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_build_message_log_document",
-      "community": 49,
+      "community": 0,
       "norm_label": "build_message_log_document()"
     },
     {
@@ -9353,7 +9353,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_26",
-      "community": 49,
+      "community": 0,
       "norm_label": "build a deterministic version 1 audit document for local mesh messages."
     },
     {
@@ -12663,7 +12663,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult",
-      "community": 49,
+      "community": 0,
       "norm_label": "localsimulationresult"
     },
     {
@@ -12683,7 +12683,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_run_local_simulation",
-      "community": 49,
+      "community": 0,
       "norm_label": "run_local_simulation()"
     },
     {
@@ -12703,7 +12703,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_summary_to_simulation_dict",
-      "community": 49,
+      "community": 0,
       "norm_label": "_summary_to_simulation_dict()"
     },
     {
@@ -12713,7 +12713,7 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_validation_summary",
-      "community": 49,
+      "community": 30,
       "norm_label": "_validation_summary()"
     },
     {
@@ -12733,7 +12733,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_31",
-      "community": 49,
+      "community": 0,
       "norm_label": "structured, deterministic output from a local multi-node simulation."
     },
     {
@@ -12753,7 +12753,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_68",
-      "community": 49,
+      "community": 0,
       "norm_label": "run local jobs across local node identities using scheduler assignment.      thi"
     },
     {
@@ -12773,7 +12773,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_validation_validationresult",
-      "community": 49,
+      "community": 30,
       "norm_label": "validationresult"
     },
     {
@@ -12823,7 +12823,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_20",
-      "community": 49,
+      "community": 30,
       "norm_label": "deterministic outcome from validating one reported job result."
     },
     {
@@ -13470,7 +13470,7 @@
       "label": "CapabilityRecordInspectionTests",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L15",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests",
       "community": 68,
@@ -13480,7 +13480,7 @@
       "label": ".test_local_records_preserve_provenance_and_degrade_independently()",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L16",
+      "source_location": "L17",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_local_records_preserve_provenance_and_degrade_independently",
       "community": 68,
@@ -13490,7 +13490,7 @@
       "label": ".test_missing_store_returns_an_explicit_empty_local_view()",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L123",
+      "source_location": "L132",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_missing_store_returns_an_explicit_empty_local_view",
       "community": 68,
@@ -13500,7 +13500,7 @@
       "label": ".test_symlinked_record_is_reported_invalid_without_being_read()",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L133",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_symlinked_record_is_reported_invalid_without_being_read",
       "community": 68,
@@ -13510,7 +13510,7 @@
       "label": ".test_symlinked_store_is_rejected_without_reading_external_records()",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L149",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_symlinked_store_is_rejected_without_reading_external_records",
       "community": 68,
@@ -13520,7 +13520,7 @@
       "label": ".test_record_without_local_identity_is_reported_invalid()",
       "file_type": "code",
       "source_file": "tests/test_capability_record_inspection.py",
-      "source_location": "L164",
+      "source_location": "L173",
       "_origin": "ast",
       "id": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_record_without_local_identity_is_reported_invalid",
       "community": 68,
@@ -15403,7 +15403,7 @@
       "source_location": "L1006",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_identity_reset_artifact_paths_avoid_collisions",
-      "community": 37,
+      "community": 54,
       "norm_label": ".test_identity_reset_artifact_paths_avoid_collisions()"
     },
     {
@@ -15463,7 +15463,7 @@
       "source_location": "L1123",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_new_local_node_id_uses_collision_resistant_hex_randomness",
-      "community": 37,
+      "community": 54,
       "norm_label": ".test_new_local_node_id_uses_collision_resistant_hex_randomness()"
     },
     {
@@ -15803,7 +15803,7 @@
       "source_location": "L2182",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_default_goos_maps_common_python_platforms",
-      "community": 27,
+      "community": 73,
       "norm_label": ".test_default_goos_maps_common_python_platforms()"
     },
     {
@@ -17393,7 +17393,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_message_log_document_is_deterministic_and_ordered",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_build_message_log_document_is_deterministic_and_ordered()"
     },
     {
@@ -20033,7 +20033,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests",
-      "community": 49,
+      "community": 0,
       "norm_label": "localsimulationtests"
     },
     {
@@ -20043,7 +20043,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_jobs_are_assigned_round_robin_by_input_order",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_jobs_are_assigned_round_robin_by_input_order()"
     },
     {
@@ -20053,7 +20053,7 @@
       "source_location": "L149",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_assignments_route_by_declared_capability",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_assignments_route_by_declared_capability()"
     },
     {
@@ -20063,7 +20063,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_text_embed_flows_through_simulation_and_validation_accounting",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_text_embed_flows_through_simulation_and_validation_accounting()"
     },
     {
@@ -20073,7 +20073,7 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_text_retrieve_flows_through_simulation_and_validation_accounting",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_text_retrieve_flows_through_simulation_and_validation_accounting()"
     },
     {
@@ -20083,7 +20083,7 @@
       "source_location": "L252",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_jobs_are_executed_by_node_service_inbox_processing",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_jobs_are_executed_by_node_service_inbox_processing()"
     },
     {
@@ -20093,7 +20093,7 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_simulation_preserves_default_output_with_scheduler",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_simulation_preserves_default_output_with_scheduler()"
     },
     {
@@ -20103,7 +20103,7 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_simulation_exposes_validation_gated_accounted_results",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_simulation_exposes_validation_gated_accounted_results()"
     },
     {
@@ -20113,7 +20113,7 @@
       "source_location": "L324",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_node_roster_includes_offline_nodes_without_assignments",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_node_roster_includes_offline_nodes_without_assignments()"
     },
     {
@@ -20123,7 +20123,7 @@
       "source_location": "L447",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_successful_echo_jobs_contribute_units_and_totals",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_successful_echo_jobs_contribute_units_and_totals()"
     },
     {
@@ -20133,7 +20133,7 @@
       "source_location": "L516",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_unsupported_jobs_are_recorded_as_failures_with_zero_units",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_unsupported_jobs_are_recorded_as_failures_with_zero_units()"
     },
     {
@@ -20143,7 +20143,7 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_invalid_completed_echo_result_is_visible_but_earns_zero_units",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_invalid_completed_echo_result_is_visible_but_earns_zero_units()"
     },
     {
@@ -20153,7 +20153,7 @@
       "source_location": "L583",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_empty_node_list_is_rejected",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_empty_node_list_is_rejected()"
     },
     {
@@ -20163,7 +20163,7 @@
       "source_location": "L589",
       "_origin": "ast",
       "id": "tests_test_simulation_localsimulationtests_test_text_stats_contribution_is_gated_by_validation",
-      "community": 49,
+      "community": 0,
       "norm_label": ".test_text_stats_contribution_is_gated_by_validation()"
     },
     {
@@ -87141,5 +87141,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "81fc8665f857a2b2c8493cd14480ca5cd62dbab8"
+  "built_at_commit": "8ce59220089b3c136b7499a0a1f7c3068d2786e1"
 }

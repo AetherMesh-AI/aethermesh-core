@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1782840133.435749,
-    "ast_hash": "8b79b1427c32a9bfd04a809cb87f49f3",
+    "mtime": 1783854924.299625,
+    "ast_hash": "1e1404dae71b266175bda13c6306ec30",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1782840133.4454157,
-    "ast_hash": "6bde2519c63fe2725755118d60e1252e",
+    "mtime": 1783854055.5671692,
+    "ast_hash": "7f2979810bda2f817825ab5c3ba95ad1",
     "semantic_hash": ""
   },
   "src/aethermesh_core/identity.py": {
@@ -305,7 +305,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1783848451.6822908,
+    "mtime": 1783850759.2406943,
     "ast_hash": "2658e38572dde63f8f258119a768eb93",
     "semantic_hash": ""
   },
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783848451.682628,
-    "ast_hash": "86aab3d2ad628aea370207265e94c13a",
+    "mtime": 1783854993.4547791,
+    "ast_hash": "eb89a51306d07c5b5c01dad9c28b0774",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783842465.5005531,
-    "ast_hash": "80b141bb59b2552ab2ab9195923f6ef7",
+    "mtime": 1783854041.8503768,
+    "ast_hash": "5afab7e6f360a2a60a98fb4abde51f55",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -730,7 +730,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
-    "mtime": 1783850162.2256966,
+    "mtime": 1783850759.2409198,
     "ast_hash": "35d8536e1e7478a33312d19db26a94e4",
     "semantic_hash": ""
   },
@@ -765,8 +765,38 @@
     "semantic_hash": ""
   },
   "tests/test_capability_record_inspection.py": {
-    "mtime": 1783849481.5230765,
-    "ast_hash": "48f76978979b76b943e6328ec46fe5a6",
+    "mtime": 1783851846.6019096,
+    "ast_hash": "f7a5de6e58fa8e96326fd55c3e864ea4",
+    "semantic_hash": ""
+  },
+  "examples/job-envelope-inputs/local-echo-input.json": {
+    "mtime": 1783853774.532718,
+    "ast_hash": "1360a8755c4c2f83aadc7c4ddcf50851",
+    "semantic_hash": ""
+  },
+  "examples/job-envelopes/local-echo.json": {
+    "mtime": 1783853774.5329723,
+    "ast_hash": "acfde13ae6b2401b701fa1e3ba4821c6",
+    "semantic_hash": ""
+  },
+  "examples/schemas/phase-1-job-envelope.schema.json": {
+    "mtime": 1783854070.2967222,
+    "ast_hash": "a99502e7ccd1324d1c5880ad4624d143",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/job_envelope.py": {
+    "mtime": 1783854009.659994,
+    "ast_hash": "a3d8c6a2d75290e167415b1d1c9f65d2",
+    "semantic_hash": ""
+  },
+  "tests/test_job_envelope.py": {
+    "mtime": 1783854279.0652404,
+    "ast_hash": "2a7e51bd5952e836f076d4e39fd7081a",
+    "semantic_hash": ""
+  },
+  "docs/phase-1-job-envelope-schema.md": {
+    "mtime": 1783854082.0569568,
+    "ast_hash": "91ab1024363ae2408b2dd050f6f5f6d7",
     "semantic_hash": ""
   }
 }

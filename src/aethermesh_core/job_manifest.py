@@ -6,7 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from aethermesh_core.models import Job
 from aethermesh_core.scheduler import (
@@ -179,8 +179,6 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
         raise ManifestError(
             f"manifest jobs[{index}].job_id must be a local ID or sha256 content ID"
         )
-    assert isinstance(job_id, str)
-
     job_type = entry.get("job_type")
     if not isinstance(job_type, str) or not job_type.strip():
         raise ManifestError(
@@ -194,7 +192,7 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
     return Job(job_id=job_id, job_type=job_type, payload=dict(payload))
 
 
-def _is_local_job_id(value: object) -> bool:
+def _is_local_job_id(value: object) -> TypeGuard[str]:
     return isinstance(value, str) and bool(
         _LOCAL_JOB_ID.fullmatch(value) or _CONTENT_ADDRESSED_JOB_ID.fullmatch(value)
     )
