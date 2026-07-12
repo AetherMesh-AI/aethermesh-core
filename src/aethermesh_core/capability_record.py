@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from datetime import datetime
 from typing import Any
+
+from aethermesh_core.models import NodeIdentity
 
 CAPABILITY_RECORD_SCHEMA_VERSION = 1
 CAPABILITY_TYPES = frozenset({"model", "tool", "worker", "runtime"})
@@ -13,6 +16,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "capability_id",
+        "node_id",
         "creator_node_id",
         "created_at",
         "updated_at",
@@ -32,17 +36,35 @@ class CapabilityRecordError(ValueError):
     """Raised when a local capability record is incomplete or dishonest."""
 
 
-def validate_capability_record(document: object) -> dict[str, Any]:
+def bind_capability_record_to_local_node(
+    document: object, *, identity: NodeIdentity
+) -> dict[str, Any]:
+    """Return a copied capability record attributed to the supplied local identity."""
+    if not isinstance(document, dict):
+        raise CapabilityRecordError("capability record must be an object")
+    record = deepcopy(document)
+    record["node_id"] = identity.node_id
+    return validate_capability_record(record, local_node_id=identity.node_id)
+
+
+def validate_capability_record(
+    document: object, *, local_node_id: str
+) -> dict[str, Any]:
     """Validate and return one local-only capability record without writing it.
 
     A passed claim requires local receipt evidence; an unvalidated claim is
-    accepted only as explicitly untrusted local metadata.
+    accepted only as explicitly untrusted local metadata. The record's ``node_id``
+    must match the stable local identity supplied by the caller.
     """
     if not isinstance(document, dict):
         raise CapabilityRecordError("capability record must be an object")
     _reject_unknown_fields(document)
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
+    node_id = _require_identifier(document, "node_id")
+    expected_node_id = _require_identifier({"node_id": local_node_id}, "node_id")
+    if node_id != expected_node_id:
+        raise CapabilityRecordError("node_id must match the local node identity")
     _require_identifier(document, "creator_node_id")
     _require_timestamp(document, "created_at")
     _require_timestamp(document, "updated_at")

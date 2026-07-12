@@ -3,8 +3,10 @@ import unittest
 
 from aethermesh_core.capability_record import (
     CapabilityRecordError,
+    bind_capability_record_to_local_node,
     validate_capability_record,
 )
+from aethermesh_core.models import NodeIdentity
 
 
 class CapabilityRecordTests(unittest.TestCase):
@@ -12,6 +14,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
             "updated_at": "2026-07-11T12:05:00Z",
@@ -44,7 +47,15 @@ class CapabilityRecordTests(unittest.TestCase):
         }
 
     def test_accepts_complete_passed_record(self) -> None:
-        self.assertIs(validate_capability_record(self.record), self.record)
+        validated = validate_capability_record(
+            self.record, local_node_id="node.local-01"
+        )
+
+        self.assertIs(validated, self.record)
+        self.assertEqual(validated["node_id"], "node.local-01")
+        self.assertEqual(
+            validated["validation"]["receipt_ids"], ["receipt.echo-smoke-01"]
+        )
 
     def test_accepts_explicitly_unvalidated_record_without_trust_evidence(self) -> None:
         record = copy.deepcopy(self.record)
@@ -52,7 +63,9 @@ class CapabilityRecordTests(unittest.TestCase):
         record["lineage"].pop("prior_capability_id")
         record["lineage"].pop("local_build_artifact_ref")
 
-        self.assertIs(validate_capability_record(record), record)
+        self.assertIs(
+            validate_capability_record(record, local_node_id="node.local-01"), record
+        )
 
     def test_accepts_failed_record_with_reason(self) -> None:
         record = copy.deepcopy(self.record)
@@ -64,10 +77,13 @@ class CapabilityRecordTests(unittest.TestCase):
             "failure_reason": "expected echo output was absent",
         }
 
-        self.assertIs(validate_capability_record(record), record)
+        self.assertIs(
+            validate_capability_record(record, local_node_id="node.local-01"), record
+        )
 
     def test_rejects_required_identity_manifest_and_validation_fields(self) -> None:
         for field, expected in (
+            ("node_id", "node_id"),
             ("creator_node_id", "creator_node_id"),
             ("manifest_refs", "manifest_refs"),
             ("validation", "validation"),
@@ -76,7 +92,7 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 record.pop(field)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_unknown_type_malformed_receipt_and_unsafe_reference(self) -> None:
         cases = (
@@ -101,7 +117,7 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 mutate(record)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_nonportable_or_nonlocal_references(self) -> None:
         for reference in (
@@ -114,7 +130,7 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 record["manifest_refs"] = [reference]
                 with self.assertRaisesRegex(CapabilityRecordError, "safe local"):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_dishonest_validation_combinations(self) -> None:
         cases = (
@@ -149,7 +165,7 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 record["validation"] = validation
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_invalid_stable_and_attribution_fields(self) -> None:
         cases = (
@@ -194,7 +210,7 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 mutate(record)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_unsupported_schema_fields(self) -> None:
         cases = (
@@ -215,11 +231,11 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 mutate(record)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
 
     def test_rejects_invalid_document_shapes_and_metadata(self) -> None:
         with self.assertRaisesRegex(CapabilityRecordError, "must be an object"):
-            validate_capability_record([])
+            validate_capability_record([], local_node_id="node.local-01")
         cases = (
             (lambda record: record.update(metadata=[]), "metadata must be an object"),
             (lambda record: record["metadata"].update(name=""), "name"),
@@ -252,7 +268,31 @@ class CapabilityRecordTests(unittest.TestCase):
                 record = copy.deepcopy(self.record)
                 mutate(record)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
-                    validate_capability_record(record)
+                    validate_capability_record(record, local_node_id="node.local-01")
+
+    def test_binds_record_to_the_local_identity(self) -> None:
+        record = copy.deepcopy(self.record)
+        record.pop("node_id")
+        identity = NodeIdentity(node_id="node.local-02")
+
+        bound = bind_capability_record_to_local_node(record, identity=identity)
+
+        self.assertEqual(bound["node_id"], identity.node_id)
+        self.assertNotIn("node_id", record)
+        self.assertIs(
+            validate_capability_record(bound, local_node_id=identity.node_id), bound
+        )
+
+    def test_rejects_blank_or_nonlocal_node_id(self) -> None:
+        for node_id, expected in (
+            ("", "node_id"),
+            ("node.local-02", "must match the local node identity"),
+        ):
+            with self.subTest(node_id=node_id):
+                record = copy.deepcopy(self.record)
+                record["node_id"] = node_id
+                with self.assertRaisesRegex(CapabilityRecordError, expected):
+                    validate_capability_record(record, local_node_id="node.local-01")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Local Capability Record Schema
 
-This is the version 1 schema for a local AetherMesh capability claim. It is a validation-only Python contract exposed by `aethermesh_core.capability_record.validate_capability_record`; it does not write artifacts, advertise to peers, discover nodes, establish consensus, or award contribution credit.
+This is the version 1 schema for a local AetherMesh capability claim. `aethermesh_core.capability_record.bind_capability_record_to_local_node` copies a draft record and stamps it with the canonical `NodeIdentity.node_id`; `validate_capability_record` requires that same local node ID for comparison. Neither function writes artifacts, advertises to peers, discovers nodes, establishes consensus, or awards contribution credit.
 
 A capability is trusted only when `validation.status` is `passed` and the record contains local receipt IDs. `unvalidated` is valid only as explicitly untrusted metadata and cannot carry receipt IDs.
 
@@ -11,7 +11,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | Field | Type and rule |
 | --- | --- |
 | `schema_version` | Integer `1`. |
-| `capability_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. |
+| `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is required and must equal the active local `NodeIdentity.node_id` during validation. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. |
 | `metadata.capability_type` | One of `model`, `tool`, `worker`, `runtime`. |
@@ -44,6 +44,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",
   "updated_at": "2026-07-11T12:05:00Z",
