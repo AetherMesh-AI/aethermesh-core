@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "capability_id": "local-capability-text-embed-v1",
+  "creator_node_id": "node-local-7f3a9c2e",
+  "created_at": "2026-07-11T00:00:00+00:00",
+  "updated_at": "2026-07-11T00:00:00+00:00",
+  "metadata": {
+    "name": "Local text embedding helper",
+    "description": "Produces deterministic local embedding helper output for prototype jobs.",
+    "capability_type": "work",
+    "supported_input_formats": ["application/json"],
+    "supported_output_formats": ["application/json"],
+    "constraints": {"maximum_text_characters": 4096},
+    "local_execution_requirements": {
+      "execution_scope": "local-only",
+      "requirements": ["Python 3.11 or later", "AetherMesh local runtime"]
+    }
+  },
+  "manifest_references": {
+    "node_manifest_ref": "manifests/local-node-manifest.json",
+    "runtime_manifest_ref": "manifests/local-runtime-manifest.json",
+    "backing_manifest_refs": ["manifests/local-worker-manifest.json#worker:text-embed"]
+  },
+  "validation": {
+    "status": "passed",
+    "receipt_ids": ["local-validation-receipt-text-embed-v1"],
+    "last_validated_at": "2026-07-11T00:00:00+00:00",
+    "check_name": "deterministic-text-embed-check",
+    "failure_reason": null
+  },
+  "lineage": {
+    "source_manifest_ref": "manifests/local-worker-manifest.json#worker:text-embed",
+    "prior_capability_id": null,
+    "local_build_artifact_ref": "artifacts/text-embed-v1.json"
+  },
+  "contribution_attribution": {
+    "creator_node_id": "node-local-7f3a9c2e",
+    "maintainer_node_id": "node-local-7f3a9c2e",
+    "local_work_receipt_ids": ["local-validation-receipt-text-embed-v1"]
+  }
+}
