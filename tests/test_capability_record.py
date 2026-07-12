@@ -66,6 +66,13 @@ class CapabilityRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(CapabilityRecordError, "receipt ID"):
             validate_capability_record(record)
 
+        record = copy.deepcopy(self.record)
+        record["contribution_attribution"]["local_work_receipt_ids"] = [
+            "local-validation-receipt-text-embed-v1"
+        ]
+        with self.assertRaisesRegex(CapabilityRecordError, "work receipt ID"):
+            validate_capability_record(record)
+
     def test_unvalidated_state_cannot_present_as_trusted(self) -> None:
         record = copy.deepcopy(self.record)
         record["validation"] = {

@@ -20,7 +20,7 @@ Every version-1 record has exactly these fields:
 | `lineage` | Required source-manifest and optional predecessor/build links. |
 | `contribution_attribution` | Required creator, maintainer, and local work-receipt links. |
 
-All manifest, lineage, and build references are safe relative local references: they cannot be absolute paths, parent traversal, or URLs. They may use a `#fragment` to address an item inside a local document. Receipt IDs must match `local-validation-receipt-...`.
+All manifest, lineage, and build references are safe relative local references: they cannot be absolute paths, parent traversal, or URLs. They may use a `#fragment` to address an item inside a local document. Validation receipt IDs must match `local-validation-receipt-...`; work receipt IDs must match `local-work-receipt-...`. The separate namespaces prevent validation evidence from being misrepresented as contributed work.
 
 ## Metadata and manifest fields
 

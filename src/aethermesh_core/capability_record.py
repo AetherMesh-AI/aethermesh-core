@@ -10,7 +10,10 @@ CAPABILITY_RECORD_SCHEMA_VERSION = 1
 CAPABILITY_TYPES = frozenset({"model", "tool", "validator", "worker", "work"})
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed", "stale"})
 _CAPABILITY_ID = re.compile(r"^local-capability-[A-Za-z0-9][A-Za-z0-9._-]*$")
-_RECEIPT_ID = re.compile(r"^local-validation-receipt-[A-Za-z0-9][A-Za-z0-9._-]*$")
+_VALIDATION_RECEIPT_ID = re.compile(
+    r"^local-validation-receipt-[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
+_WORK_RECEIPT_ID = re.compile(r"^local-work-receipt-[A-Za-z0-9][A-Za-z0-9._-]*$")
 _REFERENCE = re.compile(
     r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._/-]*(?:#[A-Za-z0-9._:-]+)?$"
 )
@@ -127,7 +130,7 @@ def _validation(value: object) -> None:
     if status not in VALIDATION_STATUSES:
         raise CapabilityRecordError("validation.status has an unknown value")
     receipt_ids = validation["receipt_ids"]
-    _receipt_list(receipt_ids)
+    _receipt_list(receipt_ids, "validation receipt ID", _VALIDATION_RECEIPT_ID)
     if status == "unvalidated":
         if receipt_ids or any(
             validation[field] is not None
@@ -181,7 +184,9 @@ def _attribution(value: object, creator_node_id: object) -> None:
     _string(
         attribution["maintainer_node_id"], "contribution_attribution.maintainer_node_id"
     )
-    _receipt_list(attribution["local_work_receipt_ids"])
+    _receipt_list(
+        attribution["local_work_receipt_ids"], "local work receipt ID", _WORK_RECEIPT_ID
+    )
 
 
 def _object(value: object, field: str) -> dict[str, Any]:
@@ -243,11 +248,11 @@ def _reference_list(value: object, field: str) -> None:
         _reference(item, field)
 
 
-def _receipt_list(value: object) -> None:
+def _receipt_list(value: object, field: str, pattern: re.Pattern[str]) -> None:
     if not isinstance(value, list):
-        raise CapabilityRecordError("validation receipt IDs must be a list")
+        raise CapabilityRecordError(f"{field}s must be a list")
     for item in value:
-        _pattern(item, "validation receipt ID", _RECEIPT_ID)
+        _pattern(item, field, pattern)
 
 
 def _timestamp(value: object, field: str) -> None:
