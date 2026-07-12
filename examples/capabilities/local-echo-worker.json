@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "capability_id": "capability.echo-v1",
+  "capability_version": "1.0.0",
+  "node_id": "node.local-01",
+  "creator_node_id": "node.local-01",
+  "created_at": "2026-07-12T00:00:00Z",
+  "updated_at": "2026-07-12T00:00:00Z",
+  "metadata": {
+    "name": "Local echo worker",
+    "description": "Returns the supplied message through the local echo job without remote execution.",
+    "type": "worker",
+    "supported_input_formats": [
+      "application/json"
+    ],
+    "supported_input_schemas": [
+      {
+        "schema_ref": "examples/schemas/local-echo-input.schema.json",
+        "schema_id": "local-echo-input",
+        "schema_version": "1.0.0",
+        "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790"
+      }
+    ],
+    "supported_output_formats": [
+      "application/json"
+    ],
+    "supported_output_schemas": [
+      {
+        "schema_ref": "examples/schemas/local-echo-output.schema.json",
+        "schema_id": "local-echo-output",
+        "schema_version": "1.0.0",
+        "schema_digest": "sha256:b2ca602935f0f448c440876cbcbc10b34fb739d5578b758ce716df4e753880c1"
+      }
+    ],
+    "constraints": {
+      "network_mode": "local-only-no-p2p",
+      "job_type": "echo"
+    },
+    "local_execution_requirements": [
+      "python>=3.11"
+    ]
+  },
+  "manifest_refs": [
+    "examples/local-batch.json"
+  ],
+  "validation": {
+    "status": "unvalidated",
+    "receipt_ids": [],
+    "receipt_evidence": []
+  },
+  "lineage": {
+    "source_manifest_ref": "examples/local-batch.json"
+  },
+  "contribution_attribution": {
+    "creator_node_id": "node.local-01",
+    "maintainer_node_id": "node.local-01",
+    "work_receipt_ids": []
+  }
+}
