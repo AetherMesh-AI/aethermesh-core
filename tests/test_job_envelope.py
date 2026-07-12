@@ -16,19 +16,64 @@ from aethermesh_core.job_envelope import (
 class JobEnvelopeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[1]
-        self.example_path = self.root / "examples/job-envelopes/local-echo.json"
-        self.envelope = json.loads(self.example_path.read_text(encoding="utf-8"))
+        self.minimal_envelope = self._load_envelope("minimal-local-echo.json")
+        self.complete_envelope = self._load_envelope("complete-local-echo.json")
+        self.envelope = self.minimal_envelope
 
-    def test_example_validates_against_the_phase_1_contract(self) -> None:
-        self.assertIs(validate_job_envelope(self.envelope), self.envelope)
-        input_file = self.root / self.envelope["input_manifest"]["files"][0]["path"]
+    def test_minimal_fixture_validates_against_the_phase_1_contract(self) -> None:
+        self.assertIs(
+            validate_job_envelope(self.minimal_envelope), self.minimal_envelope
+        )
+        input_file = (
+            self.root / self.minimal_envelope["input_manifest"]["files"][0]["path"]
+        )
         self.assertEqual(
-            self.envelope["input_manifest"]["files"][0]["size_bytes"],
+            self.minimal_envelope["input_manifest"]["files"][0]["size_bytes"],
             input_file.stat().st_size,
         )
         self.assertEqual(
-            self.envelope["input_manifest"]["files"][0]["sha256"],
+            self.minimal_envelope["input_manifest"]["files"][0]["sha256"],
             f"sha256:{hashlib.sha256(input_file.read_bytes()).hexdigest()}",
+        )
+
+    def test_complete_fixture_preserves_identity_manifest_validation_lineage_and_attribution(
+        self,
+    ) -> None:
+        parsed = validate_job_envelope(self.complete_envelope)
+
+        self.assertIs(parsed, self.complete_envelope)
+        self.assertEqual(parsed["creator_node_id"], "node.local-01")
+        self.assertEqual(
+            parsed["input_manifest"]["files"][0]["sha256"],
+            "sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f",
+        )
+        self.assertEqual(
+            parsed["input_manifest"]["files"][0]["metadata"],
+            {"media_type": "application/json", "purpose": "echo-input"},
+        )
+        self.assertEqual(
+            parsed["validation_requirements"]["checks"][0]["pass_criteria"],
+            {"field": "status", "equals": "completed", "status": "success"},
+        )
+        self.assertEqual(
+            parsed["lineage"],
+            {
+                "parent_job_ids": ["local-parent-001"],
+                "prior_validation_receipts": [
+                    "examples/job-envelope-receipts/parent.json"
+                ],
+                "source_manifests": ["examples/job-envelopes/local-echo.json"],
+            },
+        )
+        self.assertEqual(
+            parsed["contribution"],
+            {
+                "creator_node_id": "node.local-01",
+                "executor_node_id": "node.local-02",
+                "produced_artifacts": [
+                    "examples/job-envelope-results/local-echo-result.json"
+                ],
+            },
         )
 
     def test_schema_declares_the_same_required_fields_as_the_validator(self) -> None:
@@ -189,6 +234,11 @@ class JobEnvelopeTests(unittest.TestCase):
         document["future"] = True
         with self.assertRaisesRegex(JobEnvelopeError, "unsupported: future"):
             validate_job_envelope(document)
+
+    def _load_envelope(self, name: str) -> dict[str, Any]:
+        return json.loads(
+            (self.root / "examples/job-envelopes" / name).read_text(encoding="utf-8")
+        )
 
     @staticmethod
     def _set(document: dict[str, Any], path: str, value: object) -> None:

@@ -1,0 +1,44 @@
+{
+  "contribution": {
+    "creator_node_id": "node.local-01",
+    "executor_node_id": "node.local-02",
+    "produced_artifacts": ["examples/job-envelope-results/local-echo-result.json"]
+  },
+  "created_at": "2026-07-12T12:00:00Z",
+  "creator_node_id": "node.local-01",
+  "expected_outputs": {
+    "artifacts": [
+      {
+        "media_type": "application/json",
+        "path": "examples/job-envelope-results/local-echo-result.json"
+      }
+    ]
+  },
+  "input_manifest": {
+    "files": [
+      {
+        "metadata": {"media_type": "application/json", "purpose": "echo-input"},
+        "path": "examples/job-envelope-inputs/local-echo-input.json",
+        "sha256": "sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f",
+        "size_bytes": 25
+      }
+    ]
+  },
+  "job_id": "local-echo-derived-001",
+  "job_type": "echo",
+  "lineage": {
+    "parent_job_ids": ["local-parent-001"],
+    "prior_validation_receipts": ["examples/job-envelope-receipts/parent.json"],
+    "source_manifests": ["examples/job-envelopes/local-echo.json"]
+  },
+  "schema_version": 1,
+  "validation_requirements": {
+    "checks": [
+      {
+        "check_id": "echo-output-status",
+        "pass_criteria": {"field": "status", "equals": "completed", "status": "success"},
+        "receipt_path": "examples/job-envelope-receipts/local-echo-receipt.json"
+      }
+    ]
+  }
+}
