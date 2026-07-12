@@ -11,7 +11,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | Field | Type and rule |
 | --- | --- |
 | `schema_version` | Integer `1`. |
-| `capability_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. |
+| `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. |
 | `metadata.capability_type` | One of `model`, `tool`, `worker`, `runtime`. |
@@ -44,6 +44,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",
   "updated_at": "2026-07-11T12:05:00Z",
@@ -79,3 +80,5 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 ## Valid unvalidated record
 
 Set `validation.status` to `unvalidated` and `validation.receipt_ids` to `[]`; omit `last_validated_at`, `check_name`, and `failure_reason`. This remains a local claim, not a trusted or network-advertised capability.
+
+Validation requires the persisted identity's ID as `local_node_id`. The record is rejected unless its required `node_id` exactly matches that source of truth.

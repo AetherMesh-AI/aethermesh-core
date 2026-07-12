@@ -13,6 +13,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "capability_id",
+        "node_id",
         "creator_node_id",
         "created_at",
         "updated_at",
@@ -32,7 +33,9 @@ class CapabilityRecordError(ValueError):
     """Raised when a local capability record is incomplete or dishonest."""
 
 
-def validate_capability_record(document: object) -> dict[str, Any]:
+def validate_capability_record(
+    document: object, *, local_node_id: str
+) -> dict[str, Any]:
     """Validate and return one local-only capability record without writing it.
 
     A passed claim requires local receipt evidence; an unvalidated claim is
@@ -43,6 +46,9 @@ def validate_capability_record(document: object) -> dict[str, Any]:
     _reject_unknown_fields(document)
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
+    node_id = _require_identifier(document, "node_id")
+    if node_id != _require_identifier_value(local_node_id, "local_node_id"):
+        raise CapabilityRecordError("node_id must match the local node identity")
     _require_identifier(document, "creator_node_id")
     _require_timestamp(document, "created_at")
     _require_timestamp(document, "updated_at")
@@ -184,7 +190,12 @@ def _require_int(document: dict[str, Any], field: str, expected: int) -> None:
 
 
 def _require_identifier(document: dict[str, Any], field: str) -> str:
-    value = _require_string(document, field)
+    return _require_identifier_value(document.get(field), field)
+
+
+def _require_identifier_value(value: object, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise CapabilityRecordError(f"{field} must be a non-empty string")
     if not _IDENTIFIER.fullmatch(value):
         raise CapabilityRecordError(f"{field} must be a stable local identifier")
     return value
