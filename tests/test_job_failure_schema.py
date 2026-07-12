@@ -80,6 +80,18 @@ class JobFailureSchemaTests(unittest.TestCase):
         absolute_log["evidence"]["log_refs"][0]["path"] = "/private/job.log"
         cases.append((absolute_log, "safe relative"))
 
+        windows_absolute_log = copy.deepcopy(self.crash)
+        windows_absolute_log["evidence"]["log_refs"][0]["path"] = (
+            "C:\\Users\\operator\\job.log"
+        )
+        cases.append((windows_absolute_log, "safe relative"))
+
+        windows_traversal_log = copy.deepcopy(self.crash)
+        windows_traversal_log["evidence"]["log_refs"][0]["path"] = (
+            "logs\\..\\private\\job.log"
+        )
+        cases.append((windows_traversal_log, "safe relative"))
+
         raw_log = copy.deepcopy(self.crash)
         raw_log["evidence"]["raw_log"] = "credential=secret"
         cases.append((raw_log, "unsupported: raw_log"))

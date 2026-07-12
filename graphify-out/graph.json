@@ -3190,7 +3190,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "community": 49,
+      "community": 77,
       "norm_label": "lineage"
     },
     {
@@ -3200,7 +3200,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_type",
-      "community": 49,
+      "community": 77,
       "norm_label": "type"
     },
     {
@@ -3210,7 +3210,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties",
-      "community": 49,
+      "community": 77,
       "norm_label": "additionalproperties"
     },
     {
@@ -3220,7 +3220,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_required",
-      "community": 49,
+      "community": 77,
       "norm_label": "required"
     },
     {
@@ -6443,7 +6443,7 @@
       "source_location": "L657",
       "_origin": "ast",
       "id": "aethermesh_core_identity_node_name_wordlist_dir",
-      "community": 116,
+      "community": 27,
       "norm_label": "_node_name_wordlist_dir()"
     },
     {
@@ -7690,7 +7690,7 @@
       "label": "_identifier_list()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L282",
+      "source_location": "L283",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_identifier_list",
       "community": 1,
@@ -8853,7 +8853,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "aethermesh_core_local_json_helpers_canonical_json_hash",
-      "community": 44,
+      "community": 42,
       "norm_label": "canonical_json_hash()"
     },
     {
@@ -8903,7 +8903,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "aethermesh_core_local_json_helpers_rationale_58",
-      "community": 44,
+      "community": 42,
       "norm_label": "hash a json object in stable key order for local receipts."
     },
     {
@@ -9603,7 +9603,7 @@
       "source_location": "L401",
       "_origin": "ast",
       "id": "aethermesh_core_local_shutdown_document_hash",
-      "community": 44,
+      "community": 42,
       "norm_label": "_document_hash()"
     },
     {
@@ -13493,7 +13493,7 @@
       "source_location": "L1751",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_manifest_id",
-      "community": 58,
+      "community": 101,
       "norm_label": "_capability_manifest_id()"
     },
     {
@@ -13503,7 +13503,7 @@
       "source_location": "L1757",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_provenance",
-      "community": 58,
+      "community": 101,
       "norm_label": "_capability_provenance()"
     },
     {
@@ -13963,7 +13963,7 @@
       "source_location": "L1752",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_1752",
-      "community": 58,
+      "community": 101,
       "norm_label": "return the stable local manifest identity for one registered capability."
     },
     {
@@ -13973,7 +13973,7 @@
       "source_location": "L1762",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_1762",
-      "community": 58,
+      "community": 101,
       "norm_label": "build shared local provenance and optional advisory metadata."
     },
     {
@@ -16873,7 +16873,7 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_packaged_wordlist_dir_falls_back_to_install_prefix",
-      "community": 116,
+      "community": 27,
       "norm_label": ".test_packaged_wordlist_dir_falls_back_to_install_prefix()"
     },
     {
@@ -17670,7 +17670,7 @@
       "label": ".test_rejects_invalid_scalar_values()",
       "file_type": "code",
       "source_file": "tests/test_job_failure_schema.py",
-      "source_location": "L96",
+      "source_location": "L108",
       "_origin": "ast",
       "id": "tests_test_job_failure_schema_jobfailureschematests_test_rejects_invalid_scalar_values",
       "community": 1,
@@ -93780,5 +93780,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a5947e8f6c328449356fa93a18b5f592306b3e5e"
+  "built_at_commit": "702019913845660ac45f3cade8bd8867d71be224"
 }

@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_failure_schema.py": {
-    "mtime": 1783867141.0154333,
-    "ast_hash": "c5f6dffa0a9f17bdbb867005e3341256",
+    "mtime": 1783867334.9473195,
+    "ast_hash": "b4e30d7f522ad640ab8b73d8a5fcd642",
     "semantic_hash": ""
   },
   "tests/test_job_failure_schema.py": {

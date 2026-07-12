@@ -3190,7 +3190,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "community": 77,
+      "community": 49,
       "norm_label": "lineage"
     },
     {
@@ -3200,7 +3200,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_type",
-      "community": 77,
+      "community": 49,
       "norm_label": "type"
     },
     {
@@ -3210,7 +3210,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties",
-      "community": 77,
+      "community": 49,
       "norm_label": "additionalproperties"
     },
     {
@@ -3220,7 +3220,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_required",
-      "community": 77,
+      "community": 49,
       "norm_label": "required"
     },
     {
@@ -6443,7 +6443,7 @@
       "source_location": "L657",
       "_origin": "ast",
       "id": "aethermesh_core_identity_node_name_wordlist_dir",
-      "community": 27,
+      "community": 116,
       "norm_label": "_node_name_wordlist_dir()"
     },
     {
@@ -7610,7 +7610,7 @@
       "label": "_timestamp()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L144",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_timestamp",
       "community": 1,
@@ -7620,7 +7620,7 @@
       "label": "_choice()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L155",
+      "source_location": "L156",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_choice",
       "community": 1,
@@ -7630,7 +7630,7 @@
       "label": "_optional_identifier()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L162",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_optional_identifier",
       "community": 1,
@@ -7640,7 +7640,7 @@
       "label": "_optional_hash()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L167",
+      "source_location": "L168",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_optional_hash",
       "community": 1,
@@ -7650,7 +7650,7 @@
       "label": "_details()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L177",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_details",
       "community": 1,
@@ -7660,7 +7660,7 @@
       "label": "_links()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L204",
+      "source_location": "L205",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_links",
       "community": 1,
@@ -7670,7 +7670,7 @@
       "label": "_attribution()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L221",
+      "source_location": "L222",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_attribution",
       "community": 1,
@@ -7680,7 +7680,7 @@
       "label": "_evidence()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L246",
+      "source_location": "L247",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_evidence",
       "community": 1,
@@ -7690,7 +7690,7 @@
       "label": "_identifier_list()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L281",
+      "source_location": "L282",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_identifier_list",
       "community": 1,
@@ -16873,7 +16873,7 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_packaged_wordlist_dir_falls_back_to_install_prefix",
-      "community": 27,
+      "community": 116,
       "norm_label": ".test_packaged_wordlist_dir_falls_back_to_install_prefix()"
     },
     {

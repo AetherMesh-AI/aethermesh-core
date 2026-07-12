@@ -267,6 +267,7 @@ def _evidence(value: object) -> None:
             not isinstance(path, str)
             or not path
             or path.startswith(("/", "\\"))
+            or "\\" in path
             or ".." in path.split("/")
         ):
             raise JobFailureSchemaError(

@@ -1,11 +1,11 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 159 files · ~192,131 words
+- 159 files · ~192,121 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2475 nodes · 6516 edges · 115 communities (104 shown, 11 thin omitted)
+- 2475 nodes · 6516 edges · 115 communities (105 shown, 10 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 414 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
@@ -156,7 +156,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (115 total, 11 thin omitted)
+## Communities (115 total, 10 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.11
@@ -263,8 +263,8 @@ Cohesion: 0.14
 Nodes (14): AetherMesh Core Persistent Goal, AI Direction, Build Direction, Contribution Tracking Direction, Current Priority Bias, Decision Rule For Every Interval, Development Philosophy, Early Prototype Target (+6 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.11
-Nodes (19): _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes(), _node_name_wordlist_dir() (+11 more)
+Cohesion: 0.12
+Nodes (18): _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes(), _node_name_wordlists() (+10 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.40
@@ -347,8 +347,8 @@ Cohesion: 0.10
 Nodes (20): Assignment-only local dispatch for manifest-backed batches., AetherMesh Core local prototype package., MessageDelivery, Synchronous in-memory message bus for local AetherMesh simulation., A message accepted by the local bus with its deterministic sequence., JSON-backed local message log persistence for batch simulations., Local mesh message envelopes for deterministic simulation output., _require_non_empty_string() (+12 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.19
-Nodes (14): minLength, pattern, type, properties, items, type, items, type (+6 more)
+Cohesion: 0.14
+Nodes (18): minLength, pattern, type, additionalProperties, properties, required, type, items (+10 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.25
@@ -447,8 +447,8 @@ Cohesion: 0.25
 Nodes (8): minItems, type, additionalProperties, properties, required, type, artifacts, expected_outputs
 
 ### Community 77 - "Community 77"
-Cohesion: 0.12
-Nodes (17): format, pattern, type, pattern, type, enum, type, additionalProperties (+9 more)
+Cohesion: 0.15
+Nodes (13): format, pattern, type, pattern, type, enum, type, properties (+5 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.25
@@ -566,17 +566,21 @@ Nodes (3): Local example, Phase 1 Job Envelope Schema, Required fields
 Cohesion: 0.50
 Nodes (3): Examples and validation, Phase 1 Job Result Schema, Required record fields
 
+### Community 116 - "Community 116"
+Cohesion: 0.30
+Nodes (3): _new_local_node_id(), _node_name_wordlist_dir(), Return a legacy collision-resistant local node id for explicit rotations.
+
 ## Knowledge Gaps
 - **325 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+320 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `enum` connect `Community 77` to `Community 40`, `models.py`, `Community 19`?**
   _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 95`?**
+- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 49`, `Community 95`?**
   _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 27 INFERRED edges - model-reasoned connections that need verification._

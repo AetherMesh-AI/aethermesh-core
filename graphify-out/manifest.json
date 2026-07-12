@@ -850,13 +850,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_failure_schema.py": {
-    "mtime": 1783867334.9473195,
-    "ast_hash": "b4e30d7f522ad640ab8b73d8a5fcd642",
+    "mtime": 1783867574.2800405,
+    "ast_hash": "5f6ba2987fe361640821eaa814b5b654",
     "semantic_hash": ""
   },
   "tests/test_job_failure_schema.py": {
-    "mtime": 1783866697.4866023,
-    "ast_hash": "5a7b47633616179e369e602bddfb13c8",
+    "mtime": 1783867574.6319926,
+    "ast_hash": "baffa1d75e0a7431fbe29e005e76daef",
     "semantic_hash": ""
   },
   "docs/phase-1-job-failure-schema.md": {

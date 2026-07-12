@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 159 files · ~192,121 words
+- 159 files · ~192,147 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2475 nodes · 6516 edges · 115 communities (105 shown, 10 thin omitted)
+- 2475 nodes · 6516 edges · 115 communities (104 shown, 11 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 414 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a5947e8f`
+- Built from commit: `70201991`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -156,7 +156,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (115 total, 10 thin omitted)
+## Communities (115 total, 11 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.11
@@ -263,8 +263,8 @@ Cohesion: 0.14
 Nodes (14): AetherMesh Core Persistent Goal, AI Direction, Build Direction, Contribution Tracking Direction, Current Priority Bias, Decision Rule For Every Interval, Development Philosophy, Early Prototype Target (+6 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.12
-Nodes (18): _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes(), _node_name_wordlists() (+10 more)
+Cohesion: 0.11
+Nodes (19): _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes(), _node_name_wordlist_dir() (+11 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.40
@@ -319,16 +319,16 @@ Cohesion: 0.11
 Nodes (14): dispatch_local_batch(), LocalDispatchResult, _node_heartbeat_payloads(), Structured result for local assignment-only dispatch., Serialize a deterministic, intentionally small CLI summary., Build a local dispatch log with heartbeats and job assignments only.      This f, _coerce_node(), LocalScheduler (+6 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.10
-Nodes (27): append_json_line(), load_json_mapping(), Small JSON helpers shared by local lifecycle commands., Read a required JSON object and raise the caller's local error type., Return a non-empty string field or raise the caller's local error type., Append one deterministic JSONL entry to a local lifecycle log., require_text_field(), _append_log() (+19 more)
+Cohesion: 0.09
+Nodes (30): append_json_line(), canonical_json_hash(), load_json_mapping(), Small JSON helpers shared by local lifecycle commands., Read a required JSON object and raise the caller's local error type., Return a non-empty string field or raise the caller's local error type., Append one deterministic JSONL entry to a local lifecycle log., Hash a JSON object in stable key order for local receipts. (+22 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.14
 Nodes (10): LocalMessageBus, Dependency-free local-only message bus for deterministic simulations., Register a node or reserved local service actor with the bus., Accept a message from a registered sender to a registered recipient., Return a copy of the ordered message log., Return a copy of the deterministic inbox for a registered node., Create and send a message with the next deterministic bus sequence id., send_numbered_message() (+2 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.10
-Nodes (28): _run_json_command(), canonical_json_hash(), Hash a JSON object in stable key order for local receipts., _append_log(), _artifact_refs(), _document_hash(), _interrupted_work_refs(), _iter_files() (+20 more)
+Cohesion: 0.11
+Nodes (25): _run_json_command(), _append_log(), _artifact_refs(), _interrupted_work_refs(), _iter_files(), _load_json_object(), LocalShutdownError, LocalShutdownResult (+17 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.10
@@ -347,8 +347,8 @@ Cohesion: 0.10
 Nodes (20): Assignment-only local dispatch for manifest-backed batches., AetherMesh Core local prototype package., MessageDelivery, Synchronous in-memory message bus for local AetherMesh simulation., A message accepted by the local bus with its deterministic sequence., JSON-backed local message log persistence for batch simulations., Local mesh message envelopes for deterministic simulation output., _require_non_empty_string() (+12 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.14
-Nodes (18): minLength, pattern, type, additionalProperties, properties, required, type, items (+10 more)
+Cohesion: 0.19
+Nodes (14): minLength, pattern, type, properties, items, type, items, type (+6 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.25
@@ -379,8 +379,8 @@ Cohesion: 0.13
 Nodes (23): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), InboxReplayRequest, _log_ephemeral_identity_active(), _mark_ephemeral_artifact(), _mark_ephemeral_message_log(), _node_artifact_filename(), _node_artifact_path() (+15 more)
 
 ### Community 58 - "release_update.py"
-Cohesion: 0.09
-Nodes (25): _capability_manifest_id(), _capability_provenance(), _config_api_host(), _config_api_port(), _config_capability_resource_hints(), _config_enabled_work_types(), _config_identity_path(), _config_identity_persistence_enabled() (+17 more)
+Cohesion: 0.10
+Nodes (21): _config_api_host(), _config_api_port(), _config_capability_resource_hints(), _config_enabled_work_types(), _config_identity_path(), _config_identity_persistence_enabled(), _config_node_id(), _config_node_name() (+13 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.10
@@ -447,8 +447,8 @@ Cohesion: 0.25
 Nodes (8): minItems, type, additionalProperties, properties, required, type, artifacts, expected_outputs
 
 ### Community 77 - "Community 77"
-Cohesion: 0.15
-Nodes (13): format, pattern, type, pattern, type, enum, type, properties (+5 more)
+Cohesion: 0.12
+Nodes (17): format, pattern, type, pattern, type, enum, type, additionalProperties (+9 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.25
@@ -515,8 +515,8 @@ Cohesion: 0.25
 Nodes (8): minItems, type, checks, validation_requirements, additionalProperties, properties, required, type
 
 ### Community 101 - "Community 101"
-Cohesion: 0.08
-Nodes (22): _error_response(), _lifespan(), Local FastAPI app for the AetherMesh node dashboard., Return the stable, deliberately non-provenance API error envelope., Classify expected local runtime failures without exposing their text., _request_id(), _runtime_error_code(), _availability() (+14 more)
+Cohesion: 0.07
+Nodes (26): _error_response(), _lifespan(), Local FastAPI app for the AetherMesh node dashboard., Return the stable, deliberately non-provenance API error envelope., Classify expected local runtime failures without exposing their text., _request_id(), _runtime_error_code(), _availability() (+18 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.15
@@ -566,21 +566,17 @@ Nodes (3): Local example, Phase 1 Job Envelope Schema, Required fields
 Cohesion: 0.50
 Nodes (3): Examples and validation, Phase 1 Job Result Schema, Required record fields
 
-### Community 116 - "Community 116"
-Cohesion: 0.30
-Nodes (3): _new_local_node_id(), _node_name_wordlist_dir(), Return a legacy collision-resistant local node id for explicit rotations.
-
 ## Knowledge Gaps
 - **325 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+320 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `enum` connect `Community 77` to `Community 40`, `models.py`, `Community 19`?**
   _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 49`, `Community 95`?**
+- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 95`?**
   _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 27 INFERRED edges - model-reasoned connections that need verification._
