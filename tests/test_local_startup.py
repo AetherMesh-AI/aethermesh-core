@@ -87,6 +87,7 @@ class LocalNodeStartupTests(unittest.TestCase):
             )
             receipt = self._load(runtime / str(first["validation_receipt_path"]))
             lineage = self._load(runtime / str(first["lineage_path"]))
+            manifest = self._load(runtime / str(first["manifest_path"]))
             self.assertEqual(receipt["receipt_type"], "startup_validation")
             self.assertEqual(receipt["node_id"], first["node_id"])
             self.assertEqual(receipt["creator_node_id"], first["creator_node_id"])
@@ -97,6 +98,30 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertEqual(lineage["lineage_type"], "local_node_startup")
             self.assertEqual(lineage["inputs"]["manifest_hash"], first["manifest_hash"])
             self.assertFalse(lineage["contribution_attribution"]["scoring_applied"])
+            advertisements = manifest["capability_advertisements"]
+            self.assertEqual(len(advertisements), 1)
+            advertisement = advertisements[0]
+            self.assertEqual(
+                advertisement["capability_id"], "local.manifest-validation"
+            )
+            self.assertEqual(advertisement["version"], "1.0.0")
+            self.assertEqual(advertisement["creator_node_id"], first["creator_node_id"])
+            self.assertEqual(
+                advertisement["validation"]["required_receipt_ref"],
+                first["validation_receipt_path"],
+            )
+            self.assertEqual(
+                advertisement["lineage"]["source_manifest_ref"], first["manifest_path"]
+            )
+            self.assertEqual(
+                advertisement["contribution_attribution"]["creator_node_id"],
+                first["creator_node_id"],
+            )
+            self.assertEqual(
+                advertisement["contribution_attribution"]["work_record_ref"],
+                first["validation_receipt_path"],
+            )
+            self.assertEqual(advertisement["network_mode"], "local-only-no-p2p")
 
     def test_existing_identity_missing_manifest_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -106,6 +131,26 @@ class LocalNodeStartupTests(unittest.TestCase):
 
             with self.assertRaisesRegex(LocalStartupError, "required startup manifest"):
                 start_local_node(runtime)
+
+    def test_existing_version_one_manifest_is_upgraded_with_advertisement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            manifest_path = runtime / first.manifest_path
+            manifest = self._load(manifest_path)
+            manifest.pop("capability_advertisements")
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            second = start_local_node(runtime)
+
+            upgraded = self._load(manifest_path)
+            advertisement = upgraded["capability_advertisements"][0]
+            self.assertEqual(second.creator_node_id, first.creator_node_id)
+            self.assertEqual(advertisement["creator_node_id"], first.creator_node_id)
+            self.assertEqual(
+                advertisement["validation"]["required_receipt_ref"],
+                second.validation_receipt_path,
+            )
 
     def test_existing_config_missing_identity_fails_before_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
