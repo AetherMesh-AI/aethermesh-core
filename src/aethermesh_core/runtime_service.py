@@ -33,7 +33,6 @@ from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
-from aethermesh_core.scheduler import SUPPORTED_LOCAL_JOB_TYPES
 from aethermesh_core.validation import validate_job_result
 
 CONFIG_SCHEMA_VERSION = 1
@@ -114,6 +113,9 @@ LOCAL_CAPABILITY_DEFINITIONS = (
         "text_embed",
     ),
     ("work.text_stats", "Run deterministic local text statistics jobs.", "text_stats"),
+)
+SUPPORTED_RUNTIME_JOB_TYPES = tuple(
+    definition[2] for definition in LOCAL_CAPABILITY_DEFINITIONS
 )
 LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS = (
     (
@@ -865,8 +867,8 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission job_type must be a non-empty string"
             )
-        if job_type not in SUPPORTED_LOCAL_JOB_TYPES:
-            supported_types = ", ".join(SUPPORTED_LOCAL_JOB_TYPES)
+        if job_type not in SUPPORTED_RUNTIME_JOB_TYPES:
+            supported_types = ", ".join(SUPPORTED_RUNTIME_JOB_TYPES)
             error = RuntimeServiceError(
                 f"job submission job_type unsupported: {job_type!r}; "
                 f"supported local types: {supported_types}"

@@ -616,7 +616,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 RuntimeServiceError,
                 "job submission job_type unsupported: 'unknown_work'; "
                 "supported local types: echo, keyword_extract, text_chunk, "
-                "text_embed, text_retrieve, text_stats",
+                "text_embed, text_stats",
             ):
                 service.submit_local_job(request)
 
