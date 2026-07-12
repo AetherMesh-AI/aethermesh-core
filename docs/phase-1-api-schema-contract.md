@@ -2,7 +2,9 @@
 
 Schema contract version: `1`. This is the stable, local-only companion to [the API boundary](phase-1-local-api-boundary.md). The boundary document indexes every localhost route and its behavior; this document fixes the versioned provenance payloads that can be persisted or exchanged between local process runs.
 
-Compatibility rule: additive optional fields are allowed within schema version 1. Removing, renaming, or changing the meaning or type of a required field requires a new schema version, an updated example, and a migration note in this document. There are no prior versioned HTTP submission schemas to migrate; version 1 is the baseline.
+Compatibility rule: additive optional fields are allowed within schema version 1. Removing, renaming, or changing the meaning or type of a required field requires a new schema version, an updated example, and a migration note in this document.
+
+Migration note: before this baseline, `POST /api/jobs` accepted an unversioned request and defaulted omitted `lineage_parent_refs` and `attribution_metadata` to empty values. Version 1 deliberately replaces that prototype-only shape: callers must send `schema_version: 1` and must send both provenance fields explicitly. The server rejects the former unversioned shape rather than guessing a contract version. Responses from submission, job status, validation-receipt lookup, and contribution lookup now identify schema version 1.
 
 ## Route index
 
@@ -37,12 +39,13 @@ Example request:
 
 ## Local Job Status v1
 
-A known submission response includes `job_id`, `status`, `manifest_ref`, `creator_node_id`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus.
+A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A not-found response contains `schema_version`, `job_id`, `status: not_found`, and `error`.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 
 ```json
 {
+  "schema_version": 1,
   "job_id": "local-job-<generated>",
   "status": "succeeded",
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
@@ -62,15 +65,45 @@ Example completed projection (dynamic IDs and timestamps omitted):
 
 ## Local Validation Receipt v1
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `receipt_id`, `job_id`, `creator_node_id`, `manifest_ref`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, and `evidence`. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `manifest_ref`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
+Example response (dynamic timestamp omitted):
+
+```json
+{
+  "schema_version": 1,
+  "receipt_id": "local-validation-receipt-local-job-<generated>",
+  "work_id": "local-job-<generated>",
+  "creator_node_id": "creator-local-example",
+  "manifest_ref": "data/job-submissions/local-job-<generated>.json",
+  "lineage_parent_ids": ["data/prior-job.json"],
+  "validation_status": "passed",
+  "validator_identity": "worker-local-example",
+  "contribution_attribution": {"validated_contribution_units": 1},
+  "validation_scope": "local-only-not-consensus",
+  "validation": {"job_id": "local-job-<generated>", "valid": true},
+  "evidence": {"result_ref": "data/job-results/local-job-<generated>.json"}
+}
+```
+
 ## Local Contribution Lookup v1
 
-`GET /api/contributions` is read-only. Its response includes `network_mode`, `summary_status`, `accepted_work_count`, `non_accepted_work_count`, and `items`. An accepted item preserves `creator_node_id`, `contributing_node_id`, `manifest_ref`, `validation_receipt_ref`, `lineage_links`, and validation-gated attribution evidence.
+`GET /api/contributions` is read-only. Its response includes `schema_version` (`1`), `network_mode`, `summary_status`, `accepted_work_count`, `non_accepted_work_count`, and `items`. An accepted item preserves `creator_node_id`, `contributing_node_id`, `manifest_ref`, `validation_receipt_ref`, `lineage_links`, and validation-gated acceptance evidence.
 
 Example lookup: `GET /api/contributions` after the completed job example above.
+
+```json
+{
+  "schema_version": 1,
+  "network_mode": "local-only-no-p2p",
+  "summary_status": "recorded",
+  "accepted_work_count": 1,
+  "non_accepted_work_count": 0,
+  "items": [{"work_item_id": "local-job-<generated>", "acceptance_status": "accepted"}]
+}
+```
 
 ## Validation receipt
 

@@ -239,6 +239,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     "local-job-00000000000000000000000000000000"
                 ),
                 {
+                    "schema_version": 1,
                     "job_id": "local-job-00000000000000000000000000000000",
                     "status": "not_found",
                     "error": "local job not found",
@@ -246,13 +247,19 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(
                 service.get_local_job_status(""),
-                {"job_id": "", "status": "not_found", "error": "local job not found"},
+                {
+                    "schema_version": 1,
+                    "job_id": "",
+                    "status": "not_found",
+                    "error": "local job not found",
+                },
             )
             escaped_path = service.paths.data_dir / "outside-submission-directory.json"
             escaped_path.write_text("not JSON", encoding="utf-8")
             self.assertEqual(
                 service.get_local_job_status("../outside-submission-directory"),
                 {
+                    "schema_version": 1,
                     "job_id": "../outside-submission-directory",
                     "status": "not_found",
                     "error": "local job not found",
@@ -292,6 +299,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 missing.json(),
                 {
+                    "schema_version": 1,
                     "job_id": "missing-job",
                     "status": "not_found",
                     "error": "local job not found",
@@ -431,6 +439,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 service.contribution_summary(),
                 {
+                    "schema_version": 1,
                     "network_mode": "local-only-no-p2p",
                     "summary_status": "empty",
                     "accepted_work_count": 0,

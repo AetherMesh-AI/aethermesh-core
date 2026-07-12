@@ -102,6 +102,7 @@ class ApiSchemaContractTests(unittest.TestCase):
                 self.assertIn(field, response.json()["detail"])
 
             status_payload = status.json()
+            self.assertEqual(status_payload["schema_version"], 1)
             self.assertEqual(status_payload["status"], "succeeded")
             self.assertEqual(
                 status_payload["creator_node_id"], request["creator_node_id"]
@@ -115,6 +116,8 @@ class ApiSchemaContractTests(unittest.TestCase):
             )
             self.assertTrue(status_payload["validation"]["passed"])
             self.assertEqual(receipt.status_code, 200)
+            self.assertEqual(receipt.json()["schema_version"], 1)
+            self.assertEqual(receipt.json()["work_id"], accepted.json()["job_id"])
             self.assertEqual(
                 receipt.json()["creator_node_id"], request["creator_node_id"]
             )
@@ -122,6 +125,7 @@ class ApiSchemaContractTests(unittest.TestCase):
                 receipt.json()["lineage_parent_ids"], request["lineage_parent_refs"]
             )
             self.assertEqual(contributions.status_code, 200)
+            self.assertEqual(contributions.json()["schema_version"], 1)
             self.assertEqual(contributions.json()["accepted_work_count"], 1)
 
             documented_routes = {

@@ -598,6 +598,7 @@ class NodeRuntimeService:
         """Read one submission and its optional local execution evidence."""
 
         missing = {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
             "status": "not_found",
             "error": "local job not found",
@@ -621,6 +622,7 @@ class NodeRuntimeService:
             else {}
         )
         return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
             "status": status.get("status", "queued"),
             "manifest_ref": f"data/job-submissions/{job_id}.json",
@@ -852,6 +854,7 @@ class NodeRuntimeService:
             1 for item in items if item["acceptance_status"] == "accepted"
         )
         return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "network_mode": "local-only-no-p2p",
             "summary_status": "empty" if not items else "recorded",
             "accepted_work_count": accepted_work_count,
