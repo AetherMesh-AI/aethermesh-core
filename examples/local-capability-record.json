@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "capability_id": "local-echo-worker-v1",
+  "creator_node_id": "node-local-example",
+  "created_at": "2026-07-11T22:20:09Z",
+  "updated_at": "2026-07-11T22:20:09Z",
+  "metadata": {
+    "name": "Local echo worker",
+    "description": "Returns deterministic echo results in this local prototype.",
+    "capability_type": "worker",
+    "supported_input_formats": ["application/json"],
+    "supported_output_formats": ["application/json"],
+    "constraints": ["local-only", "deterministic-inputs-only"],
+    "local_execution_requirements": ["python>=3.11"]
+  },
+  "manifest_references": {
+    "node": "data/node-manifests/node-local-example.json",
+    "worker": "data/worker-manifests/local-echo-worker-v1.json"
+  },
+  "validation": {
+    "status": "passed",
+    "receipt_ids": ["local-validation-receipt-local-echo-worker-v1"],
+    "last_validated_at": "2026-07-11T22:20:09Z",
+    "check_name": "deterministic-local-echo-check",
+    "failure_reason": null
+  },
+  "lineage": {
+    "source_manifest_ref": "data/worker-manifests/local-echo-worker-v1.json",
+    "prior_capability_record_id": null,
+    "local_build_artifact_ref": "data/build-artifacts/local-echo-worker-v1.json"
+  },
+  "contribution_attribution": {
+    "creator_node_id": "node-local-example",
+    "maintainer_node_id": "node-local-example",
+    "local_work_receipt_ids": []
+  }
+}
