@@ -21,7 +21,7 @@ class CapabilityRecordTests(unittest.TestCase):
             "metadata": {
                 "name": "Local echo worker",
                 "description": "Returns a local input message.",
-                "capability_type": "worker",
+                "type": "worker",
                 "supported_input_formats": ["application/json"],
                 "supported_output_formats": ["application/json"],
                 "constraints": {"network_mode": "local-only-no-p2p"},
@@ -115,7 +115,7 @@ class CapabilityRecordTests(unittest.TestCase):
         cases = (
             (
                 "type",
-                lambda record: record["metadata"].update(capability_type="remote"),
+                lambda record: record["metadata"].update({"type": "remote"}),
                 "not allowed",
             ),
             (
@@ -256,6 +256,8 @@ class CapabilityRecordTests(unittest.TestCase):
         cases = (
             (lambda record: record.update(metadata=[]), "metadata must be an object"),
             (lambda record: record["metadata"].update(name=""), "name"),
+            (lambda record: record["metadata"].pop("name"), "name"),
+            (lambda record: record["metadata"].pop("type"), "type"),
             (
                 lambda record: record["metadata"].update(supported_input_formats=[]),
                 "supported_input_formats",

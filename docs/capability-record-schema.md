@@ -13,8 +13,8 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `schema_version` | Integer `1`. |
 | `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
-| `metadata.name`, `metadata.description` | Non-empty strings. |
-| `metadata.capability_type` | One of `model`, `tool`, `worker`, `runtime`. |
+| `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
+| `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
 | `metadata.supported_input_formats`, `metadata.supported_output_formats` | Non-empty lists of non-empty strings. |
 | `metadata.constraints` | Object describing local limits or assumptions. |
 | `metadata.local_execution_requirements` | Non-empty list of non-empty strings. |
@@ -51,7 +51,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
   "metadata": {
     "name": "Local echo worker",
     "description": "Returns an input message without remote execution.",
-    "capability_type": "worker",
+    "type": "worker",
     "supported_input_formats": ["application/json"],
     "supported_output_formats": ["application/json"],
     "constraints": {"network_mode": "local-only-no-p2p"},
