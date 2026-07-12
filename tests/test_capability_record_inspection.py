@@ -19,11 +19,9 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
             initialized = service.initialize_local_node_data()
             directory = Path(temp_dir) / "data" / "capability-records"
             directory.mkdir()
-            source = (
-                Path(__file__).parents[1]
-                / "examples/capabilities/local-echo-worker.json"
-            )
-            schema_source = Path(__file__).parents[1] / "examples/schemas"
+            repository_root = Path(__file__).resolve().parents[1]
+            source = repository_root / "examples/capabilities/local-echo-worker.json"
+            schema_source = repository_root / "examples/schemas"
             schema_directory = Path(temp_dir) / "examples/schemas"
             schema_directory.mkdir(parents=True)
             for schema_name in (
