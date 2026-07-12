@@ -214,6 +214,8 @@ class JobEnvelopeTests(unittest.TestCase):
     def test_rejects_wrong_types_and_unknown_fields(self) -> None:
         cases = [
             ("schema_version", True, "integer 1"),
+            ("schema_version", 2, "integer 1"),
+            ("creator_node_id", "", "non-empty string"),
             ("created_at", "2026-07-12", "UTC timestamp"),
             ("input_manifest.files", [], "non-empty list"),
             ("input_manifest.files[0].size_bytes", -1, "non-negative integer"),

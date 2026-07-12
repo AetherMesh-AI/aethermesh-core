@@ -299,6 +299,98 @@ class RuntimeServiceTests(unittest.TestCase):
 
             self.assertFalse((Path(temp_dir) / "data" / "job-submissions").exists())
 
+    def test_malformed_job_admission_preserves_local_evidence(self) -> None:
+        """Reject malformed local submissions before they can create durable evidence."""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            valid_request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "accepted work"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            accepted = service.submit_local_job(valid_request)
+
+            def data_snapshot() -> dict[str, bytes]:
+                return {
+                    path.relative_to(root).as_posix(): path.read_bytes()
+                    for path in (root / "data").rglob("*")
+                    if path.is_file()
+                }
+
+            evidence_before = data_snapshot()
+            self.assertIn(accepted["manifest_ref"], evidence_before)
+            self.assertFalse(
+                any("job-validation-receipts" in path for path in evidence_before)
+            )
+            malformed_requests = (
+                (
+                    "missing job_type",
+                    {
+                        key: value
+                        for key, value in valid_request.items()
+                        if key != "job_type"
+                    },
+                    "job_type",
+                ),
+                (
+                    "invalid job_type type",
+                    {**valid_request, "job_type": []},
+                    "job_type",
+                ),
+                (
+                    "unsupported schema version",
+                    {**valid_request, "schema_version": 2},
+                    "schema_version",
+                ),
+                (
+                    "invalid creator node ID",
+                    {**valid_request, "creator_node_id": ""},
+                    "creator_node_id",
+                ),
+                (
+                    "malformed lineage reference",
+                    {
+                        **valid_request,
+                        "lineage_parent_refs": [
+                            "https://remote.example/prior-job.json"
+                        ],
+                    },
+                    "lineage_parent_refs",
+                ),
+                (
+                    "invalid input payload type",
+                    {**valid_request, "input_payload": []},
+                    "input_payload",
+                ),
+            )
+
+            for name, malformed_request, error in malformed_requests:
+                with self.subTest(name=name):
+                    with self.assertRaisesRegex(RuntimeServiceError, error):
+                        service.submit_local_job(malformed_request)
+                    self.assertEqual(data_snapshot(), evidence_before)
+
+            status = service.get_local_job_status(accepted["job_id"])
+            self.assertEqual(status["creator_node_id"], "creator-local-a")
+            self.assertEqual(status["lineage"]["parent_refs"], ["data/prior-job.json"])
+            self.assertEqual(
+                status["contribution_attribution"],
+                {
+                    "job_id": accepted["job_id"],
+                    "creator_node_id": "creator-local-a",
+                    "metadata": {"project": "prototype"},
+                },
+            )
+
     def test_input_payload_is_hashed_bounded_and_receipt_linked(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))
