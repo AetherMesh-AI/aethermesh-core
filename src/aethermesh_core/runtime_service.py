@@ -739,6 +739,7 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission creator_node_id must be a safe non-empty identifier"
             )
+        requester_identity = _requester_identity(request.get("requester_identity"))
         job_type = request.get("job_type")
         if not isinstance(job_type, str) or not job_type.strip():
             raise RuntimeServiceError(
@@ -783,6 +784,7 @@ class NodeRuntimeService:
                 "submitted_at": int(time.time()),
                 "job": {"job_id": job_id, "job_type": job_type, "payload": payload},
                 "creator_node_id": creator_node_id,
+                "requester_identity": requester_identity,
                 "requested_validation_mode": validation_mode,
                 "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
                 "contribution_attribution": {
@@ -835,6 +837,7 @@ class NodeRuntimeService:
             "status": status.get("status", "queued"),
             "manifest_ref": f"data/job-submissions/{job_id}.json",
             "creator_node_id": manifest["creator_node_id"],
+            "requester_identity": manifest.get("requester_identity"),
             "worker_node_id": status.get("worker_node_id"),
             "lineage": manifest["lineage"],
             "contribution_attribution": status.get(
@@ -1145,10 +1148,12 @@ class NodeRuntimeService:
         status = self._load_local_job_document(status_path, "job status record")
         lineage = manifest.get("lineage")
         attribution = status.get("contribution_attribution")
+        requester_identity = _requester_identity(manifest.get("requester_identity"))
         if (
             not isinstance(manifest.get("creator_node_id"), str)
             or manifest.get("job", {}).get("job_id") != job_id
             or status.get("job_id") != job_id
+            or receipt.get("requester_identity") != requester_identity
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1174,6 +1179,7 @@ class NodeRuntimeService:
             "receipt_id": self._receipt_id_for_job(job_id),
             "work_id": job_id,
             "creator_node_id": manifest["creator_node_id"],
+            "requester_identity": requester_identity,
             "manifest_ref": manifest_ref,
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
@@ -1406,6 +1412,7 @@ class NodeRuntimeService:
                 "receipt_id": self._receipt_id_for_job(job_id),
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
+                "requester_identity": manifest.get("requester_identity"),
                 "validation": validation.to_dict(),
                 "validated_at": int(time.time()),
             },
@@ -1816,6 +1823,34 @@ def _safe_local_identifier(value: object) -> bool:
         and not value.startswith(("~", "."))
         and "://" not in value
         and ".." not in value
+    )
+
+
+def _requester_identity(value: object) -> dict[str, str] | None:
+    """Validate optional request-origin identity without conflating provenance roles."""
+
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise RuntimeServiceError(
+            "requester_identity must be null or an object with one requester identity"
+        )
+    requesting_node_id = value.get("requesting_node_id")
+    local_requester_identity = value.get("local_requester_identity")
+    status = value.get("status")
+    if set(value) == {"requesting_node_id"} and _safe_local_identifier(
+        requesting_node_id
+    ):
+        return {"requesting_node_id": str(requesting_node_id)}
+    if set(value) == {"local_requester_identity"} and _safe_local_identifier(
+        local_requester_identity
+    ):
+        return {"local_requester_identity": str(local_requester_identity)}
+    if set(value) == {"status"} and status == "unknown":
+        return {"status": "unknown"}
+    raise RuntimeServiceError(
+        "requester_identity must contain exactly one of requesting_node_id, "
+        "local_requester_identity, or status 'unknown'"
     )
 
 

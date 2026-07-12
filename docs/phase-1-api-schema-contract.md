@@ -40,6 +40,8 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 
 Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `payload` (object), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
 
+`requester_identity` is optional request-origin evidence, separate from creator, worker, validator, lineage, and contribution identities. Omit it or set it to `null` when absent; use exactly one of `{"requesting_node_id": "..."}`, `{"local_requester_identity": "..."}`, or `{"status": "unknown"}` when known or explicitly unknown. The local prototype stores this value in the submission manifest and validation receipt without treating it as remote-network evidence.
+
 Version 1 intentionally accepts unknown additive submission fields for forward compatibility, but does not persist them in the local submission manifest. Unknown query parameters are likewise ignored by the local read-only routes. Known path and audit artifact IDs remain strict: job/manifest IDs, receipt IDs, lineage IDs, and contribution-attribution IDs must use their documented local ID forms.
 
 Successful response required fields are `schema_version` (`1`), `job_id`, `status` (`accepted_pending_execution`), `manifest_ref`, `next_validation_expectation`, and `network_mode` (`local-only-no-p2p`).
@@ -52,6 +54,7 @@ Example request:
   "job_type": "echo",
   "payload": {"message": "schema example"},
   "creator_node_id": "creator-local-example",
+  "requester_identity": {"local_requester_identity": "developer-cli"},
   "requested_validation_mode": "deterministic-local",
   "lineage_parent_refs": ["data/prior-job.json"],
   "attribution_metadata": {"source": "phase-1-schema-contract"}
@@ -60,7 +63,7 @@ Example request:
 
 ## Local Job Status v1
 
-A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
+A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `requester_identity`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 
@@ -71,6 +74,7 @@ Example completed projection (dynamic IDs and timestamps omitted):
   "status": "succeeded",
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
   "creator_node_id": "creator-local-example",
+  "requester_identity": {"local_requester_identity": "developer-cli"},
   "worker_node_id": "worker-local-example",
   "lineage": {"parent_refs": ["data/prior-job.json"]},
   "contribution_attribution": {
@@ -95,7 +99,7 @@ Example completed projection (dynamic IDs and timestamps omitted):
 
 ## Local Validation Receipt v1
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `manifest_ref`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
@@ -107,6 +111,7 @@ Example response (dynamic timestamp omitted):
   "receipt_id": "local-validation-receipt-local-job-<generated>",
   "work_id": "local-job-<generated>",
   "creator_node_id": "creator-local-example",
+  "requester_identity": {"local_requester_identity": "developer-cli"},
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
   "lineage_parent_ids": ["data/prior-job.json"],
   "validation_status": "passed",

@@ -1,7 +1,7 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 146 files · ~186,991 words
+- 146 files · ~187,058 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e43f1925`
+- Built from commit: `fb3dd129`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -274,8 +274,8 @@ Cohesion: 0.22
 Nodes (3): Validate and return one local-only capability record without writing it.      A, validate_capability_record(), CapabilityRecordTests
 
 ### Community 30 - "Community 30"
-Cohesion: 0.12
-Nodes (17): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), _node_ids_from_replayed_messages(), process_local_inbox(), Replay a saved local message log or local transport inbox for one node., Replay saved local messages and return payload plus structured result., _fallback_job_id(), InboxProcessResult (+9 more)
+Cohesion: 0.17
+Nodes (11): _accounted_units(), Record one result and return its local contribution record.          Only comple, _string_output(), _fallback_job_id(), _job_from_assignment_payload(), LocalNodeService, Synchronous local-only handler for one node's assigned-work inbox., Process unhandled ``job_assigned`` messages addressed to this node.          The (+3 more)
 
 ### Community 31 - "Community 31"
 Cohesion: 0.13
@@ -370,8 +370,8 @@ Cohesion: 0.50
 Nodes (3): LocalNodeIdentity, Validated version 1 public local node identity document., Return the public identity document without private key material.
 
 ### Community 56 - "Community 56"
-Cohesion: 0.08
-Nodes (26): run_demo(), _accounted_units(), ContributionLedger, ContributionRecord, LedgerPersistenceError, load_existing_ledger_document(), load_ledger_document(), Small in-memory ledger for prototype contribution accounting. (+18 more)
+Cohesion: 0.07
+Nodes (32): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), _node_ids_from_replayed_messages(), process_local_inbox(), Replay a saved local message log or local transport inbox for one node., Replay saved local messages and return payload plus structured result., run_demo(), ContributionLedger (+24 more)
 
 ### Community 57 - "Community 57"
 Cohesion: 0.15
@@ -442,8 +442,8 @@ Cohesion: 0.15
 Nodes (13): additionalProperties, properties, required, type, minLength, type, minLength, type (+5 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.18
-Nodes (12): items, minItems, type, additionalProperties, properties, required, type, items (+4 more)
+Cohesion: 0.25
+Nodes (8): minItems, type, additionalProperties, properties, required, type, artifacts, expected_outputs
 
 ### Community 77 - "Community 77"
 Cohesion: 0.17
@@ -510,16 +510,16 @@ Cohesion: 0.07
 Nodes (43): ProcessedAssignment, Deterministic audit data for one inbox assignment processed locally., build_receipt_document(), _json_compatible_dict(), _json_compatible_list(), _json_compatible_value(), load_receipt_document_if_exists(), _output_summary() (+35 more)
 
 ### Community 99 - "Community 99"
-Cohesion: 0.22
-Nodes (9): items, minItems, type, checks, validation_requirements, additionalProperties, properties, required (+1 more)
+Cohesion: 0.40
+Nodes (5): validation_requirements, additionalProperties, properties, required, type
 
 ### Community 101 - "Community 101"
 Cohesion: 0.33
 Nodes (7): _error_response(), Return the stable, deliberately non-provenance API error envelope., Classify expected local runtime failures without exposing their text., _request_id(), _runtime_error_code(), JSONResponse, Request
 
 ### Community 102 - "Community 102"
-Cohesion: 0.22
-Nodes (9): properties, check_id, media_type, metadata, pass_criteria, path, receipt_path, sha256 (+1 more)
+Cohesion: 0.15
+Nodes (17): items, items, minItems, type, items, additionalProperties, properties, required (+9 more)
 
 ### Community 103 - "Community 103"
 Cohesion: 0.12
@@ -571,9 +571,9 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Job` connect `Community 0` to `Community 96`, `Community 98`, `Community 3`, `Community 36`, `Community 5`, `release_update.py`, `Community 103`, `Community 71`, `Community 47`, `Community 16`, `models.py`, `Community 53`, `Community 22`, `Community 24`, `Community 57`, `Community 56`, `Community 29`, `Community 30`?**
   _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 37`, `Community 103`, `Community 41`, `Community 10`, `Community 44`, `Community 45`, `Community 14`, `Community 50`, `Community 24`, `Community 57`, `Community 56`, `Community 30`?**
+- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 37`, `Community 103`, `Community 41`, `Community 10`, `Community 44`, `Community 45`, `Community 14`, `Community 50`, `Community 56`, `Community 57`, `Community 24`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `MeshMessage` connect `Community 89` to `Community 96`, `Community 1`, `Community 2`, `Community 98`, `Community 5`, `Community 103`, `Community 8`, `Community 41`, `Community 73`, `Community 43`, `Community 14`, `models.py`, `Community 16`, `Community 25`, `Community 24`, `Community 57`, `Community 30`?**
+- **Why does `MeshMessage` connect `Community 89` to `Community 96`, `Community 1`, `Community 2`, `Community 98`, `Community 5`, `Community 103`, `Community 8`, `Community 41`, `Community 73`, `Community 43`, `Community 14`, `models.py`, `Community 16`, `Community 24`, `Community 25`, `Community 56`, `Community 57`, `Community 30`?**
   _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Are the 26 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 26 INFERRED edges - model-reasoned connections that need verification._
