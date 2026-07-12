@@ -802,6 +802,8 @@ class NodeRuntimeService:
             "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "status": status,
             "job_id": known_job_id,
+            "job_type": request_data.get("job_type"),
+            "requested_capability": request_data.get("requested_capability"),
             "creator_node_id": (
                 creator_node_id if isinstance(creator_node_id, str) else None
             ),
