@@ -135,8 +135,8 @@ def _identifier(value: object, context: str) -> str:
     if (
         not isinstance(value, str)
         or not value
-        or value != value.strip()
-        or any(character.isspace() for character in value)
+        or any(map(str.isspace, value))
+        or value.strip() != value
     ):
         raise JobFailureSchemaError(f"{context} must be a non-empty identifier")
     return value

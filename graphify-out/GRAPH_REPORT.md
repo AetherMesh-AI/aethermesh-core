@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 159 files · ~192,109 words
+- 159 files · ~192,121 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2475 nodes · 6516 edges · 114 communities (104 shown, 10 thin omitted)
+- 2475 nodes · 6516 edges · 115 communities (105 shown, 10 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 414 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `be1b98a0`
+- Built from commit: `a5947e8f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -122,6 +122,7 @@
 - [[_COMMUNITY_Community 106|Community 106]]
 - [[_COMMUNITY_Community 107|Community 107]]
 - [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
 - [[_COMMUNITY_Community 110|Community 110]]
 - [[_COMMUNITY_Community 111|Community 111]]
 - [[_COMMUNITY_Community 112|Community 112]]
@@ -155,7 +156,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (114 total, 10 thin omitted)
+## Communities (115 total, 10 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.11
@@ -346,8 +347,8 @@ Cohesion: 0.10
 Nodes (20): Assignment-only local dispatch for manifest-backed batches., AetherMesh Core local prototype package., MessageDelivery, Synchronous in-memory message bus for local AetherMesh simulation., A message accepted by the local bus with its deterministic sequence., JSON-backed local message log persistence for batch simulations., Local mesh message envelopes for deterministic simulation output., _require_non_empty_string() (+12 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.19
-Nodes (14): minLength, pattern, type, properties, items, type, items, type (+6 more)
+Cohesion: 0.14
+Nodes (18): minLength, pattern, type, additionalProperties, properties, required, type, items (+10 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.25
@@ -362,8 +363,8 @@ Cohesion: 0.08
 Nodes (26): _local_safety_metadata(), NodeRuntimeService, _provenance_matches_job(), Read local job evidence into a deterministic, non-mutating summary., Return one stored local receipt without creating validation evidence., Raised when local runtime state cannot be safely loaded or written., Run a queued local submission; this is not a daemon or remote boundary., Cancel an unstarted local job without altering its manifest evidence. (+18 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.14
-Nodes (24): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _load_identity(), _load_identity_document() (+16 more)
+Cohesion: 0.15
+Nodes (23): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _load_identity(), _load_identity_document() (+15 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.50
@@ -446,8 +447,8 @@ Cohesion: 0.25
 Nodes (8): minItems, type, additionalProperties, properties, required, type, artifacts, expected_outputs
 
 ### Community 77 - "Community 77"
-Cohesion: 0.12
-Nodes (17): format, pattern, type, pattern, type, enum, type, additionalProperties (+9 more)
+Cohesion: 0.15
+Nodes (13): format, pattern, type, pattern, type, enum, type, properties (+5 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.25
@@ -530,8 +531,8 @@ Cohesion: 0.20
 Nodes (9): atomic_create_json(), atomic_write_json(), _publish_json(), Shared JSON file persistence helpers for local-only artifacts., Write one JSON document using a temp file and atomic replace., Create one JSON document atomically without replacing an existing file., Best-effort removal for abandoned atomic-write temp files., remove_temp_file() (+1 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.09
-Nodes (16): _append_identity_reset_receipt(), _backup_identity_referenced_artifacts(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), _local_identity_ref_path(), Return a local audit reference without leaking host-specific directories. (+8 more)
+Cohesion: 0.11
+Nodes (12): _append_identity_reset_receipt(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), Return a local audit reference without leaking host-specific directories., Local audit details for an explicit identity reset., Return JSON-serializable reset details for CLI/API callers. (+4 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.22
@@ -544,6 +545,10 @@ Nodes (7): detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(),
 ### Community 108 - "Community 108"
 Cohesion: 0.40
 Nodes (5): additionalProperties, properties, required, type, input_manifest
+
+### Community 109 - "Community 109"
+Cohesion: 0.32
+Nodes (5): _backup_identity_referenced_artifacts(), _load_local_identity_ref_document_if_exists(), _local_identity_ref_path(), _string_list_from_section(), _unique_reset_artifact_path()
 
 ### Community 110 - "Community 110"
 Cohesion: 0.29
@@ -575,7 +580,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `enum` connect `Community 77` to `Community 40`, `models.py`, `Community 19`?**
   _High betweenness centrality (0.074) - this node is a cross-community bridge._
-- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 95`?**
+- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 49`, `Community 95`?**
   _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 27 INFERRED edges - model-reasoned connections that need verification._

@@ -3190,7 +3190,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "community": 77,
+      "community": 49,
       "norm_label": "lineage"
     },
     {
@@ -3200,7 +3200,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_type",
-      "community": 77,
+      "community": 49,
       "norm_label": "type"
     },
     {
@@ -3210,7 +3210,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties",
-      "community": 77,
+      "community": 49,
       "norm_label": "additionalproperties"
     },
     {
@@ -3220,7 +3220,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_required",
-      "community": 77,
+      "community": 49,
       "norm_label": "required"
     },
     {
@@ -6983,7 +6983,7 @@
       "source_location": "L1378",
       "_origin": "ast",
       "id": "aethermesh_core_identity_load_local_identity_ref_document_if_exists",
-      "community": 54,
+      "community": 109,
       "norm_label": "_load_local_identity_ref_document_if_exists()"
     },
     {
@@ -7063,7 +7063,7 @@
       "source_location": "L1483",
       "_origin": "ast",
       "id": "aethermesh_core_identity_unique_reset_artifact_path",
-      "community": 105,
+      "community": 109,
       "norm_label": "_unique_reset_artifact_path()"
     },
     {
@@ -7083,7 +7083,7 @@
       "source_location": "L1498",
       "_origin": "ast",
       "id": "aethermesh_core_identity_backup_identity_referenced_artifacts",
-      "community": 105,
+      "community": 109,
       "norm_label": "_backup_identity_referenced_artifacts()"
     },
     {
@@ -7093,7 +7093,7 @@
       "source_location": "L1546",
       "_origin": "ast",
       "id": "aethermesh_core_identity_string_list_from_section",
-      "community": 105,
+      "community": 109,
       "norm_label": "_string_list_from_section()"
     },
     {
@@ -7103,7 +7103,7 @@
       "source_location": "L1558",
       "_origin": "ast",
       "id": "aethermesh_core_identity_local_identity_ref_path",
-      "community": 105,
+      "community": 109,
       "norm_label": "_local_identity_ref_path()"
     },
     {
@@ -7590,7 +7590,7 @@
       "label": "_object()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L115",
+      "source_location": "L119",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_object",
       "community": 1,
@@ -7600,7 +7600,7 @@
       "label": "_identifier()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L130",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_identifier",
       "community": 1,
@@ -7610,7 +7610,7 @@
       "label": "_timestamp()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L141",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_timestamp",
       "community": 1,
@@ -7620,7 +7620,7 @@
       "label": "_choice()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L152",
+      "source_location": "L156",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_choice",
       "community": 1,
@@ -7630,7 +7630,7 @@
       "label": "_optional_identifier()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L159",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_optional_identifier",
       "community": 1,
@@ -7640,7 +7640,7 @@
       "label": "_optional_hash()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L164",
+      "source_location": "L168",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_optional_hash",
       "community": 1,
@@ -7650,7 +7650,7 @@
       "label": "_details()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L174",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_details",
       "community": 1,
@@ -7660,7 +7660,7 @@
       "label": "_links()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L201",
+      "source_location": "L205",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_links",
       "community": 1,
@@ -7670,7 +7670,7 @@
       "label": "_attribution()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L218",
+      "source_location": "L222",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_attribution",
       "community": 1,
@@ -7680,7 +7680,7 @@
       "label": "_evidence()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L243",
+      "source_location": "L247",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_evidence",
       "community": 1,
@@ -7690,7 +7690,7 @@
       "label": "_identifier_list()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/job_failure_schema.py",
-      "source_location": "L278",
+      "source_location": "L282",
       "_origin": "ast",
       "id": "aethermesh_core_job_failure_schema_identifier_list",
       "community": 1,
@@ -17013,7 +17013,7 @@
       "source_location": "L921",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_identity_reset_reference_backup_ignores_non_local_or_missing_refs",
-      "community": 105,
+      "community": 109,
       "norm_label": ".test_identity_reset_reference_backup_ignores_non_local_or_missing_refs()"
     },
     {
@@ -17023,7 +17023,7 @@
       "source_location": "L965",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_identity_reset_reference_backup_copy_failure_is_reported",
-      "community": 105,
+      "community": 109,
       "norm_label": ".test_identity_reset_reference_backup_copy_failure_is_reported()"
     },
     {
@@ -17043,7 +17043,7 @@
       "source_location": "L1006",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_identity_reset_artifact_paths_avoid_collisions",
-      "community": 105,
+      "community": 109,
       "norm_label": ".test_identity_reset_artifact_paths_avoid_collisions()"
     },
     {
@@ -34865,9 +34865,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L152",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_choice",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -34876,9 +34876,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L115",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_object",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -34887,9 +34887,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -39300,9 +39300,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "target": "valueerror",
-      "confidence_score": 1.0
+      "target": "valueerror"
     },
     {
       "relation": "inherits",
@@ -53394,9 +53394,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L218",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_attribution",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_attribution"
     },
     {
       "relation": "contains",
@@ -53404,9 +53404,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L152",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_choice",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_choice"
     },
     {
       "relation": "contains",
@@ -53414,9 +53414,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_details",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_details"
     },
     {
       "relation": "contains",
@@ -53424,9 +53424,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L243",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_evidence",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_evidence"
     },
     {
       "relation": "contains",
@@ -53434,9 +53434,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier"
     },
     {
       "relation": "contains",
@@ -53444,9 +53444,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L278",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_identifier_list",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier_list"
     },
     {
       "relation": "contains",
@@ -53454,9 +53454,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "contains",
@@ -53464,9 +53464,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L201",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_links",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_links"
     },
     {
       "relation": "contains",
@@ -53474,9 +53474,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L115",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "contains",
@@ -53484,9 +53484,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L164",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_optional_hash",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_hash"
     },
     {
       "relation": "contains",
@@ -53494,9 +53494,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L159",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_optional_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_identifier"
     },
     {
       "relation": "contains",
@@ -53504,9 +53504,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L141",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_timestamp",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_timestamp"
     },
     {
       "relation": "contains",
@@ -53514,9 +53514,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_validate_job_failure_document"
     },
     {
       "relation": "imports_from",
@@ -53525,9 +53525,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema",
-      "target": "datetime",
-      "confidence_score": 1.0
+      "target": "datetime"
     },
     {
       "relation": "rationale_for",
@@ -53535,9 +53535,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_rationale_1",
-      "target": "aethermesh_core_job_failure_schema",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema"
     },
     {
       "relation": "imports_from",
@@ -53546,9 +53546,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema",
-      "target": "aethermesh_core_job_failure_schema",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema"
     },
     {
       "relation": "calls",
@@ -53557,9 +53557,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L229",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_attribution",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53568,9 +53568,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L154",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_choice",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53579,9 +53579,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L181",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_details",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53590,9 +53590,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L252",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_evidence",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53601,9 +53601,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L137",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_identifier",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53612,9 +53612,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L280",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_identifier_list",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53623,9 +53623,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L206",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_links",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53634,9 +53634,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L117",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_object",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53645,9 +53645,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L171",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_optional_hash",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "rationale_for",
@@ -53655,9 +53655,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_rationale_79",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53666,9 +53666,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_timestamp",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "calls",
@@ -53677,9 +53677,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L87",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "uses",
@@ -53687,9 +53687,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L6",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_job_failure_schema_jobfailureschemaerror"
     },
     {
       "relation": "rationale_for",
@@ -53697,9 +53697,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_rationale_83",
-      "target": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_validate_job_failure_document"
     },
     {
       "relation": "calls",
@@ -53708,9 +53708,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_attribution",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_attribution"
     },
     {
       "relation": "calls",
@@ -53719,9 +53719,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L98",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_choice",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_choice"
     },
     {
       "relation": "calls",
@@ -53730,9 +53730,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L108",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_details",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_details"
     },
     {
       "relation": "calls",
@@ -53741,9 +53741,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_evidence",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_evidence"
     },
     {
       "relation": "calls",
@@ -53752,9 +53752,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier"
     },
     {
       "relation": "calls",
@@ -53763,9 +53763,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L109",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_links",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_links"
     },
     {
       "relation": "calls",
@@ -53774,9 +53774,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L85",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "calls",
@@ -53785,9 +53785,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_validate_job_failure_document",
-      "target": "aethermesh_core_job_failure_schema_timestamp",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_timestamp"
     },
     {
       "relation": "calls",
@@ -53851,9 +53851,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L219",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_attribution",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "calls",
@@ -53862,9 +53862,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L175",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_details",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "calls",
@@ -53873,9 +53873,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L244",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_evidence",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "calls",
@@ -53884,9 +53884,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L202",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_links",
-      "target": "aethermesh_core_job_failure_schema_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_object"
     },
     {
       "relation": "calls",
@@ -53895,9 +53895,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L220",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_attribution",
-      "target": "aethermesh_core_job_failure_schema_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier"
     },
     {
       "relation": "calls",
@@ -53906,9 +53906,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L282",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_identifier_list",
-      "target": "aethermesh_core_job_failure_schema_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier"
     },
     {
       "relation": "calls",
@@ -53917,9 +53917,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L161",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_optional_identifier",
-      "target": "aethermesh_core_job_failure_schema_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier"
     },
     {
       "relation": "calls",
@@ -53928,9 +53928,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L245",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_evidence",
-      "target": "aethermesh_core_job_failure_schema_timestamp",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_timestamp"
     },
     {
       "relation": "calls",
@@ -53939,9 +53939,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L192",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_details",
-      "target": "aethermesh_core_job_failure_schema_optional_identifier",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_identifier"
     },
     {
       "relation": "calls",
@@ -53950,9 +53950,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_details",
-      "target": "aethermesh_core_job_failure_schema_optional_hash",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_hash"
     },
     {
       "relation": "calls",
@@ -53961,9 +53961,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L271",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_evidence",
-      "target": "aethermesh_core_job_failure_schema_optional_hash",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_hash"
     },
     {
       "relation": "calls",
@@ -53972,9 +53972,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L204",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_links",
-      "target": "aethermesh_core_job_failure_schema_optional_hash",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_optional_hash"
     },
     {
       "relation": "calls",
@@ -53983,9 +53983,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L215",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_links",
-      "target": "aethermesh_core_job_failure_schema_identifier_list",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier_list"
     },
     {
       "relation": "calls",
@@ -53994,9 +53994,9 @@
       "source_file": "src/aethermesh_core/job_failure_schema.py",
       "source_location": "L246",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_failure_schema_evidence",
-      "target": "aethermesh_core_job_failure_schema_identifier_list",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_failure_schema_identifier_list"
     },
     {
       "relation": "contains",
@@ -54815,9 +54815,9 @@
       "source_file": "src/aethermesh_core/job_result_schema.py",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_result_schema_rationale_51",
-      "target": "aethermesh_core_job_result_schema_jobresultschemaerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_result_schema_jobresultschemaerror"
     },
     {
       "relation": "calls",
@@ -54857,9 +54857,9 @@
       "source_file": "src/aethermesh_core/job_result_schema.py",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_result_schema_rationale_55",
-      "target": "aethermesh_core_job_result_schema_validate_job_result_document",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_result_schema_validate_job_result_document"
     },
     {
       "relation": "calls",
@@ -85577,9 +85577,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema",
-      "target": "tests_test_job_failure_schema_jobfailureschematests",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests"
     },
     {
       "relation": "method",
@@ -85587,9 +85587,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_setup"
     },
     {
       "relation": "method",
@@ -85597,9 +85597,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_test_manifest_receipt_lineage_and_attribution_links_are_preserved",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_test_manifest_receipt_lineage_and_attribution_links_are_preserved"
     },
     {
       "relation": "method",
@@ -85607,9 +85607,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_test_rejects_invalid_scalar_values",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_test_rejects_invalid_scalar_values"
     },
     {
       "relation": "method",
@@ -85617,9 +85617,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L71",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_test_rejects_vague_or_unsafe_structures_and_unattributed_rejection",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_test_rejects_vague_or_unsafe_structures_and_unattributed_rejection"
     },
     {
       "relation": "method",
@@ -85627,9 +85627,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_test_required_failure_examples_validate",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_test_required_failure_examples_validate"
     },
     {
       "relation": "method",
@@ -85637,9 +85637,9 @@
       "source_file": "tests/test_job_failure_schema.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_failure_schema_jobfailureschematests",
-      "target": "tests_test_job_failure_schema_jobfailureschematests_test_required_identity_classification_timestamp_and_evidence_reject_omission",
-      "confidence_score": 1.0
+      "target": "tests_test_job_failure_schema_jobfailureschematests_test_required_identity_classification_timestamp_and_evidence_reject_omission"
     },
     {
       "relation": "contains",
@@ -93524,9 +93524,9 @@
       "source_file": "docs/phase-1-job-failure-schema.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_failure_schema",
-      "target": "docs_phase_1_job_failure_schema_phase_1_job_failure_schema",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_failure_schema_phase_1_job_failure_schema"
     },
     {
       "relation": "contains",
@@ -93534,9 +93534,9 @@
       "source_file": "docs/phase-1-job-failure-schema.md",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_failure_schema_phase_1_job_failure_schema",
-      "target": "docs_phase_1_job_failure_schema_failure_types_and_examples",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_failure_schema_failure_types_and_examples"
     },
     {
       "relation": "contains",
@@ -93544,9 +93544,9 @@
       "source_file": "docs/phase-1-job-failure-schema.md",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_failure_schema_phase_1_job_failure_schema",
-      "target": "docs_phase_1_job_failure_schema_record_contract",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_failure_schema_record_contract"
     },
     {
       "relation": "contains",
@@ -93554,9 +93554,9 @@
       "source_file": "docs/phase-1-job-failure-schema.md",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_failure_schema_phase_1_job_failure_schema",
-      "target": "docs_phase_1_job_failure_schema_redaction_and_storage_rules",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_failure_schema_redaction_and_storage_rules"
     },
     {
       "relation": "contains",
@@ -93780,5 +93780,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "be1b98a03f21aa888ca1840e65eadf12d585d793"
+  "built_at_commit": "a5947e8f6c328449356fa93a18b5f592306b3e5e"
 }
