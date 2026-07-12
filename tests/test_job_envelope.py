@@ -80,6 +80,19 @@ class JobEnvelopeTests(unittest.TestCase):
             canonical.index('"contribution"'), canonical.index('"created_at"')
         )
 
+    def test_job_id_rejects_malformed_values_and_accepts_content_id(self) -> None:
+        for job_id in ("has spaces", "../job", "UPPERCASE", "sha256:bad"):
+            with self.subTest(job_id=job_id):
+                document = copy.deepcopy(self.envelope)
+                document["job_id"] = job_id
+                with self.assertRaisesRegex(
+                    JobEnvelopeError, "job_id must be a local ID"
+                ):
+                    validate_job_envelope(document)
+        document = copy.deepcopy(self.envelope)
+        document["job_id"] = "sha256:" + "a" * 64
+        self.assertIs(validate_job_envelope(document), document)
+
     def test_explicit_lineage_receipts_and_contribution_artifacts_are_accepted(
         self,
     ) -> None:

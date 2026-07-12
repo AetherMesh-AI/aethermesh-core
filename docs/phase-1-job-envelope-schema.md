@@ -8,7 +8,7 @@ Serialize envelopes as UTF-8 JSON with lexicographically sorted object keys, com
 
 | Field | Purpose |
 | --- | --- |
-| `job_id` | Local job identifier. |
+| `job_id` | Stable local job identifier, separate from `creator_node_id`. |
 | `schema_version` | Integer `1`. |
 | `creator_node_id` | Node that created the job. |
 | `created_at` | UTC creation timestamp in `YYYY-MM-DDTHH:MM:SSZ` form. |
@@ -22,6 +22,8 @@ Serialize envelopes as UTF-8 JSON with lexicographically sorted object keys, com
 Each `input_manifest.files` entry contains a safe relative `path`, a `sha256:<64 lowercase hex>` digest, byte `size_bytes`, and optional JSON-object `metadata`. Paths in manifests, expected outputs, receipts, lineage, and contribution are safe relative local paths: no absolute paths, URIs, or `..` segments.
 
 Each validation check requires `check_id`, `receipt_path`, and a non-empty object `pass_criteria`. A receipt is expected at the declared local path only when the check has run; the envelope records the requirement and does not claim that validation already passed.
+
+`job_id` is generated before work starts and remains immutable for its lifetime. Accepted local-first formats are a lowercase local ID (the runtime generates `local-job-` plus a UUID-style hexadecimal suffix) or a deterministic `sha256:<64 lowercase hex>` content ID. Whitespace, paths, uppercase characters, and other malformed values are rejected; an active manifest cannot reuse an ID. Task/result records, validation receipts, manifests, lineage, and contribution attribution preserve the same ID, while `creator_node_id` remains separate authorship metadata.
 
 The contribution creator must match the envelope creator. `executor_node_id` is a node ID when known and `null` before local execution. `produced_artifacts` identifies artifact paths without assigning rewards, credits, or tokens.
 

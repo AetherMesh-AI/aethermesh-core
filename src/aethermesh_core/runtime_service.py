@@ -784,8 +784,9 @@ class NodeRuntimeService:
                 "job": {"job_id": job_id, "job_type": job_type, "payload": payload},
                 "creator_node_id": creator_node_id,
                 "requested_validation_mode": validation_mode,
-                "lineage": {"parent_refs": lineage_parent_refs},
+                "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
                 "contribution_attribution": {
+                    "job_id": job_id,
                     "creator_node_id": creator_node_id,
                     "metadata": attribution_metadata,
                 },
@@ -972,8 +973,10 @@ class NodeRuntimeService:
             or not isinstance(submitted_at, int)
             or isinstance(submitted_at, bool)
             or not isinstance(lineage, dict)
+            or lineage.get("job_id") != job_id
             or not isinstance(lineage.get("parent_refs"), list)
             or not isinstance(attribution, dict)
+            or attribution.get("job_id") != job_id
             or attribution.get("creator_node_id") != creator
         ):
             raise RuntimeServiceError(
@@ -1150,8 +1153,10 @@ class NodeRuntimeService:
             or manifest.get("job", {}).get("job_id") != job_id
             or status.get("job_id") != job_id
             or not isinstance(lineage, dict)
+            or lineage.get("job_id") != job_id
             or not isinstance(lineage.get("parent_refs"), list)
             or not isinstance(attribution, dict)
+            or attribution.get("job_id") != job_id
             or attribution.get("creator_node_id") != manifest.get("creator_node_id")
         ):
             raise RuntimeServiceError(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,10 @@ from aethermesh_core.scheduler import (
     NodeStatus,
     ScheduledNode,
 )
+
+
+_LOCAL_JOB_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,127}\Z")
+_CONTENT_ADDRESSED_JOB_ID = re.compile(r"sha256:[0-9a-f]{64}\Z")
 
 
 class ManifestError(ValueError):
@@ -152,7 +157,17 @@ def _parse_jobs(value: Any) -> list[Job]:
     if not isinstance(value, list) or not value:
         raise ManifestError("manifest jobs must be a non-empty list")
 
-    return [_parse_job_entry(entry, index) for index, entry in enumerate(value)]
+    jobs: list[Job] = []
+    seen_job_ids: set[str] = set()
+    for index, entry in enumerate(value):
+        job = _parse_job_entry(entry, index)
+        if job.job_id in seen_job_ids:
+            raise ManifestError(
+                f"manifest contains duplicate active job_id: {job.job_id}"
+            )
+        seen_job_ids.add(job.job_id)
+        jobs.append(job)
+    return jobs
 
 
 def _parse_job_entry(entry: Any, index: int) -> Job:
@@ -160,8 +175,11 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
         raise ManifestError(f"manifest jobs[{index}] must be a JSON object")
 
     job_id = entry.get("job_id")
-    if not isinstance(job_id, str) or not job_id.strip():
-        raise ManifestError(f"manifest jobs[{index}].job_id must be a non-empty string")
+    if not _is_local_job_id(job_id):
+        raise ManifestError(
+            f"manifest jobs[{index}].job_id must be a local ID or sha256 content ID"
+        )
+    assert isinstance(job_id, str)
 
     job_type = entry.get("job_type")
     if not isinstance(job_type, str) or not job_type.strip():
@@ -174,3 +192,9 @@ def _parse_job_entry(entry: Any, index: int) -> Job:
         raise ManifestError(f"manifest jobs[{index}].payload must be a JSON object")
 
     return Job(job_id=job_id, job_type=job_type, payload=dict(payload))
+
+
+def _is_local_job_id(value: object) -> bool:
+    return isinstance(value, str) and bool(
+        _LOCAL_JOB_ID.fullmatch(value) or _CONTENT_ADDRESSED_JOB_ID.fullmatch(value)
+    )

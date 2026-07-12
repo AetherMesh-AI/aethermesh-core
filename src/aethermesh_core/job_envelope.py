@@ -23,6 +23,7 @@ _REQUIRED_FIELDS = frozenset(
     }
 )
 _SHA256 = re.compile(r"sha256:[0-9a-f]{64}\Z")
+_LOCAL_JOB_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,127}\Z")
 
 
 class JobEnvelopeError(ValueError):
@@ -41,7 +42,7 @@ def canonical_job_envelope_json(document: object) -> str:
 def validate_job_envelope(document: object) -> dict[str, Any]:
     """Validate one local-only Phase 1 envelope without reading or writing files."""
     envelope = _object(document, "job envelope", _REQUIRED_FIELDS)
-    _text(envelope, "job_id", "job envelope")
+    _job_id(envelope["job_id"])
     _integer(envelope, "schema_version", JOB_ENVELOPE_SCHEMA_VERSION, "job envelope")
     _text(envelope, "creator_node_id", "job envelope")
     _timestamp(envelope, "created_at")
@@ -79,6 +80,17 @@ def _text(document: dict[str, Any], field: str, context: str) -> str:
     value = document[field]
     if not isinstance(value, str) or not value.strip():
         raise JobEnvelopeError(f"{context}.{field} must be a non-empty string")
+    return value
+
+
+def _job_id(value: object) -> str:
+    """Require a local stable ID or a deterministic content-addressed ID."""
+    if not isinstance(value, str) or not (
+        _LOCAL_JOB_ID.fullmatch(value) or _SHA256.fullmatch(value)
+    ):
+        raise JobEnvelopeError(
+            "job envelope.job_id must be a local ID or sha256 content ID"
+        )
     return value
 
 

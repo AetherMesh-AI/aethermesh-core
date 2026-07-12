@@ -98,9 +98,11 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 manifest["lineage"]["parent_refs"], ["data/prior-job.json"]
             )
+            self.assertEqual(manifest["lineage"]["job_id"], response["job_id"])
             self.assertEqual(
                 manifest["contribution_attribution"],
                 {
+                    "job_id": response["job_id"],
                     "creator_node_id": "creator-local-a",
                     "metadata": {"project": "prototype"},
                 },
@@ -201,7 +203,8 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(queued["creator_node_id"], "creator-local-a")
             self.assertIsNone(queued["worker_node_id"])
             self.assertEqual(
-                queued["lineage"], {"parent_refs": ["data/prior-job.json"]}
+                queued["lineage"],
+                {"job_id": accepted["job_id"], "parent_refs": ["data/prior-job.json"]},
             )
             self.assertEqual(
                 queued["contribution_attribution"]["metadata"], {"project": "prototype"}
