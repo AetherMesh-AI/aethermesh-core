@@ -19,6 +19,10 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from aethermesh_core.capability_record import (
+    CapabilityRecordError,
+    validate_capability_record,
+)
 from aethermesh_core.identity import (
     deterministic_machine_node_id,
     deterministic_machine_node_name,
@@ -43,6 +47,7 @@ PUBLIC_VERSION = "0.2.0-alpha"
 CAPABILITY_LIST_SCHEMA_VERSION = 1
 LOCAL_CAPABILITY_WORKER_CAPACITY = 1
 MANIFEST_INSPECTION_SCHEMA_VERSION = 1
+CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
 RESOURCE_HINT_FIELDS = frozenset(
@@ -430,6 +435,102 @@ class NodeRuntimeService:
                 "degraded", "local capability validation failed", capacity
             )
         return _availability("available", None, capacity)
+
+    def inspect_capability_records(self) -> dict[str, Any]:
+        """Return local capability records without treating them as network trust."""
+
+        directory = self.paths.data_dir / "capability-records"
+        paths = sorted(directory.glob("*.json")) if directory.is_dir() else []
+        local_node_id = _config_node_id(self.load_config())
+        records = [
+            self._capability_record_summary(path, local_node_id) for path in paths
+        ]
+        return {
+            "schema_version": CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION,
+            "network_mode": "local-only-no-p2p",
+            "store_status": "available" if directory.is_dir() else "missing",
+            "record_count": len(records),
+            "records": records,
+            "note": "Local capability records only; validation is not network consensus.",
+        }
+
+    def _capability_record_summary(
+        self, path: Path, local_node_id: str | None
+    ) -> dict[str, Any]:
+        record_ref = f"data/capability-records/{path.name}"
+        empty: dict[str, Any] = {
+            "capability_id": None,
+            "capability_version": None,
+            "creator_node_id": None,
+            "manifest_refs": [],
+            "validation": {"status": None, "receipt_ids": [], "receipt_evidence": []},
+            "validation_receipt_refs": [],
+            "lineage": {
+                "source_manifest_ref": None,
+                "prior_capability_id": None,
+                "local_build_artifact_ref": None,
+            },
+            "contribution_attribution": {
+                "creator_node_id": None,
+                "maintainer_node_id": None,
+                "work_receipt_ids": [],
+            },
+        }
+        if path.is_symlink():
+            return {
+                "record_ref": record_ref,
+                "state": "invalid",
+                **empty,
+                "errors": ["capability record must not be a symbolic link"],
+            }
+        if local_node_id is None:
+            return {
+                "record_ref": record_ref,
+                "state": "invalid",
+                **empty,
+                "errors": ["local node identity is unavailable"],
+            }
+        try:
+            document = self._load_local_job_document(path, "capability record")
+            record = validate_capability_record(document, local_node_id=local_node_id)
+        except (RuntimeServiceError, CapabilityRecordError) as exc:
+            return {
+                "record_ref": record_ref,
+                "state": "invalid",
+                **empty,
+                "errors": [str(exc).split(":", 1)[0]],
+            }
+
+        validation = record["validation"]
+        validation_status = validation["status"]
+        state = {
+            "unvalidated": "advertised",
+            "passed": "validated",
+            "failed": "invalid",
+        }[validation_status]
+        lineage = record["lineage"]
+        attribution = record["contribution_attribution"]
+        return {
+            "record_ref": record_ref,
+            "state": state,
+            "capability_id": record["capability_id"],
+            "capability_version": record["capability_version"],
+            "creator_node_id": record["creator_node_id"],
+            "manifest_refs": record["manifest_refs"],
+            "validation": validation,
+            "validation_receipt_refs": validation["receipt_ids"],
+            "lineage": {
+                "source_manifest_ref": lineage["source_manifest_ref"],
+                "prior_capability_id": lineage.get("prior_capability_id"),
+                "local_build_artifact_ref": lineage.get("local_build_artifact_ref"),
+            },
+            "contribution_attribution": {
+                "creator_node_id": attribution["creator_node_id"],
+                "maintainer_node_id": attribution.get("maintainer_node_id"),
+                "work_receipt_ids": attribution["work_receipt_ids"],
+            },
+            "errors": [],
+        }
 
     def inspect_model_manifests(self) -> dict[str, Any]:
         """Return read-only, redacted summaries of locally registered experts."""
