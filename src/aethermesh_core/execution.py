@@ -7,6 +7,7 @@ outputs, and return immutable provenance-bearing receipts.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping, Protocol
@@ -54,6 +55,15 @@ class PreparedWorkAssignment:
             raise ExecutionAssignmentError("work_item must be a Job")
         _require_non_empty_string(self.work_item.job_id, "work_item.job_id")
         _require_non_empty_string(self.work_item.job_type, "work_item.job_type")
+        object.__setattr__(
+            self,
+            "work_item",
+            Job(
+                job_id=self.work_item.job_id,
+                job_type=self.work_item.job_type,
+                payload=deepcopy(self.work_item.payload),
+            ),
+        )
         object.__setattr__(self, "lineage", _snapshot_metadata(self.lineage, "lineage"))
         object.__setattr__(
             self, "attribution", _snapshot_metadata(self.attribution, "attribution")
@@ -94,8 +104,8 @@ class ExecutionReceipt:
                 "status": self.validation_status,
                 "reason": self.validation.reason,
             },
-            "lineage": dict(self.lineage),
-            "attribution": dict(self.attribution),
+            "lineage": deepcopy(dict(self.lineage)),
+            "attribution": deepcopy(dict(self.attribution)),
         }
 
 
@@ -146,4 +156,4 @@ def _snapshot_metadata(value: object, field_name: str) -> Mapping[str, object]:
         raise ExecutionAssignmentError(f"{field_name} must be a mapping")
     if not all(isinstance(key, str) and key.strip() for key in value):
         raise ExecutionAssignmentError(f"{field_name} keys must be non-empty strings")
-    return MappingProxyType(dict(value))
+    return MappingProxyType(deepcopy(dict(value)))

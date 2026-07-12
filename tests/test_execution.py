@@ -1,5 +1,6 @@
 import unittest
 from dataclasses import replace
+from typing import Any, cast
 from unittest.mock import patch
 
 from aethermesh_core.execution import (
@@ -160,20 +161,35 @@ class ExecutorBoundaryTests(unittest.TestCase):
         self.assertEqual(runner.calls, [])
 
     def test_metadata_is_snapshotted_at_the_boundary(self) -> None:
-        lineage = {"parent": "before"}
-        attribution = {"requester": "before"}
+        payload = {"message": "hello", "options": {"mode": "before"}}
+        lineage = {"parent": {"id": "before"}}
+        attribution = {"requester": {"id": "before"}}
         assignment = replace(
             self._assignment(),
+            work_item=Job(job_id="echo-1", job_type="echo", payload=payload),
             lineage=lineage,
             attribution=attribution,
             creator_node_id=None,
         )
-        lineage["parent"] = "after"
-        attribution["requester"] = "after"
+        payload["options"]["mode"] = "after"
+        lineage["parent"]["id"] = "after"
+        attribution["requester"]["id"] = "after"
 
-        self.assertEqual(dict(assignment.lineage), {"parent": "before"})
-        self.assertEqual(dict(assignment.attribution), {"requester": "before"})
+        self.assertEqual(assignment.work_item.payload["options"], {"mode": "before"})
+        self.assertEqual(dict(assignment.lineage), {"parent": {"id": "before"}})
+        self.assertEqual(dict(assignment.attribution), {"requester": {"id": "before"}})
         self.assertIsNone(assignment.creator_node_id)
+
+        receipt = LocalExecutor(
+            node_id="node-executor",
+            runner=RecordingRunner(
+                LocalRunner(NodeIdentity("node-executor")).run(assignment.work_item)
+            ),
+        ).execute(assignment)
+        serialized = receipt.to_dict()
+        serialized_lineage = cast(dict[str, Any], serialized["lineage"])
+        serialized_lineage["parent"]["id"] = "serialized mutation"
+        self.assertEqual(dict(receipt.lineage), {"parent": {"id": "before"}})
 
 
 if __name__ == "__main__":
