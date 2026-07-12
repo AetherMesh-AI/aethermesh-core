@@ -111,6 +111,7 @@ def validate_job_failure_document(document: object) -> dict[str, Any]:
             "job failure.human_summary must be a non-empty string up to 512 characters"
         )
     _details(failure["details"])
+    _failure_specific_details(failure["details"], failure_type)
     _references(failure["references"])
     _attribution(failure["attribution"], failure["executing_node_id"], failure_type)
     _evidence(failure["evidence"], failure["observed_at"])
@@ -184,6 +185,24 @@ def _details(value: object) -> None:
             )
 
 
+def _failure_specific_details(value: object, failure_type: object) -> None:
+    details = _object(value, "job failure.details", _DETAIL_FIELDS)
+    if not isinstance(failure_type, str):
+        raise JobFailureSchemaError("job failure.failure_type is unsupported")
+    required_any = {
+        "task_crash": ("exit_code", "signal"),
+        "validation_failure": ("validation_error_code", "receipt_mismatch"),
+        "timeout": ("timeout_ms",),
+        "manifest_mismatch": ("manifest_mismatch",),
+        "missing_input": ("missing_input_id",),
+        "environment_failure": ("environment_issue_code",),
+    }.get(failure_type)
+    if required_any and not any(details[field] is not None for field in required_any):
+        raise JobFailureSchemaError(
+            f"job failure.details must identify the {failure_type} cause"
+        )
+
+
 def _references(value: object) -> None:
     references = _object(value, "job failure.references", _REFERENCE_FIELDS)
     for field in ("job_manifest_hash", "input_manifest_hash"):
@@ -228,6 +247,10 @@ def _attribution(
     if reason is not None and (not isinstance(reason, str) or not reason):
         raise JobFailureSchemaError(
             "job failure.attribution.rejection_reason must be a non-empty string or null"
+        )
+    if failure_type == "contribution_rejected" and reason is None:
+        raise JobFailureSchemaError(
+            "job failure.attribution.rejection_reason is required for rejected contribution"
         )
 
 

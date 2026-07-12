@@ -100,6 +100,21 @@ class JobFailureSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(JobFailureSchemaError, "unsupported: stderr"):
             validate_job_failure_document(record)
 
+    def test_failure_types_require_machine_readable_causes(self) -> None:
+        cases = (
+            (self.examples[0], ("exit_code", "signal")),
+            (self.examples[1], ("validation_error_code", "receipt_mismatch")),
+            (self.examples[2], ("timeout_ms",)),
+            (self.examples[3], ("manifest_mismatch",)),
+        )
+        for example, fields in cases:
+            with self.subTest(failure_type=example["failure_type"]):
+                record = copy.deepcopy(example)
+                for field in fields:
+                    record["details"][field] = None
+                with self.assertRaisesRegex(JobFailureSchemaError, "must identify"):
+                    validate_job_failure_document(record)
+
     def test_rejects_invalid_references_and_attribution(self) -> None:
         mutations = (
             (("references", "job_manifest_hash"), "", "non-empty identifier"),
@@ -125,6 +140,11 @@ class JobFailureSchemaTests(unittest.TestCase):
         record = copy.deepcopy(self.examples[4])
         record["attribution"]["accepted_work_amount"] = 1
         with self.assertRaisesRegex(JobFailureSchemaError, "must be 0"):
+            validate_job_failure_document(record)
+
+        record = copy.deepcopy(self.examples[4])
+        record["attribution"]["rejection_reason"] = None
+        with self.assertRaisesRegex(JobFailureSchemaError, "is required"):
             validate_job_failure_document(record)
 
     def test_evidence_requires_safe_reference_and_observation_time(self) -> None:
