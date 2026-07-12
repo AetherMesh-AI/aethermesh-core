@@ -164,6 +164,23 @@ def _nullable_identifier(value: object, context: str) -> None:
         _identifier(value, context)
 
 
+def _content_hash(value: object, context: str) -> None:
+    if (
+        not isinstance(value, str)
+        or not value.startswith("sha256:")
+        or len(value) != 71
+        or any(character not in "0123456789abcdef" for character in value[7:])
+    ):
+        raise JobFailureSchemaError(
+            f"{context} must be a sha256 hash with 64 lowercase hexadecimal characters"
+        )
+
+
+def _nullable_content_hash(value: object, context: str) -> None:
+    if value is not None:
+        _content_hash(value, context)
+
+
 def _details(value: object) -> None:
     details = _object(value, "job failure.details", _DETAIL_FIELDS)
     for field in (
@@ -206,8 +223,8 @@ def _failure_specific_details(value: object, failure_type: object) -> None:
 def _references(value: object) -> None:
     references = _object(value, "job failure.references", _REFERENCE_FIELDS)
     for field in ("job_manifest_hash", "input_manifest_hash"):
-        _identifier(references[field], f"job failure.references.{field}")
-    _nullable_identifier(
+        _content_hash(references[field], f"job failure.references.{field}")
+    _nullable_content_hash(
         references["output_manifest_hash"],
         "job failure.references.output_manifest_hash",
     )
@@ -259,8 +276,17 @@ def _evidence(value: object, observed_at: object) -> None:
     _local_path_list(
         evidence["local_log_paths"], "job failure.evidence.local_log_paths"
     )
-    for field in ("content_hashes", "validation_command_refs"):
-        _identifier_list(evidence[field], f"job failure.evidence.{field}")
+    content_hashes = evidence["content_hashes"]
+    if not isinstance(content_hashes, list):
+        raise JobFailureSchemaError(
+            "job failure.evidence.content_hashes must be a list"
+        )
+    for content_hash in content_hashes:
+        _content_hash(content_hash, "job failure.evidence.content_hashes entries")
+    _identifier_list(
+        evidence["validation_command_refs"],
+        "job failure.evidence.validation_command_refs",
+    )
     timestamps = evidence["observed_timestamps"]
     if not isinstance(timestamps, list) or not timestamps:
         raise JobFailureSchemaError(

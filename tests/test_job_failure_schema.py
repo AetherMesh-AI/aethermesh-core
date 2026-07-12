@@ -117,7 +117,7 @@ class JobFailureSchemaTests(unittest.TestCase):
 
     def test_rejects_invalid_references_and_attribution(self) -> None:
         mutations = (
-            (("references", "job_manifest_hash"), "", "non-empty identifier"),
+            (("references", "job_manifest_hash"), "sha256:not-a-hash", "sha256 hash"),
             (("references", "validation_receipt_ids"), "receipt", "must be a list"),
             (("references", "lineage_parent_ids"), ["bad id"], "non-empty identifier"),
             (
@@ -159,7 +159,7 @@ class JobFailureSchemaTests(unittest.TestCase):
             ("local_log_paths", ["/private/job.log"], "safe relative paths"),
             ("local_log_paths", ["../private/job.log"], "safe relative paths"),
             ("local_log_paths", [r"C:\\private\\job.log"], "safe relative paths"),
-            ("content_hashes", ["bad hash"], "non-empty identifier"),
+            ("content_hashes", ["sha256:not-a-hash"], "sha256 hash"),
             ("observed_timestamps", [], "non-empty list"),
             ("observed_timestamps", [1], "UTC timestamp"),
             (
