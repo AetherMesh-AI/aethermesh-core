@@ -289,7 +289,9 @@ class RuntimeServiceTests(unittest.TestCase):
                         },
                     )
                     known = await client.get(f"/api/jobs/{accepted.json()['job_id']}")
-                    missing = await client.get("/api/jobs/missing-job")
+                    missing = await client.get(
+                        "/api/jobs/local-job-00000000000000000000000000000000"
+                    )
                     return known, missing
 
             known, missing = asyncio.run(fetch())
@@ -300,7 +302,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 missing.json(),
                 {
                     "schema_version": 1,
-                    "job_id": "missing-job",
+                    "job_id": "local-job-00000000000000000000000000000000",
                     "status": "not_found",
                     "error": "local job not found",
                 },

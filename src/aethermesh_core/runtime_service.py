@@ -533,9 +533,9 @@ class NodeRuntimeService:
         ):
             raise RuntimeServiceError("job submission schema_version must be integer 1")
         creator_node_id = request.get("creator_node_id")
-        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+        if not _safe_local_identifier(creator_node_id):
             raise RuntimeServiceError(
-                "job submission creator_node_id must be a non-empty string"
+                "job submission creator_node_id must be a safe non-empty identifier"
             )
         job_type = request.get("job_type")
         if not isinstance(job_type, str) or not job_type.strip():
@@ -552,10 +552,10 @@ class NodeRuntimeService:
             )
         lineage_parent_refs = request.get("lineage_parent_refs")
         if not isinstance(lineage_parent_refs, list) or not all(
-            isinstance(ref, str) and ref.strip() for ref in lineage_parent_refs
+            _safe_local_artifact_ref(ref) for ref in lineage_parent_refs
         ):
             raise RuntimeServiceError(
-                "job submission lineage_parent_refs must be a list of non-empty strings"
+                "job submission lineage_parent_refs must be a list of safe local references"
             )
         attribution_metadata = request.get("attribution_metadata")
         if not isinstance(attribution_metadata, dict):
@@ -690,6 +690,19 @@ class NodeRuntimeService:
         }:
             raise RuntimeServiceError(
                 "event_type must be job_submitted or job_executed"
+            )
+        if manifest_id is not None and not self._is_local_job_id(manifest_id):
+            raise RuntimeServiceError("manifest_id must be a local job ID")
+        if receipt_id is not None:
+            self._job_id_from_receipt_id(receipt_id)
+        if lineage_id is not None and not self._is_local_lineage_id(lineage_id):
+            raise RuntimeServiceError("lineage_id must be a local lineage ID")
+        if (
+            contribution_attribution_id is not None
+            and not self._is_local_attribution_id(contribution_attribution_id)
+        ):
+            raise RuntimeServiceError(
+                "contribution_attribution_id must be a local contribution attribution ID"
             )
         directory = self.paths.data_dir / "job-submissions"
         events = (
@@ -1233,6 +1246,24 @@ class NodeRuntimeService:
             and all(character in "0123456789abcdef" for character in suffix)
         )
 
+    @classmethod
+    def _is_local_lineage_id(cls, lineage_id: object) -> bool:
+        prefix = "local-lineage-"
+        return (
+            isinstance(lineage_id, str)
+            and lineage_id.startswith(prefix)
+            and cls._is_local_job_id(lineage_id.removeprefix(prefix))
+        )
+
+    @classmethod
+    def _is_local_attribution_id(cls, attribution_id: object) -> bool:
+        prefix = "local-contribution-"
+        return (
+            isinstance(attribution_id, str)
+            and attribution_id.startswith(prefix)
+            and cls._is_local_job_id(attribution_id.removeprefix(prefix))
+        )
+
     @staticmethod
     def _load_local_job_document(path: Path, label: str) -> dict[str, Any]:
         try:
@@ -1443,6 +1474,19 @@ def _safe_local_artifact_ref(value: object) -> bool:
         and "\\" not in value
         and ".." not in path.parts
         and not path.name.lower().endswith((".key", ".pem", ".env"))
+    )
+
+
+def _safe_local_identifier(value: object) -> bool:
+    """Allow readable local identifiers while rejecting path and URI-shaped values."""
+
+    return (
+        isinstance(value, str)
+        and bool(value.strip())
+        and not any(character in value for character in ("/", "\\", "?", "#", "@"))
+        and not value.startswith(("~", "."))
+        and "://" not in value
+        and ".." not in value
     )
 
 

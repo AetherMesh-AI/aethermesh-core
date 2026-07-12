@@ -54,6 +54,11 @@ def _runtime_error_code(
         return 400, "INVALID_INPUT", "The request is invalid."
     if request.url.path == "/api/validation-receipts":
         return 400, "VALIDATION_FAILURE", "Local validation evidence could not be read."
+    if (
+        request.url.path == "/api/audit-events"
+        and "manifest_id must be a local job id" in diagnostic
+    ):
+        return 400, "INVALID_INPUT", "The request is invalid."
     if "contribution_attribution" in diagnostic:
         return (
             400,
@@ -219,6 +224,8 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def job_status(job_id: str) -> dict[str, Any]:
         """Return one local submitted job's lifecycle and preserved evidence."""
 
+        if not runtime_service._is_local_job_id(job_id):
+            raise RuntimeServiceError("job_id must be a local job ID")
         return runtime_service.get_local_job_status(job_id)
 
     @app.get("/api/contributions")
