@@ -115,7 +115,10 @@ def _validate_metadata(value: Any) -> None:
     for field in ("name", "description"):
         if not isinstance(value[field], str) or not value[field].strip():
             raise CapabilityRecordError(f"metadata.{field} must be a non-empty string")
-    if value["capability_type"] not in CAPABILITY_TYPES:
+    if (
+        not isinstance(value["capability_type"], str)
+        or value["capability_type"] not in CAPABILITY_TYPES
+    ):
         raise CapabilityRecordError("metadata.capability_type is unknown")
     for field in ("supported_input_formats", "supported_output_formats"):
         entries = value[field]
@@ -156,7 +159,7 @@ def _validate_validation(value: Any) -> None:
         "validation",
     )
     status = value["status"]
-    if status not in VALIDATION_STATUSES:
+    if not isinstance(status, str) or status not in VALIDATION_STATUSES:
         raise CapabilityRecordError("validation.status is unknown")
     receipts = value["receipt_ids"]
     if not isinstance(receipts, list) or not all(

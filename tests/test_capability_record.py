@@ -51,6 +51,13 @@ class CapabilityRecordTests(unittest.TestCase):
             validate_capability_record(record)
 
         record = copy.deepcopy(self.record)
+        record["metadata"]["capability_type"] = []
+        with self.assertRaisesRegex(
+            CapabilityRecordError, "capability_type is unknown"
+        ):
+            validate_capability_record(record)
+
+        record = copy.deepcopy(self.record)
         record["validation"]["receipt_ids"] = ["https://not-local.example/receipt"]
         with self.assertRaisesRegex(CapabilityRecordError, "malformed receipt ID"):
             validate_capability_record(record)
@@ -97,6 +104,12 @@ class CapabilityRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.record)
         record["validation"]["status"] = "unknown"
+        with self.assertRaisesRegex(
+            CapabilityRecordError, "validation.status is unknown"
+        ):
+            validate_capability_record(record)
+
+        record["validation"]["status"] = []
         with self.assertRaisesRegex(
             CapabilityRecordError, "validation.status is unknown"
         ):
