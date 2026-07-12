@@ -75,7 +75,10 @@ class RuntimeServiceTests(unittest.TestCase):
             response = service.submit_local_job(
                 {
                     "job_type": "echo",
-                    "payload": {"message": "hello"},
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "hello"},
+                    },
                     "creator_node_id": "creator-local-a",
                     "requested_validation_mode": "deterministic-local",
                     "schema_version": 1,
@@ -94,7 +97,13 @@ class RuntimeServiceTests(unittest.TestCase):
             manifest_path = Path(temp_dir) / response["manifest_ref"]
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["job"]["job_id"], response["job_id"])
-            self.assertEqual(manifest["job"]["payload"], {"message": "hello"})
+            self.assertEqual(
+                manifest["job"]["input_payload"],
+                {"payload_type": "json", "content": {"message": "hello"}},
+            )
+            self.assertRegex(
+                manifest["job"]["input_payload_hash"], r"^sha256:[0-9a-f]{64}$"
+            )
             self.assertEqual(
                 manifest["lineage"]["parent_refs"], ["data/prior-job.json"]
             )
@@ -114,7 +123,10 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
-                "payload": {"message": "hello"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "schema_version": 1,
@@ -200,7 +212,10 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
-                "payload": {"message": "hello"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
                 "requested_validation_mode": "deterministic-local",
                 "schema_version": 1,
                 "lineage_parent_refs": [],
@@ -210,11 +225,70 @@ class RuntimeServiceTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeServiceError, "creator_node_id"):
                 service.submit_local_job(request)
             request["creator_node_id"] = "creator-local-a"
-            request["payload"] = ["not", "an", "object"]
-            with self.assertRaisesRegex(RuntimeServiceError, "payload"):
+            request["input_payload"] = ["not", "an", "object"]
+            with self.assertRaisesRegex(RuntimeServiceError, "input_payload"):
                 service.submit_local_job(request)
 
             self.assertFalse((Path(temp_dir) / "data" / "job-submissions").exists())
+
+    def test_input_payload_is_hashed_bounded_and_receipt_linked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "first"},
+                    "parameters": {"trim": False},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+            first = service.submit_local_job(request)
+            second = service.submit_local_job(
+                {
+                    **request,
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "second"},
+                    },
+                }
+            )
+            first_manifest = json.loads(
+                (Path(temp_dir) / first["manifest_ref"]).read_text()
+            )
+            second_manifest = json.loads(
+                (Path(temp_dir) / second["manifest_ref"]).read_text()
+            )
+            self.assertNotEqual(
+                first_manifest["job"]["input_payload_hash"],
+                second_manifest["job"]["input_payload_hash"],
+            )
+            service.execute_submitted_local_job(first["job_id"], "worker-local-a")
+            receipt = service.get_local_validation_receipt(work_id=first["job_id"])
+            self.assertEqual(receipt["manifest_ref"], first["manifest_ref"])
+            self.assertEqual(
+                receipt["input_payload_hash"],
+                first_manifest["job"]["input_payload_hash"],
+            )
+            for payload, message in (
+                ({"content": {}}, "requires payload_type"),
+                ({"payload_type": "json", "content": []}, "content"),
+                (
+                    {"payload_type": "json", "content": {}, "parameters": []},
+                    "parameters",
+                ),
+                (
+                    {"payload_type": "json", "content": {"text": "x" * 65536}},
+                    "65536-byte",
+                ),
+            ):
+                with self.subTest(payload=payload):
+                    with self.assertRaisesRegex(RuntimeServiceError, message):
+                        service.submit_local_job({**request, "input_payload": payload})
 
     def test_local_job_submission_api_reports_local_validation_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -230,7 +304,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
-                            "payload": {},
+                            "input_payload": {"payload_type": "json", "content": {}},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
                             "schema_version": 1,
@@ -242,7 +316,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
-                            "payload": {},
+                            "input_payload": {"payload_type": "json", "content": {}},
                             "requested_validation_mode": "deterministic-local",
                             "schema_version": 1,
                             "lineage_parent_refs": [],
@@ -264,7 +338,10 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
-                "payload": {"message": "hello"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "schema_version": 1,
@@ -368,7 +445,10 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
-                            "payload": {"message": "hello"},
+                            "input_payload": {
+                                "payload_type": "json",
+                                "content": {"message": "hello"},
+                            },
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
                             "schema_version": 1,
@@ -403,7 +483,10 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
-                "payload": {"message": "hello"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "schema_version": 1,
@@ -539,7 +622,10 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             request = {
                 "job_type": "echo",
-                "payload": {"message": "hello"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "schema_version": 1,
@@ -654,7 +740,10 @@ class RuntimeServiceTests(unittest.TestCase):
             accepted = service.submit_local_job(
                 {
                     "job_type": "echo",
-                    "payload": {"message": "hello"},
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "hello"},
+                    },
                     "creator_node_id": "creator-local-a",
                     "requested_validation_mode": "deterministic-local",
                     "schema_version": 1,

@@ -89,7 +89,10 @@ class ApiErrorTests(unittest.TestCase):
             valid_request = {
                 "schema_version": 1,
                 "job_type": "echo",
-                "payload": {"message": "safe"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "safe"},
+                },
                 "creator_node_id": "creator-local-a",
                 "requested_validation_mode": "deterministic-local",
                 "lineage_parent_refs": [],
@@ -124,7 +127,7 @@ class ApiErrorTests(unittest.TestCase):
                         ),
                         await client.post(
                             "/api/jobs",
-                            json={**valid_request, "payload": []},
+                            json={**valid_request, "input_payload": []},
                         ),
                         await client.post(
                             "/api/jobs",
