@@ -1119,6 +1119,21 @@ class RuntimeServiceTests(unittest.TestCase):
                 "local capability validation failed",
             )
 
+            with patch(
+                "aethermesh_core.runtime_service.LocalRunner.run",
+                side_effect=ValueError("private path"),
+            ):
+                failed_check = next(
+                    entry
+                    for entry in service.list_capabilities()["capabilities"]
+                    if entry["identifier"] == "work.echo"
+                )
+            self.assertEqual(failed_check["availability"]["status"], "degraded")
+            self.assertEqual(
+                failed_check["availability"]["reason"],
+                "local capability validation failed",
+            )
+
             with patch.object(service, "list_jobs", return_value={"current": [{}]}):
                 busy = next(
                     entry

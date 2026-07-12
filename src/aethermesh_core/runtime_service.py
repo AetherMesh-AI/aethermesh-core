@@ -401,14 +401,18 @@ class NodeRuntimeService:
             )
         if current_workers >= LOCAL_CAPABILITY_WORKER_CAPACITY:
             return _availability("busy", "local worker capacity is in use", capacity)
-        job = Job(
-            job_id="local-capability-check",
-            job_type=work_type,
-            payload=_capability_check_payload(work_type),
-        )
-        validation = validate_job_result(
-            job, LocalRunner(NodeIdentity(node_id=creator_node_id)).run(job)
-        )
+        try:
+            job = Job(
+                job_id="local-capability-check",
+                job_type=work_type,
+                payload=_capability_check_payload(work_type),
+            )
+            result = LocalRunner(NodeIdentity(node_id=creator_node_id)).run(job)
+            validation = validate_job_result(job, result)
+        except (KeyError, TypeError, ValueError):
+            return _availability(
+                "degraded", "local capability validation failed", capacity
+            )
         if not validation.valid:
             return _availability(
                 "degraded", "local capability validation failed", capacity
