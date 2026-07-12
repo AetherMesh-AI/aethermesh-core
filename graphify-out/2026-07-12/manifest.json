@@ -320,7 +320,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/result_hash.py": {
-    "mtime": 1783871618.0801938,
+    "mtime": 1783872723.14343,
     "ast_hash": "a64646758b4ad55d903046c98689ba02",
     "semantic_hash": ""
   },
@@ -355,7 +355,7 @@
     "semantic_hash": ""
   },
   "tests/test_result_hash.py": {
-    "mtime": 1783871837.6615798,
+    "mtime": 1783872723.143662,
     "ast_hash": "1ba7381e6c0bb99b4fab8065f4e10894",
     "semantic_hash": ""
   },
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "tests/test_job_envelope.py": {
-    "mtime": 1783860731.5785284,
-    "ast_hash": "b13a0d23a77da9340d212cedc26f2fe3",
+    "mtime": 1783873665.7485235,
+    "ast_hash": "f521bf2fb586ec5c494566c22a0b716b",
     "semantic_hash": ""
   },
   "docs/phase-1-job-envelope-schema.md": {
@@ -810,7 +810,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_result_schema.py": {
-    "mtime": 1783871630.9054072,
+    "mtime": 1783872723.1431608,
     "ast_hash": "e384deda52f6feea05bb49fa0eda3732",
     "semantic_hash": ""
   },
@@ -820,7 +820,7 @@
     "semantic_hash": ""
   },
   "docs/phase-1-job-result-schema.md": {
-    "mtime": 1783871676.0504282,
+    "mtime": 1783872723.1310983,
     "ast_hash": "c3151454fed273fbc7c39451a6a9a44b",
     "semantic_hash": ""
   },
@@ -842,6 +842,16 @@
   "docs/phase-1-job-failure-schema.md": {
     "mtime": 1783871370.0810466,
     "ast_hash": "86306f6ded8725a7413a8511276dc957",
+    "semantic_hash": ""
+  },
+  "examples/job-envelopes/complete-local-echo.json": {
+    "mtime": 1783873026.1033294,
+    "ast_hash": "ab3914bb82cfa8d0e99f556df338f97b",
+    "semantic_hash": ""
+  },
+  "examples/job-envelopes/minimal-local-echo.json": {
+    "mtime": 1783873026.1066077,
+    "ast_hash": "83c1a02bc96663834302695ad2d536c1",
     "semantic_hash": ""
   }
 }

@@ -118,6 +118,65 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
 
+    def test_supplied_local_job_id_persists_and_rejects_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            job_id = "local-job-0123456789abcdef0123456789abcdef"
+            request = {
+                "schema_version": 1,
+                "job_id": job_id,
+                "job_type": "echo",
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "durable"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            submission = service.submit_local_job(request)
+            manifest_path = root / submission["manifest_ref"]
+            status_path = service._job_status_path(job_id)
+            manifest_before = manifest_path.read_bytes()
+            status_before = status_path.read_bytes()
+
+            restarted = NodeRuntimeService.from_home(root)
+            discovered = restarted.get_local_job_status(job_id)
+            self.assertEqual(discovered["job_id"], job_id)
+            self.assertEqual(discovered["status"], "queued")
+            self.assertEqual(discovered["creator_node_id"], "creator-local-a")
+            self.assertEqual(discovered["manifest_ref"], submission["manifest_ref"])
+            self.assertEqual(
+                discovered["lineage"]["parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                discovered["contribution_attribution"]["metadata"],
+                {"project": "prototype"},
+            )
+
+            with self.assertRaisesRegex(RuntimeServiceError, "already exists"):
+                restarted.submit_local_job(
+                    {
+                        **request,
+                        "input_payload": {
+                            "payload_type": "json",
+                            "content": {"message": "must not overwrite"},
+                        },
+                    }
+                )
+            self.assertEqual(manifest_path.read_bytes(), manifest_before)
+            self.assertEqual(status_path.read_bytes(), status_before)
+            with self.assertRaisesRegex(RuntimeServiceError, "job_id"):
+                restarted.submit_local_job({**request, "job_id": "local-job-invalid"})
+
+            completed = restarted.execute_submitted_local_job(job_id, "worker-local-a")
+            receipt_path = root / completed["validation"]["receipt_ref"]
+            self.assertTrue(receipt_path.is_file())
+            self.assertEqual(manifest_path.read_bytes(), manifest_before)
+            self.assertEqual(json.loads(receipt_path.read_text())["job_id"], job_id)
+
     def test_local_job_states_are_auditable_and_terminal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
