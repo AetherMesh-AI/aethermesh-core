@@ -19,6 +19,7 @@ from typer.testing import CliRunner
 from aethermesh_core import app_cli
 from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
+from aethermesh_core.runner import LocalRunner
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
@@ -826,6 +827,71 @@ class RuntimeServiceTests(unittest.TestCase):
                 with self.subTest(payload=payload):
                     with self.assertRaisesRegex(RuntimeServiceError, message):
                         service.submit_local_job({**request, "input_payload": payload})
+
+    def test_deterministic_executor_metadata_and_receipt_preserve_provenance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "repeatable"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            first = service.submit_local_job(request)
+            second = service.submit_local_job(request)
+            service.execute_submitted_local_job(first["job_id"], "worker-local-a")
+            with patch.object(LocalRunner, "EXECUTOR_VERSION", "2"):
+                service.execute_submitted_local_job(second["job_id"], "worker-local-a")
+
+            first_receipt = json.loads(
+                (
+                    root
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{first['job_id']}.json"
+                ).read_text()
+            )
+            second_receipt = json.loads(
+                (
+                    root
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{second['job_id']}.json"
+                ).read_text()
+            )
+            self.assertEqual(
+                first_receipt["execution"]["output_digest"],
+                second_receipt["execution"]["output_digest"],
+            )
+            self.assertEqual(
+                first_receipt["execution"]["executor_name"], "aethermesh-local-runner"
+            )
+            self.assertEqual(first_receipt["execution"]["executor_version"], "1")
+            self.assertEqual(second_receipt["execution"]["executor_version"], "2")
+            self.assertEqual(first_receipt["manifest_ref"], first["manifest_ref"])
+            self.assertEqual(first_receipt["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                first_receipt["lineage_parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                first_receipt["contribution_attribution"],
+                {
+                    "job_id": first["job_id"],
+                    "creator_node_id": "creator-local-a",
+                    "metadata": {"project": "prototype"},
+                },
+            )
+            self.assertTrue(first_receipt["validation"]["valid"])
 
     def test_local_job_submission_api_reports_local_validation_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

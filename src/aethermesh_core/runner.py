@@ -15,6 +15,8 @@ from aethermesh_core.models import Job, JobResult, NodeIdentity
 class LocalRunner:
     """Execute supported local job types for a node."""
 
+    EXECUTOR_NAME = "aethermesh-local-runner"
+    EXECUTOR_VERSION = "1"
     SUPPORTED_ECHO_JOB_TYPE = "echo"
     SUPPORTED_TEXT_STATS_JOB_TYPE = "text_stats"
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"

@@ -1672,6 +1672,17 @@ class NodeRuntimeService:
         validation = validate_job_result(job, result)
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        execution_metadata = {
+            "executor_name": LocalRunner.EXECUTOR_NAME,
+            "executor_version": LocalRunner.EXECUTOR_VERSION,
+            "input_digest": payload_hash,
+            "output_digest": canonical_json_hash(
+                {"output": result.output}, prefix="sha256:"
+            ),
+            "executed_at": int(time.time()),
+            "creator_node_id": manifest["creator_node_id"],
+            "lineage_parent_refs": manifest["lineage"]["parent_refs"],
+        }
         atomic_create_json(
             self.paths.data_dir / "job-results" / f"{job_id}.json",
             {
@@ -1679,6 +1690,7 @@ class NodeRuntimeService:
                 "job_id": job_id,
                 "worker_node_id": worker_node_id,
                 "result": result.to_dict(),
+                "execution": execution_metadata,
             },
         )
         atomic_create_json(
@@ -1692,6 +1704,10 @@ class NodeRuntimeService:
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
+                "execution": execution_metadata,
+                "creator_node_id": manifest["creator_node_id"],
+                "lineage_parent_refs": manifest["lineage"]["parent_refs"],
+                "contribution_attribution": manifest["contribution_attribution"],
                 "validation": {
                     **validation.to_dict(),
                     "execution_outcome": result.status,
