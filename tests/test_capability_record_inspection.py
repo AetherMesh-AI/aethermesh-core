@@ -139,6 +139,113 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
             self.assertEqual(payload["record_count"], 0)
             self.assertEqual(payload["records"], [])
 
+    def test_invalid_records_cannot_populate_manifests_receipts_lineage_or_attribution(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(temp_dir)
+            initialized = service.initialize_local_node_data()
+            directory = Path(temp_dir) / "data" / "capability-records"
+            directory.mkdir()
+            repository_root = Path(__file__).resolve().parents[1]
+            source = repository_root / "examples/capabilities/local-echo-worker.json"
+            schema_directory = Path(temp_dir) / "examples/schemas"
+            schema_directory.mkdir(parents=True)
+            for schema_name in (
+                "local-echo-input.schema.json",
+                "local-echo-output.schema.json",
+            ):
+                shutil.copyfile(
+                    repository_root / "examples/schemas" / schema_name,
+                    schema_directory / schema_name,
+                )
+
+            baseline = json.loads(source.read_text(encoding="utf-8"))
+            local_node_id = initialized["node_id"]
+            baseline["node_id"] = local_node_id
+            baseline["creator_node_id"] = local_node_id
+            baseline["contribution_attribution"]["creator_node_id"] = local_node_id
+            baseline["contribution_attribution"]["maintainer_node_id"] = local_node_id
+            baseline["validation"] = {
+                "status": "passed",
+                "receipt_ids": ["receipt.echo-local-01"],
+                "receipt_evidence": [
+                    {
+                        "receipt_id": "receipt.echo-local-01",
+                        "capability_name": baseline["metadata"]["name"],
+                        "capability_version": baseline["capability_version"],
+                        "creator_node_id": local_node_id,
+                        "manifest_ref": baseline["lineage"]["source_manifest_ref"],
+                        "input_schema": baseline["metadata"]["supported_input_schemas"][
+                            0
+                        ],
+                        "output_schema": baseline["metadata"][
+                            "supported_output_schemas"
+                        ][0],
+                    }
+                ],
+                "last_validated_at": "2026-07-12T00:05:00Z",
+                "check_name": "local-echo-check",
+            }
+            cases = {
+                "missing-required-field": lambda record: record.pop("creator_node_id"),
+                "invalid-creator-node-id": lambda record: record.update(
+                    creator_node_id="bad creator"
+                ),
+                "unsupported-capability-type": lambda record: record["metadata"].update(
+                    type="remote"
+                ),
+                "malformed-manifest-reference": lambda record: record.update(
+                    manifest_refs=["../outside.json"]
+                ),
+                "invalid-capability-version": lambda record: record.update(
+                    capability_version="1.0"
+                ),
+                "corrupted-validation-receipt-reference": lambda record: record[
+                    "validation"
+                ]["receipt_evidence"][0].update(receipt_id="receipt.other-01"),
+                "missing-lineage": lambda record: record.pop("lineage"),
+                "missing-contribution-attribution": lambda record: record.pop(
+                    "contribution_attribution"
+                ),
+                "untrusted-extra-field": lambda record: record.update(
+                    routing_override="accept"
+                ),
+            }
+            for name, mutate in cases.items():
+                record = json.loads(json.dumps(baseline))
+                mutate(record)
+                (directory / f"{name}.json").write_text(
+                    json.dumps(record), encoding="utf-8"
+                )
+
+            records = service.inspect_capability_records()["records"]
+
+            self.assertEqual(len(records), len(cases))
+            for record in records:
+                with self.subTest(record_ref=record["record_ref"]):
+                    self.assertEqual(record["state"], "invalid")
+                    self.assertIsNone(record["capability_id"])
+                    self.assertEqual(record["manifest_refs"], [])
+                    self.assertEqual(record["validation_receipt_refs"], [])
+                    self.assertEqual(
+                        record["lineage"],
+                        {
+                            "source_manifest_ref": None,
+                            "prior_capability_id": None,
+                            "local_build_artifact_ref": None,
+                        },
+                    )
+                    self.assertEqual(
+                        record["contribution_attribution"],
+                        {
+                            "creator_node_id": None,
+                            "maintainer_node_id": None,
+                            "work_receipt_ids": [],
+                        },
+                    )
+                    self.assertTrue(record["errors"])
+
     def test_symlinked_record_is_reported_invalid_without_being_read(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(temp_dir)
