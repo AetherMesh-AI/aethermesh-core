@@ -23,10 +23,17 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
                 Path(__file__).parents[1]
                 / "examples/capabilities/local-echo-worker.json"
             )
-            shutil.copytree(
-                Path(__file__).parents[1] / "examples/schemas",
-                Path(temp_dir) / "examples/schemas",
-            )
+            schema_source = Path(__file__).parents[1] / "examples/schemas"
+            schema_directory = Path(temp_dir) / "examples/schemas"
+            schema_directory.mkdir(parents=True)
+            for schema_name in (
+                "local-echo-input.schema.json",
+                "local-echo-output.schema.json",
+            ):
+                shutil.copyfile(
+                    schema_source / schema_name,
+                    schema_directory / schema_name,
+                )
             record = json.loads(source.read_text(encoding="utf-8"))
             record["node_id"] = initialized["node_id"]
             record["creator_node_id"] = initialized["node_id"]
