@@ -28,10 +28,7 @@ class ApiErrorTests(unittest.TestCase):
                 async with httpx.AsyncClient(
                     transport=transport, base_url="http://testserver"
                 ) as client:
-                    with self.assertLogs("aethermesh_core.api", level="ERROR") as logs:
-                        internal = await client.get("/api/jobs")
-                    self.assertIn("unexpected-local-secret", "\n".join(logs.output))
-                    return (
+                    responses = (
                         await client.post("/api/jobs", json=[]),
                         await client.get("/api/missing-route"),
                         await client.post("/health"),
@@ -46,8 +43,11 @@ class ApiErrorTests(unittest.TestCase):
                             "/api/audit-events",
                             params={"contribution_attribution_id": ""},
                         ),
-                        internal,
                     )
+                    with self.assertLogs("aethermesh_core.api", level="ERROR") as logs:
+                        internal = await client.get("/api/jobs")
+                    self.assertIn("unexpected-local-secret", "\n".join(logs.output))
+                    return (*responses, internal)
 
             with patch.object(
                 service,
