@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 CAPABILITY_RECORD_SCHEMA_VERSION = 1
@@ -44,7 +45,11 @@ def validate_capability_record(document: Any) -> dict[str, Any]:
         },
         "capability record",
     )
-    if document["schema_version"] != CAPABILITY_RECORD_SCHEMA_VERSION:
+    if (
+        not isinstance(document["schema_version"], int)
+        or isinstance(document["schema_version"], bool)
+        or document["schema_version"] != CAPABILITY_RECORD_SCHEMA_VERSION
+    ):
         raise CapabilityRecordError("schema_version must be integer 1")
     _require_identifier(document["capability_id"], "capability_id")
     _require_identifier(document["creator_node_id"], "creator_node_id")
@@ -73,6 +78,12 @@ def _require_identifier(value: Any, field: str) -> None:
 def _require_timestamp(value: Any, field: str) -> None:
     if not isinstance(value, str) or not _TIMESTAMP.fullmatch(value):
         raise CapabilityRecordError(f"{field} must be a UTC timestamp ending in Z")
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise CapabilityRecordError(
+            f"{field} must be a UTC timestamp ending in Z"
+        ) from exc
 
 
 def _require_local_reference(value: Any, field: str) -> None:
@@ -80,6 +91,7 @@ def _require_local_reference(value: Any, field: str) -> None:
         not isinstance(value, str)
         or not value
         or value.startswith(("/", "\\"))
+        or "\\" in value
         or "://" in value
         or ".." in value.split("/")
     ):

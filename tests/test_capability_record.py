@@ -31,6 +31,17 @@ class CapabilityRecordTests(unittest.TestCase):
             ):
                 validate_capability_record(record)
 
+    def test_schema_version_and_timestamps_are_real_json_values(self) -> None:
+        record = copy.deepcopy(self.record)
+        record["schema_version"] = True
+        with self.assertRaisesRegex(CapabilityRecordError, "must be integer 1"):
+            validate_capability_record(record)
+
+        record = copy.deepcopy(self.record)
+        record["created_at"] = "2026-99-11T22:20:09Z"
+        with self.assertRaisesRegex(CapabilityRecordError, "UTC timestamp"):
+            validate_capability_record(record)
+
     def test_unknown_type_and_malformed_receipt_references_fail(self) -> None:
         record = copy.deepcopy(self.record)
         record["metadata"]["capability_type"] = "remote-gateway"
@@ -109,6 +120,11 @@ class CapabilityRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.record)
         record["lineage"]["source_manifest_ref"] = "../not-local.json"
+        with self.assertRaisesRegex(CapabilityRecordError, "safe relative"):
+            validate_capability_record(record)
+
+        record = copy.deepcopy(self.record)
+        record["lineage"]["source_manifest_ref"] = "..\\not-local.json"
         with self.assertRaisesRegex(CapabilityRecordError, "safe relative"):
             validate_capability_record(record)
 
