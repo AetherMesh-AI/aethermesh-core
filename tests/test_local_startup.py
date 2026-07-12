@@ -132,6 +132,26 @@ class LocalNodeStartupTests(unittest.TestCase):
             with self.assertRaisesRegex(LocalStartupError, "required startup manifest"):
                 start_local_node(runtime)
 
+    def test_existing_version_one_manifest_is_upgraded_with_advertisement(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            first = start_local_node(runtime)
+            manifest_path = runtime / first.manifest_path
+            manifest = self._load(manifest_path)
+            manifest.pop("capability_advertisements")
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            second = start_local_node(runtime)
+
+            upgraded = self._load(manifest_path)
+            advertisement = upgraded["capability_advertisements"][0]
+            self.assertEqual(second.creator_node_id, first.creator_node_id)
+            self.assertEqual(advertisement["creator_node_id"], first.creator_node_id)
+            self.assertEqual(
+                advertisement["validation"]["required_receipt_ref"],
+                second.validation_receipt_path,
+            )
+
     def test_existing_config_missing_identity_fails_before_writes(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             runtime = Path(temp_dir)

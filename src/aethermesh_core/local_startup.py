@@ -279,6 +279,18 @@ def start_local_node(
             replace_existing=False,
         )
     manifest = _load_manifest(manifest_path)
+    if "capability_advertisements" not in manifest:
+        manifest["capability_advertisements"] = _default_capability_advertisements(
+            creator_node_id=creator_node_id,
+            manifest_ref=_relative_ref(root, manifest_path),
+            validation_receipt_ref=receipt_ref,
+        )
+        try:
+            atomic_write_json(manifest_path, manifest)
+        except OSError as exc:
+            raise LocalStartupError(
+                f"could not upgrade startup manifest capability advertisement: {exc}"
+            ) from exc
     _validate_manifest(
         manifest,
         expected_node_id=identity.node_id,
@@ -484,33 +496,11 @@ def _default_manifest_document(
         "node": {"node_id": node_id, "creator_node_id": creator_node_id},
         "runtime_version": runtime_metadata,
         "capabilities": list(DEFAULT_LOCAL_CAPABILITIES),
-        "capability_advertisements": [
-            {
-                "capability_id": "local.manifest-validation",
-                "name": "Local startup manifest validation",
-                "version": "1.0.0",
-                "description": "Validates one local startup manifest before accepting local work.",
-                "supported_input": {
-                    "format": "application/json",
-                    "shape": "local_node_startup manifest",
-                },
-                "supported_output": {
-                    "format": "application/json",
-                    "shape": "startup_validation receipt",
-                },
-                "creator_node_id": creator_node_id,
-                "validation": {
-                    "check_name": "startup-manifest-validation",
-                    "required_receipt_ref": validation_receipt_ref,
-                },
-                "lineage": {"source_manifest_ref": manifest_ref},
-                "contribution_attribution": {
-                    "creator_node_id": creator_node_id,
-                    "work_record_ref": validation_receipt_ref,
-                },
-                "network_mode": "local-only-no-p2p",
-            }
-        ],
+        "capability_advertisements": _default_capability_advertisements(
+            creator_node_id=creator_node_id,
+            manifest_ref=manifest_ref,
+            validation_receipt_ref=validation_receipt_ref,
+        ),
         "work_directories": dict(runtime_dirs),
         "validation": {
             "startup_validation_required": True,
@@ -519,6 +509,38 @@ def _default_manifest_document(
             "accepts_work_after_startup_validation": True,
         },
     }
+
+
+def _default_capability_advertisements(
+    *, creator_node_id: str, manifest_ref: str, validation_receipt_ref: str
+) -> list[dict[str, object]]:
+    return [
+        {
+            "capability_id": "local.manifest-validation",
+            "name": "Local startup manifest validation",
+            "version": "1.0.0",
+            "description": "Validates one local startup manifest before accepting local work.",
+            "supported_input": {
+                "format": "application/json",
+                "shape": "local_node_startup manifest",
+            },
+            "supported_output": {
+                "format": "application/json",
+                "shape": "startup_validation receipt",
+            },
+            "creator_node_id": creator_node_id,
+            "validation": {
+                "check_name": "startup-manifest-validation",
+                "required_receipt_ref": validation_receipt_ref,
+            },
+            "lineage": {"source_manifest_ref": manifest_ref},
+            "contribution_attribution": {
+                "creator_node_id": creator_node_id,
+                "work_record_ref": validation_receipt_ref,
+            },
+            "network_mode": "local-only-no-p2p",
+        }
+    ]
 
 
 def _load_manifest(path: Path) -> dict[str, object]:
