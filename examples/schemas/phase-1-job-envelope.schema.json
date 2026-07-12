@@ -22,7 +22,7 @@
     "schema_version": {"const": 1},
     "creator_node_id": {"type": "string", "minLength": 1},
     "created_at": {"type": "string", "format": "date-time"},
-    "job_type": {"type": "string", "minLength": 1},
+    "job_type": {"type": "string", "enum": ["echo", "keyword_extract", "text_chunk", "text_embed", "text_retrieve", "text_stats"]},
     "input_manifest": {
       "type": "object",
       "additionalProperties": false,

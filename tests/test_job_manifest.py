@@ -259,6 +259,16 @@ class JobManifestTests(unittest.TestCase):
                 }
             )
 
+    def test_unsupported_job_type_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ManifestError, "job_type must be one of"):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": ["local-node-a"],
+                    "jobs": [{"job_id": "future-1", "job_type": "future_job"}],
+                }
+            )
+
     def test_invalid_job_entry_is_rejected(self) -> None:
         with self.assertRaisesRegex(ManifestError, r"jobs\[0\] must be a JSON object"):
             self._load({"version": 1, "nodes": ["local-node-a"], "jobs": ["bad"]})

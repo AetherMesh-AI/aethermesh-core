@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 from typing import Any
 
+from aethermesh_core.scheduler import SUPPORTED_LOCAL_JOB_TYPES
+
 JOB_ENVELOPE_SCHEMA_VERSION = 1
 _REQUIRED_FIELDS = frozenset(
     {
@@ -46,7 +48,7 @@ def validate_job_envelope(document: object) -> dict[str, Any]:
     _integer(envelope, "schema_version", JOB_ENVELOPE_SCHEMA_VERSION, "job envelope")
     _text(envelope, "creator_node_id", "job envelope")
     _timestamp(envelope, "created_at")
-    _text(envelope, "job_type", "job envelope")
+    _job_type(envelope["job_type"])
     _input_manifest(envelope["input_manifest"])
     output_paths = _expected_outputs(envelope["expected_outputs"])
     _validation_requirements(envelope["validation_requirements"])
@@ -92,6 +94,16 @@ def _job_id(value: object) -> str:
             "job envelope.job_id must be a local ID or sha256 content ID"
         )
     return value
+
+
+def _job_type(value: object) -> str:
+    job_type = _non_empty_text(value, "job envelope.job_type")
+    if job_type not in SUPPORTED_LOCAL_JOB_TYPES:
+        supported_types = ", ".join(SUPPORTED_LOCAL_JOB_TYPES)
+        raise JobEnvelopeError(
+            f"job envelope.job_type must be one of: {supported_types}"
+        )
+    return job_type
 
 
 def _integer(document: dict[str, Any], field: str, expected: int, context: str) -> None:

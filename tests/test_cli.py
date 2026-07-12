@@ -749,7 +749,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("error: manifest JSON is malformed", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
-    def test_run_local_batch_no_capable_node_returns_nonzero(self) -> None:
+    def test_run_local_batch_rejects_unsupported_job_type(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             manifest_path = Path(temp_dir) / "local-batch.json"
             manifest_path.write_text(
@@ -772,7 +772,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("job_id=bad-1 job_type=unknown", stderr.getvalue())
+        self.assertIn("manifest jobs[0].job_type must be one of", stderr.getvalue())
         self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_run_local_batch_does_not_write_ledger_by_default(self) -> None:
@@ -1108,7 +1108,7 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(persisted["records"][0]["job_type"], "echo")
 
-    def test_run_local_batch_unsupported_job_type_persists_invalid_audit_record(
+    def test_run_local_batch_unsupported_job_type_does_not_write_audit_record(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1144,19 +1144,11 @@ class CliTests(unittest.TestCase):
                         str(ledger_path),
                     ]
                 )
-            persisted = json.loads(ledger_path.read_text(encoding="utf-8"))
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Unsupported job type: unknown", stderr.getvalue())
-        self.assertEqual(len(persisted["records"]), 1)
-        self.assertEqual(persisted["records"][0]["status"], "failed")
-        self.assertEqual(persisted["records"][0]["contribution_units"], 0)
-        self.assertEqual(persisted["records"][0]["validation_valid"], False)
-        self.assertEqual(
-            persisted["records"][0]["validation_reason"], "unsupported_job_type"
-        )
-        self.assertEqual(persisted["records"][0]["job_type"], "unknown")
+        self.assertIn("manifest jobs[0].job_type must be one of", stderr.getvalue())
+        self.assertFalse(ledger_path.exists())
 
     def test_run_local_batch_malformed_ledger_returns_nonzero_without_overwrite(
         self,
