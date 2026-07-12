@@ -2,7 +2,7 @@
   "schema_version": 1, "failure_id": "failure-attribution-001", "job_id": "job-005", "task_id": "task-005", "creator_node_id": "node.creator", "executing_node_id": "node.worker", "observed_at": "2026-07-12T14:04:00.000Z",
   "failure_type": "contribution_rejected", "failure_stage": "attribution", "retryable": false, "severity": "info", "human_summary": "Attempted work was recorded but not accepted.",
   "details": {"exit_code": 0, "signal": null, "timeout_ms": null, "validation_error": null, "missing_input": null, "manifest_mismatch": null, "receipt_mismatch": "receipt belongs to another task", "environment_issue": null},
-  "links": {"job_manifest_hash": "sha256:job005", "input_manifest_hash": "sha256:input005", "output_manifest_hash": "sha256:output005", "validation_receipt_ids": ["receipt-005"], "lineage_parent_ids": ["task-parent-005"]},
+  "links": {"job_manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "input_manifest_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "output_manifest_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444", "validation_receipt_ids": ["receipt-005"], "lineage_parent_ids": ["task-parent-005"]},
   "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-005", "accepted_work_amount": 0, "rejection_reason": "validation receipt could not be attributed"},
-  "evidence": {"local_log_paths": [], "content_hashes": ["sha256:receipt005"], "validation_command_refs": ["receipt-check-005"], "observed_at": ["2026-07-12T14:04:00.000Z"]}
+  "evidence": {"local_log_paths": [], "content_hashes": ["sha256:3333333333333333333333333333333333333333333333333333333333333333"], "validation_command_refs": ["receipt-check-005"], "observed_at": ["2026-07-12T14:04:00.000Z"]}
 }

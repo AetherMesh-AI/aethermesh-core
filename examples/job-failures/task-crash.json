@@ -12,7 +12,7 @@
   "severity": "error",
   "human_summary": "Worker process exited before producing output.",
   "details": {"exit_code": 1, "signal": null, "timeout_ms": null, "validation_error": null, "missing_input": null, "manifest_mismatch": null, "receipt_mismatch": null, "environment_issue": null},
-  "links": {"job_manifest_hash": "sha256:job001", "input_manifest_hash": "sha256:input001", "output_manifest_hash": null, "validation_receipt_ids": [], "lineage_parent_ids": ["job-parent-001"]},
+  "links": {"job_manifest_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "input_manifest_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "output_manifest_hash": null, "validation_receipt_ids": [], "lineage_parent_ids": ["job-parent-001"]},
   "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-001", "accepted_work_amount": 0, "rejection_reason": "execution did not complete"},
-  "evidence": {"local_log_paths": ["logs/job-001.stderr"], "content_hashes": ["sha256:log001"], "validation_command_refs": [], "observed_at": ["2026-07-12T14:00:00.000Z"]}
+  "evidence": {"local_log_paths": ["logs/job-001.stderr"], "content_hashes": ["sha256:3333333333333333333333333333333333333333333333333333333333333333"], "validation_command_refs": [], "observed_at": ["2026-07-12T14:00:00.000Z"]}
 }

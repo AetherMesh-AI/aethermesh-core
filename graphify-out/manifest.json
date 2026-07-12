@@ -825,38 +825,38 @@
     "semantic_hash": ""
   },
   "examples/job-failures/manifest-mismatch.json": {
-    "mtime": 1783864759.6665692,
-    "ast_hash": "eee956ae852b2e03cb6dff4d7b39607f",
+    "mtime": 1783865516.5298667,
+    "ast_hash": "795f8b53b7fa484f0e9ef2b4b574edfb",
     "semantic_hash": ""
   },
   "examples/job-failures/rejected-contribution.json": {
-    "mtime": 1783864759.6507404,
-    "ast_hash": "9a7a4edf6b020217f6cbfd4aeff333eb",
+    "mtime": 1783865541.2330155,
+    "ast_hash": "078c1137bf802fe8f6fc35fe85c963e6",
     "semantic_hash": ""
   },
   "examples/job-failures/task-crash.json": {
-    "mtime": 1783864759.672041,
-    "ast_hash": "9d50d4ac9911477c0be9c7de76d63485",
+    "mtime": 1783865510.7554045,
+    "ast_hash": "2a1e9e34d6205f9b40de571f85864b42",
     "semantic_hash": ""
   },
   "examples/job-failures/timeout.json": {
-    "mtime": 1783864759.6757264,
-    "ast_hash": "50a2fc924e28249f4aaed4fed216ae6e",
+    "mtime": 1783865513.0791323,
+    "ast_hash": "26a1ddc9f203589bdc01fec95be54307",
     "semantic_hash": ""
   },
   "examples/job-failures/validation-failure.json": {
-    "mtime": 1783864759.6806786,
-    "ast_hash": "d71145a9ccb64f37a51759630a3a5ae1",
+    "mtime": 1783865536.6154737,
+    "ast_hash": "b6422499f9b85cc20a52e32c4ca70cc8",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_failure_schema.py": {
-    "mtime": 1783864965.3174129,
-    "ast_hash": "d92374dcf9e71dcdb4176e114f11148d",
+    "mtime": 1783865492.0550177,
+    "ast_hash": "465011eec0bf516bad17a3576ceade97",
     "semantic_hash": ""
   },
   "tests/test_job_failure_schema.py": {
-    "mtime": 1783864965.3173835,
-    "ast_hash": "59081a0e4dc6ceaebfb1f89c3976fbce",
+    "mtime": 1783865550.59118,
+    "ast_hash": "1504687323475b43c45c5f294ce03ff0",
     "semantic_hash": ""
   },
   "docs/phase-1-job-failure-schema.md": {

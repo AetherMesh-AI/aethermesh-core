@@ -104,6 +104,32 @@ class JobFailureSchemaTests(unittest.TestCase):
                 with self.assertRaisesRegex(JobFailureSchemaError, message):
                     validate_job_failure_document(document)
 
+    def test_rejects_malformed_hashes_and_nonlocal_evidence_paths(self) -> None:
+        for path in ("C:/private/job.log", "https://host/job.log", "logs\\job.log"):
+            with self.subTest(path=path):
+                document = copy.deepcopy(self.failure)
+                document["evidence"]["local_log_paths"] = [path]
+                with self.assertRaisesRegex(
+                    JobFailureSchemaError, "repository-relative"
+                ):
+                    validate_job_failure_document(document)
+
+        for section, field in (
+            ("links", "job_manifest_hash"),
+            ("evidence", "content_hashes"),
+        ):
+            with self.subTest(field=field):
+                document = copy.deepcopy(self.failure)
+                document[section][field] = (
+                    "sha256:not-a-digest"
+                    if section == "links"
+                    else ["sha256:not-a-digest"]
+                )
+                with self.assertRaisesRegex(
+                    JobFailureSchemaError, "sha256 content hash"
+                ):
+                    validate_job_failure_document(document)
+
 
 if __name__ == "__main__":
     unittest.main()

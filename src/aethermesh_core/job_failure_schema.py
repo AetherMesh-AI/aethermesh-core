@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Any
@@ -72,6 +73,7 @@ _ATTRIBUTION_FIELDS = frozenset(
 _EVIDENCE_FIELDS = frozenset(
     {"local_log_paths", "content_hashes", "validation_command_refs", "observed_at"}
 )
+_SHA256 = re.compile(r"sha256:[0-9a-f]{64}\Z")
 
 
 class JobFailureSchemaError(ValueError):
@@ -176,9 +178,9 @@ def _details(value: object) -> None:
 def _links(value: object) -> None:
     links = _object(value, "job failure.links", _LINK_FIELDS)
     for field in ("job_manifest_hash", "input_manifest_hash"):
-        _identifier(links[field], f"job failure.links.{field}")
+        _content_hash(links[field], f"job failure.links.{field}")
     if links["output_manifest_hash"] is not None:
-        _identifier(
+        _content_hash(
             links["output_manifest_hash"], "job failure.links.output_manifest_hash"
         )
     for field in ("validation_receipt_ids", "lineage_parent_ids"):
@@ -218,12 +220,24 @@ def _evidence(value: object) -> None:
     for path in paths:
         _identifier(path, "job failure.evidence.local_log_paths entries")
         parsed = PurePosixPath(path)
-        if parsed.is_absolute() or ".." in parsed.parts:
+        if (
+            parsed.is_absolute()
+            or ".." in parsed.parts
+            or "\\" in path
+            or re.match(r"[A-Za-z]:", path)
+            or "://" in path
+            or any(part in {"", ".", ".."} for part in path.split("/"))
+        ):
             raise JobFailureSchemaError(
                 "local log paths must be safe repository-relative references"
             )
-    for field in ("content_hashes", "validation_command_refs"):
-        _identifier_list(evidence[field], f"job failure.evidence.{field}")
+    _content_hash_list(
+        evidence["content_hashes"], "job failure.evidence.content_hashes"
+    )
+    _identifier_list(
+        evidence["validation_command_refs"],
+        "job failure.evidence.validation_command_refs",
+    )
     timestamps = evidence["observed_at"]
     if not isinstance(timestamps, list) or not timestamps:
         raise JobFailureSchemaError(
@@ -246,3 +260,15 @@ def _identifier_list(value: object, context: str) -> None:
         raise JobFailureSchemaError(f"{context} must be a list")
     for item in value:
         _identifier(item, f"{context} entries")
+
+
+def _content_hash(value: object, context: str) -> None:
+    if not isinstance(value, str) or not _SHA256.fullmatch(value):
+        raise JobFailureSchemaError(f"{context} must be a sha256 content hash")
+
+
+def _content_hash_list(value: object, context: str) -> None:
+    if not isinstance(value, list):
+        raise JobFailureSchemaError(f"{context} must be a list")
+    for item in value:
+        _content_hash(item, f"{context} entries")
