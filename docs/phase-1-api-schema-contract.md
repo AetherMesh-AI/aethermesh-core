@@ -38,7 +38,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 
 ## Local Job Submission v1
 
-Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `payload` (object), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
+Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `input_payload` (object with `payload_type`, object `content`, and optional object `parameters`), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The payload is canonically serialized as UTF-8 JSON, limited to 65,536 bytes, and recorded with a `sha256:<64 lowercase hex>` input-payload hash in the manifest. The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
 
 `requester_identity` is optional request-origin evidence, separate from creator, worker, validator, lineage, and contribution identities. Omit it or set it to `null` when absent; use exactly one of `{"requesting_node_id": "..."}`, `{"local_requester_identity": "..."}`, or `{"status": "unknown"}` when known or explicitly unknown. The local prototype stores this value in the submission manifest and validation receipt without treating it as remote-network evidence.
 
@@ -52,7 +52,7 @@ Example request:
 {
   "schema_version": 1,
   "job_type": "echo",
-  "payload": {"message": "schema example"},
+  "input_payload": {"payload_type": "json", "content": {"message": "schema example"}},
   "creator_node_id": "creator-local-example",
   "requester_identity": {"local_requester_identity": "developer-cli"},
   "requested_validation_mode": "deterministic-local",
@@ -99,7 +99,7 @@ Example completed projection (dynamic IDs and timestamps omitted):
 
 ## Local Validation Receipt v1
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 

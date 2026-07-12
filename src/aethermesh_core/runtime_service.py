@@ -8,6 +8,7 @@ and honest empty peer/job views for the current local-only prototype.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -50,6 +51,7 @@ MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
+MAX_LOCAL_INPUT_PAYLOAD_BYTES = 64 * 1024
 RESOURCE_HINT_FIELDS = frozenset(
     {
         "cpu_class",
@@ -745,9 +747,9 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission job_type must be a non-empty string"
             )
-        payload = request.get("payload")
-        if not isinstance(payload, dict):
-            raise RuntimeServiceError("job submission payload must be a JSON object")
+        input_payload, payload_hash = _validated_input_payload(
+            request.get("input_payload")
+        )
         validation_mode = request.get("requested_validation_mode")
         if not isinstance(validation_mode, str) or not validation_mode.strip():
             raise RuntimeServiceError(
@@ -782,7 +784,12 @@ class NodeRuntimeService:
                 "manifest_type": "local_job_submission",
                 "network_mode": "local-only-no-p2p",
                 "submitted_at": int(time.time()),
-                "job": {"job_id": job_id, "job_type": job_type, "payload": payload},
+                "job": {
+                    "job_id": job_id,
+                    "job_type": job_type,
+                    "input_payload": input_payload,
+                    "input_payload_hash": payload_hash,
+                },
                 "creator_node_id": creator_node_id,
                 "requester_identity": requester_identity,
                 "requested_validation_mode": validation_mode,
@@ -1146,6 +1153,9 @@ class NodeRuntimeService:
             manifest_path, "job submission manifest"
         )
         status = self._load_local_job_document(status_path, "job status record")
+        _, expected_payload_hash = _validated_input_payload(
+            manifest.get("job", {}).get("input_payload")
+        )
         lineage = manifest.get("lineage")
         attribution = status.get("contribution_attribution")
         requester_identity = _requester_identity(manifest.get("requester_identity"))
@@ -1154,6 +1164,10 @@ class NodeRuntimeService:
             or manifest.get("job", {}).get("job_id") != job_id
             or status.get("job_id") != job_id
             or receipt.get("requester_identity") != requester_identity
+            or receipt.get("manifest_ref") != manifest_ref
+            or manifest.get("job", {}).get("input_payload_hash")
+            != expected_payload_hash
+            or receipt.get("input_payload_hash") != expected_payload_hash
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1181,6 +1195,7 @@ class NodeRuntimeService:
             "creator_node_id": manifest["creator_node_id"],
             "requester_identity": requester_identity,
             "manifest_ref": manifest_ref,
+            "input_payload_hash": expected_payload_hash,
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_timestamp": validated_at,
@@ -1388,8 +1403,17 @@ class NodeRuntimeService:
             "job submission manifest",
         )
         job_data = manifest["job"]
+        input_payload, payload_hash = _validated_input_payload(
+            job_data.get("input_payload")
+        )
+        if job_data.get("input_payload_hash") != payload_hash:
+            raise RuntimeServiceError(
+                "job submission manifest input_payload hash is invalid"
+            )
         job = Job(
-            job_id=job_id, job_type=job_data["job_type"], payload=job_data["payload"]
+            job_id=job_id,
+            job_type=job_data["job_type"],
+            payload=input_payload["content"],
         )
         result = LocalRunner(NodeIdentity(node_id=worker_node_id)).run(job)
         validation = validate_job_result(job, result)
@@ -1410,6 +1434,8 @@ class NodeRuntimeService:
                 "version": 1,
                 "job_id": job_id,
                 "receipt_id": self._receipt_id_for_job(job_id),
+                "manifest_ref": f"data/job-submissions/{job_id}.json",
+                "input_payload_hash": payload_hash,
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
@@ -1824,6 +1850,53 @@ def _safe_local_identifier(value: object) -> bool:
         and "://" not in value
         and ".." not in value
     )
+
+
+def _validated_input_payload(value: object) -> tuple[dict[str, Any], str]:
+    """Validate and hash the bounded, canonical local work input object."""
+
+    if not isinstance(value, dict):
+        raise RuntimeServiceError("job submission input_payload must be a JSON object")
+    allowed_fields = {"payload_type", "content", "parameters"}
+    if set(value) - allowed_fields or not {"payload_type", "content"} <= set(value):
+        raise RuntimeServiceError(
+            "job submission input_payload requires payload_type and content only"
+        )
+    payload_type = value["payload_type"]
+    content = value["content"]
+    parameters = value.get("parameters")
+    if not isinstance(payload_type, str) or not payload_type.strip():
+        raise RuntimeServiceError(
+            "job submission input_payload.payload_type must be a non-empty string"
+        )
+    if not isinstance(content, dict):
+        raise RuntimeServiceError(
+            "job submission input_payload.content must be a JSON object"
+        )
+    if parameters is not None and not isinstance(parameters, dict):
+        raise RuntimeServiceError(
+            "job submission input_payload.parameters must be a JSON object"
+        )
+    try:
+        canonical = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        if json.loads(canonical) != value:
+            raise ValueError("canonical JSON does not preserve the payload")
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise RuntimeServiceError(
+            "job submission input_payload must contain JSON-compatible data"
+        ) from exc
+    encoded = canonical.encode("utf-8")
+    if len(encoded) > MAX_LOCAL_INPUT_PAYLOAD_BYTES:
+        raise RuntimeServiceError(
+            "job submission input_payload exceeds the 65536-byte local limit"
+        )
+    return value, f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def _requester_identity(value: object) -> dict[str, str] | None:
