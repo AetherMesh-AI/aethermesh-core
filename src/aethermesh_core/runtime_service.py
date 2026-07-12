@@ -411,6 +411,32 @@ class NodeRuntimeService:
             "note": "Capabilities are local-only registered definitions and are not advertised to a live network.",
         }
 
+    def _submitted_job_capability(self, requested_capability: object) -> dict[str, Any]:
+        """Resolve an enabled work capability from this node's local manifest."""
+
+        if (
+            not isinstance(requested_capability, str)
+            or not requested_capability.strip()
+        ):
+            raise RuntimeServiceError(
+                "job submission requested_capability must be a non-empty string"
+            )
+        for capability in self.list_capabilities()["capabilities"]:
+            if capability["identifier"] != requested_capability:
+                continue
+            if "work_type" not in capability:
+                raise RuntimeServiceError(
+                    "job submission requested_capability must name a work capability"
+                )
+            if capability["status"] != "enabled":
+                raise RuntimeServiceError(
+                    "job submission requested_capability is disabled in the local node manifest"
+                )
+            return cast(dict[str, Any], capability)
+        raise RuntimeServiceError(
+            "job submission requested_capability is not advertised by the local node manifest"
+        )
+
     @staticmethod
     def _work_capability_availability(
         *,
@@ -762,6 +788,28 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission job_type must be a non-empty string"
             )
+        requested_capability = request.get("requested_capability")
+        try:
+            capability_manifest = self._submitted_job_capability(requested_capability)
+        except RuntimeServiceError as exc:
+            self._append_event(
+                "rejected local job submission "
+                f"creator_node_id={creator_node_id} "
+                f"requested_capability={_rejection_log_value(requested_capability)} "
+                f"reason={exc}"
+            )
+            raise
+        if capability_manifest["work_type"] != job_type:
+            error = RuntimeServiceError(
+                "job submission requested_capability must match job_type"
+            )
+            self._append_event(
+                "rejected local job submission "
+                f"creator_node_id={creator_node_id} "
+                f"requested_capability={_rejection_log_value(requested_capability)} "
+                f"reason={error}"
+            )
+            raise error
         input_payload, payload_hash = _validated_input_payload(
             request.get("input_payload")
         )
@@ -810,6 +858,10 @@ class NodeRuntimeService:
                     "job": {
                         "job_id": job_id,
                         "job_type": job_type,
+                        "requested_capability": requested_capability,
+                        "capability_manifest_id": capability_manifest[
+                            "capability_manifest_id"
+                        ],
                         "input_payload": input_payload,
                         "input_payload_hash": payload_hash,
                         "local_safety": local_safety,
@@ -832,6 +884,8 @@ class NodeRuntimeService:
             "job_id": job_id,
             "status": "created",
             "creator_node_id": creator_node_id,
+            "requested_capability": requested_capability,
+            "capability_manifest_id": capability_manifest["capability_manifest_id"],
             "manifest_ref": manifest_ref,
             "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
             "contribution_attribution": {
@@ -854,6 +908,8 @@ class NodeRuntimeService:
             "job_id": job_id,
             "status": "queued",
             "manifest_ref": manifest_ref,
+            "requested_capability": requested_capability,
+            "capability_manifest_id": capability_manifest["capability_manifest_id"],
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
         }
@@ -891,6 +947,8 @@ class NodeRuntimeService:
             "status": status.get("status", "queued"),
             "manifest_ref": f"data/job-submissions/{job_id}.json",
             "creator_node_id": manifest["creator_node_id"],
+            "requested_capability": manifest["job"].get("requested_capability"),
+            "capability_manifest_id": manifest["job"].get("capability_manifest_id"),
             "requester_identity": manifest.get("requester_identity"),
             "worker_node_id": status.get("worker_node_id"),
             "lineage": manifest["lineage"],
@@ -1761,6 +1819,12 @@ def _capability_manifest_id(identifier: str) -> str:
     """Return the stable local manifest identity for one registered capability."""
 
     return f"local-capability-{identifier.replace('.', '-')}-v1"
+
+
+def _rejection_log_value(value: object) -> str:
+    """Render untrusted requested-capability input as one safe log token."""
+
+    return json.dumps(value, ensure_ascii=True, default=lambda _: "<malformed>")
 
 
 def _capability_provenance(

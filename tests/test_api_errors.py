@@ -89,6 +89,7 @@ class ApiErrorTests(unittest.TestCase):
             valid_request = {
                 "schema_version": 1,
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "safe"},

@@ -75,6 +75,7 @@ class RuntimeServiceTests(unittest.TestCase):
             response = service.submit_local_job(
                 {
                     "job_type": "echo",
+                    "requested_capability": "work.echo",
                     "input_payload": {
                         "payload_type": "json",
                         "content": {"message": "hello"},
@@ -121,6 +122,7 @@ class RuntimeServiceTests(unittest.TestCase):
             second = service.submit_local_job(
                 {
                     "job_type": "echo",
+                    "requested_capability": "work.echo",
                     "input_payload": {
                         "payload_type": "json",
                         "content": {"message": "second"},
@@ -144,6 +146,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 "schema_version": 1,
                 "job_id": job_id,
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "durable"},
@@ -214,6 +217,7 @@ class RuntimeServiceTests(unittest.TestCase):
             request = {
                 "schema_version": 1,
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -280,6 +284,7 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -369,6 +374,7 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -397,6 +403,7 @@ class RuntimeServiceTests(unittest.TestCase):
             valid_request = {
                 "schema_version": 1,
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "accepted work"},
@@ -480,12 +487,81 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
 
+    def test_capability_admission_rejects_before_writing_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": "work.echo",
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "accepted work"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            accepted = service.submit_local_job(request)
+            manifest = json.loads((root / accepted["manifest_ref"]).read_text())
+            self.assertEqual(manifest["job"]["requested_capability"], "work.echo")
+            self.assertEqual(
+                manifest["job"]["capability_manifest_id"],
+                "local-capability-work-echo-v1",
+            )
+            self.assertEqual(
+                service.get_local_job_status(accepted["job_id"])[
+                    "requested_capability"
+                ],
+                "work.echo",
+            )
+
+            def data_snapshot() -> dict[str, bytes]:
+                return {
+                    path.relative_to(root).as_posix(): path.read_bytes()
+                    for path in (root / "data").rglob("*")
+                    if path.is_file()
+                }
+
+            evidence_before = data_snapshot()
+            for requested_capability, message in (
+                (None, "non-empty string"),
+                ([], "non-empty string"),
+                ("work.unknown", "not advertised"),
+            ):
+                with self.subTest(requested_capability=requested_capability):
+                    with self.assertRaisesRegex(RuntimeServiceError, message):
+                        service.submit_local_job(
+                            {**request, "requested_capability": requested_capability}
+                        )
+                    self.assertEqual(data_snapshot(), evidence_before)
+
+            with self.assertRaisesRegex(RuntimeServiceError, "must match job_type"):
+                service.submit_local_job(
+                    {**request, "requested_capability": "work.text_stats"}
+                )
+            self.assertEqual(data_snapshot(), evidence_before)
+
+            config = service.load_config()
+            config["capabilities"] = {"enabled_work_types": []}
+            service._write_config(config)
+            with self.assertRaisesRegex(RuntimeServiceError, "disabled"):
+                service.submit_local_job(request)
+            self.assertEqual(data_snapshot(), evidence_before)
+            self.assertFalse((root / "data" / "job-validation-receipts").exists())
+            logs = "\n".join(service.recent_logs()["events"])
+            self.assertIn("creator_node_id=creator-local-a", logs)
+            self.assertIn('requested_capability="work.unknown"', logs)
+
     def test_input_payload_is_hashed_bounded_and_receipt_linked(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "schema_version": 1,
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "first"},
@@ -553,6 +629,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
+                            "requested_capability": "work.echo",
                             "input_payload": {"payload_type": "json", "content": {}},
                             "creator_node_id": "creator-local-a",
                             "requested_validation_mode": "deterministic-local",
@@ -565,6 +642,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
+                            "requested_capability": "work.echo",
                             "input_payload": {"payload_type": "json", "content": {}},
                             "requested_validation_mode": "deterministic-local",
                             "schema_version": 1,
@@ -587,6 +665,7 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -602,7 +681,10 @@ class RuntimeServiceTests(unittest.TestCase):
             succeeded = service.execute_submitted_local_job(
                 accepted["job_id"], "worker-local-a"
             )
-            failed_request = {**request, "job_type": "not-supported"}
+            failed_request = {
+                **request,
+                "local_safety": {"cancellation_requested": True},
+            }
             failed_accepted = service.submit_local_job(failed_request)
             failed = service.execute_submitted_local_job(
                 failed_accepted["job_id"], "worker-local-b"
@@ -647,7 +729,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 failed["contribution_attribution"]["creator_node_id"], "creator-local-a"
             )
-            self.assertIn("Unsupported job type", str(failed["error"]))
+            self.assertIn("local cancellation requested", str(failed["error"]))
             self.assertEqual(
                 service.get_local_job_status(
                     "local-job-00000000000000000000000000000000"
@@ -694,6 +776,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         "/api/jobs",
                         json={
                             "job_type": "echo",
+                            "requested_capability": "work.echo",
                             "input_payload": {
                                 "payload_type": "json",
                                 "content": {"message": "hello"},
@@ -732,6 +815,7 @@ class RuntimeServiceTests(unittest.TestCase):
             service = NodeRuntimeService.from_home(Path(temp_dir))
             request = {
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -871,6 +955,7 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             request = {
                 "job_type": "echo",
+                "requested_capability": "work.echo",
                 "input_payload": {
                     "payload_type": "json",
                     "content": {"message": "hello"},
@@ -883,7 +968,9 @@ class RuntimeServiceTests(unittest.TestCase):
             }
             accepted = service.submit_local_job(request)
             service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
-            failed = service.submit_local_job({**request, "job_type": "not-supported"})
+            failed = service.submit_local_job(
+                {**request, "local_safety": {"cancellation_requested": True}}
+            )
             service.execute_submitted_local_job(failed["job_id"], "worker-local-b")
             queued = service.submit_local_job(request)
             missing_reference = service.submit_local_job(request)
@@ -989,6 +1076,7 @@ class RuntimeServiceTests(unittest.TestCase):
             accepted = service.submit_local_job(
                 {
                     "job_type": "echo",
+                    "requested_capability": "work.echo",
                     "input_payload": {
                         "payload_type": "json",
                         "content": {"message": "hello"},
@@ -2524,6 +2612,7 @@ class LocalSafetyMetadataTests(unittest.TestCase):
         request = {
             "schema_version": 1,
             "job_type": "echo",
+            "requested_capability": "work.echo",
             "input_payload": {"payload_type": "json", "content": {"message": "safe"}},
             "creator_node_id": "creator-local-a",
             "requested_validation_mode": "deterministic-local",

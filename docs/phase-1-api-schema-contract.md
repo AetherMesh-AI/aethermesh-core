@@ -38,7 +38,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 
 ## Local Job Submission v1
 
-Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `input_payload` (object with `payload_type`, object `content`, and optional object `parameters`), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The payload is canonically serialized as UTF-8 JSON, limited to 65,536 bytes, and recorded with a `sha256:<64 lowercase hex>` input-payload hash in the manifest. The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
+Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `requested_capability` (a non-empty exact work-capability identifier from the receiving node's local capability manifest, such as `work.echo`), `input_payload` (object with `payload_type`, object `content`, and optional object `parameters`), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The payload is canonically serialized as UTF-8 JSON, limited to 65,536 bytes, and recorded with a `sha256:<64 lowercase hex>` input-payload hash in the manifest. The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
 
 `requester_identity` is optional request-origin evidence, separate from creator, worker, validator, lineage, and contribution identities. Omit it or set it to `null` when absent; use exactly one of `{"requesting_node_id": "..."}`, `{"local_requester_identity": "..."}`, or `{"status": "unknown"}` when known or explicitly unknown. The local prototype stores this value in the submission manifest and validation receipt without treating it as remote-network evidence.
 
@@ -54,6 +54,7 @@ Example request:
 {
   "schema_version": 1,
   "job_type": "echo",
+  "requested_capability": "work.echo",
   "input_payload": {"payload_type": "json", "content": {"message": "schema example"}},
   "creator_node_id": "creator-local-example",
   "requester_identity": {"local_requester_identity": "developer-cli"},
@@ -80,6 +81,8 @@ Example completed projection (dynamic IDs and timestamps omitted):
   "status": "succeeded",
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
   "creator_node_id": "creator-local-example",
+  "requested_capability": "work.echo",
+  "capability_manifest_id": "local-capability-work-echo-v1",
   "requester_identity": {"local_requester_identity": "developer-cli"},
   "worker_node_id": "worker-local-example",
   "lineage": {"parent_refs": ["data/prior-job.json"]},
