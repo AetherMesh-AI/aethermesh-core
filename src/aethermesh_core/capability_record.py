@@ -9,6 +9,20 @@ from typing import Any
 CAPABILITY_RECORD_SCHEMA_VERSION = 1
 CAPABILITY_TYPES = frozenset({"model", "tool", "worker", "runtime"})
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
+_TOP_LEVEL_FIELDS = frozenset(
+    {
+        "schema_version",
+        "capability_id",
+        "creator_node_id",
+        "created_at",
+        "updated_at",
+        "metadata",
+        "manifest_refs",
+        "validation",
+        "lineage",
+        "contribution_attribution",
+    }
+)
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
@@ -26,6 +40,7 @@ def validate_capability_record(document: object) -> dict[str, Any]:
     """
     if not isinstance(document, dict):
         raise CapabilityRecordError("capability record must be an object")
+    _reject_unknown_fields(document)
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
     _require_identifier(document, "creator_node_id")
@@ -37,6 +52,50 @@ def validate_capability_record(document: object) -> dict[str, Any]:
     _require_attribution(document)
     _require_validation(document)
     return document
+
+
+def _reject_unknown_fields(document: dict[str, Any]) -> None:
+    allowed_by_field = {
+        "metadata": frozenset(
+            {
+                "name",
+                "description",
+                "capability_type",
+                "supported_input_formats",
+                "supported_output_formats",
+                "constraints",
+                "local_execution_requirements",
+            }
+        ),
+        "validation": frozenset(
+            {
+                "status",
+                "receipt_ids",
+                "last_validated_at",
+                "check_name",
+                "failure_reason",
+            }
+        ),
+        "lineage": frozenset(
+            {"source_manifest_ref", "prior_capability_id", "local_build_artifact_ref"}
+        ),
+        "contribution_attribution": frozenset(
+            {"creator_node_id", "maintainer_node_id", "work_receipt_ids"}
+        ),
+    }
+    unknown = sorted(document.keys() - _TOP_LEVEL_FIELDS)
+    if unknown:
+        raise CapabilityRecordError(
+            f"capability record contains unsupported fields: {', '.join(unknown)}"
+        )
+    for field, allowed in allowed_by_field.items():
+        value = document.get(field)
+        if isinstance(value, dict):
+            unknown = sorted(value.keys() - allowed)
+            if unknown:
+                raise CapabilityRecordError(
+                    f"{field} contains unsupported fields: {', '.join(unknown)}"
+                )
 
 
 def _require_metadata(document: dict[str, Any]) -> None:

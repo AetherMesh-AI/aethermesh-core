@@ -196,6 +196,27 @@ class CapabilityRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
                     validate_capability_record(record)
 
+    def test_rejects_unsupported_schema_fields(self) -> None:
+        cases = (
+            (lambda record: record.update(network_trusted=True), "capability record"),
+            (lambda record: record["metadata"].update(peer_count=3), "metadata"),
+            (
+                lambda record: record["validation"].update(network_verified=True),
+                "validation",
+            ),
+            (lambda record: record["lineage"].update(remote_parent="peer"), "lineage"),
+            (
+                lambda record: record["contribution_attribution"].update(credits=10),
+                "contribution_attribution",
+            ),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                record = copy.deepcopy(self.record)
+                mutate(record)
+                with self.assertRaisesRegex(CapabilityRecordError, expected):
+                    validate_capability_record(record)
+
     def test_rejects_invalid_document_shapes_and_metadata(self) -> None:
         with self.assertRaisesRegex(CapabilityRecordError, "must be an object"):
             validate_capability_record([])

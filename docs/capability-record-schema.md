@@ -4,6 +4,8 @@ This is the version 1 schema for a local AetherMesh capability claim. It is a va
 
 A capability is trusted only when `validation.status` is `passed` and the record contains local receipt IDs. `unvalidated` is valid only as explicitly untrusted metadata and cannot carry receipt IDs.
 
+Fields not defined by version 1 are rejected at the top level and inside its structured sections. New trust, networking, or reward claims therefore require an explicit schema revision rather than being silently accepted.
+
 ## Required fields
 
 | Field | Type and rule |
