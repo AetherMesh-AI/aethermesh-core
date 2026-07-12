@@ -264,7 +264,7 @@ class JobManifestTests(unittest.TestCase):
             self._load({"version": 1, "nodes": ["local-node-a"], "jobs": ["bad"]})
 
     def test_invalid_job_id_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ManifestError, "job_id must be a non-empty string"):
+        with self.assertRaisesRegex(ManifestError, "job_id must be a local ID"):
             self._load(
                 {
                     "version": 1,
@@ -272,6 +272,35 @@ class JobManifestTests(unittest.TestCase):
                     "jobs": [{"job_id": "", "job_type": "echo"}],
                 }
             )
+
+    def test_malformed_duplicate_and_content_addressed_job_ids(self) -> None:
+        for job_id in ("has spaces", "../job", "UPPERCASE", "sha256:bad"):
+            with self.subTest(job_id=job_id):
+                with self.assertRaisesRegex(ManifestError, "job_id must be a local ID"):
+                    self._load(
+                        {
+                            "version": 1,
+                            "nodes": ["local-node-a"],
+                            "jobs": [{"job_id": job_id, "job_type": "echo"}],
+                        }
+                    )
+        with self.assertRaisesRegex(ManifestError, "duplicate active job_id: echo-1"):
+            self._load(
+                {
+                    "version": 1,
+                    "nodes": ["local-node-a"],
+                    "jobs": [self._job(), self._job()],
+                }
+            )
+        content_id = "sha256:" + "a" * 64
+        batch = self._load(
+            {
+                "version": 1,
+                "nodes": ["local-node-a"],
+                "jobs": [{"job_id": content_id, "job_type": "echo"}],
+            }
+        )
+        self.assertEqual(batch.jobs[0].job_id, content_id)
 
     def test_non_object_top_level_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

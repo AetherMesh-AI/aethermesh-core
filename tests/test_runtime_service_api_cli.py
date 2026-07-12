@@ -98,9 +98,11 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 manifest["lineage"]["parent_refs"], ["data/prior-job.json"]
             )
+            self.assertEqual(manifest["lineage"]["job_id"], response["job_id"])
             self.assertEqual(
                 manifest["contribution_attribution"],
                 {
+                    "job_id": response["job_id"],
                     "creator_node_id": "creator-local-a",
                     "metadata": {"project": "prototype"},
                 },
@@ -201,7 +203,8 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(queued["creator_node_id"], "creator-local-a")
             self.assertIsNone(queued["worker_node_id"])
             self.assertEqual(
-                queued["lineage"], {"parent_refs": ["data/prior-job.json"]}
+                queued["lineage"],
+                {"job_id": accepted["job_id"], "parent_refs": ["data/prior-job.json"]},
             )
             self.assertEqual(
                 queued["contribution_attribution"]["metadata"], {"project": "prototype"}
@@ -628,6 +631,17 @@ class RuntimeServiceTests(unittest.TestCase):
                         **status,
                         "contribution_attribution": {
                             **status["contribution_attribution"],
+                            "job_id": "other",
+                        },
+                    },
+                    "contribution attribution does not match work item",
+                ),
+                (
+                    status_path,
+                    {
+                        **status,
+                        "contribution_attribution": {
+                            **status["contribution_attribution"],
                             "creator_node_id": "other",
                         },
                     },
@@ -664,6 +678,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     manifest_path,
                     {**manifest, "lineage": []},
                     "job submission manifest has invalid lineage evidence",
+                ),
+                (
+                    manifest_path,
+                    {**manifest, "lineage": {"job_id": "other", "parent_refs": []}},
+                    "job submission lineage does not match work item",
                 ),
                 (
                     manifest_path,
