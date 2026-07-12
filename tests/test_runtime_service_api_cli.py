@@ -137,7 +137,9 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertNotEqual(response["job_id"], second["job_id"])
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
 
-    def test_supplied_local_job_id_persists_and_rejects_overwrite(self) -> None:
+    def test_supplied_local_job_id_retries_idempotently_and_rejects_conflicts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             service = NodeRuntimeService.from_home(root)
@@ -160,7 +162,10 @@ class RuntimeServiceTests(unittest.TestCase):
             manifest_path = root / submission["manifest_ref"]
             status_path = service._job_status_path(job_id)
             manifest_before = manifest_path.read_bytes()
-            status_before = status_path.read_bytes()
+            self.assertRegex(
+                json.loads(manifest_before)["submission_fingerprint"],
+                r"^sha256:[0-9a-f]{64}$",
+            )
 
             restarted = NodeRuntimeService.from_home(root)
             discovered = restarted.get_local_job_status(job_id)
@@ -176,7 +181,26 @@ class RuntimeServiceTests(unittest.TestCase):
                 {"project": "prototype"},
             )
 
-            with self.assertRaisesRegex(RuntimeServiceError, "already exists"):
+            completed = restarted.execute_submitted_local_job(job_id, "worker-local-a")
+            receipt_path = root / completed["validation"]["receipt_ref"]
+            self.assertTrue(receipt_path.is_file())
+            self.assertEqual(manifest_path.read_bytes(), manifest_before)
+            self.assertEqual(json.loads(receipt_path.read_text())["job_id"], job_id)
+            status_before_retry = status_path.read_bytes()
+            receipt_before_retry = receipt_path.read_bytes()
+            retry = restarted.submit_local_job(request)
+            self.assertTrue(retry["idempotent_retry"])
+            self.assertEqual(retry["status"], "succeeded")
+            self.assertEqual(retry["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                retry["validation"]["receipt_ref"],
+                completed["validation"]["receipt_ref"],
+            )
+            self.assertEqual(manifest_path.read_bytes(), manifest_before)
+            self.assertEqual(status_path.read_bytes(), status_before_retry)
+            self.assertEqual(receipt_path.read_bytes(), receipt_before_retry)
+
+            with self.assertRaisesRegex(RuntimeServiceError, "different content"):
                 restarted.submit_local_job(
                     {
                         **request,
@@ -187,15 +211,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     }
                 )
             self.assertEqual(manifest_path.read_bytes(), manifest_before)
-            self.assertEqual(status_path.read_bytes(), status_before)
+            self.assertEqual(status_path.read_bytes(), status_before_retry)
+            self.assertEqual(receipt_path.read_bytes(), receipt_before_retry)
             with self.assertRaisesRegex(RuntimeServiceError, "job_id"):
                 restarted.submit_local_job({**request, "job_id": "local-job-invalid"})
 
-            completed = restarted.execute_submitted_local_job(job_id, "worker-local-a")
-            receipt_path = root / completed["validation"]["receipt_ref"]
-            self.assertTrue(receipt_path.is_file())
-            self.assertEqual(manifest_path.read_bytes(), manifest_before)
-            self.assertEqual(json.loads(receipt_path.read_text())["job_id"], job_id)
             completed_status = restarted.get_local_job_status(job_id)
             self.assertEqual(completed_status["lineage"]["job_id"], job_id)
             self.assertEqual(
@@ -209,6 +229,37 @@ class RuntimeServiceTests(unittest.TestCase):
                 )
             )
             self.assertIn(job_id, "\n".join(restarted.recent_logs()["events"]))
+
+    def test_local_job_submission_resolves_manifest_creation_race(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "schema_version": 1,
+                "job_id": "local-job-fedcba9876543210fedcba9876543210",
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "race-safe"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+            existing_state = {"job_id": request["job_id"], "idempotent_retry": True}
+            with (
+                patch(
+                    "aethermesh_core.runtime_service.atomic_create_json",
+                    side_effect=FileExistsError,
+                ),
+                patch.object(
+                    service,
+                    "_existing_local_submission",
+                    return_value=existing_state,
+                ),
+            ):
+                self.assertEqual(service.submit_local_job(request), existing_state)
 
     def test_local_job_states_are_auditable_and_terminal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
