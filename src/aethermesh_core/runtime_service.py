@@ -790,34 +790,42 @@ class NodeRuntimeService:
                 "job submission must contain JSON-compatible data"
             ) from exc
 
-        job_id = f"local-job-{uuid4().hex}"
+        supplied_job_id = request.get("job_id")
+        if supplied_job_id is not None and not self._is_local_job_id(supplied_job_id):
+            raise RuntimeServiceError(
+                "job submission job_id must be a local-job- followed by 32 lowercase hex characters"
+            )
+        job_id = supplied_job_id or f"local-job-{uuid4().hex}"
         manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
         manifest_ref = f"data/job-submissions/{job_id}.json"
-        atomic_create_json(
-            manifest_path,
-            {
-                "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
-                "manifest_type": "local_job_submission",
-                "network_mode": "local-only-no-p2p",
-                "submitted_at": int(time.time()),
-                "job": {
-                    "job_id": job_id,
-                    "job_type": job_type,
-                    "input_payload": input_payload,
-                    "input_payload_hash": payload_hash,
-                    "local_safety": local_safety,
-                },
-                "creator_node_id": creator_node_id,
-                "requester_identity": requester_identity,
-                "requested_validation_mode": validation_mode,
-                "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
-                "contribution_attribution": {
-                    "job_id": job_id,
+        try:
+            atomic_create_json(
+                manifest_path,
+                {
+                    "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
+                    "manifest_type": "local_job_submission",
+                    "network_mode": "local-only-no-p2p",
+                    "submitted_at": int(time.time()),
+                    "job": {
+                        "job_id": job_id,
+                        "job_type": job_type,
+                        "input_payload": input_payload,
+                        "input_payload_hash": payload_hash,
+                        "local_safety": local_safety,
+                    },
                     "creator_node_id": creator_node_id,
-                    "metadata": attribution_metadata,
+                    "requester_identity": requester_identity,
+                    "requested_validation_mode": validation_mode,
+                    "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
+                    "contribution_attribution": {
+                        "job_id": job_id,
+                        "creator_node_id": creator_node_id,
+                        "metadata": attribution_metadata,
+                    },
                 },
-            },
-        )
+            )
+        except FileExistsError as exc:
+            raise RuntimeServiceError("local job ID already exists") from exc
         record: dict[str, Any] = {
             "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
