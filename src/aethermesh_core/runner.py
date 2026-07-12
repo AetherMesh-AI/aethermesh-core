@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import multiprocessing
 import re
 from collections import Counter
@@ -214,7 +215,9 @@ def build_basic_compute_output(payload: dict[str, Any]) -> dict[str, int | float
         not isinstance(operands, list)
         or not 1 <= len(operands) <= 32
         or any(
-            not isinstance(value, (int, float)) or isinstance(value, bool)
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
             for value in operands
         )
     ):
@@ -224,6 +227,8 @@ def build_basic_compute_output(payload: dict[str, Any]) -> dict[str, int | float
     result: int | float = 0 if operation == "add" else 1
     for operand in operands:
         result = result + operand if operation == "add" else result * operand
+        if not math.isfinite(result):
+            raise ValueError("basic_compute result must be a finite number")
     return {"operation": operation, "result": result}
 
 

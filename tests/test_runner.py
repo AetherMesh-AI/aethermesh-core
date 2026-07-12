@@ -52,6 +52,30 @@ class LocalRunnerTests(unittest.TestCase):
         self.assertEqual(computed_first.output, {"operation": "multiply", "result": 24})
         self.assertEqual(transformed.output, {"count": 2, "name": "Miyu"})
 
+    def test_basic_compute_rejects_non_finite_input_and_output(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+
+        non_finite_input = runner.run(
+            Job(
+                job_id="compute-infinite-input",
+                job_type="basic_compute",
+                payload={"operation": "add", "operands": [float("inf")]},
+            )
+        )
+        overflow = runner.run(
+            Job(
+                job_id="compute-overflow",
+                job_type="basic_compute",
+                payload={"operation": "multiply", "operands": [1e308, 1e308]},
+            )
+        )
+
+        self.assertEqual(non_finite_input.status, "failed")
+        self.assertIn("1 to 32 numbers", non_finite_input.error or "")
+        self.assertEqual(overflow.status, "failed")
+        self.assertEqual(overflow.error, "basic_compute result must be a finite number")
+        self.assertEqual(overflow.contribution_units, 0)
+
     def test_echo_job_completes_and_serializes_expected_shape(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         job = Job(
