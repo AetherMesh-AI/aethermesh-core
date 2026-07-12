@@ -394,6 +394,38 @@ class RuntimeServiceTests(unittest.TestCase):
 
             self.assertFalse((Path(temp_dir) / "data" / "job-submissions").exists())
 
+    def test_submission_status_reports_persistence_failure_with_admission_context(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "record me"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"source": "test"},
+            }
+            with patch(
+                "aethermesh_core.runtime_service.atomic_create_json",
+                side_effect=OSError("disk unavailable"),
+            ):
+                response = service.submit_local_job_status(request)
+
+            self.assertEqual(response["status"], "failed")
+            self.assertEqual(response["validation"]["state"], "passed")
+            self.assertEqual(response["creator_node_id"], "creator-local-a")
+            self.assertIn("could not be recorded", response["message"])
+            self.assertIsNone(response["manifest_ref"])
+            self.assertIsNone(response["lineage_ref"])
+            self.assertIsNone(response["attribution_ref"])
+
     def test_malformed_job_admission_preserves_local_evidence(self) -> None:
         """Reject malformed local submissions before they can create durable evidence."""
 
@@ -701,9 +733,11 @@ class RuntimeServiceTests(unittest.TestCase):
 
             accepted, rejected = asyncio.run(submit())
             self.assertEqual(accepted.status_code, 200)
-            self.assertEqual(accepted.json()["status"], "queued")
-            self.assertEqual(rejected.status_code, 400)
-            self.assertEqual(rejected.json()["error"]["code"], "INVALID_INPUT")
+            self.assertEqual(accepted.json()["status"], "accepted")
+            self.assertEqual(accepted.json()["validation"]["state"], "passed")
+            self.assertEqual(rejected.status_code, 200)
+            self.assertEqual(rejected.json()["status"], "rejected")
+            self.assertIn("creator_node_id", rejected.json()["message"])
 
     def test_local_job_status_tracks_queued_succeeded_failed_and_not_found(
         self,
