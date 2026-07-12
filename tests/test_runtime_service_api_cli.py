@@ -2270,5 +2270,62 @@ class AppCliTests(unittest.TestCase):
                     app_cli._serve(host="127.0.0.1", port=7280, open_browser=False)
 
 
+class LocalSafetyMetadataTests(unittest.TestCase):
+    def test_timeout_and_cancellation_record_failed_local_evidence(self) -> None:
+        request = {
+            "schema_version": 1,
+            "job_type": "echo",
+            "input_payload": {"payload_type": "json", "content": {"message": "safe"}},
+            "creator_node_id": "creator-local-a",
+            "requested_validation_mode": "deterministic-local",
+            "lineage_parent_refs": ["data/prior-job.json"],
+            "attribution_metadata": {"source": "test"},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(temp_dir)
+            timed_out = service.submit_local_job(
+                {**request, "local_safety": {"timeout_seconds": 0}}
+            )
+            cancelled = service.submit_local_job(
+                {**request, "local_safety": {"cancellation_requested": True}}
+            )
+            for accepted, outcome in (
+                (timed_out, "timed_out"),
+                (cancelled, "cancelled"),
+            ):
+                with self.subTest(outcome=outcome):
+                    status = service.execute_submitted_local_job(
+                        accepted["job_id"], "worker-local-a"
+                    )
+                    receipt = json.loads(
+                        (
+                            Path(temp_dir)
+                            / "data"
+                            / "job-validation-receipts"
+                            / f"{accepted['job_id']}.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(status["status"], "failed")
+                    self.assertFalse(status["validation"]["passed"])
+                    self.assertEqual(
+                        status["contribution_attribution"]["creator_node_id"],
+                        "creator-local-a",
+                    )
+                    self.assertEqual(
+                        status["contribution_attribution"][
+                            "validated_contribution_units"
+                        ],
+                        0,
+                    )
+                    self.assertEqual(
+                        status["lineage"]["parent_refs"], ["data/prior-job.json"]
+                    )
+                    self.assertEqual(receipt["manifest_ref"], accepted["manifest_ref"])
+                    self.assertEqual(
+                        receipt["validation"]["execution_outcome"], outcome
+                    )
+                    self.assertFalse(receipt["validation"]["valid"])
+
+
 if __name__ == "__main__":
     unittest.main()

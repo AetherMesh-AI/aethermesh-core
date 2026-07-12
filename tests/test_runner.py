@@ -1,7 +1,8 @@
 import unittest
+from unittest.mock import patch
 
 from aethermesh_core.models import Job, NodeIdentity
-from aethermesh_core.runner import LocalRunner
+from aethermesh_core.runner import LocalRunner, _run_in_local_process, run_local_job
 
 
 class LocalRunnerTests(unittest.TestCase):
@@ -668,6 +669,55 @@ class LocalRunnerTests(unittest.TestCase):
                 self.assertEqual(result.contribution_units, 0)
                 self.assertIsInstance(result.error, str)
                 self.assertTrue(str(result.error).startswith("text_retrieve"))
+
+
+class LocalSafetyRunnerTests(unittest.TestCase):
+    def test_declared_timeout_can_complete_and_process_helper_reports_result(
+        self,
+    ) -> None:
+        job = Job(job_id="safe-echo", job_type="echo", payload={"message": "safe"})
+        identity = NodeIdentity(node_id="local-test-node")
+        result = run_local_job(job, identity, timeout_seconds=1)
+        self.assertEqual(result.status, "completed")
+        reported: list[object] = []
+        queue = type("Queue", (), {"put": lambda _self, item: reported.append(item)})()
+        _run_in_local_process(job, identity, queue)
+        self.assertEqual(reported[0], result)
+
+    def test_timeout_runner_records_missing_child_result_as_failed(self) -> None:
+        class Queue:
+            def get(self, *, timeout: int) -> object:
+                raise __import__("queue").Empty
+
+            def close(self) -> None:
+                pass
+
+        class Process:
+            def start(self) -> None:
+                pass
+
+            def join(self, timeout: object = None) -> None:
+                pass
+
+            def is_alive(self) -> bool:
+                return False
+
+        class Context:
+            def Queue(self):
+                return Queue()
+
+            def Process(self, **_kwargs: object):
+                return Process()
+
+        job = Job(job_id="safe-empty", job_type="echo", payload={})
+        with patch(
+            "aethermesh_core.runner.multiprocessing.get_context", return_value=Context()
+        ):
+            result = run_local_job(
+                job, NodeIdentity(node_id="local-test-node"), timeout_seconds=1
+            )
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.contribution_units, 0)
 
 
 if __name__ == "__main__":

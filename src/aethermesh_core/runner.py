@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import multiprocessing
 import re
 from collections import Counter
-from typing import Any
+from queue import Empty
+from typing import Any, cast
 
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 
@@ -97,6 +99,76 @@ class LocalRunner:
             error=None,
             contribution_units=1,
         )
+
+
+def run_local_job(
+    job: Job,
+    identity: NodeIdentity,
+    *,
+    timeout_seconds: float | None = None,
+    cancellation_requested: bool = False,
+) -> JobResult:
+    """Run local work with optional, local-only operator safety controls.
+
+    Without metadata this uses the direct deterministic runner. A declared
+    timeout isolates work in a process so expiry stops it; cancellation is
+    checked before work starts.
+    """
+
+    if cancellation_requested:
+        return _stopped_result(
+            job, identity, "cancelled", "local cancellation requested"
+        )
+    if timeout_seconds is None:
+        return LocalRunner(identity).run(job)
+
+    context = multiprocessing.get_context("spawn")
+    results = context.Queue()
+    process = context.Process(
+        target=_run_in_local_process, args=(job, identity, results)
+    )
+    process.start()
+    process.join(timeout_seconds)
+    if process.is_alive():
+        process.terminate()
+        process.join()
+        results.close()
+        return _stopped_result(
+            job,
+            identity,
+            "timed_out",
+            f"local timeout after {timeout_seconds:g} seconds",
+        )
+    try:
+        return cast(JobResult, results.get(timeout=1))
+    except Empty:
+        return JobResult(
+            job_id=job.job_id,
+            node_id=identity.node_id,
+            status="failed",
+            output=None,
+            error="local runner exited without a result",
+            contribution_units=0,
+        )
+    finally:
+        results.close()
+
+
+def _run_in_local_process(job: Job, identity: NodeIdentity, results: Any) -> None:
+    results.put(LocalRunner(identity).run(job))
+
+
+def _stopped_result(
+    job: Job, identity: NodeIdentity, status: str, error: str
+) -> JobResult:
+    return JobResult(
+        job_id=job.job_id,
+        node_id=identity.node_id,
+        status=status,
+        output=None,
+        error=error,
+        contribution_units=0,
+    )
 
 
 def build_text_stats_output(text: str) -> dict[str, int | str]:
