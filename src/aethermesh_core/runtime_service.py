@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import shutil
 import time
 from dataclasses import dataclass
@@ -44,6 +45,24 @@ LOCAL_CAPABILITY_WORKER_CAPACITY = 1
 MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
+RESOURCE_HINT_FIELDS = frozenset(
+    {
+        "cpu_class",
+        "ram_range",
+        "disk_needs",
+        "expected_duration",
+        "network_sensitivity",
+        "accelerator_type",
+        "energy_profile",
+        "operator_cost_label",
+        "operator_notes",
+    }
+)
+ECONOMIC_HINT_PATTERN = re.compile(
+    r"\b(?:tokens?|rewards?|stak(?:e|es|ed|ing)|yields?|exchange\s+values?|"
+    r"settlements?|payments?|payouts?|prices?|pricing)\b",
+    re.IGNORECASE,
+)
 
 # These definitions are the local runtime's source of truth. A configured work
 # type is enabled only when it is registered here; provenance entries describe
@@ -302,6 +321,7 @@ class NodeRuntimeService:
                                 "status": "enabled" | "disabled",
                                 "creator_node_id": str | None,
                                 "capability_manifest_id": str,
+                                "resource_hints": {str: str} (optional),
                                 "availability": {"status": "available" | "busy" |
                                                  "degraded" | "unavailable",
                                                  "reason": str | None,
@@ -311,11 +331,13 @@ class NodeRuntimeService:
 
         Work entries are enabled from ``config.capabilities.enabled_work_types``;
         provenance entries come from the registered local artifact contracts.
+        Optional resource hints are advisory local metadata, not economic terms.
         No entry represents remote discovery, consensus, or network advertising.
         """
 
         config = self.load_config()
         enabled_work_types = _config_enabled_work_types(config)
+        resource_hints = _config_capability_resource_hints(config)
         creator_node_id = _config_node_id(config)
         current_workers = len(self.list_jobs()["current"])
         capabilities = [
@@ -323,12 +345,7 @@ class NodeRuntimeService:
                 "identifier": identifier,
                 "description": description,
                 "status": "enabled" if work_type in enabled_work_types else "disabled",
-                "creator_node_id": creator_node_id,
-                "capability_manifest_id": _capability_manifest_id(identifier),
-                "lineage": {
-                    "capability_manifest_id": _capability_manifest_id(identifier)
-                },
-                "contribution_attribution": {"creator_node_id": creator_node_id},
+                **_capability_provenance(identifier, creator_node_id, resource_hints),
                 "availability": self._work_capability_availability(
                     work_type=work_type,
                     enabled=work_type in enabled_work_types,
@@ -350,12 +367,7 @@ class NodeRuntimeService:
                     and not _config_identity_persistence_enabled(config)
                     else status
                 ),
-                "creator_node_id": creator_node_id,
-                "capability_manifest_id": _capability_manifest_id(identifier),
-                "lineage": {
-                    "capability_manifest_id": _capability_manifest_id(identifier)
-                },
-                "contribution_attribution": {"creator_node_id": creator_node_id},
+                **_capability_provenance(identifier, creator_node_id, resource_hints),
                 "availability": _metadata_capability_availability(
                     enabled=(
                         identifier != "provenance.creator_node_id"
@@ -1460,6 +1472,27 @@ def _capability_manifest_id(identifier: str) -> str:
     return f"local-capability-{identifier.replace('.', '-')}-v1"
 
 
+def _capability_provenance(
+    identifier: str,
+    creator_node_id: str | None,
+    resource_hints: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    """Build shared local provenance and optional advisory metadata."""
+
+    manifest_id = _capability_manifest_id(identifier)
+    return {
+        "creator_node_id": creator_node_id,
+        "capability_manifest_id": manifest_id,
+        "lineage": {"capability_manifest_id": manifest_id},
+        "contribution_attribution": {"creator_node_id": creator_node_id},
+        **(
+            {"resource_hints": resource_hints[identifier]}
+            if identifier in resource_hints
+            else {}
+        ),
+    }
+
+
 def _availability(
     status: str, reason: str | None, worker_capacity: dict[str, int]
 ) -> dict[str, Any]:
@@ -1514,6 +1547,53 @@ def _config_enabled_work_types(config: dict[str, Any]) -> set[str]:
             "config JSON field 'capabilities.enabled_work_types' must be a list of non-empty strings"
         )
     return set(value)
+
+
+def _config_capability_resource_hints(
+    config: dict[str, Any],
+) -> dict[str, dict[str, str]]:
+    """Load optional non-economic, advisory hints for registered capabilities."""
+
+    capabilities = config.get("capabilities")
+    if capabilities is None:
+        return {}
+    if not isinstance(capabilities, dict):
+        raise RuntimeServiceError("config JSON field 'capabilities' must be an object")
+    raw_hints = capabilities.get("resource_hints", {})
+    if not isinstance(raw_hints, dict):
+        raise RuntimeServiceError(
+            "config JSON field 'capabilities.resource_hints' must be an object"
+        )
+    registered_identifiers = {
+        identifier for identifier, _, _ in LOCAL_CAPABILITY_DEFINITIONS
+    } | {identifier for identifier, _, _ in LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS}
+    normalized: dict[str, dict[str, str]] = {}
+    for identifier, hints in raw_hints.items():
+        if identifier not in registered_identifiers:
+            raise RuntimeServiceError(
+                "capabilities.resource_hints keys must be registered capability identifiers"
+            )
+        if not isinstance(hints, dict):
+            raise RuntimeServiceError(
+                f"capabilities.resource_hints.{identifier} must be an object"
+            )
+        normalized_hints: dict[str, str] = {}
+        for field, value in hints.items():
+            if field not in RESOURCE_HINT_FIELDS:
+                raise RuntimeServiceError(
+                    f"capabilities.resource_hints.{identifier}.{field} is not an allowed advisory field"
+                )
+            if not isinstance(value, str) or not value.strip():
+                raise RuntimeServiceError(
+                    f"capabilities.resource_hints.{identifier}.{field} must be a non-empty string"
+                )
+            if ECONOMIC_HINT_PATTERN.search(value):
+                raise RuntimeServiceError(
+                    f"capabilities.resource_hints.{identifier}.{field} must not imply token economics or financial settlement"
+                )
+            normalized_hints[field] = value
+        normalized[identifier] = normalized_hints
+    return normalized
 
 
 def _config_identity_persistence_enabled(config: dict[str, Any]) -> bool:

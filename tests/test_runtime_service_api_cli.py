@@ -25,6 +25,7 @@ from aethermesh_core.runtime_service import (
     RuntimeServiceError,
     _config_api_host,
     _config_api_port,
+    _config_capability_resource_hints,
     _config_enabled_work_types,
     _config_identity_path,
     _config_identity_persistence_enabled,
@@ -1063,6 +1064,7 @@ class RuntimeServiceTests(unittest.TestCase):
             )
 
             self.assertEqual(first, second)
+            self.assertNotIn("resource_hints", echo)
             self.assertEqual(echo["creator_node_id"], initialized["node_id"])
             self.assertEqual(
                 echo["capability_manifest_id"], "local-capability-work-echo-v1"
@@ -1084,6 +1086,90 @@ class RuntimeServiceTests(unittest.TestCase):
                     "validation_receipt_refs": [],
                 },
             )
+
+    def test_capability_resource_hints_are_advisory_and_preserve_provenance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            initialized = service.initialize_local_node_data()
+            config = service.load_config()
+            config["capabilities"]["resource_hints"] = {
+                "work.echo": {
+                    "cpu_class": "general-purpose CPU",
+                    "ram_range": "256 MiB to 512 MiB",
+                    "disk_needs": "minimal local scratch space",
+                    "expected_duration": "usually under one second",
+                    "network_sensitivity": "offline-safe",
+                    "accelerator_type": "none required",
+                    "energy_profile": "low local energy use",
+                    "operator_cost_label": "operator-local-low",
+                    "operator_notes": "advisory estimate; verify locally before routing",
+                }
+            }
+            service._write_config(config)
+
+            echo = next(
+                entry
+                for entry in service.list_capabilities()["capabilities"]
+                if entry["identifier"] == "work.echo"
+            )
+
+            self.assertEqual(
+                echo["resource_hints"],
+                config["capabilities"]["resource_hints"]["work.echo"],
+            )
+            self.assertEqual(echo["creator_node_id"], initialized["node_id"])
+            self.assertEqual(
+                echo["lineage"],
+                {"capability_manifest_id": echo["capability_manifest_id"]},
+            )
+            self.assertEqual(echo["availability"]["validation_receipt_refs"], [])
+            self.assertEqual(
+                echo["contribution_attribution"],
+                {"creator_node_id": initialized["node_id"]},
+            )
+
+    def test_capability_resource_hints_reject_economic_metadata(self) -> None:
+        for hints in [
+            {"token_price": "one"},
+            {"operator_cost_label": "token reward for each job"},
+            {"operator_notes": "payments and pricing are negotiated elsewhere"},
+        ]:
+            with self.subTest(hints=hints):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError, "advisory field|token economics"
+                ):
+                    _config_capability_resource_hints(
+                        {"capabilities": {"resource_hints": {"work.echo": hints}}}
+                    )
+
+        self.assertEqual(
+            _config_capability_resource_hints(
+                {
+                    "capabilities": {
+                        "resource_hints": {
+                            "work.echo": {
+                                "operator_notes": "mistake-resistant local estimate"
+                            }
+                        }
+                    }
+                }
+            ),
+            {"work.echo": {"operator_notes": "mistake-resistant local estimate"}},
+        )
+
+    def test_capability_resource_hints_validate_registered_text_metadata(self) -> None:
+        invalid_configs = [
+            {"capabilities": []},
+            {"capabilities": {"resource_hints": {"work.unknown": {}}}},
+            {"capabilities": {"resource_hints": {"work.echo": []}}},
+            {"capabilities": {"resource_hints": {"work.echo": {"cpu_class": ""}}}},
+        ]
+        for config in invalid_configs:
+            with self.subTest(config=config):
+                with self.assertRaises(RuntimeServiceError):
+                    _config_capability_resource_hints(config)
 
     def test_capability_availability_reports_local_failure_and_capacity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1290,6 +1376,9 @@ class RuntimeServiceTests(unittest.TestCase):
             _config_enabled_work_types({"capabilities": []})
         with self.assertRaisesRegex(RuntimeServiceError, "enabled_work_types"):
             _config_enabled_work_types({"capabilities": {"enabled_work_types": [""]}})
+        self.assertEqual(_config_capability_resource_hints({}), {})
+        with self.assertRaisesRegex(RuntimeServiceError, "resource_hints"):
+            _config_capability_resource_hints({"capabilities": {"resource_hints": []}})
         self.assertFalse(_config_identity_persistence_enabled({}))
         self.assertTrue(
             _config_identity_persistence_enabled({"identity": {"persist": True}})

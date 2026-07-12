@@ -23,6 +23,20 @@ Current non-goals:
 - No rewards, payouts, tokens, or economic fairness model yet
 - No claim that the prototype is already decentralized in production
 
+## Capability resource hints
+
+Local capability entries may include optional `resource_hints` in local
+`config.json` under `capabilities.resource_hints`, keyed by registered capability
+identifier. Supported descriptive fields are `cpu_class`, `ram_range`,
+`disk_needs`, `expected_duration`, `network_sensitivity`, `accelerator_type`,
+`energy_profile`, `operator_cost_label`, and `operator_notes`.
+
+These fields are advisory, local, and non-binding. They are practical routing
+metadata only: they do not replace the capability manifest ID, creator node ID,
+validation receipt references, lineage, or contribution attribution, and they
+do not represent a price, payment, reward, token value, staking, yield, or
+financial settlement. Token-economic field names and wording are rejected.
+
 ## Install for development
 
 Requires Python 3.11 or newer.
