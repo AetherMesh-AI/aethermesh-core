@@ -90,9 +90,13 @@ def _require_local_reference(value: Any, field: str) -> None:
     if (
         not isinstance(value, str)
         or not value
+        or value != value.strip()
         or value.startswith(("/", "\\"))
+        or value.startswith("~")
         or "\\" in value
         or "://" in value
+        or re.match(r"^[A-Za-z]:/", value) is not None
+        or re.fullmatch(r"[A-Za-z0-9._/-]+", value) is None
         or ".." in value.split("/")
     ):
         raise CapabilityRecordError(f"{field} must be a safe relative local reference")

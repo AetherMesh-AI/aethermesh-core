@@ -152,6 +152,20 @@ class CapabilityRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(CapabilityRecordError, "safe relative"):
             validate_capability_record(record)
 
+        for unsafe_reference in (
+            "C:/private/manifest.json",
+            "~/private/manifest.json",
+            "data/manifest.json#fragment",
+            " data/manifest.json",
+        ):
+            record = copy.deepcopy(self.record)
+            record["lineage"]["source_manifest_ref"] = unsafe_reference
+            with (
+                self.subTest(reference=unsafe_reference),
+                self.assertRaisesRegex(CapabilityRecordError, "safe relative"),
+            ):
+                validate_capability_record(record)
+
         record = copy.deepcopy(self.record)
         record["contribution_attribution"]["creator_node_id"] = "other-node"
         with self.assertRaisesRegex(CapabilityRecordError, "must match"):
