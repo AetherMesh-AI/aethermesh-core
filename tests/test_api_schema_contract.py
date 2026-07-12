@@ -175,6 +175,12 @@ class ApiSchemaContractTests(unittest.TestCase):
                 request["attribution_metadata"],
             )
             self.assertTrue(status_payload["validation"]["passed"])
+            self.assertEqual(
+                set(status_payload["validation"]), set(status_example["validation"])
+            )
+            self.assertEqual(
+                set(status_payload["result"]), set(status_example["result"])
+            )
             self.assertEqual(receipt.status_code, 200)
             self.assertEqual(receipt.json()["schema_version"], 1)
             self.assertEqual(receipt.json()["work_id"], accepted.json()["job_id"])

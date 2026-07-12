@@ -1,7 +1,7 @@
 # Graph Report - aethermesh-core  (2026-07-11)
 
 ## Corpus Check
-- 132 files · ~178,053 words
+- 132 files · ~178,068 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d255cdac`
+- Built from commit: `7f9d82fc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

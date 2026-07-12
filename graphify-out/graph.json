@@ -21160,7 +21160,7 @@
       "label": "Local Validation Receipt v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L68",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_validation_receipt_v1",
       "community": 38,
@@ -21170,7 +21170,7 @@
       "label": "Local Contribution Lookup v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L93",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_contribution_lookup_v1",
       "community": 38,
@@ -21180,7 +21180,7 @@
       "label": "Validation receipt",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L122",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_validation_receipt",
       "community": 38,
@@ -82612,5 +82612,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d255cdac961755297f271a64ecf9e04933a37a7a"
+  "built_at_commit": "7f9d82fc501666ff1c9240945b162255f585f9bd"
 }

@@ -58,8 +58,15 @@ Example completed projection (dynamic IDs and timestamps omitted):
     "worker_node_id": "worker-local-example",
     "validated_contribution_units": 1
   },
-  "validation": {"passed": true, "reason": "ok"},
-  "result": {"result_ref": "data/job-results/local-job-<generated>.json"},
+  "validation": {
+    "passed": true,
+    "reason": "ok",
+    "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json"
+  },
+  "result": {
+    "ref": "data/job-results/local-job-<generated>.json",
+    "summary": "schema example"
+  },
   "error": null,
   "network_mode": "local-only-no-p2p"
 }
