@@ -95,7 +95,7 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1783636342.3505616,
+    "mtime": 1783811957.2759838,
     "ast_hash": "34c5b7970da9ad3bfdf77e22deca96c8",
     "semantic_hash": ""
   },
@@ -305,7 +305,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1783809573.929762,
+    "mtime": 1783810939.02192,
     "ast_hash": "b435cafc372d8a5b3944a32b0563cd8e",
     "semantic_hash": ""
   },
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783810548.7722907,
-    "ast_hash": "16d9b4cc2582d05521180083f901f4b8",
+    "mtime": 1783818848.52198,
+    "ast_hash": "7639cfd96a97462c8fb1701ea3c46163",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783807252.811409,
-    "ast_hash": "416ba012feb07c42a3a6a0948efcfe2a",
+    "mtime": 1783818848.5227938,
+    "ast_hash": "b28cecb2e93f93a9a5684aa4415f2ced",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -700,18 +700,33 @@
     "semantic_hash": ""
   },
   "docs/phase-1-local-api-boundary.md": {
-    "mtime": 1783809415.154786,
-    "ast_hash": "cbb2b0e1c1b033229b3d7a08c7400f70",
+    "mtime": 1783818848.511289,
+    "ast_hash": "3bae30330efefba3bda80cdbd76be309",
     "semantic_hash": ""
   },
   "tests/test_audit_inspection.py": {
-    "mtime": 1783809415.1557536,
-    "ast_hash": "2b6a438688a8fae755cb80a1b5b513d3",
+    "mtime": 1783818848.5224726,
+    "ast_hash": "9b47c3877bcc07f608ea1ee7d60c533a",
     "semantic_hash": ""
   },
   "tests/test_model_manifest_inspection.py": {
-    "mtime": 1783810549.2680502,
+    "mtime": 1783810939.022507,
     "ast_hash": "6582f4dc91d581113b840c235f44bdf6",
+    "semantic_hash": ""
+  },
+  "docs/validation-receipts/phase-1-step-36-schema-validation.json": {
+    "mtime": 1783818848.512021,
+    "ast_hash": "276f1c6dbde9e2d1e420ba4de119c50e",
+    "semantic_hash": ""
+  },
+  "tests/test_api_schema_contract.py": {
+    "mtime": 1783818935.0772922,
+    "ast_hash": "8b67142eeecf6a807e625ce0426dbbe4",
+    "semantic_hash": ""
+  },
+  "docs/phase-1-api-schema-contract.md": {
+    "mtime": 1783818928.1018448,
+    "ast_hash": "f0f110613a6d8ebfb933cdda57d5909e",
     "semantic_hash": ""
   }
 }

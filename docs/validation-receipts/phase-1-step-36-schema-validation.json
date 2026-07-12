@@ -1,0 +1,25 @@
+{
+  "receipt_type": "phase_1_api_schema_validation",
+  "receipt_version": 1,
+  "roadmap_step": "phase-1/step-36",
+  "schema_contract": "docs/phase-1-api-schema-contract.md",
+  "validation": {
+    "documented_submission_example": "passed",
+    "required_schema_version_rejection": "passed",
+    "required_creator_node_id_rejection": "passed",
+    "required_lineage_rejection": "passed",
+    "required_attribution_rejection": "passed",
+    "status_validation_receipt_contribution_lookup": "passed",
+    "generated_openapi_route_match": "passed"
+  },
+  "commands": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest tests.test_api_schema_contract tests.test_runtime_service_api_cli tests.test_audit_inspection",
+      "result": "32 tests passed"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python scripts/full_test.py --mode fast --base origin/main --keep-going",
+      "result": "passed: 581 tests, 366 subtests, 100% branch coverage, ruff, mypy, desktop tests, integrity, dependency, workflow-security, and PR-size gates"
+    }
+  ]
+}

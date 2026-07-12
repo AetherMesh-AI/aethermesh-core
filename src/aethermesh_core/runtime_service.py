@@ -42,6 +42,7 @@ PUBLIC_VERSION = "0.2.0-alpha"
 CAPABILITY_LIST_SCHEMA_VERSION = 1
 MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
+LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
 
 # These definitions are the local runtime's source of truth. A configured work
 # type is enabled only when it is registered here; provenance entries describe
@@ -524,6 +525,13 @@ class NodeRuntimeService:
 
         if not isinstance(request, dict):
             raise RuntimeServiceError("job submission must be a JSON object")
+        schema_version = request.get("schema_version")
+        if (
+            not isinstance(schema_version, int)
+            or isinstance(schema_version, bool)
+            or schema_version != LOCAL_JOB_SUBMISSION_SCHEMA_VERSION
+        ):
+            raise RuntimeServiceError("job submission schema_version must be integer 1")
         creator_node_id = request.get("creator_node_id")
         if not isinstance(creator_node_id, str) or not creator_node_id.strip():
             raise RuntimeServiceError(
@@ -542,14 +550,14 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission requested_validation_mode must be a non-empty string"
             )
-        lineage_parent_refs = request.get("lineage_parent_refs", [])
+        lineage_parent_refs = request.get("lineage_parent_refs")
         if not isinstance(lineage_parent_refs, list) or not all(
             isinstance(ref, str) and ref.strip() for ref in lineage_parent_refs
         ):
             raise RuntimeServiceError(
                 "job submission lineage_parent_refs must be a list of non-empty strings"
             )
-        attribution_metadata = request.get("attribution_metadata", {})
+        attribution_metadata = request.get("attribution_metadata")
         if not isinstance(attribution_metadata, dict):
             raise RuntimeServiceError(
                 "job submission attribution_metadata must be a JSON object"
@@ -567,7 +575,7 @@ class NodeRuntimeService:
         atomic_create_json(
             manifest_path,
             {
-                "version": 1,
+                "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
                 "manifest_type": "local_job_submission",
                 "network_mode": "local-only-no-p2p",
                 "submitted_at": int(time.time()),
@@ -583,6 +591,7 @@ class NodeRuntimeService:
         )
         self._append_event(f"accepted local job submission {job_id}")
         return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
             "status": "accepted_pending_execution",
             "manifest_ref": manifest_ref,
@@ -594,6 +603,7 @@ class NodeRuntimeService:
         """Read one submission and its optional local execution evidence."""
 
         missing = {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
             "status": "not_found",
             "error": "local job not found",
@@ -617,6 +627,7 @@ class NodeRuntimeService:
             else {}
         )
         return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
             "status": status.get("status", "queued"),
             "manifest_ref": f"data/job-submissions/{job_id}.json",
@@ -848,6 +859,7 @@ class NodeRuntimeService:
             1 for item in items if item["acceptance_status"] == "accepted"
         )
         return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "network_mode": "local-only-no-p2p",
             "summary_status": "empty" if not items else "recorded",
             "accepted_work_count": accepted_work_count,
