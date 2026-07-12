@@ -611,6 +611,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 "lineage_parent_refs": ["data/prior-job.json"],
                 "attribution_metadata": {"project": "prototype"},
             }
+            request_before_rejection = json.loads(json.dumps(request))
 
             with self.assertRaisesRegex(
                 RuntimeServiceError,
@@ -624,6 +625,10 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(rejection["status"], "rejected")
             self.assertEqual(rejection["creator_node_id"], "creator-local-a")
             self.assertEqual(rejection["job_id"], request["job_id"])
+            self.assertEqual(rejection["job_type"], "unknown_work")
+            self.assertEqual(
+                rejection["requested_capability"], {"identifier": "work.unknown_work"}
+            )
             self.assertEqual(
                 rejection["lineage"],
                 {"job_id": request["job_id"], "parent_refs": ["data/prior-job.json"]},
@@ -643,10 +648,22 @@ class RuntimeServiceTests(unittest.TestCase):
                 rejection["validation"], {"state": "rejected", "receipt_ref": None}
             )
             self.assertIn("unknown_work", rejection["message"])
+            self.assertEqual(request, request_before_rejection)
             self.assertFalse((root / "data" / "job-submissions").exists())
             self.assertFalse((root / "data" / "job-status").exists())
             self.assertFalse((root / "data" / "job-results").exists())
             self.assertFalse((root / "data" / "job-validation-receipts").exists())
+            self.assertEqual(
+                service.contribution_summary(),
+                {
+                    "schema_version": 1,
+                    "network_mode": "local-only-no-p2p",
+                    "summary_status": "empty",
+                    "accepted_work_count": 0,
+                    "non_accepted_work_count": 0,
+                    "items": [],
+                },
+            )
             self.assertTrue(
                 any(
                     "rejected unsupported local job submission" in event
