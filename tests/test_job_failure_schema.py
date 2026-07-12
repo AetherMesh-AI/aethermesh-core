@@ -159,6 +159,8 @@ class JobFailureSchemaTests(unittest.TestCase):
             ("local_log_paths", ["/private/job.log"], "safe relative paths"),
             ("local_log_paths", ["../private/job.log"], "safe relative paths"),
             ("local_log_paths", [r"C:\\private\\job.log"], "safe relative paths"),
+            ("local_log_paths", ["file:///private/job.log"], "safe relative paths"),
+            ("local_log_paths", [r"runtime\\job.log"], "safe relative paths"),
             ("content_hashes", ["sha256:not-a-hash"], "sha256 hash"),
             ("observed_timestamps", [], "non-empty list"),
             ("observed_timestamps", [1], "UTC timestamp"),

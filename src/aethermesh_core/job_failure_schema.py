@@ -325,6 +325,8 @@ def _local_path_list(value: object, context: str) -> None:
             path.is_absolute()
             or windows_path.is_absolute()
             or item.startswith("~")
+            or "://" in item
+            or "\\" in item
             or ".." in path.parts
             or ".." in windows_path.parts
         ):
