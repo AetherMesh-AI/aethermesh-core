@@ -97,6 +97,8 @@ class RuntimeServiceTests(unittest.TestCase):
             manifest_path = Path(temp_dir) / response["manifest_ref"]
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["job"]["job_id"], response["job_id"])
+            self.assertIsInstance(manifest["submitted_at"], int)
+            self.assertEqual(manifest["initial_state"], "created")
             self.assertEqual(
                 manifest["job"]["input_payload"],
                 {"payload_type": "json", "content": {"message": "hello"}},
@@ -116,6 +118,21 @@ class RuntimeServiceTests(unittest.TestCase):
                     "metadata": {"project": "prototype"},
                 },
             )
+            second = service.submit_local_job(
+                {
+                    "job_type": "echo",
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "second"},
+                    },
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "schema_version": 1,
+                    "lineage_parent_refs": ["data/prior-job.json"],
+                    "attribution_metadata": {"project": "prototype"},
+                }
+            )
+            self.assertNotEqual(response["job_id"], second["job_id"])
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
 
     def test_supplied_local_job_id_persists_and_rejects_overwrite(self) -> None:
@@ -176,6 +193,19 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertTrue(receipt_path.is_file())
             self.assertEqual(manifest_path.read_bytes(), manifest_before)
             self.assertEqual(json.loads(receipt_path.read_text())["job_id"], job_id)
+            completed_status = restarted.get_local_job_status(job_id)
+            self.assertEqual(completed_status["lineage"]["job_id"], job_id)
+            self.assertEqual(
+                completed_status["contribution_attribution"]["job_id"], job_id
+            )
+            state_audit_path = root / completed_status["state_audit_refs"][0]
+            self.assertTrue(
+                all(
+                    json.loads(line)["job_id"] == job_id
+                    for line in state_audit_path.read_text().splitlines()
+                )
+            )
+            self.assertIn(job_id, "\n".join(restarted.recent_logs()["events"]))
 
     def test_local_job_states_are_auditable_and_terminal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

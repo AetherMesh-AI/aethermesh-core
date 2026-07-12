@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 157 files · ~194,072 words
+- 157 files · ~194,134 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2498 nodes · 6563 edges · 118 communities (105 shown, 13 thin omitted)
+- 2498 nodes · 6563 edges · 119 communities (105 shown, 14 thin omitted)
 - Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 414 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a20583bc`
+- Built from commit: `9ab024f4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -127,6 +127,7 @@
 - [[_COMMUNITY_Community 111|Community 111]]
 - [[_COMMUNITY_Community 112|Community 112]]
 - [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
 - [[_COMMUNITY_Community 115|Community 115]]
 - [[_COMMUNITY_Community 116|Community 116]]
 - [[_COMMUNITY_Community 121|Community 121]]
@@ -159,7 +160,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (118 total, 13 thin omitted)
+## Communities (119 total, 14 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.14
@@ -202,8 +203,8 @@ Cohesion: 0.05
 Nodes (49): _background_mode_enabled(), _control_background_node(), init(), jobs(), _local_api_is_aethermesh(), main(), node_start(), node_status() (+41 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.12
-Nodes (30): _bytes_to_gb(), collect_hardware_identity_inputs(), _colon_value(), _count_display_chips(), _csv_first_value(), _darwin_hardware_inputs(), _extract_mac_addresses(), _linux_cpu_value() (+22 more)
+Cohesion: 0.11
+Nodes (34): _bytes_to_gb(), collect_hardware_identity_inputs(), _colon_value(), _count_display_chips(), _csv_first_value(), _darwin_hardware_inputs(), _default_goos(), _extract_mac_addresses() (+26 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.14
@@ -266,8 +267,8 @@ Cohesion: 0.14
 Nodes (14): AetherMesh Core Persistent Goal, AI Direction, Build Direction, Contribution Tracking Direction, Current Priority Bias, Decision Rule For Every Interval, Development Philosophy, Early Prototype Target (+6 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.10
-Nodes (23): run_demo(), _canonical_root_json(), _component_hashes(), _default_goos(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, HardwareIdentityInputs (+15 more)
+Cohesion: 0.12
+Nodes (19): run_demo(), _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes() (+11 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.14
@@ -278,8 +279,8 @@ Cohesion: 0.23
 Nodes (3): Validate and return one local-only capability record without writing it.      A, validate_capability_record(), CapabilityRecordTests
 
 ### Community 30 - "Community 30"
-Cohesion: 0.24
-Nodes (11): _darwin_physical_mac_addresses(), _extract_labeled_value(), _is_darwin_physical_ethernet_or_wifi_port(), _is_physical_ethernet_or_wifi_name(), _is_physical_linux_network_interface(), _is_usable_mac_address(), _is_virtual_or_non_hardware_network_name(), _linux_physical_mac_addresses() (+3 more)
+Cohesion: 0.50
+Nodes (5): _gpu_input(), _join_normalized(), _normalize_value(), _round_installed_ram_gb(), _rounded_gb_input()
 
 ### Community 31 - "Community 31"
 Cohesion: 0.13
@@ -302,8 +303,8 @@ Cohesion: 0.35
 Nodes (4): Return capped integer contribution units for one validated local result.      Th, score_validated_contribution(), ContributionScoringTests, _run()
 
 ### Community 37 - "Community 37"
-Cohesion: 0.08
-Nodes (11): _identity_document(), load_or_create_identity(), _node_name_wordlist_dir(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., _run_command(), _save_identity() (+3 more)
+Cohesion: 0.10
+Nodes (9): _identity_document(), load_or_create_identity(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., _save_identity(), HostnameReader, IdentityPersistenceTests (+1 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.10
@@ -359,7 +360,7 @@ Nodes (27): _local_safety_metadata(), NodeRuntimeService, _provenance_matches_jo
 
 ### Community 54 - "Community 54"
 Cohesion: 0.12
-Nodes (34): _backup_identity_referenced_artifacts(), _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _gpu_input(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError (+26 more)
+Nodes (37): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _darwin_physical_mac_addresses(), _extract_labeled_value(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError (+29 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.50
@@ -446,7 +447,7 @@ Cohesion: 0.15
 Nodes (13): format, pattern, type, pattern, type, enum, type, properties (+5 more)
 
 ### Community 78 - "Community 78"
-Cohesion: 0.25
+Cohesion: 0.29
 Nodes (7): Local Node Identity Format, Local prototype reset procedure, Manifest linkage, Minimal example, Private key material, Version 1 document shape, Versioning rules
 
 ### Community 79 - "Community 79"
@@ -526,8 +527,8 @@ Cohesion: 0.20
 Nodes (9): atomic_create_json(), atomic_write_json(), _publish_json(), Shared JSON file persistence helpers for local-only artifacts., Write one JSON document using a temp file and atomic replace., Create one JSON document atomically without replacing an existing file., Best-effort removal for abandoned atomic-write temp files., remove_temp_file() (+1 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.11
-Nodes (12): _append_identity_reset_receipt(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), Return a local audit reference without leaking host-specific directories., Local audit details for an explicit identity reset., Return JSON-serializable reset details for CLI/API callers. (+4 more)
+Cohesion: 0.09
+Nodes (16): _append_identity_reset_receipt(), _backup_identity_referenced_artifacts(), _identity_reset_artifact_ref(), _identity_reset_warning(), IdentityResetResult, _load_identity_reset_receipts(), _local_identity_ref_path(), Return a local audit reference without leaking host-specific directories. (+8 more)
 
 ### Community 106 - "Community 106"
 Cohesion: 0.09
@@ -576,7 +577,7 @@ Nodes (6): _coerce_job(), NoAvailableNodesError, Raised when local job assignmen
 ## Knowledge Gaps
 - **326 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+321 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

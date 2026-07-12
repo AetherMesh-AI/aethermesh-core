@@ -806,6 +806,7 @@ class NodeRuntimeService:
                     "manifest_type": "local_job_submission",
                     "network_mode": "local-only-no-p2p",
                     "submitted_at": int(time.time()),
+                    "initial_state": "created",
                     "job": {
                         "job_id": job_id,
                         "job_type": job_type,
