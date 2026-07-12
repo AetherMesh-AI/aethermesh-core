@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783854993.4547791,
-    "ast_hash": "eb89a51306d07c5b5c01dad9c28b0774",
+    "mtime": 1783855478.6600983,
+    "ast_hash": "db69ffc4fe6674af54420ef7878e4e1d",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783854041.8503768,
-    "ast_hash": "5afab7e6f360a2a60a98fb4abde51f55",
+    "mtime": 1783855479.4796808,
+    "ast_hash": "ce64715742524d281ce9bae17b7fecb4",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {

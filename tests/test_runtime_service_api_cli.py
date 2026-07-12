@@ -109,6 +109,90 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
 
+    def test_local_job_requester_identity_preserves_request_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "job_type": "echo",
+                "payload": {"message": "hello"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "schema_version": 1,
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            node_requested = service.submit_local_job(
+                {**request, "requester_identity": {"requesting_node_id": "node-a"}}
+            )
+            local_requested = service.submit_local_job(
+                {
+                    **request,
+                    "requester_identity": {"local_requester_identity": "developer-cli"},
+                }
+            )
+            absent_requested = service.submit_local_job(request)
+            unknown_requested = service.submit_local_job(
+                {**request, "requester_identity": {"status": "unknown"}}
+            )
+            with self.assertRaisesRegex(RuntimeServiceError, "requester_identity"):
+                service.submit_local_job(
+                    {**request, "requester_identity": ["not-an-identity-object"]}
+                )
+            completed = service.execute_submitted_local_job(
+                local_requested["job_id"], "worker-local-a"
+            )
+            node_manifest = json.loads(
+                (Path(temp_dir) / node_requested["manifest_ref"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            receipt = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{local_requested['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )
+
+            self.assertEqual(
+                node_manifest["requester_identity"], {"requesting_node_id": "node-a"}
+            )
+            self.assertEqual(
+                completed["requester_identity"],
+                {"local_requester_identity": "developer-cli"},
+            )
+            self.assertEqual(
+                receipt["requester_identity"],
+                {"local_requester_identity": "developer-cli"},
+            )
+            self.assertIsNone(
+                service.get_local_job_status(absent_requested["job_id"])[
+                    "requester_identity"
+                ]
+            )
+            self.assertEqual(
+                service.get_local_job_status(unknown_requested["job_id"])[
+                    "requester_identity"
+                ],
+                {"status": "unknown"},
+            )
+            self.assertEqual(completed["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                completed["lineage"]["parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                completed["contribution_attribution"]["creator_node_id"],
+                "creator-local-a",
+            )
+            self.assertEqual(receipt["validator_id"], "worker-local-a")
+            self.assertEqual(
+                service.get_local_validation_receipt(work_id=local_requested["job_id"])[
+                    "requester_identity"
+                ],
+                {"local_requester_identity": "developer-cli"},
+            )
+
     def test_local_job_submission_rejects_invalid_request_without_manifest(
         self,
     ) -> None:
