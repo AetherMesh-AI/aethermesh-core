@@ -30,6 +30,7 @@ from aethermesh_core.identity import (
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
@@ -827,6 +828,14 @@ class NodeRuntimeService:
             or schema_version != LOCAL_JOB_SUBMISSION_SCHEMA_VERSION
         ):
             raise RuntimeServiceError("job submission schema_version must be integer 1")
+        supplied_job_id = request.get("job_id")
+        if supplied_job_id is not None and not self._is_local_job_id(supplied_job_id):
+            raise RuntimeServiceError(
+                "job submission job_id must be a local-job- followed by 32 lowercase hex characters"
+            )
+        job_id = supplied_job_id or f"local-job-{uuid4().hex}"
+        manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
+        manifest_ref = f"data/job-submissions/{job_id}.json"
         creator_node_id = request.get("creator_node_id")
         if not _safe_local_identifier(creator_node_id):
             raise RuntimeServiceError(
@@ -875,15 +884,11 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission must contain JSON-compatible data"
             ) from exc
-
-        supplied_job_id = request.get("job_id")
-        if supplied_job_id is not None and not self._is_local_job_id(supplied_job_id):
-            raise RuntimeServiceError(
-                "job submission job_id must be a local-job- followed by 32 lowercase hex characters"
+        submission_fingerprint = canonical_json_hash(request, prefix="sha256:")
+        if manifest_path.exists():
+            return self._existing_local_submission(
+                manifest_path, job_id, submission_fingerprint
             )
-        job_id = supplied_job_id or f"local-job-{uuid4().hex}"
-        manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
-        manifest_ref = f"data/job-submissions/{job_id}.json"
         try:
             atomic_create_json(
                 manifest_path,
@@ -893,6 +898,7 @@ class NodeRuntimeService:
                     "network_mode": "local-only-no-p2p",
                     "submitted_at": int(time.time()),
                     "initial_state": "created",
+                    "submission_fingerprint": submission_fingerprint,
                     "job": {
                         "job_id": job_id,
                         "job_type": job_type,
@@ -912,8 +918,10 @@ class NodeRuntimeService:
                     },
                 },
             )
-        except FileExistsError as exc:
-            raise RuntimeServiceError("local job ID already exists") from exc
+        except FileExistsError:
+            return self._existing_local_submission(
+                manifest_path, job_id, submission_fingerprint
+            )
         record: dict[str, Any] = {
             "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
@@ -946,6 +954,22 @@ class NodeRuntimeService:
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
         }
+
+    def _existing_local_submission(
+        self, manifest_path: Path, job_id: str, submission_fingerprint: str
+    ) -> dict[str, Any]:
+        """Return an exact retry's state or reject a conflicting local job ID."""
+
+        manifest = self._load_local_job_document(
+            manifest_path, "job submission manifest"
+        )
+        if (
+            manifest.get("job", {}).get("job_id") == job_id
+            and manifest.get("submission_fingerprint") == submission_fingerprint
+        ):
+            return {**self.get_local_job_status(job_id), "idempotent_retry": True}
+        self._append_event(f"rejected duplicate local job submission {job_id}")
+        raise RuntimeServiceError("local job ID already exists with different content")
 
     def _requested_local_capability(
         self, value: object, job_type: str
