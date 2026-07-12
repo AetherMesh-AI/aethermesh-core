@@ -40,6 +40,15 @@ class JobEnvelopeTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.envelope))
         self.assertFalse(schema["additionalProperties"])
+        self.assertIn("created_at", schema["required"])
+        created_at_schema = schema["properties"]["created_at"]
+        self.assertEqual(created_at_schema["format"], "date-time")
+        self.assertIsNotNone(
+            re.fullmatch(created_at_schema["pattern"], self.envelope["created_at"])
+        )
+        self.assertIsNone(
+            re.fullmatch(created_at_schema["pattern"], "2026-07-12T12:00:00+00:00")
+        )
         self.assertEqual(
             schema["properties"]["job_type"]["enum"],
             [

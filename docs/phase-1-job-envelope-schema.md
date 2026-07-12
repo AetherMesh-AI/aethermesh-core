@@ -1,6 +1,6 @@
 # Phase 1 Job Envelope Schema
 
-`examples/schemas/phase-1-job-envelope.schema.json` defines the local-only, version-1 envelope for one runnable job. It is an artifact contract, not a network protocol or scheduler request.
+`examples/schemas/phase-1-job-envelope.schema.json` defines the local-only, version-1 envelope for one runnable job. It is an artifact contract, not a network protocol or scheduler request. Phase 1 has no separate task-record schema: each envelope is the single local runnable job (task) record.
 
 Serialize envelopes as UTF-8 JSON with lexicographically sorted object keys, compact separators, and one trailing newline. `aethermesh_core.job_envelope.canonical_job_envelope_json` provides that representation for fixtures and receipt inputs.
 
@@ -11,7 +11,7 @@ Serialize envelopes as UTF-8 JSON with lexicographically sorted object keys, com
 | `job_id` | Stable local job identifier, separate from `creator_node_id`. |
 | `schema_version` | Integer `1`. |
 | `creator_node_id` | Node that created the job. |
-| `created_at` | UTC creation timestamp in `YYYY-MM-DDTHH:MM:SSZ` form. |
+| `created_at` | UTC creation timestamp in `YYYY-MM-DDTHH:MM:SSZ` form. It is set when the local record is created and remains unchanged during validation, retries, reporting, and export; it is not proof of global ordering or network consensus. |
 | `job_type` | Required local worker capability: one of `echo`, `keyword_extract`, `text_chunk`, `text_embed`, `text_retrieve`, or `text_stats`. |
 | `input_manifest` | File references only; never inline large input payloads. |
 | `expected_outputs` | Expected artifact paths and media types. |
