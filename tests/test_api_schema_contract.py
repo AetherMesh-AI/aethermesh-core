@@ -27,6 +27,61 @@ class ApiSchemaContractTests(unittest.TestCase):
             if example_match is None:
                 self.fail("submission example is missing from schema contract")
             request = json.loads(example_match.group(1))
+            examples = [
+                json.loads(block)
+                for block in re.findall(r"```json\n(.*?)\n```", contract, re.DOTALL)
+            ]
+            self.assertEqual(len(examples), 4)
+            submission, status_example, receipt_example, contribution_example = examples
+            self.assertEqual(submission, request)
+            self.assertEqual(
+                set(status_example),
+                {
+                    "schema_version",
+                    "job_id",
+                    "status",
+                    "manifest_ref",
+                    "creator_node_id",
+                    "worker_node_id",
+                    "lineage",
+                    "contribution_attribution",
+                    "validation",
+                    "result",
+                    "error",
+                    "network_mode",
+                },
+            )
+            self.assertTrue(
+                {
+                    "schema_version",
+                    "receipt_id",
+                    "work_id",
+                    "creator_node_id",
+                    "manifest_ref",
+                    "lineage_parent_ids",
+                    "validation_status",
+                    "validator_identity",
+                    "contribution_attribution",
+                    "validation_scope",
+                    "validation",
+                    "evidence",
+                }.issubset(receipt_example)
+            )
+            self.assertTrue(
+                {
+                    "work_item_id",
+                    "status",
+                    "acceptance_status",
+                    "creator_node_id",
+                    "contributing_node_id",
+                    "manifest_ref",
+                    "status_ref",
+                    "validation_receipt_ref",
+                    "lineage_links",
+                    "timestamps",
+                    "evidence_errors",
+                }.issubset(contribution_example["items"][0])
+            )
 
             async def exercise() -> tuple[httpx.Response, ...]:
                 transport = httpx.ASGITransport(app=app)
@@ -133,14 +188,20 @@ class ApiSchemaContractTests(unittest.TestCase):
             self.assertEqual(contributions.json()["schema_version"], 1)
             self.assertEqual(contributions.json()["accepted_work_count"], 1)
 
-            documented_routes = {
-                "/api/jobs",
-                "/api/jobs/{job_id}",
-                "/api/validation-receipts",
-                "/api/contributions",
-                "/api/audit-events",
+            documented_operations = {
+                ("/api/jobs", "get"),
+                ("/api/jobs", "post"),
+                ("/api/jobs/{job_id}", "get"),
+                ("/api/validation-receipts", "get"),
+                ("/api/contributions", "get"),
+                ("/api/audit-events", "get"),
             }
-            self.assertTrue(documented_routes.issubset(openapi["paths"]))
+            self.assertTrue(
+                all(
+                    method in openapi["paths"].get(route, {})
+                    for route, method in documented_operations
+                )
+            )
 
 
 if __name__ == "__main__":

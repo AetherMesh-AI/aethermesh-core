@@ -21160,7 +21160,7 @@
       "label": "Local Validation Receipt v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L66",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_validation_receipt_v1",
       "community": 38,
@@ -21170,7 +21170,7 @@
       "label": "Local Contribution Lookup v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L91",
+      "source_location": "L93",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_contribution_lookup_v1",
       "community": 38,
@@ -21180,7 +21180,7 @@
       "label": "Validation receipt",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L108",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_validation_receipt",
       "community": 38,
@@ -68246,9 +68246,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L603",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_603",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status"
     },
     {
       "relation": "calls",
@@ -68267,9 +68267,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L660",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_660",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events"
     },
     {
       "relation": "calls",
@@ -68321,9 +68321,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L845",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_845",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary"
     },
     {
       "relation": "calls",
@@ -68386,9 +68386,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L877",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_877",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt"
     },
     {
       "relation": "calls",
@@ -68484,9 +68484,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L1152",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_1152",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job"
     },
     {
       "relation": "calls",
@@ -82612,5 +82612,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "759d88532a837d577cc8b196d9f54f6392556f8c"
+  "built_at_commit": "d255cdac961755297f271a64ecf9e04933a37a7a"
 }

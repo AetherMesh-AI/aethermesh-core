@@ -59,6 +59,8 @@ Example completed projection (dynamic IDs and timestamps omitted):
     "validated_contribution_units": 1
   },
   "validation": {"passed": true, "reason": "ok"},
+  "result": {"result_ref": "data/job-results/local-job-<generated>.json"},
+  "error": null,
   "network_mode": "local-only-no-p2p"
 }
 ```
@@ -101,10 +103,22 @@ Example lookup: `GET /api/contributions` after the completed job example above.
   "summary_status": "recorded",
   "accepted_work_count": 1,
   "non_accepted_work_count": 0,
-  "items": [{"work_item_id": "local-job-<generated>", "acceptance_status": "accepted"}]
+  "items": [{
+    "work_item_id": "local-job-<generated>",
+    "status": "succeeded",
+    "acceptance_status": "accepted",
+    "creator_node_id": "creator-local-example",
+    "contributing_node_id": "worker-local-example",
+    "manifest_ref": "data/job-submissions/local-job-<generated>.json",
+    "status_ref": "data/job-status/local-job-<generated>.json",
+    "validation_receipt_ref": "data/job-validation-receipts/local-job-<generated>.json",
+    "lineage_links": ["data/prior-job.json"],
+    "timestamps": {"submitted_at": 0},
+    "evidence_errors": []
+  }]
 }
 ```
 
 ## Validation receipt
 
-`tests/test_api_schema_contract.py` loads the submission example from this file's equivalent test fixture, exercises it through the actual FastAPI route, verifies required-field rejection for schema version, creator, lineage, and attribution, then verifies its status, validation receipt, and contribution lookup. It also confirms the documented provenance routes are present in generated `/openapi.json`.
+`tests/test_api_schema_contract.py` loads every JSON example in this document, checks each example against the documented required-field contract, exercises the submission through the actual FastAPI route, verifies required-field rejection for schema version, creator, lineage, and attribution, then verifies its status, validation receipt, and contribution lookup. It also confirms the documented provenance routes and methods are present in generated `/openapi.json`.
