@@ -48,6 +48,10 @@ class JobEnvelopeTests(unittest.TestCase):
             "sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f",
         )
         self.assertEqual(
+            parsed["input_manifest"]["files"][0]["metadata"],
+            {"media_type": "application/json", "purpose": "echo-input"},
+        )
+        self.assertEqual(
             parsed["validation_requirements"]["checks"][0]["pass_criteria"],
             {"field": "status", "equals": "completed", "status": "success"},
         )
