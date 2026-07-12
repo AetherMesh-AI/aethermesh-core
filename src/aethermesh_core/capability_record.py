@@ -28,7 +28,7 @@ _TOP_LEVEL_FIELDS = frozenset(
         "contribution_attribution",
     }
 )
-_IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
+_IDENTIFIER = re.compile(r"[a-z0-9][a-z0-9_.-]{2,127}\Z")
 _SEMVER = re.compile(
     r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
     r"(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)"

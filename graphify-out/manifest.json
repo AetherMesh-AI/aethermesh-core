@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/api.py": {
-    "mtime": 1783822796.512875,
-    "ast_hash": "566f26637b1c985eda7a4a3c2ecb5062",
+    "mtime": 1783848451.6822908,
+    "ast_hash": "2658e38572dde63f8f258119a768eb93",
     "semantic_hash": ""
   },
   "src/aethermesh_core/app_cli.py": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783842465.5001698,
-    "ast_hash": "7dcbc010e9dea6686c8242ab0afab2ae",
+    "mtime": 1783848451.682628,
+    "ast_hash": "86aab3d2ad628aea370207265e94c13a",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -525,7 +525,7 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/local_startup.py": {
-    "mtime": 1783843434.321743,
+    "mtime": 1783844107.724285,
     "ast_hash": "fe38f6198708193addcbf7a0882542c0",
     "semantic_hash": ""
   },
@@ -565,7 +565,7 @@
     "semantic_hash": ""
   },
   "tests/test_local_startup.py": {
-    "mtime": 1783843444.4904346,
+    "mtime": 1783844107.7246208,
     "ast_hash": "b8eb52115f7d36373c9af3c23353d19c",
     "semantic_hash": ""
   },
@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
-    "mtime": 1783839365.2071218,
-    "ast_hash": "bdd67b159dd3596342488a9f2f8efd0f",
+    "mtime": 1783850162.2256966,
+    "ast_hash": "35d8536e1e7478a33312d19db26a94e4",
     "semantic_hash": ""
   },
   "tests/test_api_errors.py": {
@@ -740,13 +740,13 @@
     "semantic_hash": ""
   },
   "tests/test_capability_record.py": {
-    "mtime": 1783839365.2074292,
-    "ast_hash": "2d20a43935701a5a9f5404b0c6d9e044",
+    "mtime": 1783845201.0302575,
+    "ast_hash": "f8389d2997a4039b507f45ace76567ea",
     "semantic_hash": ""
   },
   "docs/capability-record-schema.md": {
-    "mtime": 1783839365.2065818,
-    "ast_hash": "ca6f92156c927d2b2e3b4fb9a63a0ae3",
+    "mtime": 1783845201.0293374,
+    "ast_hash": "e94be64bff704d77bc67f39ac78be166",
     "semantic_hash": ""
   },
   "examples/schemas/local-echo-input.schema.json": {
@@ -755,8 +755,18 @@
     "semantic_hash": ""
   },
   "examples/schemas/local-echo-output.schema.json": {
-    "mtime": 1783839365.206816,
-    "ast_hash": "f9ab00e8d569e20c730413927b80d91b",
+    "mtime": 1783845201.0299735,
+    "ast_hash": "00dcb1f43c18b8b0f92d9b4a8401b333",
+    "semantic_hash": ""
+  },
+  "examples/capabilities/local-echo-worker.json": {
+    "mtime": 1783845201.0296974,
+    "ast_hash": "987976e877d3df5f9a5d9e63c492b4e6",
+    "semantic_hash": ""
+  },
+  "tests/test_capability_record_inspection.py": {
+    "mtime": 1783849481.5230765,
+    "ast_hash": "48f76978979b76b943e6328ec46fe5a6",
     "semantic_hash": ""
   }
 }
