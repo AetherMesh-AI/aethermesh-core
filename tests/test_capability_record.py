@@ -14,6 +14,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "capability_version": "1.0.0",
             "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
@@ -76,6 +77,7 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_rejects_required_identity_manifest_and_validation_fields(self) -> None:
         for field, expected in (
+            ("capability_version", "capability_version"),
             ("node_id", "node_id"),
             ("creator_node_id", "creator_node_id"),
             ("manifest_refs", "manifest_refs"),
@@ -86,6 +88,36 @@ class CapabilityRecordTests(unittest.TestCase):
                 record.pop(field)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
                     self.validate(record)
+
+    def test_rejects_non_semantic_capability_version(self) -> None:
+        for version in ("1", "1.0", "v1.0.0", "01.0.0", "1.0.0-preview"):
+            with self.subTest(version=version):
+                record = copy.deepcopy(self.record)
+                record["capability_version"] = version
+                with self.assertRaisesRegex(CapabilityRecordError, "semantic version"):
+                    self.validate(record)
+
+    def test_versioned_record_preserves_receipt_manifest_and_attribution(self) -> None:
+        validated = self.validate(self.record)
+
+        self.assertEqual(validated["metadata"]["name"], "Local echo worker")
+        self.assertEqual(validated["capability_version"], "1.0.0")
+        self.assertEqual(validated["creator_node_id"], "node.local-01")
+        self.assertEqual(
+            validated["lineage"]["source_manifest_ref"],
+            "manifests/local-echo-worker.json",
+        )
+        self.assertEqual(
+            validated["validation"]["receipt_ids"], ["receipt.echo-smoke-01"]
+        )
+        self.assertEqual(
+            validated["contribution_attribution"],
+            {
+                "creator_node_id": "node.local-01",
+                "maintainer_node_id": "node.local-01",
+                "work_receipt_ids": ["work.echo-0001"],
+            },
+        )
 
     def test_rejects_blank_node_id(self) -> None:
         record = copy.deepcopy(self.record)

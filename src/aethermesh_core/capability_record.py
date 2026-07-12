@@ -13,6 +13,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "capability_id",
+        "capability_version",
         "node_id",
         "creator_node_id",
         "created_at",
@@ -25,6 +26,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     }
 )
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
+_CAPABILITY_VERSION = re.compile(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
 
@@ -46,6 +48,7 @@ def validate_capability_record(
     _reject_unknown_fields(document)
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
+    _require_capability_version(document)
     node_id = _require_identifier(document, "node_id")
     if node_id != _require_identifier_value(local_node_id, "local_node_id"):
         raise CapabilityRecordError("node_id must match the local node identity")
@@ -211,6 +214,14 @@ def _require_timestamp(document: dict[str, Any], field: str) -> None:
         raise CapabilityRecordError(
             f"{field} must be an RFC 3339 UTC timestamp"
         ) from exc
+
+
+def _require_capability_version(document: dict[str, Any]) -> None:
+    value = _require_string(document, "capability_version")
+    if not _CAPABILITY_VERSION.fullmatch(value):
+        raise CapabilityRecordError(
+            "capability_version must be a semantic version in MAJOR.MINOR.PATCH form"
+        )
 
 
 def _require_ref_list(

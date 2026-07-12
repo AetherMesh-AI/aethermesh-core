@@ -12,6 +12,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | --- | --- |
 | `schema_version` | Integer `1`. |
 | `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
+| `capability_version` | Required capability-contract semantic version in `MAJOR.MINOR.PATCH` form (for example, `1.0.0`). It describes the capability's inputs, outputs, constraints, and local behavior—not node reputation, release/marketing status, credits, or token value. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
@@ -38,12 +39,23 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 
 `lineage.prior_capability_id` links a replacement to an earlier capability record. `lineage.local_build_artifact_ref` links it to a local build artifact. Either may be omitted or `null` when not applicable. `source_manifest_ref` remains required in every record.
 
+## Capability versioning and local migration
+
+The version belongs to the capability record alongside its manifest references, validation receipt IDs, lineage, and contribution attribution; none of those provenance fields are replaced by a version update. Validators should rerun the relevant local checks when a capability contract changes before claiming `passed` validation for the updated record.
+
+- Increment **major** when a compatible consumer can no longer safely rely on the documented input/output contract, constraints, or behavior.
+- Increment **minor** when adding backward-compatible inputs, outputs, or behavior.
+- Increment **patch** only for backward-compatible corrections that preserve the contract.
+
+Older records without `capability_version` are rejected rather than guessed. Add an explicit semantic version while retaining the existing `creator_node_id`, `manifest_refs`, `validation`, `lineage`, and `contribution_attribution` values so local records remain comparable and traceable.
+
 ## Valid passed record
 
 ```json
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "capability_version": "1.0.0",
   "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",
