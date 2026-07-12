@@ -40,6 +40,7 @@ DEFAULT_LOCAL_CAPABILITIES = (
 )
 PUBLIC_VERSION = "0.2.0-alpha"
 CAPABILITY_LIST_SCHEMA_VERSION = 1
+LOCAL_CAPABILITY_WORKER_CAPACITY = 1
 MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
@@ -299,6 +300,13 @@ class NodeRuntimeService:
             {"schema_version": 1, "network_mode": "local-only-no-p2p",
              "capabilities": [{"identifier": str, "description": str,
                                 "status": "enabled" | "disabled",
+                                "creator_node_id": str | None,
+                                "capability_manifest_id": str,
+                                "availability": {"status": "available" | "busy" |
+                                                 "degraded" | "unavailable",
+                                                 "reason": str | None,
+                                                 "worker_capacity": dict,
+                                                 "validation_receipt_refs": list},
                                 "schema_version": 1}], "advertised": False}
 
         Work entries are enabled from ``config.capabilities.enabled_work_types``;
@@ -308,11 +316,25 @@ class NodeRuntimeService:
 
         config = self.load_config()
         enabled_work_types = _config_enabled_work_types(config)
+        creator_node_id = _config_node_id(config)
+        current_workers = len(self.list_jobs()["current"])
         capabilities = [
             {
                 "identifier": identifier,
                 "description": description,
                 "status": "enabled" if work_type in enabled_work_types else "disabled",
+                "creator_node_id": creator_node_id,
+                "capability_manifest_id": _capability_manifest_id(identifier),
+                "lineage": {
+                    "capability_manifest_id": _capability_manifest_id(identifier)
+                },
+                "contribution_attribution": {"creator_node_id": creator_node_id},
+                "availability": self._work_capability_availability(
+                    work_type=work_type,
+                    enabled=work_type in enabled_work_types,
+                    creator_node_id=creator_node_id,
+                    current_workers=current_workers,
+                ),
                 "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
                 "work_type": work_type,
             }
@@ -328,6 +350,21 @@ class NodeRuntimeService:
                     and not _config_identity_persistence_enabled(config)
                     else status
                 ),
+                "creator_node_id": creator_node_id,
+                "capability_manifest_id": _capability_manifest_id(identifier),
+                "lineage": {
+                    "capability_manifest_id": _capability_manifest_id(identifier)
+                },
+                "contribution_attribution": {"creator_node_id": creator_node_id},
+                "availability": _metadata_capability_availability(
+                    enabled=(
+                        identifier != "provenance.creator_node_id"
+                        or _config_identity_persistence_enabled(config)
+                    )
+                    and status == "enabled",
+                    creator_node_id=creator_node_id,
+                    current_workers=current_workers,
+                ),
                 "schema_version": CAPABILITY_LIST_SCHEMA_VERSION,
             }
             for identifier, description, status in LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS
@@ -339,6 +376,44 @@ class NodeRuntimeService:
             "advertised": False,
             "note": "Capabilities are local-only registered definitions and are not advertised to a live network.",
         }
+
+    @staticmethod
+    def _work_capability_availability(
+        *,
+        work_type: str,
+        enabled: bool,
+        creator_node_id: str | None,
+        current_workers: int,
+    ) -> dict[str, Any]:
+        """Report local worker readiness without making network claims."""
+
+        capacity = {
+            "current": current_workers,
+            "maximum": LOCAL_CAPABILITY_WORKER_CAPACITY,
+        }
+        if not enabled:
+            return _availability(
+                "unavailable", "disabled in local configuration", capacity
+            )
+        if creator_node_id is None:
+            return _availability(
+                "unavailable", "local node identity is missing", capacity
+            )
+        if current_workers >= LOCAL_CAPABILITY_WORKER_CAPACITY:
+            return _availability("busy", "local worker capacity is in use", capacity)
+        job = Job(
+            job_id="local-capability-check",
+            job_type=work_type,
+            payload=_capability_check_payload(work_type),
+        )
+        validation = validate_job_result(
+            job, LocalRunner(NodeIdentity(node_id=creator_node_id)).run(job)
+        )
+        if not validation.valid:
+            return _availability(
+                "degraded", "local capability validation failed", capacity
+            )
+        return _availability("available", None, capacity)
 
     def inspect_model_manifests(self) -> dict[str, Any]:
         """Return read-only, redacted summaries of locally registered experts."""
@@ -1373,6 +1448,44 @@ def _merge_config(existing: dict[str, Any], default: dict[str, Any]) -> dict[str
         else:
             merged[key] = value
     return merged
+
+
+def _capability_manifest_id(identifier: str) -> str:
+    """Return the stable local manifest identity for one registered capability."""
+
+    return f"local-capability-{identifier.replace('.', '-')}-v1"
+
+
+def _availability(
+    status: str, reason: str | None, worker_capacity: dict[str, int]
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "reason": reason,
+        "worker_capacity": worker_capacity,
+        "validation_receipt_refs": [],
+    }
+
+
+def _metadata_capability_availability(
+    *, enabled: bool, creator_node_id: str | None, current_workers: int
+) -> dict[str, Any]:
+    capacity = {"current": current_workers, "maximum": LOCAL_CAPABILITY_WORKER_CAPACITY}
+    if not enabled:
+        return _availability("unavailable", "disabled in local configuration", capacity)
+    if creator_node_id is None:
+        return _availability("unavailable", "local node identity is missing", capacity)
+    return _availability("available", None, capacity)
+
+
+def _capability_check_payload(work_type: str) -> dict[str, Any]:
+    return {
+        "echo": {"message": "availability-check"},
+        "keyword_extract": {"text": "availability check"},
+        "text_chunk": {"text": "availability check"},
+        "text_embed": {"text": "availability check"},
+        "text_stats": {"text": "availability check"},
+    }[work_type]
 
 
 def _config_node_id(config: dict[str, Any]) -> str | None:

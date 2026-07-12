@@ -1047,6 +1047,93 @@ class RuntimeServiceTests(unittest.TestCase):
                 persistent_capabilities["provenance.creator_node_id"], "enabled"
             )
 
+    def test_capability_availability_is_local_validation_gated_and_deterministic(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            initialized = service.initialize_local_node_data()
+
+            first = service.list_capabilities()
+            second = service.list_capabilities()
+            echo = next(
+                entry
+                for entry in first["capabilities"]
+                if entry["identifier"] == "work.echo"
+            )
+
+            self.assertEqual(first, second)
+            self.assertEqual(echo["creator_node_id"], initialized["node_id"])
+            self.assertEqual(
+                echo["capability_manifest_id"], "local-capability-work-echo-v1"
+            )
+            self.assertEqual(
+                echo["lineage"],
+                {"capability_manifest_id": echo["capability_manifest_id"]},
+            )
+            self.assertEqual(
+                echo["contribution_attribution"],
+                {"creator_node_id": initialized["node_id"]},
+            )
+            self.assertEqual(
+                echo["availability"],
+                {
+                    "status": "available",
+                    "reason": None,
+                    "worker_capacity": {"current": 0, "maximum": 1},
+                    "validation_receipt_refs": [],
+                },
+            )
+
+    def test_capability_availability_reports_local_failure_and_capacity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            service.initialize_local_node_data()
+            config = service.load_config()
+            config["capabilities"] = {"enabled_work_types": ["echo"]}
+            service._write_config(config)
+
+            unavailable = next(
+                entry
+                for entry in service.list_capabilities()["capabilities"]
+                if entry["identifier"] == "work.text_stats"
+            )
+            self.assertEqual(unavailable["availability"]["status"], "unavailable")
+            self.assertEqual(
+                unavailable["availability"]["reason"],
+                "disabled in local configuration",
+            )
+
+            with patch(
+                "aethermesh_core.runtime_service.validate_job_result",
+                return_value=types.SimpleNamespace(valid=False),
+            ):
+                degraded = next(
+                    entry
+                    for entry in service.list_capabilities()["capabilities"]
+                    if entry["identifier"] == "work.echo"
+                )
+            self.assertEqual(degraded["availability"]["status"], "degraded")
+            self.assertEqual(
+                degraded["availability"]["reason"],
+                "local capability validation failed",
+            )
+
+            with patch.object(service, "list_jobs", return_value={"current": [{}]}):
+                busy = next(
+                    entry
+                    for entry in service.list_capabilities()["capabilities"]
+                    if entry["identifier"] == "work.echo"
+                )
+            self.assertEqual(busy["availability"]["status"], "busy")
+            self.assertEqual(
+                busy["availability"]["worker_capacity"], {"current": 1, "maximum": 1}
+            )
+            self.assertEqual(busy["creator_node_id"], degraded["creator_node_id"])
+            self.assertEqual(
+                busy["capability_manifest_id"], degraded["capability_manifest_id"]
+            )
+
     def test_existing_config_is_merged_and_logs_are_limited(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))
