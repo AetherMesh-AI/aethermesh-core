@@ -1,7 +1,7 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 140 files · ~184,496 words
+- 140 files · ~184,541 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `711bae10`
+- Built from commit: `a5435483`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -177,7 +177,7 @@ Nodes (44): platformNotes(), apiClient, { app, BrowserWindow, ipcMain }, assertP
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
-Nodes (33): shouldLeaveBackgroundNodeRunning(), shouldStopTemporaryNode(), detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(), parsePythonVersion(), { promisify } (+25 more)
+Nodes (31): shouldLeaveBackgroundNodeRunning(), shouldStopTemporaryNode(), fs, getBundledRuntimePath(), getRuntimeExecutableName(), path, resolveRuntimeCommand(), getAetherMeshPaths() (+23 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.07
@@ -284,8 +284,8 @@ Cohesion: 0.47
 Nodes (3): build_parser(), ArgumentParser, build_parser()
 
 ### Community 35 - "Community 35"
-Cohesion: 0.14
-Nodes (11): _configured_path(), _contains_runtime_artifacts(), _next_artifact_ref(), Initialize one local node runtime without external services., Return whether a config-less root contains more than empty directories., _relative_ref(), _runtime_dirs(), start_local_node() (+3 more)
+Cohesion: 0.16
+Nodes (10): _configured_path(), _contains_runtime_artifacts(), _next_artifact_ref(), Initialize one local node runtime without external services., Return whether a config-less root contains more than empty directories., _relative_ref(), _runtime_dirs(), start_local_node() (+2 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.38
@@ -308,8 +308,8 @@ Cohesion: 0.47
 Nodes (9): _cap_units(), _ceil_div(), _non_negative_int(), Deterministic contribution scoring for validated local workload results., _score_keyword_extract(), _score_text_chunk(), _score_text_embed(), _score_text_retrieve() (+1 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.11
-Nodes (27): append_json_line(), canonical_json_hash(), load_json_mapping(), Small JSON helpers shared by local lifecycle commands., Read a required JSON object and raise the caller's local error type., Return a non-empty string field or raise the caller's local error type., Append one deterministic JSONL entry to a local lifecycle log., Hash a JSON object in stable key order for local receipts. (+19 more)
+Cohesion: 0.10
+Nodes (28): append_json_line(), canonical_json_hash(), load_json_mapping(), Small JSON helpers shared by local lifecycle commands., Read a required JSON object and raise the caller's local error type., Return a non-empty string field or raise the caller's local error type., Append one deterministic JSONL entry to a local lifecycle log., Hash a JSON object in stable key order for local receipts. (+20 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.10
@@ -432,8 +432,8 @@ Cohesion: 0.40
 Nodes (7): Write a local message log via temp-file then atomic replace., write_message_log(), _assignment(), LocalValidationReplayTests, _message_log(), _result(), _result_with_payload()
 
 ### Community 76 - "Community 76"
-Cohesion: 0.53
-Nodes (5): fs, getBundledRuntimePath(), getRuntimeExecutableName(), path, resolveRuntimeCommand()
+Cohesion: 0.39
+Nodes (7): detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(), parsePythonVersion(), { promisify }, runVersion()
 
 ### Community 77 - "Community 77"
 Cohesion: 0.50

@@ -440,7 +440,13 @@ class NodeRuntimeService:
         """Return local capability records without treating them as network trust."""
 
         directory = self.paths.data_dir / "capability-records"
-        paths = sorted(directory.glob("*.json")) if directory.is_dir() else []
+        store_status = "missing"
+        paths: list[Path] = []
+        if directory.is_symlink():
+            store_status = "invalid"
+        elif directory.is_dir():
+            store_status = "available"
+            paths = sorted(directory.glob("*.json"))
         local_node_id = _config_node_id(self.load_config())
         records = [
             self._capability_record_summary(path, local_node_id) for path in paths
@@ -448,7 +454,7 @@ class NodeRuntimeService:
         return {
             "schema_version": CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION,
             "network_mode": "local-only-no-p2p",
-            "store_status": "available" if directory.is_dir() else "missing",
+            "store_status": store_status,
             "record_count": len(records),
             "records": records,
             "note": "Local capability records only; validation is not network consensus.",

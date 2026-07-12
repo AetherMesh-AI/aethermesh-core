@@ -141,6 +141,21 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
                 ["capability record must not be a symbolic link"],
             )
 
+    def test_symlinked_store_is_rejected_without_reading_external_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(temp_dir)
+            service.initialize_local_node_data()
+            outside = Path(temp_dir) / "outside"
+            outside.mkdir()
+            (outside / "record.json").write_text("{}", encoding="utf-8")
+            (Path(temp_dir) / "data" / "capability-records").symlink_to(outside)
+
+            payload = service.inspect_capability_records()
+
+            self.assertEqual(payload["store_status"], "invalid")
+            self.assertEqual(payload["record_count"], 0)
+            self.assertEqual(payload["records"], [])
+
     def test_record_without_local_identity_is_reported_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir) / "data" / "capability-records"
