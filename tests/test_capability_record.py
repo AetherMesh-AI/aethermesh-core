@@ -24,6 +24,13 @@ class CapabilityRecordTests(unittest.TestCase):
                 "description": "Returns a local input message.",
                 "type": "worker",
                 "supported_input_formats": ["application/json"],
+                "supported_input_schemas": [
+                    {
+                        "schema_ref": "examples/schemas/local-echo-input.schema.json",
+                        "schema_version": "1.0.0",
+                        "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790",
+                    }
+                ],
                 "supported_output_formats": ["application/json"],
                 "constraints": {"network_mode": "local-only-no-p2p"},
                 "local_execution_requirements": ["python>=3.11"],
@@ -39,6 +46,11 @@ class CapabilityRecordTests(unittest.TestCase):
                         "capability_version": "1.0.0",
                         "creator_node_id": "node.local-01",
                         "manifest_ref": "manifests/local-echo-worker.json",
+                        "input_schema": {
+                            "schema_ref": "examples/schemas/local-echo-input.schema.json",
+                            "schema_version": "1.0.0",
+                            "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790",
+                        },
                     }
                 ],
                 "last_validated_at": "2026-07-11T12:05:00Z",
@@ -330,6 +342,49 @@ class CapabilityRecordTests(unittest.TestCase):
                 mutate(record)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
                     self.validate(record)
+
+    def test_rejects_missing_unknown_or_drifting_input_schemas(self) -> None:
+        cases = (
+            (
+                lambda record: record["metadata"].pop("supported_input_schemas"),
+                "supported_input_schemas",
+            ),
+            (
+                lambda record: record["metadata"]["supported_input_schemas"][0].update(
+                    schema_ref="examples/schemas/unknown.schema.json"
+                ),
+                "readable local schema",
+            ),
+            (
+                lambda record: record["metadata"]["supported_input_schemas"][0].update(
+                    schema_digest="sha256:" + "0" * 64
+                ),
+                "does not match local schema",
+            ),
+            (
+                lambda record: record["metadata"]["supported_input_schemas"][0].update(
+                    schema_version="1.0"
+                ),
+                "semantic version",
+            ),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                record = copy.deepcopy(self.record)
+                mutate(record)
+                with self.assertRaisesRegex(CapabilityRecordError, expected):
+                    self.validate(record)
+
+    def test_rejects_receipt_with_different_input_schema_reference(self) -> None:
+        record = copy.deepcopy(self.record)
+        record["validation"]["receipt_evidence"][0]["input_schema"] = {
+            "schema_ref": "examples/schemas/other.schema.json",
+            "schema_version": "1.0.0",
+            "schema_digest": "sha256:" + "0" * 64,
+        }
+
+        with self.assertRaisesRegex(CapabilityRecordError, "supported input schema"):
+            self.validate(record)
 
 
 if __name__ == "__main__":

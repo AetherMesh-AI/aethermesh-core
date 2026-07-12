@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
+from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 CAPABILITY_RECORD_SCHEMA_VERSION = 1
@@ -41,7 +44,7 @@ class CapabilityRecordError(ValueError):
 
 
 def validate_capability_record(
-    document: object, *, local_node_id: str
+    document: object, *, local_node_id: str, local_schema_root: str | Path = "."
 ) -> dict[str, Any]:
     """Validate and return one local-only capability record without writing it.
 
@@ -60,7 +63,7 @@ def validate_capability_record(
     _require_identifier(document, "creator_node_id")
     _require_timestamp(document, "created_at")
     _require_timestamp(document, "updated_at")
-    _require_metadata(document)
+    _require_metadata(document, local_schema_root=local_schema_root)
     _require_ref_list(document, "manifest_refs", minimum=1)
     _require_lineage(document)
     _require_attribution(document)
@@ -76,6 +79,7 @@ def _reject_unknown_fields(document: dict[str, Any]) -> None:
                 "description",
                 "type",
                 "supported_input_formats",
+                "supported_input_schemas",
                 "supported_output_formats",
                 "constraints",
                 "local_execution_requirements",
@@ -113,7 +117,9 @@ def _reject_unknown_fields(document: dict[str, Any]) -> None:
                 )
 
 
-def _require_metadata(document: dict[str, Any]) -> None:
+def _require_metadata(
+    document: dict[str, Any], *, local_schema_root: str | Path
+) -> None:
     metadata = _require_object(document, "metadata")
     _require_string(metadata, "name")
     _require_string(metadata, "description")
@@ -121,6 +127,7 @@ def _require_metadata(document: dict[str, Any]) -> None:
     if capability_type not in CAPABILITY_TYPES:
         raise CapabilityRecordError("metadata.type is not allowed")
     _require_string_list(metadata, "supported_input_formats", minimum=1)
+    _require_input_schemas(metadata, local_schema_root=local_schema_root)
     _require_string_list(metadata, "supported_output_formats", minimum=1)
     if not isinstance(metadata.get("constraints"), dict):
         raise CapabilityRecordError("metadata.constraints must be an object")
@@ -176,12 +183,13 @@ def _require_receipt_evidence(
         "creator_node_id": document["creator_node_id"],
         "manifest_ref": document["lineage"]["source_manifest_ref"],
     }
+    supported_schemas = document["metadata"]["supported_input_schemas"]
     for index, receipt in enumerate(evidence):
         if not isinstance(receipt, dict):
             raise CapabilityRecordError(
                 f"validation.receipt_evidence[{index}] must be an object"
             )
-        allowed_fields = {"receipt_id", *expected}
+        allowed_fields = {"receipt_id", "input_schema", *expected}
         if receipt.keys() != allowed_fields:
             raise CapabilityRecordError(
                 f"validation.receipt_evidence[{index}] must contain exactly the "
@@ -196,6 +204,10 @@ def _require_receipt_evidence(
                 "validation receipt must record matching capability name, version, "
                 "creator node ID, and manifest reference"
             )
+        if receipt.get("input_schema") not in supported_schemas:
+            raise CapabilityRecordError(
+                "validation receipt must record a supported input schema reference"
+            )
 
 
 def _require_lineage(document: dict[str, Any]) -> None:
@@ -203,6 +215,71 @@ def _require_lineage(document: dict[str, Any]) -> None:
     _require_ref(lineage, "source_manifest_ref")
     _require_optional_identifier(lineage, "prior_capability_id")
     _require_optional_ref(lineage, "local_build_artifact_ref")
+
+
+def _require_input_schemas(
+    metadata: dict[str, Any], *, local_schema_root: str | Path
+) -> None:
+    schemas = metadata.get("supported_input_schemas")
+    if not isinstance(schemas, list) or not schemas:
+        raise CapabilityRecordError(
+            "metadata.supported_input_schemas must be a non-empty list"
+        )
+    root = Path(local_schema_root).resolve()
+    for index, schema in enumerate(schemas):
+        context = f"metadata.supported_input_schemas[{index}]"
+        if not isinstance(schema, dict) or set(schema) != {
+            "schema_ref",
+            "schema_version",
+            "schema_digest",
+        }:
+            raise CapabilityRecordError(
+                f"{context} must contain exactly schema_ref, schema_version, and schema_digest"
+            )
+        schema_ref = schema["schema_ref"]
+        _require_safe_ref(schema_ref, f"{context}.schema_ref")
+        schema_version = schema["schema_version"]
+        if not isinstance(schema_version, str) or not _SEMVER.fullmatch(schema_version):
+            raise CapabilityRecordError(
+                f"{context}.schema_version must be a semantic version"
+            )
+        digest = schema["schema_digest"]
+        if not isinstance(digest, str) or not re.fullmatch(
+            r"sha256:[0-9a-f]{64}", digest
+        ):
+            raise CapabilityRecordError(
+                f"{context}.schema_digest must be a lowercase SHA-256 digest"
+            )
+        try:
+            path = (root / schema_ref).resolve(strict=True)
+            path.relative_to(root)
+            contents = path.read_bytes()
+        except (OSError, ValueError) as exc:
+            raise CapabilityRecordError(
+                f"{context}.schema_ref does not name a readable local schema"
+            ) from exc
+        if sha256(contents).hexdigest() != digest.removeprefix("sha256:"):
+            raise CapabilityRecordError(
+                f"{context}.schema_digest does not match local schema"
+            )
+        try:
+            local_schema = json.loads(contents)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise CapabilityRecordError(
+                f"{context}.schema_ref must contain readable JSON"
+            ) from exc
+        if (
+            not isinstance(local_schema, dict)
+            or local_schema.get("$schema")
+            != "https://json-schema.org/draft/2020-12/schema"
+        ):
+            raise CapabilityRecordError(
+                f"{context}.schema_ref must contain a supported JSON Schema draft"
+            )
+        if local_schema.get("x-aethermesh-schema-version") != schema_version:
+            raise CapabilityRecordError(
+                f"{context}.schema_version must match the local schema version"
+            )
 
 
 def _require_attribution(document: dict[str, Any]) -> None:
