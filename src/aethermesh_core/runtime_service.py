@@ -764,7 +764,7 @@ class NodeRuntimeService:
             )
         try:
             requested_capability = self._requested_local_capability(
-                request.get("requested_capability")
+                request.get("requested_capability"), job_type
             )
         except RuntimeServiceError as exc:
             self._append_event(
@@ -873,7 +873,9 @@ class NodeRuntimeService:
             "network_mode": "local-only-no-p2p",
         }
 
-    def _requested_local_capability(self, value: object) -> dict[str, str]:
+    def _requested_local_capability(
+        self, value: object, job_type: str
+    ) -> dict[str, str]:
         """Resolve one job capability against this node's local capability manifest."""
 
         if not isinstance(value, dict) or set(value) != {"identifier"}:
@@ -898,6 +900,10 @@ class NodeRuntimeService:
         if capability is None:
             raise RuntimeServiceError(
                 "job submission requested_capability.identifier is not present in the local node capability manifest"
+            )
+        if capability.get("work_type") != job_type:
+            raise RuntimeServiceError(
+                "job submission requested_capability.identifier does not match job_type"
             )
         if capability["status"] != "enabled":
             raise RuntimeServiceError(

@@ -1,7 +1,7 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 157 files · ~194,610 words
+- 157 files · ~194,657 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `96765df8`
+- Built from commit: `b056c3d9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -172,7 +172,7 @@ Cohesion: 0.15
 Nodes (16): announce_local_node(), build_node_announcement_message_log_document(), build_node_heartbeat_message(), NodeAnnouncementError, normalize_announcement_capabilities(), Local-only node heartbeat announcement helpers., Build and write one local node heartbeat announcement message log., Raised when a local node announcement cannot be built or written safely. (+8 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.19
+Cohesion: 0.17
 Nodes (20): _assignment_key(), _job_from_assignment(), LocalValidationError, Independent local replay validation for reported AetherMesh job results., Normalize credited local result messages back to runner-result shape.      Worke, Raised when local validation replay cannot safely produce an artifact., Replay assignment/result logs and write an independent validation report., _required_non_empty_string() (+12 more)
 
 ### Community 3 - "Community 3"
@@ -193,7 +193,7 @@ Nodes (44): platformNotes(), apiClient, { app, BrowserWindow, ipcMain }, assertP
 
 ### Community 7 - "Community 7"
 Cohesion: 0.07
-Nodes (33): shouldLeaveBackgroundNodeRunning(), shouldStopTemporaryNode(), detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(), parsePythonVersion(), { promisify } (+25 more)
+Nodes (31): shouldLeaveBackgroundNodeRunning(), shouldStopTemporaryNode(), fs, getBundledRuntimePath(), getRuntimeExecutableName(), path, resolveRuntimeCommand(), getAetherMeshPaths() (+23 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.07
@@ -224,7 +224,7 @@ Cohesion: 0.10
 Nodes (15): BackgroundNodeManager, buildLaunchAgentPlist(), buildSystemdUserService(), buildWindowsTaskXml(), crypto, { execFile: defaultExecFile }, execFilePromise(), fs (+7 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (11): build_replayed_message_log_document(), _load_message_log_document(), load_message_log_messages(), load_worker_emitted_messages(), _message_from_document_entry(), MessageLogPersistenceError, Raised when a local message log JSON file cannot be safely loaded or saved., Load validated MeshMessage entries from a version 1 local message log.      The (+3 more)
 
 ### Community 17 - "Community 17"
@@ -376,7 +376,7 @@ Cohesion: 0.07
 Nodes (34): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), InboxReplayRequest, _mark_ephemeral_artifact(), _mark_ephemeral_message_log(), _node_ids_from_replayed_messages(), process_local_inbox(), Replay a saved local message log or local transport inbox for one node. (+26 more)
 
 ### Community 58 - "release_update.py"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (16): _config_api_host(), _config_api_port(), _config_identity_path(), _config_identity_persistence_enabled(), _config_node_id(), _config_node_name(), _merge_config(), _package_version() (+8 more)
 
 ### Community 59 - "Community 59"
@@ -536,8 +536,8 @@ Cohesion: 0.09
 Nodes (34): _attribution(), _content_hash(), _details(), _enum(), _evidence(), _failure_specific_details(), _identifier(), _identifier_list() (+26 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.53
-Nodes (5): fs, getBundledRuntimePath(), getRuntimeExecutableName(), path, resolveRuntimeCommand()
+Cohesion: 0.39
+Nodes (7): detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(), parsePythonVersion(), { promisify }, runVersion()
 
 ### Community 108 - "Community 108"
 Cohesion: 0.40

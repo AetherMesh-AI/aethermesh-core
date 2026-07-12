@@ -555,6 +555,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     {**request, "requested_capability": {"identifier": "work.unknown"}},
                     "not present",
                 ),
+                (
+                    "mismatched job type",
+                    {**request, "job_type": "text_stats"},
+                    "does not match job_type",
+                ),
             )
             for name, rejected, error in rejected_requests:
                 with (
@@ -702,7 +707,11 @@ class RuntimeServiceTests(unittest.TestCase):
             succeeded = service.execute_submitted_local_job(
                 accepted["job_id"], "worker-local-a"
             )
-            failed_request = {**request, "job_type": "not-supported"}
+            failed_request = {
+                **request,
+                "job_type": "text_stats",
+                "requested_capability": {"identifier": "work.text_stats"},
+            }
             failed_accepted = service.submit_local_job(failed_request)
             failed = service.execute_submitted_local_job(
                 failed_accepted["job_id"], "worker-local-b"
@@ -747,7 +756,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 failed["contribution_attribution"]["creator_node_id"], "creator-local-a"
             )
-            self.assertIn("Unsupported job type", str(failed["error"]))
+            self.assertIn("requires string field: text", str(failed["error"]))
             self.assertEqual(
                 service.get_local_job_status(
                     "local-job-00000000000000000000000000000000"
@@ -986,7 +995,13 @@ class RuntimeServiceTests(unittest.TestCase):
             }
             accepted = service.submit_local_job(request)
             service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
-            failed = service.submit_local_job({**request, "job_type": "not-supported"})
+            failed = service.submit_local_job(
+                {
+                    **request,
+                    "job_type": "text_stats",
+                    "requested_capability": {"identifier": "work.text_stats"},
+                }
+            )
             service.execute_submitted_local_job(failed["job_id"], "worker-local-b")
             queued = service.submit_local_job(request)
             missing_reference = service.submit_local_job(request)
