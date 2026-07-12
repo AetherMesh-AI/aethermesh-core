@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-12)
 
 ## Corpus Check
-- 151 files · ~190,601 words
+- 159 files · ~192,109 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2445 nodes · 6444 edges · 117 communities (103 shown, 14 thin omitted)
-- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 413 edges (avg confidence: 0.58)
+- 2475 nodes · 6516 edges · 114 communities (104 shown, 10 thin omitted)
+- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 414 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `207da62a`
+- Built from commit: `be1b98a0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -122,12 +122,9 @@
 - [[_COMMUNITY_Community 106|Community 106]]
 - [[_COMMUNITY_Community 107|Community 107]]
 - [[_COMMUNITY_Community 108|Community 108]]
-- [[_COMMUNITY_Community 109|Community 109]]
 - [[_COMMUNITY_Community 110|Community 110]]
 - [[_COMMUNITY_Community 111|Community 111]]
 - [[_COMMUNITY_Community 112|Community 112]]
-- [[_COMMUNITY_Community 113|Community 113]]
-- [[_COMMUNITY_Community 114|Community 114]]
 - [[_COMMUNITY_Community 115|Community 115]]
 - [[_COMMUNITY_Community 116|Community 116]]
 
@@ -158,23 +155,23 @@
 ## Import Cycles
 - None detected.
 
-## Communities (117 total, 14 thin omitted)
+## Communities (114 total, 10 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.15
-Nodes (7): NodeIdentity, Identity for one local node., LocalRunner, Execute supported local job types for a node., Raised when a requested local validation receipt is not stored., ValidationReceiptNotFoundError, LocalRunnerTests
+Cohesion: 0.11
+Nodes (13): NodeIdentity, Identity for one local node., LocalRunner, Run local work with optional, local-only operator safety controls.      Without, Execute supported local job types for a node., _run_in_local_process(), run_local_job(), _stopped_result() (+5 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.15
-Nodes (16): announce_local_node(), build_node_announcement_message_log_document(), build_node_heartbeat_message(), NodeAnnouncementError, normalize_announcement_capabilities(), Local-only node heartbeat announcement helpers., Build and write one local node heartbeat announcement message log., Raised when a local node announcement cannot be built or written safely. (+8 more)
+Cohesion: 0.21
+Nodes (17): _attribution(), _choice(), _details(), _evidence(), _identifier(), _identifier_list(), JobFailureSchemaError, _links() (+9 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.14
-Nodes (22): collect_local_outboxes(), _load_inbox_document(), _load_outbox_document(), local_outbox_path(), LocalTransportError, _message_from_inbox_entry(), _message_from_outbox_entry(), _messages_from_outbox_document() (+14 more)
+Cohesion: 0.20
+Nodes (21): collect_local_outboxes(), _load_inbox_document(), _load_outbox_document(), local_outbox_path(), LocalTransportError, _message_from_outbox_entry(), _messages_from_outbox_document(), _node_id_from_transport_filename() (+13 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.14
-Nodes (6): JobResult, Structured result emitted after local job execution., Serialize the result into a JSON-compatible dictionary., Validate a reported result against the assigned local job.      The current prot, validate_job_result(), ValidationTests
+Cohesion: 0.13
+Nodes (9): JobResult, Structured result emitted after local job execution., _validation_summary(), _invalid(), Deterministic outcome from validating one reported job result., Validate a reported result against the assigned local job.      The current prot, validate_job_result(), ValidationResult (+1 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.18
@@ -201,20 +198,20 @@ Cohesion: 0.05
 Nodes (49): _background_mode_enabled(), _control_background_node(), init(), jobs(), _local_api_is_aethermesh(), main(), node_start(), node_status() (+41 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.11
-Nodes (34): _bytes_to_gb(), collect_hardware_identity_inputs(), _colon_value(), _count_display_chips(), _csv_first_value(), _darwin_hardware_inputs(), _default_goos(), _extract_mac_addresses() (+26 more)
+Cohesion: 0.10
+Nodes (51): _bytes_to_gb(), collect_hardware_identity_inputs(), _colon_value(), _count_display_chips(), _csv_first_value(), _darwin_hardware_inputs(), _darwin_physical_mac_addresses(), _default_goos() (+43 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.15
 Nodes (22): canonical_job_envelope_json(), _contribution(), _expected_outputs(), _input_manifest(), _integer(), _job_id(), _job_type(), JobEnvelopeError (+14 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.25
-Nodes (25): CapabilityRecordError, Validation for the local-only version 1 capability record contract., Raised when a local capability record is incomplete or dishonest., _reject_unknown_fields(), _require_attribution(), _require_capability_version(), _require_identifier(), _require_identifier_list() (+17 more)
+Cohesion: 0.18
+Nodes (28): CapabilityRecordError, Validation for the local-only version 1 capability record contract., Raised when a local capability record is incomplete or dishonest., _reject_unknown_fields(), _require_attribution(), _require_capability_version(), _require_identifier(), _require_identifier_list() (+20 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.07
-Nodes (60): _accepted_result(), aggregate_local_flow(), AggregationError, build_local_flow_aggregate(), _is_accepted(), Deterministic local aggregation for completed flow artifact directories., Raised when a local flow aggregate cannot be built or written safely., Build a deterministic aggregate document after auditing a flow directory. (+52 more)
+Cohesion: 0.06
+Nodes (65): _accepted_result(), aggregate_local_flow(), AggregationError, build_local_flow_aggregate(), _is_accepted(), Deterministic local aggregation for completed flow artifact directories., Raised when a local flow aggregate cannot be built or written safely., Build a deterministic aggregate document after auditing a flow directory. (+57 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.10
@@ -225,40 +222,40 @@ Cohesion: 0.13
 Nodes (10): build_replayed_message_log_document(), _load_message_log_document(), load_message_log_messages(), load_worker_emitted_messages(), MessageLogPersistenceError, Raised when a local message log JSON file cannot be safely loaded or saved., Load validated MeshMessage entries from a version 1 local message log.      The, Load only post-replay worker-emitted messages from a worker message log. (+2 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.14
-Nodes (33): CompletedProcess, Namespace, changed_pyproject_from_base(), command_artifact_provenance(), command_dependency_audit(), command_dependency_review(), command_mutation_score(), command_pr_size() (+25 more)
+Cohesion: 0.28
+Nodes (17): CompletedProcess, Namespace, changed_pyproject_from_base(), command_artifact_provenance(), command_dependency_audit(), command_dependency_review(), command_mutation_score(), command_pr_size() (+9 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.11
-Nodes (31): configured_runtime_path(), default_local_runtime_config(), load_local_runtime_config(), load_optional_local_runtime_config(), load_or_create_local_runtime_config(), LocalRuntimeConfig, LocalRuntimeConfigError, parse_local_runtime_config() (+23 more)
+Cohesion: 0.12
+Nodes (29): default_local_runtime_config(), load_local_runtime_config(), load_optional_local_runtime_config(), load_or_create_local_runtime_config(), LocalRuntimeConfig, LocalRuntimeConfigError, parse_local_runtime_config(), _paths_overlap() (+21 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.12
-Nodes (12): NodeRegistry, In-memory source of truth for local simulation node state.      The registry is, Register a node ID or ScheduledNode in deterministic insertion order., Mark a known node available for future scheduler exports., Mark a known node offline for future scheduler exports., Record one deterministic local heartbeat for a known node., Return JSON-compatible roster entries in registration order., _RegistryNode (+4 more)
+Cohesion: 0.06
+Nodes (29): announce_local_node(), build_node_announcement_message_log_document(), build_node_heartbeat_message(), NodeAnnouncementError, normalize_announcement_capabilities(), Local-only node heartbeat announcement helpers., Build and write one local node heartbeat announcement message log., Raised when a local node announcement cannot be built or written safely. (+21 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.13
-Nodes (20): Run a local simulation from a validated JSON manifest., run_local_batch(), _is_local_job_id(), load_job_manifest(), _load_manifest_document(), load_manifest_jobs(), LocalJobBatch, ManifestError (+12 more)
+Cohesion: 0.09
+Nodes (21): Run a local simulation from a validated JSON manifest., run_local_batch(), _is_local_job_id(), load_job_manifest(), _load_manifest_document(), load_manifest_jobs(), LocalJobBatch, ManifestError (+13 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.12
 Nodes (19): buildPosixShim(), buildShellPathBlock(), buildWindowsCmdShim(), buildWindowsPowerShellShim(), CliManager, { execFile: defaultExecFile }, execFilePromise(), fs (+11 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.15
-Nodes (6): LocalScheduler, NoAvailableNodesError, Raised when local job assignment has jobs but no available nodes., In-memory deterministic scheduler for local prototype jobs., Assign jobs to available capable nodes with deterministic fair ordering., LocalSchedulerTests
+Cohesion: 0.28
+Nodes (16): build_parser(), build_release_metadata(), command_prepare(), Commit, commits_since(), format_release_notes(), head_sha(), main() (+8 more)
 
 ### Community 23 - "Community 23"
 Cohesion: 0.10
 Nodes (24): ModuleType, RuntimeError, build_parser(), format_duration(), format_progress_line(), main(), max_non_killed_for_score(), parse_mutmut_counts() (+16 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.19
-Nodes (10): Run the fixed local simulation demo used by the CLI command., run_default_local_simulation(), build_message_log_document(), Build a deterministic version 1 audit document for local mesh messages., Job, A small in-memory job assigned to a local node., Run local jobs across local node identities using scheduler assignment.      Thi, run_local_simulation() (+2 more)
+Cohesion: 0.17
+Nodes (12): Run the fixed local simulation demo used by the CLI command., run_default_local_simulation(), build_message_log_document(), Build a deterministic version 1 audit document for local mesh messages., Job, A small in-memory job assigned to a local node., LocalSimulationResult, Structured, deterministic output from a local multi-node simulation. (+4 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.13
-Nodes (15): Load an existing message log and return a read-only peer roster., Run local file transport with workers discovered from heartbeat peers., run_peer_transport_flow(), summarize_peers(), _parse_capabilities(), _parse_heartbeat(), peer_summary_document(), PeerRegistryError (+7 more)
+Cohesion: 0.10
+Nodes (16): dispatch_peer_batch_command(), Dispatch manifest jobs to heartbeat-derived peers without execution., Load an existing message log and return a read-only peer roster., summarize_peers(), _parse_capabilities(), _parse_heartbeat(), peer_summary_document(), PeerRegistryError (+8 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.14
@@ -266,23 +263,23 @@ Nodes (14): AetherMesh Core Persistent Goal, AI Direction, Build Direction, Cont
 
 ### Community 27 - "Community 27"
 Cohesion: 0.12
-Nodes (19): run_demo(), _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes() (+11 more)
+Nodes (18): _canonical_root_json(), _component_hashes(), deterministic_machine_node_id(), deterministic_machine_node_name(), HardwareComponentHashes, _index_from_hash(), _node_name_from_hashes(), _node_name_wordlists() (+10 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.13
-Nodes (19): _classify_startup_error(), _default_capability_advertisements(), _default_manifest_document(), _document_hash(), _ensure_runtime_dirs(), _identity_creator_node_id(), _load_json_object(), _load_manifest() (+11 more)
+Cohesion: 0.40
+Nodes (4): _classify_startup_error(), Keep startup errors shareable by removing absolute host paths., Attach stable automation fields without including local configuration values., _redact_local_paths()
 
 ### Community 29 - "Community 29"
-Cohesion: 0.21
+Cohesion: 0.23
 Nodes (3): Validate and return one local-only capability record without writing it.      A, validate_capability_record(), CapabilityRecordTests
 
 ### Community 30 - "Community 30"
-Cohesion: 0.16
-Nodes (9): _accounted_units(), Record one result and return its local contribution record.          Only comple, _string_output(), _fallback_job_id(), _job_from_assignment_payload(), _coerce_job(), Minimal scheduler view of a job., ScheduledJob (+1 more)
+Cohesion: 0.17
+Nodes (11): _fallback_job_id(), _job_from_assignment_payload(), LocalNodeService, Synchronous local-only handler for one node's assigned-work inbox., Process unhandled ``job_assigned`` messages addressed to this node.          The, _coerce_job(), NoAvailableNodesError, Raised when local job assignment has jobs but no available nodes. (+3 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.12
-Nodes (14): InboxReplayRequest, empty_node_processing_state(), load_node_processing_state(), LocalNodeProcessingState, NodeStatePersistenceError, Versioned local node processing state persistence., Write a local node-state JSON document via temp-file then atomic replace., Raised when a local node-state JSON file cannot be safely loaded or saved. (+6 more)
+Cohesion: 0.13
+Nodes (13): empty_node_processing_state(), load_node_processing_state(), LocalNodeProcessingState, NodeStatePersistenceError, Versioned local node processing state persistence., Write a local node-state JSON document via temp-file then atomic replace., Raised when a local node-state JSON file cannot be safely loaded or saved., Durable local record of assignment messages already processed by one node. (+5 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.36
@@ -297,16 +294,16 @@ Cohesion: 0.47
 Nodes (3): build_parser(), ArgumentParser, build_parser()
 
 ### Community 35 - "Community 35"
-Cohesion: 0.16
-Nodes (11): _configured_path(), _contains_runtime_artifacts(), _ensure_manifest_directories(), _next_artifact_ref(), Initialize one local node runtime without external services., Return whether a config-less root contains more than empty directories., _relative_ref(), _runtime_dirs() (+3 more)
+Cohesion: 0.10
+Nodes (26): _configured_path(), _contains_runtime_artifacts(), _default_capability_advertisements(), _default_manifest_document(), _document_hash(), _ensure_manifest_directories(), _ensure_runtime_dirs(), _identity_creator_node_id() (+18 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.35
 Nodes (4): Return capped integer contribution units for one validated local result.      Th, score_validated_contribution(), ContributionScoringTests, _run()
 
 ### Community 37 - "Community 37"
-Cohesion: 0.10
-Nodes (9): _identity_document(), load_or_create_identity(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., _save_identity(), HostnameReader, IdentityPersistenceTests (+1 more)
+Cohesion: 0.09
+Nodes (10): _identity_document(), load_or_create_identity(), parse_local_node_identity_document(), Parse and validate the Phase 1 public local node identity shape., Load a versioned local node identity, creating one if the file is missing., _run_command(), _save_identity(), HostnameReader (+2 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.10
@@ -317,36 +314,40 @@ Cohesion: 0.13
 Nodes (24): allowed_next_states(), canonical_lifecycle_states(), LifecycleRecord, LifecycleStateSpec, LifecycleTransitionError, LocalNodeLifecycleState, Local-first lifecycle model for one AetherMesh node runtime., Canonical local node lifecycle states. (+16 more)
 
 ### Community 41 - "Community 41"
-Cohesion: 0.14
-Nodes (12): dispatch_local_batch(), LocalDispatchResult, _node_heartbeat_payloads(), Structured result for local assignment-only dispatch., Serialize a deterministic, intentionally small CLI summary., Build a local dispatch log with heartbeats and job assignments only.      This f, Return scheduler-compatible nodes in registration order., _coerce_node() (+4 more)
+Cohesion: 0.11
+Nodes (14): dispatch_local_batch(), LocalDispatchResult, _node_heartbeat_payloads(), Structured result for local assignment-only dispatch., Serialize a deterministic, intentionally small CLI summary., Build a local dispatch log with heartbeats and job assignments only.      This f, _coerce_node(), LocalScheduler (+6 more)
 
 ### Community 42 - "Community 42"
 Cohesion: 0.10
 Nodes (27): append_json_line(), load_json_mapping(), Small JSON helpers shared by local lifecycle commands., Read a required JSON object and raise the caller's local error type., Return a non-empty string field or raise the caller's local error type., Append one deterministic JSONL entry to a local lifecycle log., require_text_field(), _append_log() (+19 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.10
-Nodes (13): LocalMessageBus, Dependency-free local-only message bus for deterministic simulations., Register a node or reserved local service actor with the bus., Accept a message from a registered sender to a registered recipient., Return a copy of the ordered message log., Return a copy of the deterministic inbox for a registered node., Create and send a message with the next deterministic bus sequence id., send_numbered_message() (+5 more)
+Cohesion: 0.14
+Nodes (10): LocalMessageBus, Dependency-free local-only message bus for deterministic simulations., Register a node or reserved local service actor with the bus., Accept a message from a registered sender to a registered recipient., Return a copy of the ordered message log., Return a copy of the deterministic inbox for a registered node., Create and send a message with the next deterministic bus sequence id., send_numbered_message() (+2 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.10
 Nodes (28): _run_json_command(), canonical_json_hash(), Hash a JSON object in stable key order for local receipts., _append_log(), _artifact_refs(), _document_hash(), _interrupted_work_refs(), _iter_files() (+20 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.11
-Nodes (32): configured_runtime_ref(), Return configured local path reference or the Phase 1 default., _artifact_refs(), _attribution_id(), _error_summary(), inspect_local_node_runtime(), _lineage_parent(), _load_identity_and_manifest() (+24 more)
+Cohesion: 0.10
+Nodes (34): configured_runtime_path(), configured_runtime_ref(), Return configured local path reference or the Phase 1 default., Resolve a configured local runtime path under ``root``., _artifact_refs(), _attribution_id(), _error_summary(), inspect_local_node_runtime() (+26 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.29
 Nodes (6): $id, minLength, $schema, title, type, x-aethermesh-schema-version
 
+### Community 47 - "Community 47"
+Cohesion: 0.36
+Nodes (3): _assignment(), LocalNodeServiceTests, _service()
+
 ### Community 48 - "models.py"
-Cohesion: 0.13
-Nodes (16): Assignment-only local dispatch for manifest-backed batches., AetherMesh Core local prototype package., Contribution ledger helpers for local job results., MessageDelivery, Synchronous in-memory message bus for local AetherMesh simulation., A message accepted by the local bus with its deterministic sequence., JSON-backed local message log persistence for batch simulations., Local mesh message envelopes for deterministic simulation output. (+8 more)
+Cohesion: 0.10
+Nodes (20): Assignment-only local dispatch for manifest-backed batches., AetherMesh Core local prototype package., MessageDelivery, Synchronous in-memory message bus for local AetherMesh simulation., A message accepted by the local bus with its deterministic sequence., JSON-backed local message log persistence for batch simulations., Local mesh message envelopes for deterministic simulation output., _require_non_empty_string() (+12 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.14
-Nodes (18): minLength, pattern, type, additionalProperties, properties, required, type, items (+10 more)
+Cohesion: 0.19
+Nodes (14): minLength, pattern, type, properties, items, type, items, type (+6 more)
 
 ### Community 51 - "Community 51"
 Cohesion: 0.25
@@ -361,24 +362,24 @@ Cohesion: 0.08
 Nodes (26): _local_safety_metadata(), NodeRuntimeService, _provenance_matches_job(), Read local job evidence into a deterministic, non-mutating summary., Return one stored local receipt without creating validation evidence., Raised when local runtime state cannot be safely loaded or written., Run a queued local submission; this is not a daemon or remote boundary., Cancel an unstarted local job without altering its manifest evidence. (+18 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.12
-Nodes (37): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _darwin_physical_mac_addresses(), _extract_labeled_value(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError (+29 more)
+Cohesion: 0.14
+Nodes (24): _contains_secret_identity_fragment(), _create_identity_document_without_overwrite(), _identity_artifact_has_identity_metadata(), _identity_artifact_mentions_node(), _identity_document_creator_node_id(), IdentityPersistenceError, _load_identity(), _load_identity_document() (+16 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.50
 Nodes (3): LocalNodeIdentity, Validated version 1 public local node identity document., Return the public identity document without private key material.
 
 ### Community 56 - "Community 56"
-Cohesion: 0.09
-Nodes (21): ContributionLedger, ContributionRecord, LedgerPersistenceError, load_existing_ledger_document(), load_ledger_document(), Small in-memory ledger for prototype contribution accounting., Audit record derived from one local job result., Serialize the ledger into the small local JSON file shape. (+13 more)
+Cohesion: 0.08
+Nodes (27): _accounted_units(), ContributionLedger, ContributionRecord, LedgerPersistenceError, load_existing_ledger_document(), load_ledger_document(), Contribution ledger helpers for local job results., Small in-memory ledger for prototype contribution accounting. (+19 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.16
-Nodes (16): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), _log_ephemeral_identity_active(), _mark_ephemeral_artifact(), _mark_ephemeral_message_log(), _node_artifact_filename(), _node_artifact_path(), _node_ids_from_replayed_messages() (+8 more)
+Cohesion: 0.13
+Nodes (23): _emitted_messages_from_inbox_result(), _inbox_process_result_to_dict(), InboxReplayRequest, _log_ephemeral_identity_active(), _mark_ephemeral_artifact(), _mark_ephemeral_message_log(), _node_artifact_filename(), _node_artifact_path() (+15 more)
 
 ### Community 58 - "release_update.py"
-Cohesion: 0.07
-Nodes (33): _availability(), _capability_check_payload(), _capability_manifest_id(), _capability_provenance(), _config_api_host(), _config_api_port(), _config_capability_resource_hints(), _config_enabled_work_types() (+25 more)
+Cohesion: 0.09
+Nodes (25): _capability_manifest_id(), _capability_provenance(), _config_api_host(), _config_api_port(), _config_capability_resource_hints(), _config_enabled_work_types(), _config_identity_path(), _config_identity_persistence_enabled() (+17 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.10
@@ -404,13 +405,17 @@ Nodes (11): bootstrapState, els, formatBool(), refreshDashboard(), renderBackgro
 Cohesion: 0.17
 Nodes (12): AEF: Aether Expert Fabric, AER: Adaptive Expert Routing, AetherMesh Core Architecture, Contribution tracking direction, Core responsibilities, Current prototype layer, Decision rule for new work, Non-goals for the current prototype (+4 more)
 
+### Community 66 - "Community 66"
+Cohesion: 0.40
+Nodes (4): Failure types and examples, Phase 1 Job Failure Schema, Record contract, Redaction and storage rules
+
 ### Community 67 - "Desktop Troubleshooting"
 Cohesion: 0.17
 Nodes (11): AetherMesh CLI, CLI shim paths, Linux, macOS, Manual tests, PATH setup, Repair CLI, Runtime updates (+3 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.08
-Nodes (6): create_app(), Create the localhost API/dashboard app used by CLI and UI frontends., ApiErrorTests, CapabilityRecordInspectionTests, ModelManifestInspectionTests, RuntimeServiceTests
+Nodes (7): create_app(), Create the localhost API/dashboard app used by CLI and UI frontends., ApiErrorTests, AuditInspectionTests, CapabilityRecordInspectionTests, ModelManifestInspectionTests, RuntimeServiceTests
 
 ### Community 69 - "Community 69"
 Cohesion: 0.18
@@ -420,9 +425,13 @@ Nodes (10): API did not start, Bundled runtime missing, Desktop Troubleshooting,
 Cohesion: 0.18
 Nodes (10): args, built, entry, fs, nodeNameWordlists, path, result, root (+2 more)
 
+### Community 71 - "Community 71"
+Cohesion: 0.50
+Nodes (4): build_text_chunk_output(), _preferred_text_chunk_split(), Build stable character chunks for a local ``text_chunk`` job., Return a deterministic split point no later than ``hard_end``.
+
 ### Community 73 - "Community 73"
-Cohesion: 0.17
-Nodes (15): Load an existing ledger and return read-only aggregate totals., _require_int_result_field(), _run_local_flow_with_roster(), summarize_ledger(), load_local_inbox(), local_inbox_path(), materialize_local_inboxes(), Load and validate only ``node_id``'s local transport inbox messages. (+7 more)
+Cohesion: 0.15
+Nodes (11): load_local_inbox(), local_inbox_path(), materialize_local_inboxes(), Load and validate only ``node_id``'s local transport inbox messages., Return the deterministic inbox path for ``node_id``., Materialize addressed messages from a message log into per-node inbox files., _emitted_message(), _failing_atomic_write_json() (+3 more)
 
 ### Community 74 - "REVA Pipeline"
 Cohesion: 0.25
@@ -437,8 +446,8 @@ Cohesion: 0.25
 Nodes (8): minItems, type, additionalProperties, properties, required, type, artifacts, expected_outputs
 
 ### Community 77 - "Community 77"
-Cohesion: 0.15
-Nodes (13): format, pattern, type, pattern, type, enum, type, properties (+5 more)
+Cohesion: 0.12
+Nodes (17): format, pattern, type, pattern, type, enum, type, additionalProperties (+9 more)
 
 ### Community 78 - "Community 78"
 Cohesion: 0.25
@@ -478,10 +487,10 @@ Nodes (4): main, name, private, version
 
 ### Community 89 - "Community 89"
 Cohesion: 0.12
-Nodes (13): build_collected_outbox_message_log_document(), build_flow_message_log_document(), _message_from_document_entry(), _message_to_document_entry(), Build a deterministic version 1 run-level local flow message log., Build a deterministic version 1 log from collected local transport outboxes., MeshMessage, message_from_mapping() (+5 more)
+Nodes (13): _message_from_inbox_entry(), build_collected_outbox_message_log_document(), build_flow_message_log_document(), _message_from_document_entry(), _message_to_document_entry(), Build a deterministic version 1 run-level local flow message log., Build a deterministic version 1 log from collected local transport outboxes., MeshMessage (+5 more)
 
 ### Community 92 - "Community 92"
-Cohesion: 0.40
+Cohesion: 0.47
 Nodes (9): _cap_units(), _ceil_div(), _non_negative_int(), Deterministic contribution scoring for validated local workload results., _score_keyword_extract(), _score_text_chunk(), _score_text_embed(), _score_text_retrieve() (+1 more)
 
 ### Community 94 - "Community 94"
@@ -493,8 +502,8 @@ Cohesion: 0.22
 Nodes (8): additionalProperties, description, $id, required, $schema, title, type, x-aethermesh-schema-version
 
 ### Community 96 - "Community 96"
-Cohesion: 0.23
-Nodes (6): _canonical_json_bytes(), Return the canonical lowercase SHA-256 digest for a ``JobResult``.      The hash, Hash the canonical result fields used by result messages and audits., result_hash(), result_hash_from_fields(), ResultHashTests
+Cohesion: 0.21
+Nodes (5): _canonical_json_bytes(), Canonical SHA-256 hashing for accounted local job results., Hash the canonical result fields used by result messages and audits., result_hash_from_fields(), ResultHashTests
 
 ### Community 98 - "Community 98"
 Cohesion: 0.07
@@ -505,19 +514,19 @@ Cohesion: 0.25
 Nodes (8): minItems, type, checks, validation_requirements, additionalProperties, properties, required, type
 
 ### Community 101 - "Community 101"
-Cohesion: 0.12
-Nodes (14): _error_response(), _lifespan(), Local FastAPI app for the AetherMesh node dashboard., Return the stable, deliberately non-provenance API error envelope., Classify expected local runtime failures without exposing their text., _request_id(), _runtime_error_code(), FastAPI (+6 more)
+Cohesion: 0.08
+Nodes (22): _error_response(), _lifespan(), Local FastAPI app for the AetherMesh node dashboard., Return the stable, deliberately non-provenance API error envelope., Classify expected local runtime failures without exposing their text., _request_id(), _runtime_error_code(), _availability() (+14 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.15
 Nodes (17): items, items, items, minItems, type, additionalProperties, properties, required (+9 more)
 
 ### Community 103 - "Community 103"
-Cohesion: 0.18
-Nodes (10): dispatch_local_batch_command(), dispatch_peer_batch_command(), Dispatch a manifest batch to a local message log without execution., Dispatch manifest jobs to heartbeat-derived peers without execution., build_dispatch_message_log_document(), Build a deterministic version 1 assignment-only dispatch document., JobAssignment, Structured local assignment of one job to one node. (+2 more)
+Cohesion: 0.22
+Nodes (8): dispatch_local_batch_command(), Dispatch a manifest batch to a local message log without execution., build_dispatch_message_log_document(), Build a deterministic version 1 assignment-only dispatch document., JobAssignment, Structured local assignment of one job to one node., Serialize the assignment into a JSON-compatible dictionary., _node_roster_entry()
 
 ### Community 104 - "Community 104"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (9): atomic_create_json(), atomic_write_json(), _publish_json(), Shared JSON file persistence helpers for local-only artifacts., Write one JSON document using a temp file and atomic replace., Create one JSON document atomically without replacing an existing file., Best-effort removal for abandoned atomic-write temp files., remove_temp_file() (+1 more)
 
 ### Community 105 - "Community 105"
@@ -536,53 +545,45 @@ Nodes (7): detectPython(), { execFile }, execFileAsync, isUsablePythonVersion(),
 Cohesion: 0.40
 Nodes (5): additionalProperties, properties, required, type, input_manifest
 
-### Community 109 - "Community 109"
-Cohesion: 0.15
-Nodes (11): LocalNodeService, Synchronous local-only handler for one node's assigned-work inbox., Process unhandled ``job_assigned`` messages addressed to this node.          The, LocalSimulationResult, Structured, deterministic output from a local multi-node simulation., Serialize the simulation result into a JSON-compatible dictionary.          Vali, _validation_summary(), _invalid() (+3 more)
-
 ### Community 110 - "Community 110"
-Cohesion: 0.33
-Nodes (3): _ephemeral_roster(), Create a caller-usable ephemeral identity for local demo runs., NodeIdentityTests
+Cohesion: 0.29
+Nodes (4): _ephemeral_roster(), run_demo(), Create a caller-usable ephemeral identity for local demo runs., NodeIdentityTests
 
 ### Community 111 - "Community 111"
-Cohesion: 0.10
-Nodes (19): build_keyword_extract_output(), build_text_chunk_output(), build_text_embed_output(), build_text_retrieve_output(), build_text_stats_output(), _preferred_text_chunk_split(), Local in-memory runner for the first AetherMesh executable slice., Run local work with optional, local-only operator safety controls.      Without (+11 more)
+Cohesion: 0.40
+Nodes (3): build_text_stats_output(), Build deterministic text statistics for a local ``text_stats`` job., Run one local job and return a structured result.
 
 ### Community 112 - "Community 112"
 Cohesion: 0.50
 Nodes (3): Local example, Phase 1 Job Envelope Schema, Required fields
 
-### Community 113 - "Community 113"
-Cohesion: 0.50
-Nodes (5): _gpu_input(), _join_normalized(), _normalize_value(), _round_installed_ram_gb(), _rounded_gb_input()
-
-### Community 114 - "Community 114"
-Cohesion: 0.67
-Nodes (3): _require_non_empty_string(), _require_supported_message_type(), _validate_json_compatible()
-
 ### Community 115 - "Community 115"
 Cohesion: 0.50
 Nodes (3): Examples and validation, Phase 1 Job Result Schema, Required record fields
 
+### Community 116 - "Community 116"
+Cohesion: 0.30
+Nodes (3): _new_local_node_id(), _node_name_wordlist_dir(), Return a legacy collision-resistant local node id for explicit rotations.
+
 ## Knowledge Gaps
-- **322 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+317 more)
+- **325 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+320 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `enum` connect `Community 77` to `Community 40`, `models.py`, `Community 19`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
-- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 49`, `Community 95`?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
+- **Why does `properties` connect `Community 77` to `Community 99`, `Community 75`, `Community 108`, `Community 76`, `Community 95`?**
   _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 27 inferred relationships involving `MeshMessage` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`MeshMessage` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `name`, `version`, `private` to the rest of the system?**
-  _632 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _638 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.14603174603174604 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.14022988505747128 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11212121212121212 - nodes in this community are weakly interconnected._
+- **Should `Community 3` be split into smaller, more focused modules?**
+  _Cohesion score 0.13076923076923078 - nodes in this community are weakly interconnected._

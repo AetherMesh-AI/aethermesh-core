@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/cli.py": {
-    "mtime": 1783787950.5158594,
-    "ast_hash": "3fa5638cae524165189f73487a111c8a",
+    "mtime": 1783858750.5073946,
+    "ast_hash": "257a5b98a01d5d5b518eedda78d96538",
     "semantic_hash": ""
   },
   "src/aethermesh_core/ledger.py": {
@@ -30,13 +30,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runner.py": {
-    "mtime": 1782840133.437122,
-    "ast_hash": "79f98796b34bca78b6fd8243a3879247",
+    "mtime": 1783861898.4941351,
+    "ast_hash": "e3b73ddd7855fe2b6225e9f8aa210fea",
     "semantic_hash": ""
   },
   "src/aethermesh_core/scheduler.py": {
-    "mtime": 1782840133.4397004,
-    "ast_hash": "52d688cf76f26740f52134a5a861761d",
+    "mtime": 1783858750.5086267,
+    "ast_hash": "bea315f9e6b9c31cdfb835b517f88b5b",
     "semantic_hash": ""
   },
   "src/aethermesh_core/simulation.py": {
@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "tests/test_cli.py": {
-    "mtime": 1783660151.2637556,
-    "ast_hash": "eafd7b1e3e41ba6658c9bf2bd3d4154f",
+    "mtime": 1783858750.509189,
+    "ast_hash": "ede6536566005997ca231fd7d6c29160",
     "semantic_hash": ""
   },
   "tests/test_ledger.py": {
@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "tests/test_runner.py": {
-    "mtime": 1782840133.4494498,
-    "ast_hash": "7983d38b1f0b007a0ab16311966e4541",
+    "mtime": 1783861898.4948688,
+    "ast_hash": "8e54299578e56094433975bd2c455c0c",
     "semantic_hash": ""
   },
   "tests/test_scheduler.py": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1783855971.0776262,
-    "ast_hash": "1e1404dae71b266175bda13c6306ec30",
+    "mtime": 1783858750.50818,
+    "ast_hash": "0d1d780dfc555c857e9edb2188b63d8e",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1783855971.0790763,
-    "ast_hash": "7f2979810bda2f817825ab5c3ba95ad1",
+    "mtime": 1783858750.5098662,
+    "ast_hash": "1a9d0d32f993041cff18cfa110f142fa",
     "semantic_hash": ""
   },
   "src/aethermesh_core/identity.py": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783856149.431411,
-    "ast_hash": "29a99c940b0dbbd65623cc015be057db",
+    "mtime": 1783863464.5428705,
+    "ast_hash": "082b8efc267bc916ed1836a996f4b58b",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783856392.9714189,
-    "ast_hash": "580d8e68147e46d33cd60a2c5a9526c7",
+    "mtime": 1783863464.5436273,
+    "ast_hash": "f5b0d7a576bfcf3e7fbe295eac5a2610",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "tests/test_audit_inspection.py": {
-    "mtime": 1783821492.5559294,
-    "ast_hash": "2e76a4d15925c3c994a496a30b6c679c",
+    "mtime": 1783859970.787997,
+    "ast_hash": "fee58eea5f3b1b7240ccccf58a0b558e",
     "semantic_hash": ""
   },
   "tests/test_model_manifest_inspection.py": {
@@ -720,13 +720,13 @@
     "semantic_hash": ""
   },
   "tests/test_api_schema_contract.py": {
-    "mtime": 1783856209.380809,
-    "ast_hash": "00369d7faa8d9c2a274c8057440d3365",
+    "mtime": 1783863464.5432212,
+    "ast_hash": "916c5dbf7a77de3e99f588881616a4fc",
     "semantic_hash": ""
   },
   "docs/phase-1-api-schema-contract.md": {
-    "mtime": 1783856198.0056856,
-    "ast_hash": "553c9ddf38d4d1da093396342e54b3c4",
+    "mtime": 1783863464.5424104,
+    "ast_hash": "1115c2e7bc6125ddd911b4ab5ead2267",
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "tests/test_api_errors.py": {
-    "mtime": 1783822796.5135062,
-    "ast_hash": "06b5da14ecbaafd94f29e960dd0586da",
+    "mtime": 1783859970.7877238,
+    "ast_hash": "00b6aa9bb4872c1d98b2161b02262b21",
     "semantic_hash": ""
   },
   "tests/test_capability_record.py": {
@@ -780,23 +780,48 @@
     "semantic_hash": ""
   },
   "examples/schemas/phase-1-job-envelope.schema.json": {
-    "mtime": 1783855971.0610726,
-    "ast_hash": "a99502e7ccd1324d1c5880ad4624d143",
+    "mtime": 1783860731.578213,
+    "ast_hash": "76c606afae74f819ae94fa650059f379",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_envelope.py": {
-    "mtime": 1783855971.077324,
-    "ast_hash": "a3d8c6a2d75290e167415b1d1c9f65d2",
+    "mtime": 1783859084.9596894,
+    "ast_hash": "92ed1a41279504c4292ce737bb21e420",
     "semantic_hash": ""
   },
   "tests/test_job_envelope.py": {
-    "mtime": 1783855971.078669,
-    "ast_hash": "2a7e51bd5952e836f076d4e39fd7081a",
+    "mtime": 1783860731.5785284,
+    "ast_hash": "b13a0d23a77da9340d212cedc26f2fe3",
     "semantic_hash": ""
   },
   "docs/phase-1-job-envelope-schema.md": {
-    "mtime": 1783855971.0605989,
-    "ast_hash": "91ab1024363ae2408b2dd050f6f5f6d7",
+    "mtime": 1783860731.5778503,
+    "ast_hash": "2c54fe7fe81b76b0926dfd8a9d28a4a2",
+    "semantic_hash": ""
+  },
+  "examples/job-results/local-echo-failed.json": {
+    "mtime": 1783863576.6174004,
+    "ast_hash": "c4f89ef155c9425165cf1864e5d52371",
+    "semantic_hash": ""
+  },
+  "examples/job-results/local-echo-success.json": {
+    "mtime": 1783863576.6440594,
+    "ast_hash": "648317e7b5a6824ab134652b08726e46",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/job_result_schema.py": {
+    "mtime": 1783863576.7949018,
+    "ast_hash": "0bd58121d970a280a9f45e7aae0e2d87",
+    "semantic_hash": ""
+  },
+  "tests/test_job_result_schema.py": {
+    "mtime": 1783863607.705857,
+    "ast_hash": "5dc8b89f64699aa70a115f4271d184d7",
+    "semantic_hash": ""
+  },
+  "docs/phase-1-job-result-schema.md": {
+    "mtime": 1783863607.697837,
+    "ast_hash": "ff6606d0a492ed4b28b9120e1a0ccdec",
     "semantic_hash": ""
   }
 }
