@@ -12,6 +12,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | --- | --- |
 | `schema_version` | Integer `1`. |
 | `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
+| `capability_version` | Required semantic version (`MAJOR.MINOR.PATCH`) for the capability contract, such as `1.0.0`. It is distinct from `schema_version` and does not express reputation, release status, or value. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
@@ -27,6 +28,12 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `contribution_attribution.work_receipt_ids` | List of stable local work receipt IDs. |
 
 A safe local reference is non-empty, relative, and cannot begin with `/` or `~`, contain `..`, or contain a URI scheme. This keeps records portable without treating a filesystem reference as a network location.
+
+## Capability-version policy
+
+Increment `MAJOR` when a capability makes an incompatible input, output, behavior, or constraint change. Increment `MINOR` when it adds backward-compatible capability behavior. Increment `PATCH` only for compatible corrections that do not change the capability contract. Rerun validation after any capability change, and retain the version with the record's creator node ID, manifest references, validation receipt IDs, lineage, and contribution attribution so a local selector can compare the complete claim safely.
+
+Older local records without `capability_version` are rejected by this contract. Add an accurate semantic version and rerun local validation before using such a record for local capability comparison.
 
 ## Conditional validation fields
 
@@ -44,6 +51,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "capability_version": "1.0.0",
   "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",

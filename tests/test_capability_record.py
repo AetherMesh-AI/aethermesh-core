@@ -14,6 +14,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "capability_version": "1.0.0",
             "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
@@ -53,6 +54,20 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_accepts_complete_passed_record(self) -> None:
         self.assertIs(self.validate(self.record), self.record)
+        self.assertEqual(self.record["metadata"]["name"], "Local echo worker")
+        self.assertEqual(self.record["capability_version"], "1.0.0")
+        self.assertEqual(self.record["creator_node_id"], "node.local-01")
+        self.assertEqual(
+            self.record["lineage"]["source_manifest_ref"],
+            "manifests/local-echo-worker.json",
+        )
+        self.assertEqual(
+            self.record["validation"]["receipt_ids"], ["receipt.echo-smoke-01"]
+        )
+        self.assertEqual(
+            self.record["contribution_attribution"]["creator_node_id"],
+            self.record["creator_node_id"],
+        )
 
     def test_accepts_explicitly_unvalidated_record_without_trust_evidence(self) -> None:
         record = copy.deepcopy(self.record)
@@ -78,6 +93,7 @@ class CapabilityRecordTests(unittest.TestCase):
         for field, expected in (
             ("node_id", "node_id"),
             ("creator_node_id", "creator_node_id"),
+            ("capability_version", "capability_version"),
             ("manifest_refs", "manifest_refs"),
             ("validation", "validation"),
         ):
@@ -92,6 +108,13 @@ class CapabilityRecordTests(unittest.TestCase):
         record["node_id"] = ""
 
         with self.assertRaisesRegex(CapabilityRecordError, "node_id"):
+            self.validate(record)
+
+    def test_rejects_nonsemantic_capability_version(self) -> None:
+        record = copy.deepcopy(self.record)
+        record["capability_version"] = "v1"
+
+        with self.assertRaisesRegex(CapabilityRecordError, "semantic version"):
             self.validate(record)
 
     def test_validates_node_id_against_persisted_local_identity(self) -> None:
