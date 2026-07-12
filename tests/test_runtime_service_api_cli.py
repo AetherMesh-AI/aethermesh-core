@@ -1134,6 +1134,7 @@ class RuntimeServiceTests(unittest.TestCase):
         for hints in [
             {"token_price": "one"},
             {"operator_cost_label": "token reward for each job"},
+            {"operator_notes": "payments and pricing are negotiated elsewhere"},
         ]:
             with self.subTest(hints=hints):
                 with self.assertRaisesRegex(
@@ -1142,6 +1143,21 @@ class RuntimeServiceTests(unittest.TestCase):
                     _config_capability_resource_hints(
                         {"capabilities": {"resource_hints": {"work.echo": hints}}}
                     )
+
+        self.assertEqual(
+            _config_capability_resource_hints(
+                {
+                    "capabilities": {
+                        "resource_hints": {
+                            "work.echo": {
+                                "operator_notes": "mistake-resistant local estimate"
+                            }
+                        }
+                    }
+                }
+            ),
+            {"work.echo": {"operator_notes": "mistake-resistant local estimate"}},
+        )
 
     def test_capability_resource_hints_validate_registered_text_metadata(self) -> None:
         invalid_configs = [

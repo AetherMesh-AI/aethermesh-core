@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import shutil
 import time
 from dataclasses import dataclass
@@ -57,17 +58,10 @@ RESOURCE_HINT_FIELDS = frozenset(
         "operator_notes",
     }
 )
-ECONOMIC_HINT_TERMS = (
-    "token",
-    "reward",
-    "stake",
-    "staking",
-    "yield",
-    "exchange value",
-    "settlement",
-    "payment",
-    "payout",
-    "price",
+ECONOMIC_HINT_PATTERN = re.compile(
+    r"\b(?:tokens?|rewards?|stak(?:e|es|ed|ing)|yields?|exchange\s+values?|"
+    r"settlements?|payments?|payouts?|prices?|pricing)\b",
+    re.IGNORECASE,
 )
 
 # These definitions are the local runtime's source of truth. A configured work
@@ -351,17 +345,7 @@ class NodeRuntimeService:
                 "identifier": identifier,
                 "description": description,
                 "status": "enabled" if work_type in enabled_work_types else "disabled",
-                "creator_node_id": creator_node_id,
-                "capability_manifest_id": _capability_manifest_id(identifier),
-                "lineage": {
-                    "capability_manifest_id": _capability_manifest_id(identifier)
-                },
-                "contribution_attribution": {"creator_node_id": creator_node_id},
-                **(
-                    {"resource_hints": resource_hints[identifier]}
-                    if identifier in resource_hints
-                    else {}
-                ),
+                **_capability_provenance(identifier, creator_node_id, resource_hints),
                 "availability": self._work_capability_availability(
                     work_type=work_type,
                     enabled=work_type in enabled_work_types,
@@ -383,17 +367,7 @@ class NodeRuntimeService:
                     and not _config_identity_persistence_enabled(config)
                     else status
                 ),
-                "creator_node_id": creator_node_id,
-                "capability_manifest_id": _capability_manifest_id(identifier),
-                "lineage": {
-                    "capability_manifest_id": _capability_manifest_id(identifier)
-                },
-                "contribution_attribution": {"creator_node_id": creator_node_id},
-                **(
-                    {"resource_hints": resource_hints[identifier]}
-                    if identifier in resource_hints
-                    else {}
-                ),
+                **_capability_provenance(identifier, creator_node_id, resource_hints),
                 "availability": _metadata_capability_availability(
                     enabled=(
                         identifier != "provenance.creator_node_id"
@@ -1498,6 +1472,27 @@ def _capability_manifest_id(identifier: str) -> str:
     return f"local-capability-{identifier.replace('.', '-')}-v1"
 
 
+def _capability_provenance(
+    identifier: str,
+    creator_node_id: str | None,
+    resource_hints: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    """Build shared local provenance and optional advisory metadata."""
+
+    manifest_id = _capability_manifest_id(identifier)
+    return {
+        "creator_node_id": creator_node_id,
+        "capability_manifest_id": manifest_id,
+        "lineage": {"capability_manifest_id": manifest_id},
+        "contribution_attribution": {"creator_node_id": creator_node_id},
+        **(
+            {"resource_hints": resource_hints[identifier]}
+            if identifier in resource_hints
+            else {}
+        ),
+    }
+
+
 def _availability(
     status: str, reason: str | None, worker_capacity: dict[str, int]
 ) -> dict[str, Any]:
@@ -1592,7 +1587,7 @@ def _config_capability_resource_hints(
                 raise RuntimeServiceError(
                     f"capabilities.resource_hints.{identifier}.{field} must be a non-empty string"
                 )
-            if any(term in value.lower() for term in ECONOMIC_HINT_TERMS):
+            if ECONOMIC_HINT_PATTERN.search(value):
                 raise RuntimeServiceError(
                     f"capabilities.resource_hints.{identifier}.{field} must not imply token economics or financial settlement"
                 )
