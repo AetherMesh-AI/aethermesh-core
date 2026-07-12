@@ -38,29 +38,39 @@ class Phase1ApiSchemaTests(unittest.TestCase):
         self.assertGreater(receipt["example_count"], 0)
         self.assertGreater(receipt["published_route_count"], 0)
 
-    def test_schema_validator_rejects_missing_required_creator_attribution(
-        self,
-    ) -> None:
-        contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
-        example = next(
-            item
-            for item in contract["examples"]
-            if item["schema"] == "LocalValidationReceipt"
+    def test_schema_validator_rejects_missing_required_provenance(self) -> None:
+        cases = (
+            ("creator_node_id", "$.creator_node_id is required"),
+            ("manifest_ref", "$.manifest_ref is required"),
+            ("validation", "$.validation is required"),
+            ("lineage_parent_ids", "$.lineage_parent_ids is required"),
+            ("contribution_attribution", "$.contribution_attribution is required"),
         )
-        del example["payload"]["contribution_attribution"]["creator_node_id"]
-        with tempfile.TemporaryDirectory() as temp_dir:
-            invalid_contract = Path(temp_dir) / "invalid-contract.json"
-            invalid_contract.write_text(json.dumps(contract), encoding="utf-8")
-            result = subprocess.run(
-                [sys.executable, str(SCRIPT), "--contract", str(invalid_contract)],
-                capture_output=True,
-                text=True,
-                cwd=ROOT,
-            )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn(
-            "contribution_attribution.creator_node_id is required", result.stderr
-        )
+        for field, expected_error in cases:
+            with self.subTest(field=field):
+                contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
+                example = next(
+                    item
+                    for item in contract["examples"]
+                    if item["schema"] == "LocalValidationReceipt"
+                )
+                del example["payload"][field]
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    invalid_contract = Path(temp_dir) / "invalid-contract.json"
+                    invalid_contract.write_text(json.dumps(contract), encoding="utf-8")
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            str(SCRIPT),
+                            "--contract",
+                            str(invalid_contract),
+                        ],
+                        capture_output=True,
+                        text=True,
+                        cwd=ROOT,
+                    )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected_error, result.stderr)
 
 
 if __name__ == "__main__":

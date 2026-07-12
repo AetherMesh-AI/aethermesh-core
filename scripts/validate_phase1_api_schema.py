@@ -7,9 +7,11 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import tempfile
 from typing import Any
 
 from aethermesh_core.api import create_app
+from aethermesh_core.runtime_service import NodeRuntimeService
 
 
 class SchemaValidationError(ValueError):
@@ -54,6 +56,22 @@ def validate_contract(contract_path: Path) -> dict[str, Any]:
     for example in contract["examples"]:
         _validate(example["payload"], schemas[example["schema"]])
 
+    examples = {item["schema"]: item["payload"] for item in contract["examples"]}
+    with tempfile.TemporaryDirectory() as temp_dir:
+        service = NodeRuntimeService.from_home(Path(temp_dir))
+        accepted = service.submit_local_job(examples["LocalJobSubmissionRequest"])
+        _validate(accepted, schemas["LocalJobSubmissionAccepted"])
+        _validate(
+            service.get_local_job_status(accepted["job_id"]),
+            schemas["LocalJobStatus"],
+        )
+        service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
+        _validate(
+            service.get_local_validation_receipt(work_id=accepted["job_id"]),
+            schemas["LocalValidationReceipt"],
+        )
+        _validate(service.contribution_summary(), schemas["LocalContributionLookup"])
+
     documented_routes = set(contract["published_route_inventory"])
     published_routes = {
         f"{method.upper()} {path}"
@@ -78,6 +96,7 @@ def validate_contract(contract_path: Path) -> dict[str, Any]:
         "receipt_kind": "phase_1_local_api_schema_validation",
         "contract_version": contract["contract_version"],
         "example_count": len(contract["examples"]),
+        "runtime_conformance_count": 4,
         "published_route_count": len(published_routes),
         "contract_sha256": hashlib.sha256(raw_contract).hexdigest(),
         "result": "passed",

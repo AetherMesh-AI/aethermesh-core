@@ -4,5 +4,6 @@
   "example_count": 6,
   "published_route_count": 25,
   "receipt_kind": "phase_1_local_api_schema_validation",
-  "result": "passed"
+  "result": "passed",
+  "runtime_conformance_count": 4
 }
