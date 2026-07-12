@@ -21,6 +21,7 @@ class AuditInspectionTests(unittest.TestCase):
                     "payload": {"message": "audit"},
                     "creator_node_id": "creator-local-a",
                     "requested_validation_mode": "deterministic-local",
+                    "schema_version": 1,
                     "lineage_parent_refs": ["data/prior-job.json"],
                     "attribution_metadata": {"project": "prototype"},
                 }
@@ -86,6 +87,9 @@ class AuditInspectionTests(unittest.TestCase):
                     "payload": {},
                     "creator_node_id": "creator-a",
                     "requested_validation_mode": "deterministic-local",
+                    "schema_version": 1,
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
                 }
             )
 
