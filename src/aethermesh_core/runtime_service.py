@@ -114,6 +114,9 @@ LOCAL_CAPABILITY_DEFINITIONS = (
     ),
     ("work.text_stats", "Run deterministic local text statistics jobs.", "text_stats"),
 )
+SUPPORTED_RUNTIME_JOB_TYPES = tuple(
+    definition[2] for definition in LOCAL_CAPABILITY_DEFINITIONS
+)
 LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS = (
     (
         "provenance.creator_node_id",
@@ -803,6 +806,23 @@ class NodeRuntimeService:
                 creator_node_id if isinstance(creator_node_id, str) else None
             ),
             "manifest_ref": manifest_ref,
+            "lineage": (
+                {
+                    "job_id": known_job_id,
+                    "parent_refs": request_data.get("lineage_parent_refs"),
+                }
+                if known_job_id is not None
+                else None
+            ),
+            "contribution_attribution": (
+                {
+                    "job_id": known_job_id,
+                    "creator_node_id": creator_node_id,
+                    "metadata": request_data.get("attribution_metadata"),
+                }
+                if known_job_id is not None and isinstance(creator_node_id, str)
+                else None
+            ),
             "validation": {"state": validation_state, "receipt_ref": None},
             "lineage_ref": (
                 f"local-lineage-{known_job_id}" if manifest_ref is not None else None
@@ -847,6 +867,17 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission job_type must be a non-empty string"
             )
+        if job_type not in SUPPORTED_RUNTIME_JOB_TYPES:
+            supported_types = ", ".join(SUPPORTED_RUNTIME_JOB_TYPES)
+            error = RuntimeServiceError(
+                f"job submission job_type unsupported: {job_type!r}; "
+                f"supported local types: {supported_types}"
+            )
+            self._append_event(
+                "rejected unsupported local job submission "
+                f"creator_node_id={creator_node_id} job_type={job_type!r} reason={error}"
+            )
+            raise error
         try:
             requested_capability = self._requested_local_capability(
                 request.get("requested_capability"), job_type
