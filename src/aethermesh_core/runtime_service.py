@@ -492,7 +492,11 @@ class NodeRuntimeService:
             }
         try:
             document = self._load_local_job_document(path, "capability record")
-            record = validate_capability_record(document, local_node_id=local_node_id)
+            record = validate_capability_record(
+                document,
+                local_node_id=local_node_id,
+                local_schema_root=self.paths.home,
+            )
         except (RuntimeServiceError, CapabilityRecordError) as exc:
             return {
                 "record_ref": record_ref,

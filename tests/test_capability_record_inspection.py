@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,6 +22,10 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
             source = (
                 Path(__file__).parents[1]
                 / "examples/capabilities/local-echo-worker.json"
+            )
+            shutil.copytree(
+                Path(__file__).parents[1] / "examples/schemas",
+                Path(temp_dir) / "examples/schemas",
             )
             record = json.loads(source.read_text(encoding="utf-8"))
             record["node_id"] = initialized["node_id"]
@@ -97,6 +103,17 @@ class CapabilityRecordInspectionTests(unittest.TestCase):
             self.assertEqual(echo["validation_receipt_refs"], ["receipt.echo-local-01"])
             self.assertEqual(advertised["state"], "advertised")
             self.assertEqual(advertised["validation_receipt_refs"], [])
+
+            previous_cwd = Path.cwd()
+            try:
+                with tempfile.TemporaryDirectory() as unrelated_dir:
+                    os.chdir(unrelated_dir)
+                    self.assertEqual(
+                        service.inspect_capability_records()["records"][1]["state"],
+                        "validated",
+                    )
+            finally:
+                os.chdir(previous_cwd)
 
     def test_missing_store_returns_an_explicit_empty_local_view(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
