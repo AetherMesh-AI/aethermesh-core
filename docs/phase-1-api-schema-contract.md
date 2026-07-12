@@ -6,6 +6,25 @@ Compatibility rule: additive optional fields are allowed within schema version 1
 
 Migration note: before this baseline, `POST /api/jobs` accepted an unversioned request and defaulted omitted `lineage_parent_refs` and `attribution_metadata` to empty values. Version 1 deliberately replaces that prototype-only shape: callers must send `schema_version: 1` and must send both provenance fields explicitly. The server rejects the former unversioned shape rather than guessing a contract version. Responses from submission, job status, validation-receipt lookup, and contribution lookup now identify schema version 1.
 
+## Local API error envelope
+
+Every HTTP failure from the local API uses this stable envelope. Successful response shapes are unchanged.
+
+```jsonc
+{
+  "error": {
+    "code": "INVALID_INPUT",
+    "message": "The request is invalid.",
+    "details": {}
+  },
+  "request_id": "local request trace identifier"
+}
+```
+
+`request_id` is a fresh local trace identifier for correlating a caller response with local process logs. `error.details` is deliberately an empty object in version 1: API failures must not return exception text, stack traces, creator node IDs, manifests, receipts, lineage records, or contribution-attribution data. Local logs retain the original diagnostic.
+
+The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 route lookup), `MISSING_MANIFEST` (404), `VALIDATION_FAILURE` (400 or 404 when evidence is absent), `LINEAGE_LOOKUP_FAILURE` (400), `CONTRIBUTION_ATTRIBUTION_FAILURE` (400), and `INTERNAL_ERROR` (500). Callers should test `error.code` rather than response messages or log text.
+
 ## Route index
 
 | Route | Request | Response contract |

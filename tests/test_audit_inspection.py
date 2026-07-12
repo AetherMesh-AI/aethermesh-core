@@ -111,4 +111,4 @@ class AuditInspectionTests(unittest.TestCase):
                 response.json()["events"][0]["event_type"], "job_submitted"
             )
             self.assertEqual(invalid.status_code, 400)
-            self.assertIn("start_time", invalid.json()["detail"])
+            self.assertEqual(invalid.json()["error"]["code"], "INVALID_INPUT")
