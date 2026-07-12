@@ -6,6 +6,52 @@ from aethermesh_core.runner import LocalRunner, _run_in_local_process, run_local
 
 
 class LocalRunnerTests(unittest.TestCase):
+    def test_phase_one_simple_jobs_are_deterministic_and_schema_checked(self) -> None:
+        runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
+
+        echo = runner.run(
+            Job(job_id="echo-1", job_type="echo", payload={"message": "exact"})
+        )
+        hashed = runner.run(
+            Job(job_id="hash-1", job_type="hash", payload={"value": {"b": 2, "a": 1}})
+        )
+        computed_first = runner.run(
+            Job(
+                job_id="compute-1",
+                job_type="basic_compute",
+                payload={"operation": "multiply", "operands": [2, 3, 4]},
+            )
+        )
+        computed_second = runner.run(
+            Job(
+                job_id="compute-2",
+                job_type="basic_compute",
+                payload={"operation": "multiply", "operands": [2, 3, 4]},
+            )
+        )
+        transformed = runner.run(
+            Job(
+                job_id="schema-1",
+                job_type="schema_transform",
+                payload={
+                    "record": {"name": "Miyu", "count": 2},
+                    "schema": {"fields": {"name": "string", "count": "integer"}},
+                },
+            )
+        )
+
+        self.assertEqual(echo.output, "exact")
+        self.assertEqual(
+            hashed.output,
+            {
+                "algorithm": "sha256",
+                "digest": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777",
+            },
+        )
+        self.assertEqual(computed_first.output, computed_second.output)
+        self.assertEqual(computed_first.output, {"operation": "multiply", "result": 24})
+        self.assertEqual(transformed.output, {"count": 2, "name": "Miyu"})
+
     def test_echo_job_completes_and_serializes_expected_shape(self) -> None:
         runner = LocalRunner(NodeIdentity(node_id="local-test-node"))
         job = Job(

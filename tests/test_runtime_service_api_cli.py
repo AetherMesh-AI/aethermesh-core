@@ -617,8 +617,8 @@ class RuntimeServiceTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 RuntimeServiceError,
                 "job submission job_type unsupported: 'unknown_work'; "
-                "supported local types: echo, keyword_extract, text_chunk, "
-                "text_embed, text_stats",
+                "supported local types: echo, hash, basic_compute, schema_transform, "
+                "keyword_extract, text_chunk, text_embed, text_stats",
             ):
                 service.submit_local_job(request)
 
@@ -1599,7 +1599,16 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(
                 config["capabilities"]["enabled_work_types"],
-                ["echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"],
+                [
+                    "echo",
+                    "hash",
+                    "basic_compute",
+                    "schema_transform",
+                    "keyword_extract",
+                    "text_chunk",
+                    "text_embed",
+                    "text_stats",
+                ],
             )
 
             with patch.object(
@@ -1795,6 +1804,9 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
                 {
                     "work.echo": "enabled",
+                    "work.hash": "enabled",
+                    "work.basic_compute": "enabled",
+                    "work.schema_transform": "enabled",
                     "work.keyword_extract": "enabled",
                     "work.text_chunk": "enabled",
                     "work.text_embed": "enabled",
@@ -2172,11 +2184,29 @@ class RuntimeServiceTests(unittest.TestCase):
         self.assertEqual(_config_api_port({}), 7280)
         self.assertEqual(
             _config_enabled_work_types({}),
-            {"echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"},
+            {
+                "echo",
+                "hash",
+                "basic_compute",
+                "schema_transform",
+                "keyword_extract",
+                "text_chunk",
+                "text_embed",
+                "text_stats",
+            },
         )
         self.assertEqual(
             _config_enabled_work_types({"capabilities": {}}),
-            {"echo", "keyword_extract", "text_chunk", "text_embed", "text_stats"},
+            {
+                "echo",
+                "hash",
+                "basic_compute",
+                "schema_transform",
+                "keyword_extract",
+                "text_chunk",
+                "text_embed",
+                "text_stats",
+            },
         )
         self.assertEqual(
             _config_enabled_work_types(

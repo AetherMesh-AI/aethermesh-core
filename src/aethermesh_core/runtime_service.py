@@ -40,6 +40,9 @@ DEFAULT_API_HOST = "127.0.0.1"
 DEFAULT_API_PORT = 7280
 DEFAULT_LOCAL_CAPABILITIES = (
     "echo",
+    "hash",
+    "basic_compute",
+    "schema_transform",
     "keyword_extract",
     "text_chunk",
     "text_embed",
@@ -101,6 +104,17 @@ ECONOMIC_HINT_PATTERN = re.compile(
 # the local artifact contracts implemented by the Phase 1 runtime.
 LOCAL_CAPABILITY_DEFINITIONS = (
     ("work.echo", "Run deterministic local echo jobs.", "echo"),
+    ("work.hash", "Run deterministic local SHA-256 hash jobs.", "hash"),
+    (
+        "work.basic_compute",
+        "Run bounded deterministic arithmetic jobs.",
+        "basic_compute",
+    ),
+    (
+        "work.schema_transform",
+        "Run declared-schema local transform jobs.",
+        "schema_transform",
+    ),
     (
         "work.keyword_extract",
         "Run deterministic local keyword extraction jobs.",
@@ -895,6 +909,9 @@ class NodeRuntimeService:
         input_payload, payload_hash = _validated_input_payload(
             request.get("input_payload")
         )
+        expected_output_shape = _expected_output_shape(
+            job_type, input_payload["content"]
+        )
         local_safety = _local_safety_metadata(request.get("local_safety"))
         validation_mode = request.get("requested_validation_mode")
         if not isinstance(validation_mode, str) or not validation_mode.strip():
@@ -938,6 +955,7 @@ class NodeRuntimeService:
                         "requested_capability": requested_capability,
                         "input_payload": input_payload,
                         "input_payload_hash": payload_hash,
+                        "expected_output_shape": expected_output_shape,
                         "local_safety": local_safety,
                     },
                     "creator_node_id": creator_node_id,
@@ -1701,6 +1719,7 @@ class NodeRuntimeService:
                 "receipt_id": self._receipt_id_for_job(job_id),
                 "manifest_ref": f"data/job-submissions/{job_id}.json",
                 "input_payload_hash": payload_hash,
+                "output_hash": execution_metadata["output_digest"],
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
@@ -2008,13 +2027,20 @@ def _metadata_capability_availability(
 
 
 def _capability_check_payload(work_type: str) -> dict[str, Any]:
-    return {
+    payloads: dict[str, dict[str, Any]] = {
         "echo": {"message": "availability-check"},
+        "hash": {"value": "availability-check"},
+        "basic_compute": {"operation": "add", "operands": [1, 2]},
+        "schema_transform": {
+            "record": {"ready": True},
+            "schema": {"fields": {"ready": "boolean"}},
+        },
         "keyword_extract": {"text": "availability check"},
         "text_chunk": {"text": "availability check"},
         "text_embed": {"text": "availability check"},
         "text_stats": {"text": "availability check"},
-    }[work_type]
+    }
+    return payloads[work_type]
 
 
 def _config_node_id(config: dict[str, Any]) -> str | None:
@@ -2240,6 +2266,23 @@ def _local_safety_metadata(value: object) -> dict[str, object] | None:
             )
         metadata["cancellation_requested"] = cancellation
     return metadata
+
+
+def _expected_output_shape(job_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Declare the deterministic output contract stored with each local manifest."""
+
+    shapes: dict[str, dict[str, Any]] = {
+        "echo": {"type": "string"},
+        "hash": {"type": "object", "required": ["algorithm", "digest"]},
+        "basic_compute": {"type": "object", "required": ["operation", "result"]},
+        "schema_transform": {
+            "type": "object",
+            "fields": payload.get("schema", {}).get("fields")
+            if isinstance(payload.get("schema"), dict)
+            else None,
+        },
+    }
+    return shapes.get(job_type, {"type": "deterministic-local-output"})
 
 
 def _validated_input_payload(value: object) -> tuple[dict[str, Any], str]:

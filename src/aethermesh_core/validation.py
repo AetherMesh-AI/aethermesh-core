@@ -7,7 +7,10 @@ from typing import Any
 
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.runner import (
+    build_basic_compute_output,
+    build_hash_output,
     build_keyword_extract_output,
+    build_schema_transform_output,
     build_text_chunk_output,
     build_text_embed_output,
     build_text_retrieve_output,
@@ -41,6 +44,9 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
 
     if job.job_type not in {
         "echo",
+        "hash",
+        "basic_compute",
+        "schema_transform",
         "keyword_extract",
         "text_chunk",
         "text_embed",
@@ -66,6 +72,20 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
             valid=True,
             reason="ok",
         )
+
+    if job.job_type in {"hash", "basic_compute", "schema_transform"}:
+        builders = {
+            "hash": build_hash_output,
+            "basic_compute": build_basic_compute_output,
+            "schema_transform": build_schema_transform_output,
+        }
+        try:
+            expected_output = builders[job.job_type](job.payload)
+        except ValueError:
+            return _invalid(job, result, f"malformed_{job.job_type}_payload")
+        if result.output != expected_output:
+            return _invalid(job, result, "output_mismatch")
+        return ValidationResult(job.job_id, result.job_id, True, "ok")
 
     if job.job_type == "text_stats":
         if "text" not in job.payload or not isinstance(job.payload["text"], str):
