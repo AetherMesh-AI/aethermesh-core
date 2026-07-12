@@ -2,14 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "local-echo-output",
   "title": "Local echo worker output",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["message"],
-  "properties": {
-    "message": {
-      "type": "string",
-      "minLength": 1
-    }
-  },
+  "type": "string",
+  "minLength": 1,
   "x-aethermesh-schema-version": "1.0.0"
 }

@@ -1,5 +1,7 @@
 import copy
+import json
 import unittest
+from pathlib import Path
 from typing import Any
 
 from aethermesh_core.capability_record import (
@@ -7,6 +9,8 @@ from aethermesh_core.capability_record import (
     validate_capability_record,
 )
 from aethermesh_core.identity import load_or_create_identity
+from aethermesh_core.models import Job, NodeIdentity
+from aethermesh_core.runner import LocalRunner
 
 
 class CapabilityRecordTests(unittest.TestCase):
@@ -38,7 +42,7 @@ class CapabilityRecordTests(unittest.TestCase):
                         "schema_ref": "examples/schemas/local-echo-output.schema.json",
                         "schema_id": "local-echo-output",
                         "schema_version": "1.0.0",
-                        "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073",
+                        "schema_digest": "sha256:b2ca602935f0f448c440876cbcbc10b34fb739d5578b758ce716df4e753880c1",
                     }
                 ],
                 "constraints": {"network_mode": "local-only-no-p2p"},
@@ -65,7 +69,7 @@ class CapabilityRecordTests(unittest.TestCase):
                             "schema_ref": "examples/schemas/local-echo-output.schema.json",
                             "schema_id": "local-echo-output",
                             "schema_version": "1.0.0",
-                            "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073",
+                            "schema_digest": "sha256:b2ca602935f0f448c440876cbcbc10b34fb739d5578b758ce716df4e753880c1",
                         },
                     }
                 ],
@@ -91,6 +95,35 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_accepts_complete_passed_record(self) -> None:
         self.assertIs(self.validate(self.record), self.record)
+
+    def test_example_record_describes_the_runnable_local_echo_worker(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        record_path = root / "examples/capabilities/local-echo-worker.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+
+        self.assertIs(
+            validate_capability_record(
+                record,
+                local_node_id=record["node_id"],
+                local_schema_root=root,
+            ),
+            record,
+        )
+        self.assertTrue((root / record["manifest_refs"][0]).is_file())
+        self.assertTrue((root / record["lineage"]["source_manifest_ref"]).is_file())
+        self.assertEqual(record["validation"]["status"], "unvalidated")
+        self.assertEqual(record["validation"]["receipt_ids"], [])
+        self.assertEqual(record["validation"]["receipt_evidence"], [])
+
+        result = LocalRunner(NodeIdentity(node_id=record["node_id"])).run(
+            Job(
+                job_id="capability-echo-check",
+                job_type="echo",
+                payload={"message": "ready"},
+            )
+        )
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.output, "ready")
 
     def test_accepts_explicitly_unvalidated_record_without_trust_evidence(self) -> None:
         record = copy.deepcopy(self.record)

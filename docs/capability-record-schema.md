@@ -1,6 +1,6 @@
 # Local Capability Record Schema
 
-This is the version 1 schema for a local AetherMesh capability claim. It is a validation-only Python contract exposed by `aethermesh_core.capability_record.validate_capability_record`; it does not write artifacts, advertise to peers, discover nodes, establish consensus, or award contribution credit.
+This is the version 1 schema for a local AetherMesh capability claim. It is a validation-only Python contract exposed by `aethermesh_core.capability_record.validate_capability_record`; it does not write artifacts, advertise to peers, discover nodes, establish consensus, or award contribution credit. Repository example records live predictably under `examples/capabilities/` and are validated from the repository root.
 
 A capability is trusted only when `validation.status` is `passed` and the record contains local receipt IDs. `unvalidated` is valid only as explicitly untrusted metadata and cannot carry receipt IDs.
 
@@ -72,7 +72,7 @@ Use Semantic Versioning for the capability interface or behavior only: increment
       "schema_ref": "examples/schemas/local-echo-output.schema.json",
       "schema_id": "local-echo-output",
       "schema_version": "1.0.0",
-      "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073"
+      "schema_digest": "sha256:b2ca602935f0f448c440876cbcbc10b34fb739d5578b758ce716df4e753880c1"
     }],
     "constraints": {"network_mode": "local-only-no-p2p"},
     "local_execution_requirements": ["python>=3.11"]
@@ -97,7 +97,7 @@ Use Semantic Versioning for the capability interface or behavior only: increment
         "schema_ref": "examples/schemas/local-echo-output.schema.json",
         "schema_id": "local-echo-output",
         "schema_version": "1.0.0",
-        "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073"
+        "schema_digest": "sha256:b2ca602935f0f448c440876cbcbc10b34fb739d5578b758ce716df4e753880c1"
       }
     }],
     "last_validated_at": "2026-07-11T12:05:00Z",
@@ -121,3 +121,5 @@ Use Semantic Versioning for the capability interface or behavior only: increment
 Set `validation.status` to `unvalidated`, `validation.receipt_ids` to `[]`, and `validation.receipt_evidence` to `[]`; omit `last_validated_at`, `check_name`, and `failure_reason`. This remains a local claim, not a trusted or network-advertised capability.
 
 Validation requires the persisted identity's ID as `local_node_id`. The record is rejected unless its required `node_id` exactly matches that source of truth.
+
+`examples/capabilities/local-echo-worker.json` is the minimal runnable example. It describes only the `echo` job implemented by `LocalRunner`, links to its local batch manifest and input/output schemas, and remains explicitly unvalidated because this repository does not persist a standalone capability-validation receipt yet.
