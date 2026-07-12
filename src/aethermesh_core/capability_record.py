@@ -28,7 +28,8 @@ _TOP_LEVEL_FIELDS = frozenset(
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
 _SEMVER = re.compile(
     r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
-    r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+    r"(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\Z"
 )
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
@@ -179,6 +180,12 @@ def _require_receipt_evidence(
         if not isinstance(receipt, dict):
             raise CapabilityRecordError(
                 f"validation.receipt_evidence[{index}] must be an object"
+            )
+        allowed_fields = {"receipt_id", *expected}
+        if receipt.keys() != allowed_fields:
+            raise CapabilityRecordError(
+                f"validation.receipt_evidence[{index}] must contain exactly the "
+                "documented receipt fields"
             )
         if receipt.get("receipt_id") != receipt_ids[index]:
             raise CapabilityRecordError(

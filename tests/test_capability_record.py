@@ -207,6 +207,10 @@ class CapabilityRecordTests(unittest.TestCase):
                 "semantic version",
             ),
             (
+                lambda record: record.update(capability_version="1.0.0-01"),
+                "semantic version",
+            ),
+            (
                 lambda record: record["validation"]["receipt_evidence"][0].update(
                     capability_version="2.0.0"
                 ),
@@ -268,6 +272,12 @@ class CapabilityRecordTests(unittest.TestCase):
             (
                 lambda record: record["validation"].update(network_verified=True),
                 "validation",
+            ),
+            (
+                lambda record: record["validation"]["receipt_evidence"][0].update(
+                    network_verified=True
+                ),
+                "documented receipt fields",
             ),
             (lambda record: record["lineage"].update(remote_parent="peer"), "lineage"),
             (
