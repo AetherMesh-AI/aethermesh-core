@@ -591,6 +591,71 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
 
+    def test_unsupported_job_type_is_rejected_before_local_evidence(self) -> None:
+        """Unsupported work is admission failure, not queued or credited work."""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_id": "local-job-0123456789abcdef0123456789abcdef",
+                "job_type": "unknown_work",
+                "requested_capability": {"identifier": "work.unknown_work"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "must not execute"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError,
+                "job submission job_type unsupported: 'unknown_work'; "
+                "supported local types: echo, keyword_extract, text_chunk, "
+                "text_embed, text_retrieve, text_stats",
+            ):
+                service.submit_local_job(request)
+
+            rejection = service.submit_local_job_status(request)
+            self.assertEqual(rejection["status"], "rejected")
+            self.assertEqual(rejection["creator_node_id"], "creator-local-a")
+            self.assertEqual(rejection["job_id"], request["job_id"])
+            self.assertEqual(
+                rejection["lineage"],
+                {"job_id": request["job_id"], "parent_refs": ["data/prior-job.json"]},
+            )
+            self.assertEqual(
+                rejection["contribution_attribution"],
+                {
+                    "job_id": request["job_id"],
+                    "creator_node_id": "creator-local-a",
+                    "metadata": {"project": "prototype"},
+                },
+            )
+            self.assertIsNone(rejection["manifest_ref"])
+            self.assertIsNone(rejection["lineage_ref"])
+            self.assertIsNone(rejection["attribution_ref"])
+            self.assertEqual(
+                rejection["validation"], {"state": "rejected", "receipt_ref": None}
+            )
+            self.assertIn("unknown_work", rejection["message"])
+            self.assertFalse((root / "data" / "job-submissions").exists())
+            self.assertFalse((root / "data" / "job-status").exists())
+            self.assertFalse((root / "data" / "job-results").exists())
+            self.assertFalse((root / "data" / "job-validation-receipts").exists())
+            self.assertTrue(
+                any(
+                    "rejected unsupported local job submission" in event
+                    and "creator_node_id=creator-local-a" in event
+                    and "job_type='unknown_work'" in event
+                    for event in service.recent_logs()["events"]
+                )
+            )
+
     def test_job_submission_requires_enabled_local_manifest_capability(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
