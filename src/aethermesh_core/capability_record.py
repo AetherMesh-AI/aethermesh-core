@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import Any
 
 CAPABILITY_RECORD_SCHEMA_VERSION = 1
@@ -63,12 +64,24 @@ def _require_validation(document: dict[str, Any]) -> None:
             raise CapabilityRecordError("passed validation requires a receipt ID")
         _require_timestamp(validation, "last_validated_at")
         _require_string(validation, "check_name")
+        if "failure_reason" in validation:
+            raise CapabilityRecordError(
+                "passed validation must not include failure_reason"
+            )
     elif status == "failed":
         _require_timestamp(validation, "last_validated_at")
         _require_string(validation, "check_name")
         _require_string(validation, "failure_reason")
-    elif validation["receipt_ids"]:
-        raise CapabilityRecordError("unvalidated capability must not claim receipt IDs")
+    else:
+        if validation["receipt_ids"]:
+            raise CapabilityRecordError(
+                "unvalidated capability must not claim receipt IDs"
+            )
+        for field in ("last_validated_at", "check_name", "failure_reason"):
+            if field in validation:
+                raise CapabilityRecordError(
+                    f"unvalidated capability must not include {field}"
+                )
 
 
 def _require_lineage(document: dict[str, Any]) -> None:
@@ -119,8 +132,15 @@ def _require_identifier(document: dict[str, Any], field: str) -> str:
 
 
 def _require_timestamp(document: dict[str, Any], field: str) -> None:
-    if not _TIMESTAMP.fullmatch(_require_string(document, field)):
+    value = _require_string(document, field)
+    if not _TIMESTAMP.fullmatch(value):
         raise CapabilityRecordError(f"{field} must be an RFC 3339 UTC timestamp")
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise CapabilityRecordError(
+            f"{field} must be an RFC 3339 UTC timestamp"
+        ) from exc
 
 
 def _require_ref_list(

@@ -125,6 +125,24 @@ class CapabilityRecordTests(unittest.TestCase):
                 "must not claim",
             ),
             ({"status": "trusted", "receipt_ids": []}, "not allowed"),
+            (
+                {
+                    "status": "passed",
+                    "receipt_ids": ["receipt.echo-01"],
+                    "last_validated_at": "2026-07-11T12:05:00Z",
+                    "check_name": "echo-smoke-test",
+                    "failure_reason": "contradictory failure",
+                },
+                "must not include failure_reason",
+            ),
+            (
+                {
+                    "status": "unvalidated",
+                    "receipt_ids": [],
+                    "check_name": "unperformed-check",
+                },
+                "must not include check_name",
+            ),
         )
         for validation, expected in cases:
             with self.subTest(validation=validation):
@@ -138,6 +156,10 @@ class CapabilityRecordTests(unittest.TestCase):
             (lambda record: record.update(schema_version=True), "schema_version"),
             (lambda record: record.update(capability_id="Bad"), "capability_id"),
             (lambda record: record.update(created_at="2026-07-11"), "created_at"),
+            (
+                lambda record: record.update(created_at="2026-99-11T12:00:00Z"),
+                "created_at",
+            ),
             (
                 lambda record: record["contribution_attribution"].update(
                     creator_node_id="node.other-01"

@@ -1,16 +1,16 @@
 # Graph Report - aethermesh-core  (2026-07-11)
 
 ## Corpus Check
-- 136 files · ~180,708 words
+- 136 files · ~180,809 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2196 nodes · 5916 edges · 105 communities (89 shown, 16 thin omitted)
+- 2196 nodes · 5916 edges · 103 communities (88 shown, 15 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 399 edges (avg confidence: 0.58)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f298c358`
+- Built from commit: `59c2bd86`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -108,7 +108,6 @@
 - [[_COMMUNITY_Community 90|Community 90]]
 - [[_COMMUNITY_Community 92|Community 92]]
 - [[_COMMUNITY_Community 94|Community 94]]
-- [[_COMMUNITY_Community 95|Community 95]]
 - [[_COMMUNITY_Community 96|Community 96]]
 - [[_COMMUNITY_Community 97|Community 97]]
 - [[_COMMUNITY_Community 98|Community 98]]
@@ -117,7 +116,6 @@
 - [[_COMMUNITY_Community 101|Community 101]]
 - [[_COMMUNITY_Community 102|Community 102]]
 - [[_COMMUNITY_Community 103|Community 103]]
-- [[_COMMUNITY_Community 104|Community 104]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Job` - 155 edges
@@ -146,7 +144,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (105 total, 16 thin omitted)
+## Communities (103 total, 15 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.16
@@ -197,7 +195,7 @@ Cohesion: 0.36
 Nodes (23): backgroundStateFromSettings(), bootstrap(), checkRuntimeUpdates(), cliStateFromSettings(), createBackgroundManager(), createCliManager(), disableBackgroundNode(), enableBackgroundNode() (+15 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (26): CapabilityRecordError, Validation for the local-only version 1 capability record contract., Raised when a local capability record is incomplete or dishonest., Validate and return one local-only capability record without writing it.      A, _require_attribution(), _require_identifier(), _require_identifier_list(), _require_int() (+18 more)
 
 ### Community 14 - "Community 14"
@@ -345,8 +343,8 @@ Cohesion: 0.10
 Nodes (19): author, description, devDependencies, electron, electron-builder, main, name, private (+11 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.20
-Nodes (8): Raised when local runtime state cannot be safely loaded or written., Raised when a requested local validation receipt is not stored., Run a queued local submission; this is not a daemon or remote boundary., Read one submission and its optional local execution evidence., Read derived local job audit events without mutating stored evidence., Return one stored local receipt without creating validation evidence., RuntimeServiceError, ValidationReceiptNotFoundError
+Cohesion: 0.10
+Nodes (19): atomic_create_json(), Create one JSON document atomically without replacing an existing file., NodeRuntimeService, Raised when local runtime state cannot be safely loaded or written., Raised when a requested local validation receipt is not stored., Run a queued local submission; this is not a daemon or remote boundary., Central service for local node config, lifecycle status, peers, and jobs., Allow readable local identifiers while rejecting path and URI-shaped values. (+11 more)
 
 ### Community 54 - "Community 54"
 Cohesion: 0.11
@@ -362,7 +360,7 @@ Nodes (14): _message_from_inbox_entry(), Return a copy of the deterministic inbo
 
 ### Community 58 - "release_update.py"
 Cohesion: 0.10
-Nodes (24): _config_api_host(), _config_api_port(), _config_enabled_work_types(), _config_identity_path(), _config_identity_persistence_enabled(), _config_node_id(), _config_node_name(), _default_home() (+16 more)
+Nodes (21): _config_api_host(), _config_api_port(), _config_enabled_work_types(), _config_identity_path(), _config_identity_persistence_enabled(), _config_node_id(), _config_node_name(), _default_home() (+13 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.10
@@ -476,10 +474,6 @@ Nodes (3): IdentityResetResult, Local audit details for an explicit identity res
 Cohesion: 0.50
 Nodes (4): build_text_chunk_output(), _preferred_text_chunk_split(), Build stable character chunks for a local ``text_chunk`` job., Return a deterministic split point no later than ``hard_end``.
 
-### Community 95 - "Community 95"
-Cohesion: 0.20
-Nodes (7): atomic_create_json(), Create one JSON document atomically without replacing an existing file., Allow readable local identifiers while rejecting path and URI-shaped values., Return read-only, redacted summaries of locally registered experts., Accept one local job request without dispatching or validating it., _safe_local_artifact_ref(), _safe_local_identifier()
-
 ### Community 96 - "Community 96"
 Cohesion: 0.20
 Nodes (6): ContributionSummary, Serialize the summary into a JSON-compatible dictionary., Return deterministic aggregate totals for one local node., Return node ids present in the ledger in deterministic order., Return a deterministic JSON-compatible summary of all records., Aggregated contribution totals for one local node.
@@ -499,7 +493,7 @@ Nodes (13): _error_response(), _lifespan(), Local FastAPI app for the AetherMesh
 ## Knowledge Gaps
 - **248 isolated node(s):** `name`, `version`, `private`, `main`, `{ spawnSync }` (+243 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **16 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -508,7 +502,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 37`, `Community 6`, `Community 73`, `Community 10`, `Community 75`, `Community 44`, `Community 45`, `Community 14`, `Community 46`, `Community 47`, `Community 50`, `Community 24`, `Community 25`, `Community 27`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `Job` connect `Community 24` to `Community 0`, `Community 66`, `Community 99`, `Community 3`, `Community 5`, `Community 6`, `Community 71`, `Community 75`, `Community 46`, `Community 47`, `Community 16`, `models.py`, `Community 53`, `Community 22`, `release_update.py`, `Community 27`, `Community 28`?**
+- **Why does `Job` connect `Community 24` to `Community 0`, `Community 66`, `Community 99`, `Community 3`, `Community 5`, `Community 6`, `Community 71`, `Community 75`, `Community 46`, `Community 47`, `Community 16`, `models.py`, `Community 53`, `Community 22`, `Community 27`, `Community 28`?**
   _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Are the 25 inferred relationships involving `Job` (e.g. with `InboxReplayRequest` and `LocalDispatchResult`) actually correct?**
   _`Job` has 25 INFERRED edges - model-reasoned connections that need verification._
