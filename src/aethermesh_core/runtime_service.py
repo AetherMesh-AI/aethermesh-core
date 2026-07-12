@@ -51,6 +51,21 @@ MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
+LOCAL_JOB_STATES = frozenset(
+    {"created", "queued", "running", "succeeded", "failed", "canceled"}
+)
+LOCAL_JOB_STATE_TRANSITIONS = frozenset(
+    {
+        ("created", "queued"),
+        ("queued", "running"),
+        ("running", "succeeded"),
+        ("running", "failed"),
+        ("created", "canceled"),
+        ("queued", "canceled"),
+        ("running", "canceled"),
+    }
+)
+LOCAL_JOB_TERMINAL_STATES = frozenset({"succeeded", "failed", "canceled"})
 MAX_LOCAL_INPUT_PAYLOAD_BYTES = 64 * 1024
 RESOURCE_HINT_FIELDS = frozenset(
     {
@@ -803,11 +818,32 @@ class NodeRuntimeService:
                 },
             },
         )
+        record: dict[str, Any] = {
+            "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
+            "job_id": job_id,
+            "status": "created",
+            "creator_node_id": creator_node_id,
+            "manifest_ref": manifest_ref,
+            "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
+            "contribution_attribution": {
+                "job_id": job_id,
+                "creator_node_id": creator_node_id,
+                "metadata": attribution_metadata,
+            },
+            "timestamps": {"created_at": int(time.time())},
+            "state_audit_refs": [],
+            "worker_node_id": None,
+            "validation": None,
+            "result": None,
+            "error": None,
+        }
+        atomic_create_json(self._job_status_path(job_id), record)
+        self._transition_local_job_state(job_id, "queued")
         self._append_event(f"accepted local job submission {job_id}")
         return {
             "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
-            "status": "accepted_pending_execution",
+            "status": "queued",
             "manifest_ref": manifest_ref,
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
@@ -852,6 +888,8 @@ class NodeRuntimeService:
             "contribution_attribution": status.get(
                 "contribution_attribution", manifest["contribution_attribution"]
             ),
+            "timestamps": status.get("timestamps"),
+            "state_audit_refs": status.get("state_audit_refs", []),
             "validation": status.get("validation"),
             "result": status.get("result"),
             "error": status.get("error"),
@@ -1016,9 +1054,9 @@ class NodeRuntimeService:
             return events
         status = self._load_local_job_document(status_path, "job status record")
         validation = status.get("validation")
-        receipt_ref = (
-            validation.get("receipt_ref") if isinstance(validation, dict) else None
-        )
+        if not isinstance(validation, dict):
+            return events
+        receipt_ref = validation.get("receipt_ref")
         expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         worker = status.get("worker_node_id")
         if (
@@ -1279,7 +1317,7 @@ class NodeRuntimeService:
                     "validation receipt",
                     evidence_errors,
                 )
-        elif status:
+        elif status and status.get("status") in LOCAL_JOB_TERMINAL_STATES:
             evidence_errors.append(
                 "job status record has no validation receipt reference"
             )
@@ -1400,6 +1438,9 @@ class NodeRuntimeService:
             raise RuntimeServiceError("local job is not queued")
         if not isinstance(worker_node_id, str) or not worker_node_id.strip():
             raise RuntimeServiceError("worker_node_id must be a non-empty string")
+        self._transition_local_job_state(
+            job_id, "running", updates={"worker_node_id": worker_node_id}
+        )
         manifest = self._load_local_job_document(
             self.paths.data_dir / "job-submissions" / f"{job_id}.json",
             "job submission manifest",
@@ -1465,13 +1506,10 @@ class NodeRuntimeService:
             },
         )
         succeeded = result.status == "completed" and validation.valid
-        atomic_create_json(
-            self.paths.data_dir / "job-status" / f"{job_id}.json",
-            {
-                "version": 1,
-                "job_id": job_id,
-                "status": "succeeded" if succeeded else "failed",
-                "worker_node_id": worker_node_id,
+        self._transition_local_job_state(
+            job_id,
+            "succeeded" if succeeded else "failed",
+            updates={
                 "result": {
                     "ref": result_ref,
                     "summary": result.output if succeeded else None,
@@ -1494,6 +1532,81 @@ class NodeRuntimeService:
         )
         self._append_event(f"executed local job submission {job_id}")
         return self.get_local_job_status(job_id)
+
+    def cancel_submitted_local_job(self, job_id: str) -> dict[str, Any]:
+        """Cancel an unstarted local job without altering its manifest evidence."""
+
+        before = self.get_local_job_status(job_id)
+        if before["status"] == "not_found":
+            raise RuntimeServiceError("local job not found")
+        self._transition_local_job_state(job_id, "canceled")
+        self._append_event(f"canceled local job submission {job_id}")
+        return self.get_local_job_status(job_id)
+
+    def _job_status_path(self, job_id: str) -> Path:
+        return self.paths.data_dir / "job-status" / f"{job_id}.json"
+
+    def _transition_local_job_state(
+        self, job_id: str, target: str, *, updates: dict[str, Any] | None = None
+    ) -> None:
+        """Persist one allowed transition and append a local audit entry first."""
+
+        record = self._load_local_job_document(
+            self._job_status_path(job_id), "job status record"
+        )
+        current = record.get("status")
+        if current not in LOCAL_JOB_STATES:
+            raise RuntimeServiceError("job status record has an invalid state")
+        if target not in LOCAL_JOB_STATES:
+            raise RuntimeServiceError("target job state is invalid")
+        if current in LOCAL_JOB_TERMINAL_STATES:
+            raise RuntimeServiceError("terminal local job cannot be restarted in place")
+        if (current, target) not in LOCAL_JOB_STATE_TRANSITIONS:
+            raise RuntimeServiceError(
+                f"invalid local job state transition: {current} -> {target}"
+            )
+        timestamp = int(time.time())
+        audit_ref = f"data/job-state-receipts/{job_id}.jsonl"
+        self._append_job_state_audit(
+            job_id,
+            current,
+            target,
+            timestamp,
+            record["creator_node_id"],
+            record["manifest_ref"],
+        )
+        next_record = dict(record)
+        if updates is not None:
+            next_record.update(updates)
+        next_record["status"] = target
+        next_record["timestamps"] = {**record["timestamps"], f"{target}_at": timestamp}
+        next_record["state_audit_refs"] = [*record["state_audit_refs"], audit_ref]
+        atomic_write_json(self._job_status_path(job_id), next_record)
+
+    def _append_job_state_audit(
+        self,
+        job_id: str,
+        previous_state: str,
+        state: str,
+        timestamp: int,
+        creator_node_id: object,
+        manifest_ref: object,
+    ) -> None:
+        path = self.paths.data_dir / "job-state-receipts" / f"{job_id}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "version": 1,
+            "job_id": job_id,
+            "previous_state": previous_state,
+            "state": state,
+            "timestamp": timestamp,
+            "creator_node_id": creator_node_id,
+            "manifest_ref": manifest_ref,
+        }
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n"
+            )
 
     @staticmethod
     def _is_local_job_id(job_id: object) -> bool:
