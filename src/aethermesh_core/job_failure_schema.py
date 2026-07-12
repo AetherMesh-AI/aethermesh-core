@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 JOB_FAILURE_SCHEMA_VERSION = 1
@@ -98,7 +99,8 @@ def validate_job_failure_document(document: object) -> dict[str, Any]:
     if failure["task_id"] is not None:
         _identifier(failure["task_id"], "job failure.task_id")
     _timestamp(failure["observed_at"], "job failure.observed_at")
-    _enum(failure["failure_type"], FAILURE_TYPES, "job failure.failure_type")
+    failure_type = failure["failure_type"]
+    _enum(failure_type, FAILURE_TYPES, "job failure.failure_type")
     _enum(failure["failure_stage"], FAILURE_STAGES, "job failure.failure_stage")
     _enum(failure["severity"], SEVERITIES, "job failure.severity")
     if not isinstance(failure["retryable"], bool):
@@ -110,7 +112,7 @@ def validate_job_failure_document(document: object) -> dict[str, Any]:
         )
     _details(failure["details"])
     _references(failure["references"])
-    _attribution(failure["attribution"], failure["executing_node_id"])
+    _attribution(failure["attribution"], failure["executing_node_id"], failure_type)
     _evidence(failure["evidence"], failure["observed_at"])
     return failure
 
@@ -131,11 +133,10 @@ def _object(value: object, context: str, required: frozenset[str]) -> dict[str, 
 
 
 def _identifier(value: object, context: str) -> str:
-    if (
-        not isinstance(value, str)
-        or not value
-        or value != value.strip()
-        or any(character.isspace() for character in value)
+    if not isinstance(value, str):
+        raise JobFailureSchemaError(f"{context} must be a non-empty identifier")
+    if not value or value != value.strip() or any(
+        character.isspace() for character in value
     ):
         raise JobFailureSchemaError(f"{context} must be a non-empty identifier")
     return value
@@ -151,7 +152,7 @@ def _timestamp(value: object, context: str) -> datetime:
 
 
 def _enum(value: object, choices: frozenset[str], context: str) -> None:
-    if value not in choices:
+    if not isinstance(value, str) or value not in choices:
         raise JobFailureSchemaError(f"{context} is unsupported")
 
 
@@ -197,7 +198,9 @@ def _references(value: object) -> None:
         _identifier_list(references[field], f"job failure.references.{field}")
 
 
-def _attribution(value: object, executing_node_id: object) -> None:
+def _attribution(
+    value: object, executing_node_id: object, failure_type: object
+) -> None:
     attribution = _object(value, "job failure.attribution", _ATTRIBUTION_FIELDS)
     if attribution["attempted_contributor_node_id"] != executing_node_id:
         raise JobFailureSchemaError(
@@ -215,6 +218,10 @@ def _attribution(value: object, executing_node_id: object) -> None:
         raise JobFailureSchemaError(
             "job failure.attribution.accepted_work_amount must be a non-negative integer"
         )
+    if failure_type == "contribution_rejected" and amount != 0:
+        raise JobFailureSchemaError(
+            "job failure.attribution.accepted_work_amount must be 0 for rejected contribution"
+        )
     reason = attribution["rejection_reason"]
     if reason is not None and (not isinstance(reason, str) or not reason):
         raise JobFailureSchemaError(
@@ -224,7 +231,10 @@ def _attribution(value: object, executing_node_id: object) -> None:
 
 def _evidence(value: object, observed_at: object) -> None:
     evidence = _object(value, "job failure.evidence", _EVIDENCE_FIELDS)
-    for field in ("local_log_paths", "content_hashes", "validation_command_refs"):
+    _local_path_list(
+        evidence["local_log_paths"], "job failure.evidence.local_log_paths"
+    )
+    for field in ("content_hashes", "validation_command_refs"):
         _identifier_list(evidence[field], f"job failure.evidence.{field}")
     timestamps = evidence["observed_timestamps"]
     if not isinstance(timestamps, list) or not timestamps:
@@ -251,3 +261,22 @@ def _identifier_list(value: object, context: str) -> None:
         raise JobFailureSchemaError(f"{context} must be a list")
     for item in value:
         _identifier(item, f"{context} entries")
+
+
+def _local_path_list(value: object, context: str) -> None:
+    if not isinstance(value, list):
+        raise JobFailureSchemaError(f"{context} must be a list")
+    for item in value:
+        _identifier(item, f"{context} entries")
+        path = Path(item)
+        windows_path = PureWindowsPath(item)
+        if (
+            path.is_absolute()
+            or windows_path.is_absolute()
+            or item.startswith("~")
+            or ".." in path.parts
+            or ".." in windows_path.parts
+        ):
+            raise JobFailureSchemaError(
+                f"{context} entries must be safe relative paths"
+            )

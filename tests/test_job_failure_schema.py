@@ -62,6 +62,7 @@ class JobFailureSchemaTests(unittest.TestCase):
             ("observed_at", 1, "UTC timestamp"),
             ("observed_at", "yesterday", "UTC timestamp"),
             ("failure_type", "unknown", "unsupported"),
+            ("failure_type", [], "unsupported"),
             ("failure_stage", "routing", "unsupported"),
             ("severity", "low", "unsupported"),
             ("retryable", 1, "boolean"),
@@ -121,6 +122,11 @@ class JobFailureSchemaTests(unittest.TestCase):
                 with self.assertRaisesRegex(JobFailureSchemaError, message):
                     validate_job_failure_document(record)
 
+        record = copy.deepcopy(self.examples[4])
+        record["attribution"]["accepted_work_amount"] = 1
+        with self.assertRaisesRegex(JobFailureSchemaError, "must be 0"):
+            validate_job_failure_document(record)
+
     def test_evidence_requires_safe_reference_and_observation_time(self) -> None:
         record = copy.deepcopy(self.valid)
         for field in ("local_log_paths", "content_hashes", "validation_command_refs"):
@@ -130,6 +136,9 @@ class JobFailureSchemaTests(unittest.TestCase):
 
         cases = (
             ("local_log_paths", "log", "must be a list"),
+            ("local_log_paths", ["/private/job.log"], "safe relative paths"),
+            ("local_log_paths", ["../private/job.log"], "safe relative paths"),
+            ("local_log_paths", [r"C:\\private\\job.log"], "safe relative paths"),
             ("content_hashes", ["bad hash"], "non-empty identifier"),
             ("observed_timestamps", [], "non-empty list"),
             ("observed_timestamps", [1], "UTC timestamp"),
