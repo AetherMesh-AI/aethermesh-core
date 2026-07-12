@@ -66,7 +66,7 @@ def _reject_unknown_fields(document: dict[str, Any]) -> None:
             {
                 "name",
                 "description",
-                "capability_type",
+                "type",
                 "supported_input_formats",
                 "supported_output_formats",
                 "constraints",
@@ -108,9 +108,9 @@ def _require_metadata(document: dict[str, Any]) -> None:
     metadata = _require_object(document, "metadata")
     _require_string(metadata, "name")
     _require_string(metadata, "description")
-    capability_type = _require_string(metadata, "capability_type")
+    capability_type = _require_string(metadata, "type")
     if capability_type not in CAPABILITY_TYPES:
-        raise CapabilityRecordError("metadata.capability_type is not allowed")
+        raise CapabilityRecordError("metadata.type is not allowed")
     _require_string_list(metadata, "supported_input_formats", minimum=1)
     _require_string_list(metadata, "supported_output_formats", minimum=1)
     if not isinstance(metadata.get("constraints"), dict):
