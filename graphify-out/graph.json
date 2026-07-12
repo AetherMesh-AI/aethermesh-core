@@ -2870,7 +2870,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_files_items",
-      "community": 76,
+      "community": 102,
       "norm_label": "items"
     },
     {
@@ -2890,7 +2890,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_items_additionalproperties",
-      "community": 76,
+      "community": 102,
       "norm_label": "additionalproperties"
     },
     {
@@ -2900,7 +2900,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_items_required",
-      "community": 76,
+      "community": 102,
       "norm_label": "required"
     },
     {
@@ -3040,7 +3040,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "community": 76,
+      "community": 102,
       "norm_label": "items"
     },
     {
@@ -3110,7 +3110,7 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_checks",
-      "community": 99,
+      "community": 102,
       "norm_label": "checks"
     },
     {
@@ -3120,7 +3120,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_checks_type",
-      "community": 99,
+      "community": 102,
       "norm_label": "type"
     },
     {
@@ -3130,7 +3130,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_checks_minitems",
-      "community": 99,
+      "community": 102,
       "norm_label": "minitems"
     },
     {
@@ -3140,7 +3140,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_checks_items",
-      "community": 99,
+      "community": 102,
       "norm_label": "items"
     },
     {
@@ -5483,7 +5483,7 @@
       "source_location": "L1124",
       "_origin": "ast",
       "id": "aethermesh_core_cli_process_local_inbox",
-      "community": 30,
+      "community": 56,
       "norm_label": "process_local_inbox()"
     },
     {
@@ -5493,7 +5493,7 @@
       "source_location": "L1254",
       "_origin": "ast",
       "id": "aethermesh_core_cli_emitted_messages_from_inbox_result",
-      "community": 30,
+      "community": 56,
       "norm_label": "_emitted_messages_from_inbox_result()"
     },
     {
@@ -5503,7 +5503,7 @@
       "source_location": "L1264",
       "_origin": "ast",
       "id": "aethermesh_core_cli_node_ids_from_replayed_messages",
-      "community": 30,
+      "community": 56,
       "norm_label": "_node_ids_from_replayed_messages()"
     },
     {
@@ -5513,7 +5513,7 @@
       "source_location": "L1277",
       "_origin": "ast",
       "id": "aethermesh_core_cli_inbox_process_result_to_dict",
-      "community": 30,
+      "community": 56,
       "norm_label": "_inbox_process_result_to_dict()"
     },
     {
@@ -5663,7 +5663,7 @@
       "source_location": "L1134",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1134",
-      "community": 30,
+      "community": 56,
       "norm_label": "replay a saved local message log or local transport inbox for one node."
     },
     {
@@ -5673,7 +5673,7 @@
       "source_location": "L1155",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1155",
-      "community": 30,
+      "community": 56,
       "norm_label": "replay saved local messages and return payload plus structured result."
     },
     {
@@ -7913,7 +7913,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionledger_record",
-      "community": 56,
+      "community": 30,
       "norm_label": ".record()"
     },
     {
@@ -8013,7 +8013,7 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_accounted_units",
-      "community": 56,
+      "community": 30,
       "norm_label": "_accounted_units()"
     },
     {
@@ -8023,7 +8023,7 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_string_output",
-      "community": 56,
+      "community": 30,
       "norm_label": "_string_output()"
     },
     {
@@ -8143,7 +8143,7 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_120",
-      "community": 56,
+      "community": 30,
       "norm_label": "record one result and return its local contribution record.          only comple"
     },
     {
@@ -11193,7 +11193,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_inboxprocessresult",
-      "community": 30,
+      "community": 56,
       "norm_label": "inboxprocessresult"
     },
     {
@@ -11293,7 +11293,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_rationale_37",
-      "community": 30,
+      "community": 56,
       "norm_label": "structured result returned by one local inbox processing pass."
     },
     {
@@ -12870,7 +12870,7 @@
       "label": ".contribution_summary()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1058",
+      "source_location": "L1059",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary",
       "community": 53,
@@ -12880,7 +12880,7 @@
       "label": ".get_local_validation_receipt()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1084",
+      "source_location": "L1085",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
       "community": 53,
@@ -12890,7 +12890,7 @@
       "label": "._receipt_id_for_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1192",
+      "source_location": "L1193",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_receipt_id_for_job",
       "community": 53,
@@ -12900,7 +12900,7 @@
       "label": "._job_id_from_receipt_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1195",
+      "source_location": "L1196",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_job_id_from_receipt_id",
       "community": 53,
@@ -12910,7 +12910,7 @@
       "label": "._latest_validation_receipt_work_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1209",
+      "source_location": "L1210",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_latest_validation_receipt_work_id",
       "community": 53,
@@ -12920,7 +12920,7 @@
       "label": "._contribution_summary_item()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1226",
+      "source_location": "L1227",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary_item",
       "community": 53,
@@ -12930,7 +12930,7 @@
       "label": "._load_summary_document()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1351",
+      "source_location": "L1356",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_load_summary_document",
       "community": 53,
@@ -12940,7 +12940,7 @@
       "label": ".execute_submitted_local_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1363",
+      "source_location": "L1368",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job",
       "community": 53,
@@ -12950,7 +12950,7 @@
       "label": "._is_local_job_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1440",
+      "source_location": "L1445",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_job_id",
       "community": 53,
@@ -12960,7 +12960,7 @@
       "label": "._is_local_lineage_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1451",
+      "source_location": "L1456",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_lineage_id",
       "community": 53,
@@ -12970,7 +12970,7 @@
       "label": "._is_local_attribution_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1460",
+      "source_location": "L1465",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_attribution_id",
       "community": 53,
@@ -12980,7 +12980,7 @@
       "label": "._load_local_job_document()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1469",
+      "source_location": "L1474",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_load_local_job_document",
       "community": 53,
@@ -12990,7 +12990,7 @@
       "label": ".health()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1480",
+      "source_location": "L1485",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_health",
       "community": 58,
@@ -13000,7 +13000,7 @@
       "label": ".recent_logs()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1492",
+      "source_location": "L1497",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_recent_logs",
       "community": 53,
@@ -13010,7 +13010,7 @@
       "label": ".system_info()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1498",
+      "source_location": "L1503",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_system_info",
       "community": 58,
@@ -13020,7 +13020,7 @@
       "label": "._default_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1511",
+      "source_location": "L1516",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_default_config",
       "community": 58,
@@ -13030,7 +13030,7 @@
       "label": "._write_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1531",
+      "source_location": "L1536",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_write_config",
       "community": 53,
@@ -13040,7 +13040,7 @@
       "label": "._runtime_marker()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1537",
+      "source_location": "L1542",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_runtime_marker",
       "community": 58,
@@ -13050,7 +13050,7 @@
       "label": "._append_event()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1553",
+      "source_location": "L1558",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_append_event",
       "community": 53,
@@ -13060,7 +13060,7 @@
       "label": "_default_home()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1560",
+      "source_location": "L1565",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_default_home",
       "community": 58,
@@ -13070,7 +13070,7 @@
       "label": "_merge_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1567",
+      "source_location": "L1572",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_merge_config",
       "community": 58,
@@ -13080,7 +13080,7 @@
       "label": "_capability_manifest_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1579",
+      "source_location": "L1584",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_manifest_id",
       "community": 58,
@@ -13090,7 +13090,7 @@
       "label": "_capability_provenance()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1585",
+      "source_location": "L1590",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_provenance",
       "community": 58,
@@ -13100,7 +13100,7 @@
       "label": "_availability()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1606",
+      "source_location": "L1611",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_availability",
       "community": 58,
@@ -13110,7 +13110,7 @@
       "label": "_metadata_capability_availability()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1617",
+      "source_location": "L1622",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_metadata_capability_availability",
       "community": 58,
@@ -13120,7 +13120,7 @@
       "label": "_capability_check_payload()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1628",
+      "source_location": "L1633",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_check_payload",
       "community": 58,
@@ -13130,7 +13130,7 @@
       "label": "_config_node_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1638",
+      "source_location": "L1643",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_node_id",
       "community": 58,
@@ -13140,7 +13140,7 @@
       "label": "_config_enabled_work_types()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1646",
+      "source_location": "L1651",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_enabled_work_types",
       "community": 58,
@@ -13150,7 +13150,7 @@
       "label": "_config_capability_resource_hints()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1662",
+      "source_location": "L1667",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_capability_resource_hints",
       "community": 58,
@@ -13160,7 +13160,7 @@
       "label": "_config_identity_persistence_enabled()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1709",
+      "source_location": "L1714",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_identity_persistence_enabled",
       "community": 58,
@@ -13170,7 +13170,7 @@
       "label": "_config_identity_path()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1723",
+      "source_location": "L1728",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_identity_path",
       "community": 58,
@@ -13180,7 +13180,7 @@
       "label": "_config_node_name()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1738",
+      "source_location": "L1743",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_node_name",
       "community": 58,
@@ -13190,7 +13190,7 @@
       "label": "_config_api_host()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1746",
+      "source_location": "L1751",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_api_host",
       "community": 58,
@@ -13200,7 +13200,7 @@
       "label": "_config_api_port()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1754",
+      "source_location": "L1759",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_api_port",
       "community": 58,
@@ -13210,7 +13210,7 @@
       "label": "_pid_is_alive()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1762",
+      "source_location": "L1767",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_pid_is_alive",
       "community": 58,
@@ -13220,7 +13220,7 @@
       "label": "_provenance_matches_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1772",
+      "source_location": "L1777",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_provenance_matches_job",
       "community": 53,
@@ -13230,7 +13230,7 @@
       "label": "_safe_local_artifact_ref()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1789",
+      "source_location": "L1794",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_safe_local_artifact_ref",
       "community": 53,
@@ -13240,7 +13240,7 @@
       "label": "_safe_local_identifier()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1804",
+      "source_location": "L1809",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_safe_local_identifier",
       "community": 53,
@@ -13250,7 +13250,7 @@
       "label": "_package_version()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1817",
+      "source_location": "L1822",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_package_version",
       "community": 58,
@@ -13260,7 +13260,7 @@
       "label": "_memory_total_bytes()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1821",
+      "source_location": "L1826",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_memory_total_bytes",
       "community": 58,
@@ -13470,9 +13470,9 @@
       "label": "Read local job evidence into a deterministic, non-mutating summary.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1059",
+      "source_location": "L1060",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1059",
+      "id": "aethermesh_core_runtime_service_rationale_1060",
       "community": 53,
       "norm_label": "read local job evidence into a deterministic, non-mutating summary."
     },
@@ -13480,9 +13480,9 @@
       "label": "Return one stored local receipt without creating validation evidence.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1091",
+      "source_location": "L1092",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1091",
+      "id": "aethermesh_core_runtime_service_rationale_1092",
       "community": 53,
       "norm_label": "return one stored local receipt without creating validation evidence."
     },
@@ -13490,9 +13490,9 @@
       "label": "Run a queued local submission; this is not a daemon or remote boundary.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1366",
+      "source_location": "L1371",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1366",
+      "id": "aethermesh_core_runtime_service_rationale_1371",
       "community": 53,
       "norm_label": "run a queued local submission; this is not a daemon or remote boundary."
     },
@@ -13500,9 +13500,9 @@
       "label": "Return the stable local manifest identity for one registered capability.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1580",
+      "source_location": "L1585",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1580",
+      "id": "aethermesh_core_runtime_service_rationale_1585",
       "community": 58,
       "norm_label": "return the stable local manifest identity for one registered capability."
     },
@@ -13510,9 +13510,9 @@
       "label": "Build shared local provenance and optional advisory metadata.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1590",
+      "source_location": "L1595",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1590",
+      "id": "aethermesh_core_runtime_service_rationale_1595",
       "community": 58,
       "norm_label": "build shared local provenance and optional advisory metadata."
     },
@@ -13520,9 +13520,9 @@
       "label": "Load optional non-economic, advisory hints for registered capabilities.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1665",
+      "source_location": "L1670",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1665",
+      "id": "aethermesh_core_runtime_service_rationale_1670",
       "community": 58,
       "norm_label": "load optional non-economic, advisory hints for registered capabilities."
     },
@@ -13530,9 +13530,9 @@
       "label": "Return whether local lineage and attribution retain one job identity.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1778",
+      "source_location": "L1783",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1778",
+      "id": "aethermesh_core_runtime_service_rationale_1783",
       "community": 53,
       "norm_label": "return whether local lineage and attribution retain one job identity."
     },
@@ -13540,9 +13540,9 @@
       "label": "Allow readable local identifiers while rejecting path and URI-shaped values.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1805",
+      "source_location": "L1810",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1805",
+      "id": "aethermesh_core_runtime_service_rationale_1810",
       "community": 53,
       "norm_label": "allow readable local identifiers while rejecting path and uri-shaped values."
     },
@@ -19783,7 +19783,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests",
-      "community": 30,
+      "community": 56,
       "norm_label": "qualitygateedgecoveragetests"
     },
     {
@@ -19793,7 +19793,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_pr_size_excludes_generated_static_data_from_reviewability_counts",
-      "community": 30,
+      "community": 56,
       "norm_label": ".test_pr_size_excludes_generated_static_data_from_reviewability_counts()"
     },
     {
@@ -19803,7 +19803,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_remove_temp_helpers_ignore_missing_files",
-      "community": 30,
+      "community": 56,
       "norm_label": ".test_remove_temp_helpers_ignore_missing_files()"
     },
     {
@@ -19853,7 +19853,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_cli_defensive_branches",
-      "community": 30,
+      "community": 56,
       "norm_label": ".test_cli_defensive_branches()"
     },
     {
@@ -19873,7 +19873,7 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_peer_registry_defensive_branches",
-      "community": 30,
+      "community": 56,
       "norm_label": ".test_peer_registry_defensive_branches()"
     },
     {
@@ -20860,7 +20860,7 @@
       "label": ".test_init_creates_reusable_local_node_data_and_status()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L685",
+      "source_location": "L701",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_init_creates_reusable_local_node_data_and_status",
       "community": 68,
@@ -20870,7 +20870,7 @@
       "label": ".test_identity_persistence_only_when_configured()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L799",
+      "source_location": "L815",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_identity_persistence_only_when_configured",
       "community": 68,
@@ -20880,7 +20880,7 @@
       "label": ".test_persisted_identity_manifest_survives_restart_without_rewrite()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L848",
+      "source_location": "L864",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_persisted_identity_manifest_survives_restart_without_rewrite",
       "community": 68,
@@ -20890,7 +20890,7 @@
       "label": ".test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L953",
+      "source_location": "L969",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work",
       "community": 68,
@@ -20900,7 +20900,7 @@
       "label": ".test_capability_listing_uses_configured_work_type_enablement()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1026",
+      "source_location": "L1042",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_listing_uses_configured_work_type_enablement",
       "community": 68,
@@ -20910,7 +20910,7 @@
       "label": ".test_capability_availability_is_local_validation_gated_and_deterministic()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1054",
+      "source_location": "L1070",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_availability_is_local_validation_gated_and_deterministic",
       "community": 68,
@@ -20920,7 +20920,7 @@
       "label": ".test_capability_resource_hints_are_advisory_and_preserve_provenance()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1093",
+      "source_location": "L1109",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_are_advisory_and_preserve_provenance",
       "community": 68,
@@ -20930,7 +20930,7 @@
       "label": ".test_capability_resource_hints_reject_economic_metadata()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1136",
+      "source_location": "L1152",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_reject_economic_metadata",
       "community": 58,
@@ -20940,7 +20940,7 @@
       "label": ".test_capability_resource_hints_validate_registered_text_metadata()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1165",
+      "source_location": "L1181",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_validate_registered_text_metadata",
       "community": 58,
@@ -20950,7 +20950,7 @@
       "label": ".test_capability_availability_reports_local_failure_and_capacity()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1177",
+      "source_location": "L1193",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_availability_reports_local_failure_and_capacity",
       "community": 68,
@@ -20960,7 +20960,7 @@
       "label": ".test_existing_config_is_merged_and_logs_are_limited()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1241",
+      "source_location": "L1257",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_existing_config_is_merged_and_logs_are_limited",
       "community": 68,
@@ -20970,7 +20970,7 @@
       "label": ".test_runtime_markers_cover_started_stopped_and_bad_marker_states()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1278",
+      "source_location": "L1294",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_runtime_markers_cover_started_stopped_and_bad_marker_states",
       "community": 68,
@@ -20980,7 +20980,7 @@
       "label": ".test_config_errors_and_defaults_are_explicit()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1329",
+      "source_location": "L1345",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_config_errors_and_defaults_are_explicit",
       "community": 58,
@@ -20990,7 +20990,7 @@
       "label": ".test_environment_and_platform_fallback_helpers()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1408",
+      "source_location": "L1424",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_environment_and_platform_fallback_helpers",
       "community": 58,
@@ -21000,7 +21000,7 @@
       "label": "ApiTests",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1466",
+      "source_location": "L1482",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests",
       "community": 68,
@@ -21010,7 +21010,7 @@
       "label": ".test_local_api_routes_return_service_status()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1467",
+      "source_location": "L1483",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests_test_local_api_routes_return_service_status",
       "community": 68,
@@ -21020,7 +21020,7 @@
       "label": ".test_lifespan_uses_same_runtime_service()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1583",
+      "source_location": "L1599",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests_test_lifespan_uses_same_runtime_service",
       "community": 68,
@@ -21030,7 +21030,7 @@
       "label": "AppCliTests",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1595",
+      "source_location": "L1611",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests",
       "community": 10,
@@ -21040,7 +21040,7 @@
       "label": ".test_cli_smoke_commands_use_runtime_service()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1596",
+      "source_location": "L1612",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_smoke_commands_use_runtime_service",
       "community": 10,
@@ -21050,7 +21050,7 @@
       "label": ".test_cli_node_start_dry_run_reports_localhost_binding()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1623",
+      "source_location": "L1639",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_dry_run_reports_localhost_binding",
       "community": 10,
@@ -21060,7 +21060,7 @@
       "label": ".test_cli_node_start_stop_delegate_to_background_manager()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1632",
+      "source_location": "L1648",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_stop_delegate_to_background_manager",
       "community": 10,
@@ -21070,7 +21070,7 @@
       "label": ".test_cli_node_start_reuses_existing_local_api()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1663",
+      "source_location": "L1679",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_reuses_existing_local_api",
       "community": 10,
@@ -21080,7 +21080,7 @@
       "label": ".test_cli_ui_reuses_existing_local_api_without_runtime_mutation()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1678",
+      "source_location": "L1694",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_ui_reuses_existing_local_api_without_runtime_mutation",
       "community": 10,
@@ -21090,7 +21090,7 @@
       "label": ".test_background_control_helper_platforms_and_errors()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1725",
+      "source_location": "L1741",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_background_control_helper_platforms_and_errors",
       "community": 10,
@@ -21100,7 +21100,7 @@
       "label": ".test_local_api_health_detection_handles_false_paths()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1761",
+      "source_location": "L1777",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_local_api_health_detection_handles_false_paths",
       "community": 10,
@@ -21110,7 +21110,7 @@
       "label": ".test_cli_update_installs_latest_release_and_reports_errors()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1818",
+      "source_location": "L1834",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_update_installs_latest_release_and_reports_errors",
       "community": 10,
@@ -21120,7 +21120,7 @@
       "label": ".test_cli_warning_and_table_branches_are_exercised()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1867",
+      "source_location": "L1883",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_warning_and_table_branches_are_exercised",
       "community": 10,
@@ -21130,7 +21130,7 @@
       "label": ".test_serve_uses_uvicorn_and_reports_missing_ui_dependencies()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1975",
+      "source_location": "L1991",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_serve_uses_uvicorn_and_reports_missing_ui_dependencies",
       "community": 10,
@@ -29289,9 +29289,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29299,9 +29299,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_description",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_description"
     },
     {
       "relation": "contains",
@@ -29309,9 +29309,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_id"
     },
     {
       "relation": "contains",
@@ -29319,9 +29319,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties"
     },
     {
       "relation": "contains",
@@ -29329,9 +29329,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_required"
     },
     {
       "relation": "contains",
@@ -29339,9 +29339,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_schema",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_schema"
     },
     {
       "relation": "contains",
@@ -29349,9 +29349,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_title",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_title"
     },
     {
       "relation": "contains",
@@ -29359,9 +29359,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_type"
     },
     {
       "relation": "contains",
@@ -29369,9 +29369,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema",
-      "target": "schemas_phase_1_job_envelope_schema_x_aethermesh_schema_version",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_x_aethermesh_schema_version"
     },
     {
       "relation": "contains",
@@ -29379,9 +29379,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L99",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_contribution",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_contribution"
     },
     {
       "relation": "contains",
@@ -29389,9 +29389,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_created_at",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_created_at"
     },
     {
       "relation": "contains",
@@ -29399,9 +29399,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_creator_node_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_creator_node_id"
     },
     {
       "relation": "contains",
@@ -29409,9 +29409,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_expected_outputs",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_expected_outputs"
     },
     {
       "relation": "contains",
@@ -29419,9 +29419,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_input_manifest",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_input_manifest"
     },
     {
       "relation": "contains",
@@ -29429,9 +29429,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_job_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_job_id"
     },
     {
       "relation": "contains",
@@ -29439,9 +29439,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_job_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_job_type"
     },
     {
       "relation": "contains",
@@ -29449,9 +29449,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_lineage"
     },
     {
       "relation": "contains",
@@ -29459,9 +29459,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_schema_version",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_schema_version"
     },
     {
       "relation": "contains",
@@ -29469,9 +29469,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L68",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_validation_requirements",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_validation_requirements"
     },
     {
       "relation": "contains",
@@ -29479,9 +29479,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_job_id",
-      "target": "schemas_phase_1_job_envelope_schema_job_id_pattern",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_job_id_pattern"
     },
     {
       "relation": "contains",
@@ -29489,9 +29489,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_job_id",
-      "target": "schemas_phase_1_job_envelope_schema_job_id_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_job_id_type"
     },
     {
       "relation": "contains",
@@ -29499,9 +29499,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_schema_version",
-      "target": "schemas_phase_1_job_envelope_schema_schema_version_const",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_schema_version_const"
     },
     {
       "relation": "contains",
@@ -29509,9 +29509,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_contribution_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_creator_node_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_creator_node_id"
     },
     {
       "relation": "contains",
@@ -29519,9 +29519,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_creator_node_id",
-      "target": "schemas_phase_1_job_envelope_schema_creator_node_id_minlength",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_creator_node_id_minlength"
     },
     {
       "relation": "contains",
@@ -29529,9 +29529,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_creator_node_id",
-      "target": "schemas_phase_1_job_envelope_schema_creator_node_id_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_creator_node_id_type"
     },
     {
       "relation": "contains",
@@ -29539,9 +29539,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_created_at",
-      "target": "schemas_phase_1_job_envelope_schema_created_at_format",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_created_at_format"
     },
     {
       "relation": "contains",
@@ -29549,9 +29549,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_created_at",
-      "target": "schemas_phase_1_job_envelope_schema_created_at_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_created_at_type"
     },
     {
       "relation": "contains",
@@ -29559,9 +29559,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_job_type",
-      "target": "schemas_phase_1_job_envelope_schema_job_type_minlength",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_job_type_minlength"
     },
     {
       "relation": "contains",
@@ -29569,9 +29569,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_job_type",
-      "target": "schemas_phase_1_job_envelope_schema_job_type_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_job_type_type"
     },
     {
       "relation": "contains",
@@ -29579,9 +29579,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_input_manifest",
-      "target": "schemas_phase_1_job_envelope_schema_input_manifest_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_input_manifest_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29589,9 +29589,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_input_manifest",
-      "target": "schemas_phase_1_job_envelope_schema_input_manifest_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_input_manifest_properties"
     },
     {
       "relation": "contains",
@@ -29599,9 +29599,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_input_manifest",
-      "target": "schemas_phase_1_job_envelope_schema_input_manifest_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_input_manifest_required"
     },
     {
       "relation": "contains",
@@ -29609,9 +29609,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_input_manifest",
-      "target": "schemas_phase_1_job_envelope_schema_input_manifest_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_input_manifest_type"
     },
     {
       "relation": "contains",
@@ -29619,9 +29619,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_input_manifest_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_files",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_files"
     },
     {
       "relation": "contains",
@@ -29629,9 +29629,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_files",
-      "target": "schemas_phase_1_job_envelope_schema_files_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_files_items"
     },
     {
       "relation": "contains",
@@ -29639,9 +29639,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_files",
-      "target": "schemas_phase_1_job_envelope_schema_files_minitems",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_files_minitems"
     },
     {
       "relation": "contains",
@@ -29649,9 +29649,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_files",
-      "target": "schemas_phase_1_job_envelope_schema_files_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_files_type"
     },
     {
       "relation": "contains",
@@ -29659,9 +29659,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_files_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29669,9 +29669,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_files_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_properties"
     },
     {
       "relation": "contains",
@@ -29679,9 +29679,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_files_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_required"
     },
     {
       "relation": "contains",
@@ -29689,9 +29689,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_files_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29699,9 +29699,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29709,9 +29709,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_checks_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29719,9 +29719,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_parent_job_ids_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29729,9 +29729,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29739,9 +29739,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_produced_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29749,9 +29749,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_source_manifests_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_type"
     },
     {
       "relation": "contains",
@@ -29759,9 +29759,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29769,9 +29769,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_checks_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29779,9 +29779,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_required"
     },
     {
       "relation": "contains",
@@ -29789,9 +29789,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_checks_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_required"
     },
     {
       "relation": "contains",
@@ -29799,9 +29799,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_properties"
     },
     {
       "relation": "contains",
@@ -29809,9 +29809,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L80",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_checks_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_properties"
     },
     {
       "relation": "contains",
@@ -29819,9 +29819,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_check_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_check_id"
     },
     {
       "relation": "contains",
@@ -29829,9 +29829,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L62",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_media_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_media_type"
     },
     {
       "relation": "contains",
@@ -29839,9 +29839,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_metadata",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_metadata"
     },
     {
       "relation": "contains",
@@ -29849,9 +29849,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_pass_criteria",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_pass_criteria"
     },
     {
       "relation": "contains",
@@ -29859,9 +29859,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_path",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_path"
     },
     {
       "relation": "contains",
@@ -29869,9 +29869,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_receipt_path",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_receipt_path"
     },
     {
       "relation": "contains",
@@ -29879,9 +29879,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_sha256",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_sha256"
     },
     {
       "relation": "contains",
@@ -29889,9 +29889,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_items_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_size_bytes",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_size_bytes"
     },
     {
       "relation": "contains",
@@ -29899,9 +29899,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_expected_outputs",
-      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29909,9 +29909,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_expected_outputs",
-      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_properties"
     },
     {
       "relation": "contains",
@@ -29919,9 +29919,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_expected_outputs",
-      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_required"
     },
     {
       "relation": "contains",
@@ -29929,9 +29929,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_expected_outputs",
-      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_expected_outputs_type"
     },
     {
       "relation": "contains",
@@ -29939,9 +29939,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_expected_outputs_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_artifacts",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_artifacts"
     },
     {
       "relation": "contains",
@@ -29949,9 +29949,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_artifacts",
-      "target": "schemas_phase_1_job_envelope_schema_artifacts_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_artifacts_items"
     },
     {
       "relation": "contains",
@@ -29959,9 +29959,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_artifacts",
-      "target": "schemas_phase_1_job_envelope_schema_artifacts_minitems",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_artifacts_minitems"
     },
     {
       "relation": "contains",
@@ -29969,9 +29969,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_artifacts",
-      "target": "schemas_phase_1_job_envelope_schema_artifacts_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_artifacts_type"
     },
     {
       "relation": "contains",
@@ -29979,9 +29979,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L70",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_validation_requirements",
-      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_additionalproperties"
     },
     {
       "relation": "contains",
@@ -29989,9 +29989,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_validation_requirements",
-      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_properties"
     },
     {
       "relation": "contains",
@@ -29999,9 +29999,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L71",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_validation_requirements",
-      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_required"
     },
     {
       "relation": "contains",
@@ -30009,9 +30009,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_validation_requirements",
-      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_validation_requirements_type"
     },
     {
       "relation": "contains",
@@ -30019,9 +30019,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L73",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_validation_requirements_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_checks",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_checks"
     },
     {
       "relation": "contains",
@@ -30029,9 +30029,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_checks",
-      "target": "schemas_phase_1_job_envelope_schema_checks_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_checks_items"
     },
     {
       "relation": "contains",
@@ -30039,9 +30039,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L75",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_checks",
-      "target": "schemas_phase_1_job_envelope_schema_checks_minitems",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_checks_minitems"
     },
     {
       "relation": "contains",
@@ -30049,9 +30049,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L74",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_checks",
-      "target": "schemas_phase_1_job_envelope_schema_checks_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_checks_type"
     },
     {
       "relation": "contains",
@@ -30059,9 +30059,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "target": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties"
     },
     {
       "relation": "contains",
@@ -30069,9 +30069,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "target": "schemas_phase_1_job_envelope_schema_lineage_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_lineage_properties"
     },
     {
       "relation": "contains",
@@ -30079,9 +30079,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L92",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "target": "schemas_phase_1_job_envelope_schema_lineage_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_lineage_required"
     },
     {
       "relation": "contains",
@@ -30089,9 +30089,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "target": "schemas_phase_1_job_envelope_schema_lineage_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_lineage_type"
     },
     {
       "relation": "contains",
@@ -30099,9 +30099,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_lineage_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_parent_job_ids",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_parent_job_ids"
     },
     {
       "relation": "contains",
@@ -30109,9 +30109,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_lineage_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_prior_validation_receipts",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_prior_validation_receipts"
     },
     {
       "relation": "contains",
@@ -30119,9 +30119,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_lineage_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_source_manifests",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_source_manifests"
     },
     {
       "relation": "contains",
@@ -30129,9 +30129,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_parent_job_ids",
-      "target": "schemas_phase_1_job_envelope_schema_parent_job_ids_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_parent_job_ids_items"
     },
     {
       "relation": "contains",
@@ -30139,9 +30139,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_parent_job_ids",
-      "target": "schemas_phase_1_job_envelope_schema_parent_job_ids_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_parent_job_ids_type"
     },
     {
       "relation": "contains",
@@ -30149,9 +30149,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_parent_job_ids_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_minlength",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_minlength"
     },
     {
       "relation": "contains",
@@ -30159,9 +30159,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_source_manifests",
-      "target": "schemas_phase_1_job_envelope_schema_source_manifests_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_source_manifests_items"
     },
     {
       "relation": "contains",
@@ -30169,9 +30169,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_source_manifests",
-      "target": "schemas_phase_1_job_envelope_schema_source_manifests_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_source_manifests_type"
     },
     {
       "relation": "contains",
@@ -30179,9 +30179,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_source_manifests_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_pattern",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_pattern"
     },
     {
       "relation": "contains",
@@ -30189,9 +30189,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_pattern",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_pattern"
     },
     {
       "relation": "contains",
@@ -30199,9 +30199,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_produced_artifacts_items",
-      "target": "schemas_phase_1_job_envelope_schema_items_pattern",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_items_pattern"
     },
     {
       "relation": "contains",
@@ -30209,9 +30209,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_prior_validation_receipts",
-      "target": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_items"
     },
     {
       "relation": "contains",
@@ -30219,9 +30219,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_prior_validation_receipts",
-      "target": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_prior_validation_receipts_type"
     },
     {
       "relation": "contains",
@@ -30229,9 +30229,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_contribution",
-      "target": "schemas_phase_1_job_envelope_schema_contribution_additionalproperties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_contribution_additionalproperties"
     },
     {
       "relation": "contains",
@@ -30239,9 +30239,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_contribution",
-      "target": "schemas_phase_1_job_envelope_schema_contribution_properties",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_contribution_properties"
     },
     {
       "relation": "contains",
@@ -30249,9 +30249,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L102",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_contribution",
-      "target": "schemas_phase_1_job_envelope_schema_contribution_required",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_contribution_required"
     },
     {
       "relation": "contains",
@@ -30259,9 +30259,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_contribution",
-      "target": "schemas_phase_1_job_envelope_schema_contribution_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_contribution_type"
     },
     {
       "relation": "contains",
@@ -30269,9 +30269,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_contribution_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_executor_node_id",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_executor_node_id"
     },
     {
       "relation": "contains",
@@ -30279,9 +30279,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_contribution_properties",
-      "target": "schemas_phase_1_job_envelope_schema_properties_produced_artifacts",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_properties_produced_artifacts"
     },
     {
       "relation": "contains",
@@ -30289,9 +30289,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_executor_node_id",
-      "target": "schemas_phase_1_job_envelope_schema_executor_node_id_minlength",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_executor_node_id_minlength"
     },
     {
       "relation": "contains",
@@ -30299,9 +30299,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_executor_node_id",
-      "target": "schemas_phase_1_job_envelope_schema_executor_node_id_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_executor_node_id_type"
     },
     {
       "relation": "contains",
@@ -30309,9 +30309,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_produced_artifacts",
-      "target": "schemas_phase_1_job_envelope_schema_produced_artifacts_items",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_produced_artifacts_items"
     },
     {
       "relation": "contains",
@@ -30319,9 +30319,9 @@
       "source_file": "examples/schemas/phase-1-job-envelope.schema.json",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "schemas_phase_1_job_envelope_schema_properties_produced_artifacts",
-      "target": "schemas_phase_1_job_envelope_schema_produced_artifacts_type",
-      "confidence_score": 1.0
+      "target": "schemas_phase_1_job_envelope_schema_produced_artifacts_type"
     },
     {
       "relation": "contains",
@@ -33937,9 +33937,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_integer",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -33948,9 +33948,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_object",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -33959,9 +33959,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_text",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -33970,9 +33970,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_timestamp",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -33981,9 +33981,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -35543,9 +35543,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L163",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests_set",
-      "target": "any",
-      "confidence_score": 1.0
+      "target": "any"
     },
     {
       "relation": "references",
@@ -38340,9 +38340,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "target": "valueerror",
-      "confidence_score": 1.0
+      "target": "valueerror"
     },
     {
       "relation": "inherits",
@@ -51577,9 +51577,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_canonical_job_envelope_json",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_canonical_job_envelope_json"
     },
     {
       "relation": "contains",
@@ -51587,9 +51587,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L200",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_contribution",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_contribution"
     },
     {
       "relation": "contains",
@@ -51597,9 +51597,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_expected_outputs",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_expected_outputs"
     },
     {
       "relation": "contains",
@@ -51607,9 +51607,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L113",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_input_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_input_manifest"
     },
     {
       "relation": "contains",
@@ -51617,9 +51617,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_integer",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_integer"
     },
     {
       "relation": "contains",
@@ -51627,9 +51627,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L86",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_job_id",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_job_id"
     },
     {
       "relation": "contains",
@@ -51637,9 +51637,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "contains",
@@ -51647,9 +51647,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L184",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_lineage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_lineage"
     },
     {
       "relation": "contains",
@@ -51657,9 +51657,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L226",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_non_empty_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_non_empty_text"
     },
     {
       "relation": "contains",
@@ -51667,9 +51667,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "contains",
@@ -51677,9 +51677,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L232",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "contains",
@@ -51687,9 +51687,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "contains",
@@ -51697,9 +51697,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_timestamp",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_timestamp"
     },
     {
       "relation": "contains",
@@ -51707,9 +51707,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_validate_job_envelope",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_validate_job_envelope"
     },
     {
       "relation": "contains",
@@ -51717,9 +51717,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L161",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope",
-      "target": "aethermesh_core_job_envelope_validation_requirements",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_validation_requirements"
     },
     {
       "relation": "rationale_for",
@@ -51727,9 +51727,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_rationale_1",
-      "target": "aethermesh_core_job_envelope",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope"
     },
     {
       "relation": "imports_from",
@@ -51738,9 +51738,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope",
-      "target": "aethermesh_core_job_envelope",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope"
     },
     {
       "relation": "calls",
@@ -51749,9 +51749,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L207",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_contribution",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51760,9 +51760,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_expected_outputs",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51771,9 +51771,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L117",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_input_manifest",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51782,9 +51782,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_integer",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51793,9 +51793,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_job_id",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51804,9 +51804,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_lineage",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51815,9 +51815,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L228",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_non_empty_text",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51826,9 +51826,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L65",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_object",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "rationale_for",
@@ -51836,9 +51836,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_rationale_30",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51847,9 +51847,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L241",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_relative_path",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51858,9 +51858,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_text",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51869,9 +51869,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L108",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_timestamp",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51880,9 +51880,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L165",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validation_requirements",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "uses",
@@ -51890,9 +51890,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L9",
       "weight": 0.8,
+      "confidence_score": 0.5,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "aethermesh_core_job_envelope_jobenvelopeerror",
-      "confidence_score": 0.5
+      "target": "aethermesh_core_job_envelope_jobenvelopeerror"
     },
     {
       "relation": "calls",
@@ -51901,9 +51901,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_canonical_job_envelope_json",
-      "target": "aethermesh_core_job_envelope_validate_job_envelope",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_validate_job_envelope"
     },
     {
       "relation": "rationale_for",
@@ -51911,9 +51911,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_rationale_34",
-      "target": "aethermesh_core_job_envelope_canonical_job_envelope_json",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_canonical_job_envelope_json"
     },
     {
       "relation": "calls",
@@ -51932,9 +51932,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L43",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_rationale_43",
-      "target": "aethermesh_core_job_envelope_validate_job_envelope",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_validate_job_envelope"
     },
     {
       "relation": "calls",
@@ -51943,9 +51943,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_contribution",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_contribution"
     },
     {
       "relation": "calls",
@@ -51954,9 +51954,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_expected_outputs",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_expected_outputs"
     },
     {
       "relation": "calls",
@@ -51965,9 +51965,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_input_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_input_manifest"
     },
     {
       "relation": "calls",
@@ -51976,9 +51976,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_integer",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_integer"
     },
     {
       "relation": "calls",
@@ -51987,9 +51987,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_job_id",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_job_id"
     },
     {
       "relation": "calls",
@@ -51998,9 +51998,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_lineage",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_lineage"
     },
     {
       "relation": "calls",
@@ -52009,9 +52009,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52020,9 +52020,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L47",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "calls",
@@ -52031,9 +52031,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_timestamp",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_timestamp"
     },
     {
       "relation": "calls",
@@ -52042,9 +52042,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validate_job_envelope",
-      "target": "aethermesh_core_job_envelope_validation_requirements",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_validation_requirements"
     },
     {
       "relation": "calls",
@@ -52119,9 +52119,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L201",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_contribution",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52130,9 +52130,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_expected_outputs",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52141,9 +52141,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L114",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_input_manifest",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52152,9 +52152,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L185",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_lineage",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52163,9 +52163,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L162",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validation_requirements",
-      "target": "aethermesh_core_job_envelope_object",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_object"
     },
     {
       "relation": "calls",
@@ -52174,9 +52174,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L206",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_contribution",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "calls",
@@ -52185,9 +52185,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L154",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_expected_outputs",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "calls",
@@ -52196,9 +52196,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_input_manifest",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "calls",
@@ -52207,9 +52207,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_timestamp",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "calls",
@@ -52218,9 +52218,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L174",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validation_requirements",
-      "target": "aethermesh_core_job_envelope_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_text"
     },
     {
       "relation": "rationale_for",
@@ -52228,9 +52228,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L87",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_rationale_87",
-      "target": "aethermesh_core_job_envelope_job_id",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_job_id"
     },
     {
       "relation": "calls",
@@ -52239,9 +52239,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_input_manifest",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "calls",
@@ -52250,9 +52250,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_expected_outputs",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "calls",
@@ -52261,9 +52261,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L175",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_validation_requirements",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "calls",
@@ -52272,9 +52272,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_lineage",
-      "target": "aethermesh_core_job_envelope_non_empty_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_non_empty_text"
     },
     {
       "relation": "calls",
@@ -52283,9 +52283,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_lineage",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "calls",
@@ -52294,9 +52294,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L219",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_contribution",
-      "target": "aethermesh_core_job_envelope_relative_path",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_relative_path"
     },
     {
       "relation": "calls",
@@ -52305,9 +52305,9 @@
       "source_file": "src/aethermesh_core/job_envelope.py",
       "source_location": "L233",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_envelope_relative_path",
-      "target": "aethermesh_core_job_envelope_non_empty_text",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_envelope_non_empty_text"
     },
     {
       "relation": "contains",
@@ -52315,9 +52315,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest",
-      "target": "aethermesh_core_job_manifest_is_local_job_id",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_is_local_job_id"
     },
     {
       "relation": "contains",
@@ -52575,9 +52575,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_24",
-      "target": "aethermesh_core_job_manifest_manifesterror",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_manifesterror"
     },
     {
       "relation": "uses",
@@ -52666,9 +52666,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_29",
-      "target": "aethermesh_core_job_manifest_localjobbatch",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_localjobbatch"
     },
     {
       "relation": "rationale_for",
@@ -52676,9 +52676,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_36",
-      "target": "aethermesh_core_job_manifest_localjobbatch_node_ids",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_localjobbatch_node_ids"
     },
     {
       "relation": "calls",
@@ -52719,9 +52719,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_42",
-      "target": "aethermesh_core_job_manifest_load_job_manifest",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_load_job_manifest"
     },
     {
       "relation": "calls",
@@ -52817,9 +52817,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_rationale_52",
-      "target": "aethermesh_core_job_manifest_load_manifest_jobs",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_load_manifest_jobs"
     },
     {
       "relation": "calls",
@@ -52916,9 +52916,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L178",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_parse_job_entry",
-      "target": "aethermesh_core_job_manifest_is_local_job_id",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_job_manifest_is_local_job_id"
     },
     {
       "relation": "references",
@@ -52938,9 +52938,9 @@
       "source_file": "src/aethermesh_core/job_manifest.py",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_job_manifest_is_local_job_id",
-      "target": "typeguard",
-      "confidence_score": 1.0
+      "target": "typeguard"
     },
     {
       "relation": "contains",
@@ -73049,9 +73049,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L1772",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service",
-      "target": "aethermesh_core_runtime_service_provenance_matches_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_provenance_matches_job"
     },
     {
       "relation": "contains",
@@ -75234,9 +75234,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L806",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_806",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status"
     },
     {
       "relation": "calls",
@@ -75299,9 +75299,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L863",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_rationale_863",
-      "target": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events"
     },
     {
       "relation": "calls",
@@ -75343,9 +75343,9 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L975",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_noderuntimeservice_audit_events_for_manifest",
-      "target": "aethermesh_core_runtime_service_provenance_matches_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_provenance_matches_job"
     },
     {
       "relation": "calls",
@@ -75362,9 +75362,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1059",
+      "source_location": "L1060",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1059",
+      "source": "aethermesh_core_runtime_service_rationale_1060",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary",
       "confidence_score": 1.0
     },
@@ -75430,17 +75430,17 @@
       "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L1151",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
-      "target": "aethermesh_core_runtime_service_provenance_matches_job",
-      "confidence_score": 1.0
+      "target": "aethermesh_core_runtime_service_provenance_matches_job"
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1091",
+      "source_location": "L1092",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1091",
+      "source": "aethermesh_core_runtime_service_rationale_1092",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
       "confidence_score": 1.0
     },
@@ -75536,9 +75536,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1366",
+      "source_location": "L1371",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1366",
+      "source": "aethermesh_core_runtime_service_rationale_1371",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job",
       "confidence_score": 1.0
     },
@@ -75656,9 +75656,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1580",
+      "source_location": "L1585",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1580",
+      "source": "aethermesh_core_runtime_service_rationale_1585",
       "target": "aethermesh_core_runtime_service_capability_manifest_id",
       "confidence_score": 1.0
     },
@@ -75666,9 +75666,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1590",
+      "source_location": "L1595",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1590",
+      "source": "aethermesh_core_runtime_service_rationale_1595",
       "target": "aethermesh_core_runtime_service_capability_provenance",
       "confidence_score": 1.0
     },
@@ -75709,9 +75709,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1665",
+      "source_location": "L1670",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1665",
+      "source": "aethermesh_core_runtime_service_rationale_1670",
       "target": "aethermesh_core_runtime_service_config_capability_resource_hints",
       "confidence_score": 1.0
     },
@@ -75818,9 +75818,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1778",
+      "source_location": "L1783",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1778",
+      "source": "aethermesh_core_runtime_service_rationale_1783",
       "target": "aethermesh_core_runtime_service_provenance_matches_job",
       "confidence_score": 1.0
     },
@@ -75828,9 +75828,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1805",
+      "source_location": "L1810",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1805",
+      "source": "aethermesh_core_runtime_service_rationale_1810",
       "target": "aethermesh_core_runtime_service_safe_local_identifier",
       "confidence_score": 1.0
     },
@@ -79066,9 +79066,9 @@
       "source_file": "tests/test_capability_record_inspection.py",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_capability_record_inspection_capabilityrecordinspectiontests",
-      "target": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_invalid_records_cannot_populate_manifests_receipts_lineage_or_attribution",
-      "confidence_score": 1.0
+      "target": "tests_test_capability_record_inspection_capabilityrecordinspectiontests_test_invalid_records_cannot_populate_manifests_receipts_lineage_or_attribution"
     },
     {
       "relation": "method",
@@ -82590,9 +82590,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope",
-      "target": "tests_test_job_envelope_jobenvelopetests",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests"
     },
     {
       "relation": "method",
@@ -82600,9 +82600,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L163",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_set",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_set"
     },
     {
       "relation": "method",
@@ -82610,9 +82610,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_setup",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_setup"
     },
     {
       "relation": "method",
@@ -82620,9 +82620,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L74",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_canonical_serialization_is_deterministic",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_canonical_serialization_is_deterministic"
     },
     {
       "relation": "method",
@@ -82630,9 +82630,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_each_required_field_is_rejected_when_missing",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_each_required_field_is_rejected_when_missing"
     },
     {
       "relation": "method",
@@ -82640,9 +82640,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_example_validates_against_the_phase_1_contract",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_example_validates_against_the_phase_1_contract"
     },
     {
       "relation": "method",
@@ -82650,9 +82650,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_explicit_lineage_receipts_and_contribution_artifacts_are_accepted",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_explicit_lineage_receipts_and_contribution_artifacts_are_accepted"
     },
     {
       "relation": "method",
@@ -82660,9 +82660,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L83",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_job_id_rejects_malformed_values_and_accepts_content_id",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_job_id_rejects_malformed_values_and_accepts_content_id"
     },
     {
       "relation": "method",
@@ -82670,9 +82670,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L109",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_rejects_invalid_local_references_and_attribution",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_rejects_invalid_local_references_and_attribution"
     },
     {
       "relation": "method",
@@ -82680,9 +82680,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L138",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_rejects_wrong_types_and_unknown_fields",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_rejects_wrong_types_and_unknown_fields"
     },
     {
       "relation": "method",
@@ -82690,9 +82690,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests",
-      "target": "tests_test_job_envelope_jobenvelopetests_test_schema_declares_the_same_required_fields_as_the_validator",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_test_schema_declares_the_same_required_fields_as_the_validator"
     },
     {
       "relation": "calls",
@@ -82701,9 +82701,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests_test_rejects_invalid_local_references_and_attribution",
-      "target": "tests_test_job_envelope_jobenvelopetests_set",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_set"
     },
     {
       "relation": "calls",
@@ -82712,9 +82712,9 @@
       "source_file": "tests/test_job_envelope.py",
       "source_location": "L153",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_envelope_jobenvelopetests_test_rejects_wrong_types_and_unknown_fields",
-      "target": "tests_test_job_envelope_jobenvelopetests_set",
-      "confidence_score": 1.0
+      "target": "tests_test_job_envelope_jobenvelopetests_set"
     },
     {
       "relation": "contains",
@@ -82872,9 +82872,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L276",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests",
-      "target": "tests_test_job_manifest_jobmanifesttests_test_malformed_duplicate_and_content_addressed_job_ids",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_test_malformed_duplicate_and_content_addressed_job_ids"
     },
     {
       "relation": "method",
@@ -83259,9 +83259,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L292",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_malformed_duplicate_and_content_addressed_job_ids",
-      "target": "tests_test_job_manifest_jobmanifesttests_job",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_job"
     },
     {
       "relation": "calls",
@@ -83270,9 +83270,9 @@
       "source_file": "tests/test_job_manifest.py",
       "source_location": "L280",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_test_job_manifest_jobmanifesttests_test_malformed_duplicate_and_content_addressed_job_ids",
-      "target": "tests_test_job_manifest_jobmanifesttests_load",
-      "confidence_score": 1.0
+      "target": "tests_test_job_manifest_jobmanifesttests_load"
     },
     {
       "relation": "calls",
@@ -90408,9 +90408,9 @@
       "source_file": "docs/phase-1-job-envelope-schema.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_envelope_schema",
-      "target": "docs_phase_1_job_envelope_schema_phase_1_job_envelope_schema",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_envelope_schema_phase_1_job_envelope_schema"
     },
     {
       "relation": "contains",
@@ -90418,9 +90418,9 @@
       "source_file": "docs/phase-1-job-envelope-schema.md",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_envelope_schema_phase_1_job_envelope_schema",
-      "target": "docs_phase_1_job_envelope_schema_local_example",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_envelope_schema_local_example"
     },
     {
       "relation": "contains",
@@ -90428,9 +90428,9 @@
       "source_file": "docs/phase-1-job-envelope-schema.md",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_phase_1_job_envelope_schema_phase_1_job_envelope_schema",
-      "target": "docs_phase_1_job_envelope_schema_required_fields",
-      "confidence_score": 1.0
+      "target": "docs_phase_1_job_envelope_schema_required_fields"
     },
     {
       "relation": "contains",
@@ -90624,5 +90624,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e43f1925de335798344d1cbf881eec3e06acc4fb"
+  "built_at_commit": "fb3dd1296aae7aaa2cc2c09748752bdfc8fe7c7f"
 }

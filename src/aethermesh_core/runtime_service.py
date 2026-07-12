@@ -1032,6 +1032,7 @@ class NodeRuntimeService:
             or not isinstance(receipt_validation.get("valid"), bool)
             or validation.get("passed") is not receipt_validation["valid"]
             or not isinstance(status_attribution, dict)
+            or status_attribution.get("job_id") != job_id
             or status_attribution.get("creator_node_id") != creator
         ):
             raise RuntimeServiceError("validation receipt has invalid audit evidence")
@@ -1299,6 +1300,8 @@ class NodeRuntimeService:
         )
         if manifest and not isinstance(creator_node_id, str):
             evidence_errors.append("contribution attribution has no creator node ID")
+        if manifest and attribution.get("job_id") != job_id:
+            evidence_errors.append("contribution attribution does not match work item")
         elif manifest and creator_node_id != manifest.get("creator_node_id"):
             evidence_errors.append(
                 "contribution attribution creator does not match manifest"
@@ -1323,6 +1326,8 @@ class NodeRuntimeService:
                     "job submission manifest has invalid lineage evidence"
                 )
         lineage_links = lineage.get("parent_refs", [])
+        if manifest and lineage.get("job_id") != job_id:
+            evidence_errors.append("job submission lineage does not match work item")
         if not isinstance(lineage_links, list):
             evidence_errors.append("job submission manifest has invalid lineage links")
             lineage_links = []

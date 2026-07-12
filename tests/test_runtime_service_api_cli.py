@@ -631,6 +631,17 @@ class RuntimeServiceTests(unittest.TestCase):
                         **status,
                         "contribution_attribution": {
                             **status["contribution_attribution"],
+                            "job_id": "other",
+                        },
+                    },
+                    "contribution attribution does not match work item",
+                ),
+                (
+                    status_path,
+                    {
+                        **status,
+                        "contribution_attribution": {
+                            **status["contribution_attribution"],
                             "creator_node_id": "other",
                         },
                     },
@@ -667,6 +678,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     manifest_path,
                     {**manifest, "lineage": []},
                     "job submission manifest has invalid lineage evidence",
+                ),
+                (
+                    manifest_path,
+                    {**manifest, "lineage": {"job_id": "other", "parent_refs": []}},
+                    "job submission lineage does not match work item",
                 ),
                 (
                     manifest_path,
