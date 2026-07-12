@@ -67,6 +67,15 @@ LOCAL_JOB_STATE_TRANSITIONS = frozenset(
 )
 LOCAL_JOB_TERMINAL_STATES = frozenset({"succeeded", "failed", "canceled"})
 MAX_LOCAL_INPUT_PAYLOAD_BYTES = 64 * 1024
+MAX_LOCAL_ATTRIBUTION_METADATA_BYTES = 4 * 1024
+_ATTRIBUTION_METADATA_RESERVED_FIELDS = frozenset(
+    {
+        "job_id",
+        "creator_node_id",
+        "worker_node_id",
+        "validated_contribution_units",
+    }
+)
 RESOURCE_HINT_FIELDS = frozenset(
     {
         "cpu_class",
@@ -790,13 +799,11 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission lineage_parent_refs must be a list of safe local references"
             )
-        attribution_metadata = request.get("attribution_metadata")
-        if not isinstance(attribution_metadata, dict):
-            raise RuntimeServiceError(
-                "job submission attribution_metadata must be a JSON object"
-            )
+        attribution_metadata = _attribution_metadata(
+            request.get("attribution_metadata")
+        )
         try:
-            json.dumps(request, sort_keys=True)
+            json.dumps(request, sort_keys=True, allow_nan=False)
         except (TypeError, ValueError) as exc:
             raise RuntimeServiceError(
                 "job submission must contain JSON-compatible data"
@@ -2140,6 +2147,38 @@ def _validated_input_payload(value: object) -> tuple[dict[str, Any], str]:
             "job submission input_payload exceeds the 65536-byte local limit"
         )
     return value, f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _attribution_metadata(value: object) -> dict[str, Any]:
+    """Validate bounded descriptive metadata without allowing evidence overrides."""
+
+    if not isinstance(value, dict):
+        raise RuntimeServiceError(
+            "job submission attribution_metadata must be a JSON object"
+        )
+    reserved = sorted(_ATTRIBUTION_METADATA_RESERVED_FIELDS & set(value))
+    if reserved:
+        raise RuntimeServiceError(
+            "job submission attribution_metadata must not contain reserved "
+            f"provenance fields: {', '.join(reserved)}"
+        )
+    try:
+        encoded = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise RuntimeServiceError(
+            "job submission attribution_metadata must contain JSON-compatible data"
+        ) from exc
+    if len(encoded) > MAX_LOCAL_ATTRIBUTION_METADATA_BYTES:
+        raise RuntimeServiceError(
+            "job submission attribution_metadata exceeds the 4096-byte local limit"
+        )
+    return value
 
 
 def _requester_identity(value: object) -> dict[str, str] | None:

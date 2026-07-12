@@ -463,6 +463,22 @@ class RuntimeServiceTests(unittest.TestCase):
                     "lineage_parent_refs",
                 ),
                 (
+                    "attribution cannot override creator identity",
+                    {
+                        **valid_request,
+                        "attribution_metadata": {"creator_node_id": "other-node"},
+                    },
+                    "reserved provenance fields: creator_node_id",
+                ),
+                (
+                    "oversized attribution metadata",
+                    {
+                        **valid_request,
+                        "attribution_metadata": {"note": "x" * 4096},
+                    },
+                    "4096-byte",
+                ),
+                (
                     "invalid input payload type",
                     {**valid_request, "input_payload": []},
                     "input_payload",
