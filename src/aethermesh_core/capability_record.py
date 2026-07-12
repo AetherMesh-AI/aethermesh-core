@@ -10,6 +10,7 @@ CAPABILITY_TYPES = frozenset({"model", "tool", "worker", "runtime"})
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
+_URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
 
 
 class CapabilityRecordError(ValueError):
@@ -175,7 +176,8 @@ def _require_safe_ref(value: object, field: str) -> None:
         not isinstance(value, str)
         or not value
         or value.startswith(("/", "~"))
-        or ".." in value
-        or "://" in value
+        or "\\" in value
+        or ".." in value.split("/")
+        or _URI_SCHEME.match(value)
     ):
         raise CapabilityRecordError(f"{field} must be a safe local relative reference")

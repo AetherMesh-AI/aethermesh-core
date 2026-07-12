@@ -103,6 +103,19 @@ class CapabilityRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
                     validate_capability_record(record)
 
+    def test_rejects_nonportable_or_nonlocal_references(self) -> None:
+        for reference in (
+            "file:/tmp/manifest.json",
+            "urn:aethermesh:manifest",
+            "C:\\secrets\\manifest.json",
+            "manifests\\..\\secrets.json",
+        ):
+            with self.subTest(reference=reference):
+                record = copy.deepcopy(self.record)
+                record["manifest_refs"] = [reference]
+                with self.assertRaisesRegex(CapabilityRecordError, "safe local"):
+                    validate_capability_record(record)
+
     def test_rejects_dishonest_validation_combinations(self) -> None:
         cases = (
             ({"status": "passed", "receipt_ids": []}, "requires a receipt"),
