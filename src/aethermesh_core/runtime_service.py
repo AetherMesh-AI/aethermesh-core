@@ -31,7 +31,7 @@ from aethermesh_core.identity import (
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.models import Job, NodeIdentity
-from aethermesh_core.runner import LocalRunner
+from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
 
 CONFIG_SCHEMA_VERSION = 1
@@ -750,6 +750,7 @@ class NodeRuntimeService:
         input_payload, payload_hash = _validated_input_payload(
             request.get("input_payload")
         )
+        local_safety = _local_safety_metadata(request.get("local_safety"))
         validation_mode = request.get("requested_validation_mode")
         if not isinstance(validation_mode, str) or not validation_mode.strip():
             raise RuntimeServiceError(
@@ -789,6 +790,7 @@ class NodeRuntimeService:
                     "job_type": job_type,
                     "input_payload": input_payload,
                     "input_payload_hash": payload_hash,
+                    "local_safety": local_safety,
                 },
                 "creator_node_id": creator_node_id,
                 "requester_identity": requester_identity,
@@ -1415,7 +1417,23 @@ class NodeRuntimeService:
             job_type=job_data["job_type"],
             payload=input_payload["content"],
         )
-        result = LocalRunner(NodeIdentity(node_id=worker_node_id)).run(job)
+        local_safety = job_data.get("local_safety")
+        if local_safety is not None and not isinstance(local_safety, dict):
+            raise RuntimeServiceError("job submission manifest local_safety is invalid")
+        result = run_local_job(
+            job,
+            NodeIdentity(node_id=worker_node_id),
+            timeout_seconds=(
+                local_safety.get("timeout_seconds")
+                if local_safety is not None
+                else None
+            ),
+            cancellation_requested=(
+                local_safety.get("cancellation_requested", False)
+                if local_safety is not None
+                else False
+            ),
+        )
         validation = validate_job_result(job, result)
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
@@ -1439,7 +1457,10 @@ class NodeRuntimeService:
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
-                "validation": validation.to_dict(),
+                "validation": {
+                    **validation.to_dict(),
+                    "execution_outcome": result.status,
+                },
                 "validated_at": int(time.time()),
             },
         )
@@ -1850,6 +1871,42 @@ def _safe_local_identifier(value: object) -> bool:
         and "://" not in value
         and ".." not in value
     )
+
+
+def _local_safety_metadata(value: object) -> dict[str, object] | None:
+    """Validate optional local-only execution controls stored with one job."""
+
+    if value is None:
+        return None
+    if (
+        not isinstance(value, dict)
+        or not value
+        or set(value) - {"timeout_seconds", "cancellation_requested"}
+    ):
+        raise RuntimeServiceError(
+            "local_safety must be a non-empty object with timeout_seconds or cancellation_requested"
+        )
+    metadata: dict[str, object] = {}
+    if "timeout_seconds" in value:
+        timeout = value["timeout_seconds"]
+        if (
+            not isinstance(timeout, (int, float))
+            or isinstance(timeout, bool)
+            or timeout < 0
+            or timeout > 60
+        ):
+            raise RuntimeServiceError(
+                "local_safety.timeout_seconds must be a number from 0 through 60"
+            )
+        metadata["timeout_seconds"] = timeout
+    if "cancellation_requested" in value:
+        cancellation = value["cancellation_requested"]
+        if not isinstance(cancellation, bool):
+            raise RuntimeServiceError(
+                "local_safety.cancellation_requested must be a boolean"
+            )
+        metadata["cancellation_requested"] = cancellation
+    return metadata
 
 
 def _validated_input_payload(value: object) -> tuple[dict[str, Any], str]:
