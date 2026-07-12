@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783817880.546119,
-    "ast_hash": "8dda02dd754cd7d0bdcb9c469d4002f2",
+    "mtime": 1783818150.069074,
+    "ast_hash": "7639cfd96a97462c8fb1701ea3c46163",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -720,8 +720,8 @@
     "semantic_hash": ""
   },
   "tests/test_api_schema_contract.py": {
-    "mtime": 1783817881.219489,
-    "ast_hash": "cac460322a8cbae0a120893f9baa2077",
+    "mtime": 1783818150.58746,
+    "ast_hash": "aa5b180f67417234048beb3608310d79",
     "semantic_hash": ""
   },
   "docs/phase-1-api-schema-contract.md": {

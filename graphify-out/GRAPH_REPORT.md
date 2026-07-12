@@ -1,7 +1,7 @@
 # Graph Report - aethermesh-core  (2026-07-11)
 
 ## Corpus Check
-- 132 files · ~177,909 words
+- 132 files · ~177,931 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bc8fa852`
+- Built from commit: `759d8853`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -217,8 +217,8 @@ Cohesion: 0.28
 Nodes (17): CompletedProcess, Namespace, changed_pyproject_from_base(), command_artifact_provenance(), command_dependency_audit(), command_dependency_review(), command_mutation_score(), command_pr_size() (+9 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.11
-Nodes (30): configured_runtime_path(), default_local_runtime_config(), load_local_runtime_config(), load_optional_local_runtime_config(), load_or_create_local_runtime_config(), LocalRuntimeConfig, LocalRuntimeConfigError, parse_local_runtime_config() (+22 more)
+Cohesion: 0.10
+Nodes (32): _run_json_command(), configured_runtime_path(), default_local_runtime_config(), load_local_runtime_config(), load_optional_local_runtime_config(), load_or_create_local_runtime_config(), LocalRuntimeConfig, LocalRuntimeConfigError (+24 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.13
@@ -317,8 +317,8 @@ Cohesion: 0.14
 Nodes (10): LocalMessageBus, Dependency-free local-only message bus for deterministic simulations., Register a node or reserved local service actor with the bus., Accept a message from a registered sender to a registered recipient., Return a copy of the ordered message log., Return a copy of the deterministic inbox for a registered node., Create and send a message with the next deterministic bus sequence id., send_numbered_message() (+2 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.09
-Nodes (28): _run_json_command(), canonical_json_hash(), Hash a JSON object in stable key order for local receipts., _append_log(), _artifact_refs(), _document_hash(), _interrupted_work_refs(), _iter_files() (+20 more)
+Cohesion: 0.10
+Nodes (26): canonical_json_hash(), Hash a JSON object in stable key order for local receipts., _append_log(), _artifact_refs(), _document_hash(), _interrupted_work_refs(), _iter_files(), _load_json_object() (+18 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.11
@@ -510,7 +510,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Job` connect `Community 24` to `Community 96`, `Community 32`, `Community 66`, `Community 0`, `Community 3`, `Community 5`, `Community 6`, `Community 71`, `Community 46`, `Community 47`, `Community 16`, `models.py`, `Community 53`, `Community 22`, `Community 57`, `Community 27`, `Community 29`, `Community 95`?**
   _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 6`, `Community 10`, `Community 44`, `Community 45`, `Community 14`, `Community 47`, `Community 50`, `Community 24`, `Community 57`, `Community 27`, `Community 92`, `Community 29`, `Community 25`?**
+- **Why does `main()` connect `Community 8` to `Community 1`, `Community 34`, `Community 35`, `Community 2`, `Community 6`, `Community 10`, `Community 45`, `Community 14`, `Community 47`, `Community 18`, `Community 50`, `Community 24`, `Community 57`, `Community 27`, `Community 92`, `Community 29`, `Community 25`?**
   _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Why does `MeshMessage` connect `Community 57` to `Community 96`, `Community 1`, `Community 2`, `Community 99`, `Community 32`, `Community 5`, `Community 6`, `Community 8`, `Community 43`, `Community 13`, `Community 14`, `Community 46`, `Community 16`, `models.py`, `Community 24`, `Community 89`, `Community 25`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._

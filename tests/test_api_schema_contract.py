@@ -47,6 +47,9 @@ class ApiSchemaContractTests(unittest.TestCase):
                             },
                         ),
                         await client.post(
+                            "/api/jobs", json={**request, "schema_version": True}
+                        ),
+                        await client.post(
                             "/api/jobs",
                             json={
                                 key: value
@@ -80,6 +83,7 @@ class ApiSchemaContractTests(unittest.TestCase):
             (
                 accepted,
                 missing_version,
+                boolean_version,
                 missing_creator,
                 missing_lineage,
                 missing_attribution,
@@ -94,6 +98,7 @@ class ApiSchemaContractTests(unittest.TestCase):
             self.assertEqual(accepted.json()["status"], "accepted_pending_execution")
             for response, field in (
                 (missing_version, "schema_version"),
+                (boolean_version, "schema_version"),
                 (missing_creator, "creator_node_id"),
                 (missing_lineage, "lineage_parent_refs"),
                 (missing_attribution, "attribution_metadata"),

@@ -525,7 +525,12 @@ class NodeRuntimeService:
 
         if not isinstance(request, dict):
             raise RuntimeServiceError("job submission must be a JSON object")
-        if request.get("schema_version") != LOCAL_JOB_SUBMISSION_SCHEMA_VERSION:
+        schema_version = request.get("schema_version")
+        if (
+            not isinstance(schema_version, int)
+            or isinstance(schema_version, bool)
+            or schema_version != LOCAL_JOB_SUBMISSION_SCHEMA_VERSION
+        ):
             raise RuntimeServiceError("job submission schema_version must be integer 1")
         creator_node_id = request.get("creator_node_id")
         if not isinstance(creator_node_id, str) or not creator_node_id.strip():
