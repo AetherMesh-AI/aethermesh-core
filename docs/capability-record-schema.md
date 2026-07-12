@@ -12,6 +12,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | --- | --- |
 | `schema_version` | Integer `1`. |
 | `capability_id`, `node_id`, `creator_node_id` | Stable local identifiers: lowercase letter followed by 2–127 lowercase letters, digits, `.`, `_`, or `-`. `node_id` is the persisted local identity's `node_id` and identifies the node advertising this capability. |
+| `capability_version` | Required semantic version in `major.minor.patch` form (for example, `1.0.0`) describing this capability's contract, not its release status, reputation, or value. |
 | `created_at`, `updated_at` | UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form. |
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
@@ -27,6 +28,18 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `contribution_attribution.work_receipt_ids` | List of stable local work receipt IDs. |
 
 A safe local reference is non-empty, relative, and cannot begin with `/` or `~`, contain `..`, or contain a URI scheme. This keeps records portable without treating a filesystem reference as a network location.
+
+## Capability versioning
+
+Increment the major version when the capability contract makes incompatible input,
+output, or behavior changes. Increment the minor version for backward-compatible
+contract additions. Increment the patch version for backward-compatible fixes that
+do not change the advertised contract. Revalidate a capability after a contract or
+behavior change before presenting it as `passed`.
+
+The version stays alongside the capability name, creator identity, source manifest
+reference, lineage, contribution attribution, and validation receipt IDs. This lets
+local consumers compare contracts without replacing their provenance evidence.
 
 ## Conditional validation fields
 
@@ -44,6 +57,7 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 {
   "schema_version": 1,
   "capability_id": "capability.echo-v1",
+  "capability_version": "1.0.0",
   "node_id": "node.local-01",
   "creator_node_id": "node.local-01",
   "created_at": "2026-07-11T12:00:00Z",

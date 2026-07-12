@@ -14,6 +14,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "capability_version": "1.0.0",
             "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
@@ -54,6 +55,35 @@ class CapabilityRecordTests(unittest.TestCase):
     def test_accepts_complete_passed_record(self) -> None:
         self.assertIs(self.validate(self.record), self.record)
 
+    def test_versioned_record_preserves_receipt_manifest_and_attribution(self) -> None:
+        validated = self.validate(self.record)
+
+        self.assertEqual(validated["metadata"]["name"], "Local echo worker")
+        self.assertEqual(validated["capability_version"], "1.0.0")
+        self.assertEqual(validated["creator_node_id"], "node.local-01")
+        self.assertEqual(
+            validated["lineage"]["source_manifest_ref"],
+            "manifests/local-echo-worker.json",
+        )
+        self.assertEqual(
+            validated["validation"]["receipt_ids"], ["receipt.echo-smoke-01"]
+        )
+        self.assertEqual(
+            validated["contribution_attribution"]["work_receipt_ids"],
+            ["work.echo-0001"],
+        )
+
+    def test_rejects_missing_or_invalid_capability_version(self) -> None:
+        missing_version = copy.deepcopy(self.record)
+        missing_version.pop("capability_version")
+        with self.assertRaisesRegex(CapabilityRecordError, "capability_version"):
+            self.validate(missing_version)
+
+        invalid_version = copy.deepcopy(self.record)
+        invalid_version["capability_version"] = "version-one"
+        with self.assertRaisesRegex(CapabilityRecordError, "semantic version"):
+            self.validate(invalid_version)
+
     def test_accepts_explicitly_unvalidated_record_without_trust_evidence(self) -> None:
         record = copy.deepcopy(self.record)
         record["validation"] = {"status": "unvalidated", "receipt_ids": []}
@@ -77,6 +107,7 @@ class CapabilityRecordTests(unittest.TestCase):
     def test_rejects_required_identity_manifest_and_validation_fields(self) -> None:
         for field, expected in (
             ("node_id", "node_id"),
+            ("capability_version", "capability_version"),
             ("creator_node_id", "creator_node_id"),
             ("manifest_refs", "manifest_refs"),
             ("validation", "validation"),
