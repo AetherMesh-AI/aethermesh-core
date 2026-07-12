@@ -7,7 +7,7 @@ from typing import Any
 
 JOB_RESULT_SCHEMA_VERSION = 1
 RESULT_STATUSES = frozenset({"succeeded", "failed"})
-VALIDATION_STATUSES = frozenset({"passed", "failed", "not_run"})
+VALIDATION_STATUSES = frozenset({"passed", "failed", "error", "not_run"})
 _FAILURE_FIELDS = frozenset(
     {"execution", "validation", "malformed_input", "missing_artifact"}
 )
@@ -99,7 +99,7 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
         )
     if result["validation_status"] not in VALIDATION_STATUSES:
         raise JobResultSchemaError(
-            "job result.validation_status must be passed, failed, or not_run"
+            "job result.validation_status must be passed, failed, error, or not_run"
         )
     _failure_reasons(result["failure_reasons"])
     _lineage(result["lineage"])

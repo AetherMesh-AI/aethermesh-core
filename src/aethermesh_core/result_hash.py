@@ -1,4 +1,4 @@
-"""Canonical SHA-256 hashing for accounted local job results."""
+"""Canonical SHA-256 hashing for accounted and durable local job results."""
 
 from __future__ import annotations
 
@@ -6,8 +6,10 @@ import hashlib
 import json
 from typing import Any
 
+from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.models import JobResult
 
+RESULT_HASH_ALGORITHM = "sha256"
 RESULT_HASH_FIELDS = ("job_id", "node_id", "status", "output", "error")
 
 
@@ -47,8 +49,64 @@ def result_hash_from_fields(
         "output": output,
         "error": error,
     }
-    encoded = _canonical_json_bytes(canonical)
-    return hashlib.sha256(encoded).hexdigest()
+    return hashlib.sha256(_canonical_json_bytes(canonical)).hexdigest()
+
+
+def canonical_result_document_hash(document: object) -> str:
+    """Hash a completed Phase 1 result record without runtime-only fields.
+
+    This is separate from :func:`result_hash`, which preserves the legacy local
+    flow receipt contract. It is the Phase 1 durable-result contract.
+    """
+
+    result = validate_job_result_document(document)
+    if result["validation_status"] not in {"passed", "failed", "error"}:
+        raise ValueError(
+            "a result hash requires a passed, failed, or error validation receipt"
+        )
+    payload = {
+        "schema_version": result["schema_version"],
+        "result_id": result["result_id"],
+        "job_id": result["job_id"],
+        "task_id": result["task_id"],
+        "creator_node_id": result["creator_node_id"],
+        "executor_node_id": result["executor_node_id"],
+        "manifest_ref": result["manifest_id"],
+        "result_content": {
+            "status": result["status"],
+            "exit_code": result["exit_code"],
+            "summary": result["summary"],
+            "failure_reasons": result["failure_reasons"],
+        },
+        "validation": {
+            "status": result["validation_status"],
+            "receipt_id": result["validation_receipt_id"],
+            "validator_node_id": result["validator_node_id"],
+        },
+        "lineage": result["lineage"],
+        "contribution": result["contribution"],
+    }
+    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
+
+
+def result_hash_manifest(document: object) -> dict[str, str]:
+    """Return the explicit-algorithm manifest stored with a durable result."""
+
+    return {
+        "algorithm": RESULT_HASH_ALGORITHM,
+        "result_hash": canonical_result_document_hash(document),
+    }
+
+
+def validate_validation_receipt_result_hash(
+    receipt: object, expected_result_hash: str
+) -> None:
+    """Require a local validation receipt to identify its exact result hash."""
+
+    if not isinstance(receipt, dict):
+        raise ValueError("validation receipt must be an object")
+    if receipt.get("result_hash") != expected_result_hash:
+        raise ValueError("validation receipt result_hash does not match the result")
 
 
 def _canonical_json_bytes(payload: dict[str, Any]) -> bytes:

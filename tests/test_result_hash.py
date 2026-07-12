@@ -1,11 +1,79 @@
+import json
 import math
 import unittest
+from copy import deepcopy
+from pathlib import Path
 
 from aethermesh_core.models import JobResult
-from aethermesh_core.result_hash import result_hash, result_hash_from_fields
+from aethermesh_core.result_hash import (
+    RESULT_HASH_ALGORITHM,
+    canonical_result_document_hash,
+    result_hash,
+    result_hash_from_fields,
+    result_hash_manifest,
+    validate_validation_receipt_result_hash,
+)
 
 
 class ResultHashTests(unittest.TestCase):
+    def setUp(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.document = json.loads(
+            (root / "examples/job-results/local-echo-success.json").read_text("utf-8")
+        )
+
+    def test_durable_result_hash_is_stable_and_ignores_runtime_formatting(self) -> None:
+        first = canonical_result_document_hash(self.document)
+        reformatted = json.loads(json.dumps(self.document, indent=4, sort_keys=False))
+        reformatted["created_at"] = "2030-01-01T00:00:00.000Z"
+        reformatted["started_at"] = "2030-01-01T00:00:01.000Z"
+        reformatted["finished_at"] = "2030-01-01T00:00:01.125Z"
+
+        self.assertEqual(first, canonical_result_document_hash(reformatted))
+        self.assertEqual(
+            result_hash_manifest(self.document),
+            {"algorithm": RESULT_HASH_ALGORITHM, "result_hash": first},
+        )
+
+    def test_durable_result_hash_covers_result_provenance_and_attribution(self) -> None:
+        original = canonical_result_document_hash(self.document)
+        changes = (
+            ("summary", "different result content"),
+            ("manifest_id", "sha256:" + "d" * 64),
+            ("creator_node_id", "node.another-creator"),
+            ("lineage.parent_task_ids", ["local-parent-task"]),
+            ("contribution.local_operator_id", "operator.another"),
+        )
+        for field, value in changes:
+            with self.subTest(field=field):
+                changed = deepcopy(self.document)
+                target = changed
+                *parents, leaf = field.split(".")
+                for parent in parents:
+                    target = target[parent]
+                target[leaf] = value
+                self.assertNotEqual(original, canonical_result_document_hash(changed))
+
+    def test_durable_failed_and_error_results_are_hashable_after_validation(
+        self,
+    ) -> None:
+        failed = deepcopy(self.document)
+        failed["status"] = "failed"
+        failed["exit_code"] = 1
+        failed["validation_status"] = "error"
+        self.assertRegex(canonical_result_document_hash(failed), r"^[0-9a-f]{64}$")
+
+        pending = deepcopy(self.document)
+        pending["validation_status"] = "not_run"
+        with self.assertRaisesRegex(ValueError, "requires a passed, failed, or error"):
+            canonical_result_document_hash(pending)
+
+    def test_validation_receipt_references_expected_durable_result_hash(self) -> None:
+        digest = canonical_result_document_hash(self.document)
+        validate_validation_receipt_result_hash({"result_hash": digest}, digest)
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            validate_validation_receipt_result_hash({"result_hash": "f" * 64}, digest)
+
     def test_hash_is_stable_for_semantically_identical_dict_output(self) -> None:
         first = JobResult(
             job_id="job-1",
