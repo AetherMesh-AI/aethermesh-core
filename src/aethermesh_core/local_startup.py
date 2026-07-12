@@ -252,6 +252,10 @@ def start_local_node(
     manifest_path = config.resolve_path(root, "manifest")
     runtime_dirs = _runtime_dirs(config)
     _ensure_runtime_dirs(root, config)
+    timestamp = datetime.now(UTC).replace(microsecond=0).isoformat()
+    receipt_ref = _next_artifact_ref(
+        root, config, "validation_receipts", "startup-validation", timestamp
+    )
     if reset_creator_identity and identity_existed:
         _write_default_manifest(
             manifest_path,
@@ -259,6 +263,8 @@ def start_local_node(
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
             runtime_dirs=runtime_dirs,
+            manifest_ref=_relative_ref(root, manifest_path),
+            validation_receipt_ref=receipt_ref,
             replace_existing=True,
         )
     elif not manifest_path.exists():
@@ -268,6 +274,8 @@ def start_local_node(
             creator_node_id=creator_node_id,
             runtime_metadata=capture_version_metadata(),
             runtime_dirs=runtime_dirs,
+            manifest_ref=_relative_ref(root, manifest_path),
+            validation_receipt_ref=receipt_ref,
             replace_existing=False,
         )
     manifest = _load_manifest(manifest_path)
@@ -277,7 +285,6 @@ def start_local_node(
         expected_creator_node_id=creator_node_id,
     )
     _ensure_manifest_directories(root, manifest, runtime_dirs=runtime_dirs)
-    timestamp = datetime.now(UTC).replace(microsecond=0).isoformat()
     manifest_hash = _document_hash(manifest)
     receipt_ref = _next_artifact_ref(
         root, config, "validation_receipts", "startup-validation", timestamp
@@ -440,6 +447,8 @@ def _write_default_manifest(
     creator_node_id: str,
     runtime_metadata: dict[str, object],
     runtime_dirs: dict[str, str],
+    manifest_ref: str,
+    validation_receipt_ref: str,
     replace_existing: bool,
 ) -> None:
     document = _default_manifest_document(
@@ -447,6 +456,8 @@ def _write_default_manifest(
         creator_node_id=creator_node_id,
         runtime_metadata=runtime_metadata,
         runtime_dirs=runtime_dirs,
+        manifest_ref=manifest_ref,
+        validation_receipt_ref=validation_receipt_ref,
     )
     action = "write" if replace_existing else "create"
     try:
@@ -464,6 +475,8 @@ def _default_manifest_document(
     creator_node_id: str,
     runtime_metadata: dict[str, object],
     runtime_dirs: dict[str, str],
+    manifest_ref: str,
+    validation_receipt_ref: str,
 ) -> dict[str, object]:
     return {
         "version": LOCAL_STARTUP_MANIFEST_VERSION,
@@ -471,6 +484,33 @@ def _default_manifest_document(
         "node": {"node_id": node_id, "creator_node_id": creator_node_id},
         "runtime_version": runtime_metadata,
         "capabilities": list(DEFAULT_LOCAL_CAPABILITIES),
+        "capability_advertisements": [
+            {
+                "capability_id": "local.manifest-validation",
+                "name": "Local startup manifest validation",
+                "version": "1.0.0",
+                "description": "Validates one local startup manifest before accepting local work.",
+                "supported_input": {
+                    "format": "application/json",
+                    "shape": "local_node_startup manifest",
+                },
+                "supported_output": {
+                    "format": "application/json",
+                    "shape": "startup_validation receipt",
+                },
+                "creator_node_id": creator_node_id,
+                "validation": {
+                    "check_name": "startup-manifest-validation",
+                    "required_receipt_ref": validation_receipt_ref,
+                },
+                "lineage": {"source_manifest_ref": manifest_ref},
+                "contribution_attribution": {
+                    "creator_node_id": creator_node_id,
+                    "work_record_ref": validation_receipt_ref,
+                },
+                "network_mode": "local-only-no-p2p",
+            }
+        ],
         "work_directories": dict(runtime_dirs),
         "validation": {
             "startup_validation_required": True,
@@ -528,6 +568,11 @@ def _validate_manifest(
         raise LocalStartupError(
             "startup manifest capabilities must be non-empty strings"
         )
+    advertisements = manifest.get("capability_advertisements")
+    _validate_capability_advertisements(
+        advertisements,
+        expected_creator_node_id=expected_creator_node_id,
+    )
     try:
         validate_version_metadata(manifest.get("runtime_version"))
     except VersionMetadataError as exc:
@@ -546,6 +591,60 @@ def _validate_manifest(
             raise LocalStartupError(
                 f"startup manifest validation.{key} must be {expected}"
             )
+
+
+def _validate_capability_advertisements(
+    advertisements: object, *, expected_creator_node_id: str
+) -> None:
+    if not isinstance(advertisements, list) or not advertisements:
+        raise LocalStartupError(
+            "startup manifest capability_advertisements must be a non-empty list"
+        )
+    required_strings = ("capability_id", "name", "version", "description")
+    for index, advertisement in enumerate(advertisements):
+        context = f"startup manifest capability_advertisements[{index}]"
+        if not isinstance(advertisement, dict):
+            raise LocalStartupError(f"{context} must be an object")
+        for field in required_strings:
+            if (
+                not isinstance(advertisement.get(field), str)
+                or not advertisement[field]
+            ):
+                raise LocalStartupError(f"{context}.{field} must be a non-empty string")
+        for field in ("supported_input", "supported_output", "validation", "lineage"):
+            if not isinstance(advertisement.get(field), dict):
+                raise LocalStartupError(f"{context}.{field} must be an object")
+        for field in ("supported_input", "supported_output"):
+            shape = advertisement[field]
+            if not isinstance(shape.get("format"), str) or not isinstance(
+                shape.get("shape"), str
+            ):
+                raise LocalStartupError(
+                    f"{context}.{field} must describe format and shape"
+                )
+        validation = advertisement["validation"]
+        if not isinstance(validation.get("check_name"), str) or not isinstance(
+            validation.get("required_receipt_ref"), str
+        ):
+            raise LocalStartupError(
+                f"{context}.validation must reference a local receipt"
+            )
+        lineage = advertisement["lineage"]
+        if not isinstance(lineage.get("source_manifest_ref"), str):
+            raise LocalStartupError(f"{context}.lineage must reference its manifest")
+        attribution = advertisement.get("contribution_attribution")
+        if (
+            not isinstance(attribution, dict)
+            or attribution.get("creator_node_id") != expected_creator_node_id
+            or not isinstance(attribution.get("work_record_ref"), str)
+        ):
+            raise LocalStartupError(f"{context}.contribution_attribution is invalid")
+        if advertisement.get("creator_node_id") != expected_creator_node_id:
+            raise LocalStartupError(
+                f"{context}.creator_node_id does not match identity"
+            )
+        if advertisement.get("network_mode") != "local-only-no-p2p":
+            raise LocalStartupError(f"{context}.network_mode must be local-only-no-p2p")
 
 
 def _identity_creator_node_id(document: dict[str, object]) -> str:
