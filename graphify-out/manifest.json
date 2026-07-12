@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
-    "mtime": 1783830799.934986,
-    "ast_hash": "7db6934bf2ade38ff332fd016b8c391c",
+    "mtime": 1783831486.7210674,
+    "ast_hash": "ace248fb84dd77dcebe574f262a5b0b7",
     "semantic_hash": ""
   },
   "tests/test_api_errors.py": {
@@ -740,13 +740,13 @@
     "semantic_hash": ""
   },
   "tests/test_capability_record.py": {
-    "mtime": 1783831014.1312563,
-    "ast_hash": "957c9e6ce4d86bcc3a59e41942cc4a6b",
+    "mtime": 1783831502.2974217,
+    "ast_hash": "4fc892a42e3b93a96aa2dc22c9d48542",
     "semantic_hash": ""
   },
   "docs/capability-record-schema.md": {
-    "mtime": 1783830857.9282944,
-    "ast_hash": "9b9f8e01221f5c1d0ff3b1b5afbe3122",
+    "mtime": 1783831477.3598053,
+    "ast_hash": "ca427b80c6333f33d35b85a9cdb074ea",
     "semantic_hash": ""
   }
 }

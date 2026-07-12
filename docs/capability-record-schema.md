@@ -81,4 +81,4 @@ A safe local reference is non-empty, relative, and cannot begin with `/` or `~`,
 
 Set `validation.status` to `unvalidated` and `validation.receipt_ids` to `[]`; omit `last_validated_at`, `check_name`, and `failure_reason`. This remains a local claim, not a trusted or network-advertised capability.
 
-When validating a record for the current node, pass the persisted identity's ID as `local_node_id` to `validate_capability_record`. The record is rejected unless its required `node_id` exactly matches that source of truth.
+Validation requires the persisted identity's ID as `local_node_id`. The record is rejected unless its required `node_id` exactly matches that source of truth.

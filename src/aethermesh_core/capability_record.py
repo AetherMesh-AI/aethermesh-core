@@ -34,7 +34,7 @@ class CapabilityRecordError(ValueError):
 
 
 def validate_capability_record(
-    document: object, *, local_node_id: str | None = None
+    document: object, *, local_node_id: str
 ) -> dict[str, Any]:
     """Validate and return one local-only capability record without writing it.
 
@@ -47,9 +47,7 @@ def validate_capability_record(
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
     node_id = _require_identifier(document, "node_id")
-    if local_node_id is not None and node_id != _require_identifier_value(
-        local_node_id, "local_node_id"
-    ):
+    if node_id != _require_identifier_value(local_node_id, "local_node_id"):
         raise CapabilityRecordError("node_id must match the local node identity")
     _require_identifier(document, "creator_node_id")
     _require_timestamp(document, "created_at")
