@@ -81,6 +81,7 @@ def _reject_unknown_fields(document: dict[str, Any]) -> None:
                 "supported_input_formats",
                 "supported_input_schemas",
                 "supported_output_formats",
+                "supported_output_schemas",
                 "constraints",
                 "local_execution_requirements",
             }
@@ -127,8 +128,13 @@ def _require_metadata(
     if capability_type not in CAPABILITY_TYPES:
         raise CapabilityRecordError("metadata.type is not allowed")
     _require_string_list(metadata, "supported_input_formats", minimum=1)
-    _require_input_schemas(metadata, local_schema_root=local_schema_root)
+    _require_schemas(
+        metadata, "supported_input_schemas", local_schema_root=local_schema_root
+    )
     _require_string_list(metadata, "supported_output_formats", minimum=1)
+    _require_schemas(
+        metadata, "supported_output_schemas", local_schema_root=local_schema_root
+    )
     if not isinstance(metadata.get("constraints"), dict):
         raise CapabilityRecordError("metadata.constraints must be an object")
     _require_string_list(metadata, "local_execution_requirements", minimum=1)
@@ -183,13 +189,14 @@ def _require_receipt_evidence(
         "creator_node_id": document["creator_node_id"],
         "manifest_ref": document["lineage"]["source_manifest_ref"],
     }
-    supported_schemas = document["metadata"]["supported_input_schemas"]
+    supported_input_schemas = document["metadata"]["supported_input_schemas"]
+    supported_output_schemas = document["metadata"]["supported_output_schemas"]
     for index, receipt in enumerate(evidence):
         if not isinstance(receipt, dict):
             raise CapabilityRecordError(
                 f"validation.receipt_evidence[{index}] must be an object"
             )
-        allowed_fields = {"receipt_id", "input_schema", *expected}
+        allowed_fields = {"receipt_id", "input_schema", "output_schema", *expected}
         if receipt.keys() != allowed_fields:
             raise CapabilityRecordError(
                 f"validation.receipt_evidence[{index}] must contain exactly the "
@@ -204,9 +211,13 @@ def _require_receipt_evidence(
                 "validation receipt must record matching capability name, version, "
                 "creator node ID, and manifest reference"
             )
-        if receipt.get("input_schema") not in supported_schemas:
+        if receipt.get("input_schema") not in supported_input_schemas:
             raise CapabilityRecordError(
                 "validation receipt must record a supported input schema reference"
+            )
+        if receipt.get("output_schema") not in supported_output_schemas:
+            raise CapabilityRecordError(
+                "validation receipt must record a supported output schema reference"
             )
 
 
@@ -217,27 +228,31 @@ def _require_lineage(document: dict[str, Any]) -> None:
     _require_optional_ref(lineage, "local_build_artifact_ref")
 
 
-def _require_input_schemas(
-    metadata: dict[str, Any], *, local_schema_root: str | Path
+def _require_schemas(
+    metadata: dict[str, Any], field: str, *, local_schema_root: str | Path
 ) -> None:
-    schemas = metadata.get("supported_input_schemas")
+    schemas = metadata.get(field)
     if not isinstance(schemas, list) or not schemas:
-        raise CapabilityRecordError(
-            "metadata.supported_input_schemas must be a non-empty list"
-        )
+        raise CapabilityRecordError(f"metadata.{field} must be a non-empty list")
     root = Path(local_schema_root).resolve()
     for index, schema in enumerate(schemas):
-        context = f"metadata.supported_input_schemas[{index}]"
+        context = f"metadata.{field}[{index}]"
         if not isinstance(schema, dict) or set(schema) != {
             "schema_ref",
+            "schema_id",
             "schema_version",
             "schema_digest",
         }:
             raise CapabilityRecordError(
-                f"{context} must contain exactly schema_ref, schema_version, and schema_digest"
+                f"{context} must contain exactly schema_ref, schema_id, schema_version, and schema_digest"
             )
         schema_ref = schema["schema_ref"]
         _require_safe_ref(schema_ref, f"{context}.schema_ref")
+        schema_id = schema["schema_id"]
+        if not isinstance(schema_id, str) or not schema_id.strip():
+            raise CapabilityRecordError(
+                f"{context}.schema_id must be a non-empty string"
+            )
         schema_version = schema["schema_version"]
         if not isinstance(schema_version, str) or not _SEMVER.fullmatch(schema_version):
             raise CapabilityRecordError(
@@ -279,6 +294,10 @@ def _require_input_schemas(
         if local_schema.get("x-aethermesh-schema-version") != schema_version:
             raise CapabilityRecordError(
                 f"{context}.schema_version must match the local schema version"
+            )
+        if local_schema.get("$id") != schema_id:
+            raise CapabilityRecordError(
+                f"{context}.schema_id must match the local schema ID"
             )
 
 
