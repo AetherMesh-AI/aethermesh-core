@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "result_id": "local-result-echo-002",
+  "job_id": "local-job-echo-002",
+  "task_id": "local-task-echo-002",
+  "creator_node_id": "node.local-creator",
+  "executor_node_id": "node.local-worker",
+  "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "created_at": "2026-07-12T12:10:00.000Z",
+  "status": "failed",
+  "exit_code": 2,
+  "started_at": "2026-07-12T12:10:01.000Z",
+  "finished_at": "2026-07-12T12:10:01.050Z",
+  "duration_ms": 50,
+  "summary": "Echo could not read its declared local input artifact.",
+  "validation_status": "failed",
+  "validation_receipt_id": "local-validation-receipt-echo-002",
+  "validator_node_id": "node.local-validator",
+  "failure_reasons": {
+    "execution": null,
+    "validation": "required output was not produced",
+    "malformed_input": null,
+    "missing_artifact": "examples/job-envelope-inputs/missing.json"
+  },
+  "lineage": {
+    "input_manifest_ids": ["sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],
+    "output_manifest_ids": [],
+    "parent_job_ids": ["local-job-parent-001"],
+    "parent_task_ids": ["local-task-parent-001"],
+    "artifact_ids": []
+  },
+  "contribution": {
+    "attribution_node_id": "node.local-worker",
+    "local_operator_id": null
+  }
+}

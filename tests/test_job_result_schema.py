@@ -1,0 +1,92 @@
+import copy
+import json
+import unittest
+from pathlib import Path
+
+from aethermesh_core.job_result_schema import (
+    JobResultSchemaError,
+    validate_job_result_document,
+)
+
+
+class JobResultSchemaTests(unittest.TestCase):
+    def setUp(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.success = json.loads(
+            (root / "examples/job-results/local-echo-success.json").read_text("utf-8")
+        )
+        self.failed = json.loads(
+            (root / "examples/job-results/local-echo-failed.json").read_text("utf-8")
+        )
+
+    def test_success_and_failed_examples_validate(self) -> None:
+        self.assertIs(validate_job_result_document(self.success), self.success)
+        self.assertIs(validate_job_result_document(self.failed), self.failed)
+
+    def test_required_attribution_lineage_manifest_and_validation_fields_reject_omission(
+        self,
+    ) -> None:
+        for field in (
+            "creator_node_id",
+            "executor_node_id",
+            "manifest_id",
+            "validation_status",
+            "validation_receipt_id",
+            "validator_node_id",
+            "lineage",
+            "contribution",
+        ):
+            with self.subTest(field=field):
+                document = copy.deepcopy(self.success)
+                document.pop(field)
+                with self.assertRaisesRegex(JobResultSchemaError, f"missing: {field}"):
+                    validate_job_result_document(document)
+
+    def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
+        invalid_status = copy.deepcopy(self.success)
+        invalid_status["status"] = "complete"
+        with self.assertRaisesRegex(JobResultSchemaError, "status must be"):
+            validate_job_result_document(invalid_status)
+
+        for field in ("result_id", "job_id", "task_id"):
+            with self.subTest(field=field):
+                document = copy.deepcopy(self.success)
+                document[field] = ""
+                with self.assertRaisesRegex(
+                    JobResultSchemaError, "non-empty identifier"
+                ):
+                    validate_job_result_document(document)
+
+    def test_rejects_inconsistent_runtime_and_attribution_values(self) -> None:
+        cases = (
+            ("duration_ms", 124, "must match"),
+            ("summary", "x" * 513, "up to 512"),
+            ("validation_status", "pending", "must be passed"),
+        )
+        for field, value, message in cases:
+            with self.subTest(field=field):
+                document = copy.deepcopy(self.success)
+                document[field] = value
+                with self.assertRaisesRegex(JobResultSchemaError, message):
+                    validate_job_result_document(document)
+
+        document = copy.deepcopy(self.success)
+        document["contribution"]["attribution_node_id"] = "node.other"
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "must match executor_node_id"
+        ):
+            validate_job_result_document(document)
+
+        document = copy.deepcopy(self.success)
+        document["failure_reasons"].pop("missing_artifact")
+        with self.assertRaisesRegex(JobResultSchemaError, "missing: missing_artifact"):
+            validate_job_result_document(document)
+
+        document = copy.deepcopy(self.success)
+        document["future"] = True
+        with self.assertRaisesRegex(JobResultSchemaError, "unsupported: future"):
+            validate_job_result_document(document)
+
+
+if __name__ == "__main__":
+    unittest.main()

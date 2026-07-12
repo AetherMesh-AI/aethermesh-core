@@ -110,12 +110,12 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_manifest.py": {
-    "mtime": 1783854924.299625,
+    "mtime": 1783855971.0776262,
     "ast_hash": "1e1404dae71b266175bda13c6306ec30",
     "semantic_hash": ""
   },
   "tests/test_job_manifest.py": {
-    "mtime": 1783854055.5671692,
+    "mtime": 1783855971.0790763,
     "ast_hash": "7f2979810bda2f817825ab5c3ba95ad1",
     "semantic_hash": ""
   },
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783855478.6600983,
-    "ast_hash": "db69ffc4fe6674af54420ef7878e4e1d",
+    "mtime": 1783856149.431411,
+    "ast_hash": "29a99c940b0dbbd65623cc015be057db",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783855479.4796808,
-    "ast_hash": "ce64715742524d281ce9bae17b7fecb4",
+    "mtime": 1783856392.9714189,
+    "ast_hash": "580d8e68147e46d33cd60a2c5a9526c7",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -720,13 +720,13 @@
     "semantic_hash": ""
   },
   "tests/test_api_schema_contract.py": {
-    "mtime": 1783821492.5555665,
-    "ast_hash": "0484467fbb25184509e3d3ea2a3fccb3",
+    "mtime": 1783856209.380809,
+    "ast_hash": "00369d7faa8d9c2a274c8057440d3365",
     "semantic_hash": ""
   },
   "docs/phase-1-api-schema-contract.md": {
-    "mtime": 1783822796.512595,
-    "ast_hash": "f95c5a820a24602d931c7f7c2c5903bd",
+    "mtime": 1783856198.0056856,
+    "ast_hash": "553c9ddf38d4d1da093396342e54b3c4",
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
@@ -780,22 +780,22 @@
     "semantic_hash": ""
   },
   "examples/schemas/phase-1-job-envelope.schema.json": {
-    "mtime": 1783854070.2967222,
+    "mtime": 1783855971.0610726,
     "ast_hash": "a99502e7ccd1324d1c5880ad4624d143",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_envelope.py": {
-    "mtime": 1783854009.659994,
+    "mtime": 1783855971.077324,
     "ast_hash": "a3d8c6a2d75290e167415b1d1c9f65d2",
     "semantic_hash": ""
   },
   "tests/test_job_envelope.py": {
-    "mtime": 1783854279.0652404,
+    "mtime": 1783855971.078669,
     "ast_hash": "2a7e51bd5952e836f076d4e39fd7081a",
     "semantic_hash": ""
   },
   "docs/phase-1-job-envelope-schema.md": {
-    "mtime": 1783854082.0569568,
+    "mtime": 1783855971.0605989,
     "ast_hash": "91ab1024363ae2408b2dd050f6f5f6d7",
     "semantic_hash": ""
   }
