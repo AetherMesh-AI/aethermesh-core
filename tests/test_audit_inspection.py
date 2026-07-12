@@ -18,6 +18,7 @@ class AuditInspectionTests(unittest.TestCase):
             accepted = service.submit_local_job(
                 {
                     "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
                     "input_payload": {
                         "payload_type": "json",
                         "content": {"message": "audit"},
@@ -87,6 +88,7 @@ class AuditInspectionTests(unittest.TestCase):
             accepted = service.submit_local_job(
                 {
                     "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
                     "input_payload": {"payload_type": "json", "content": {}},
                     "creator_node_id": "creator-a",
                     "requested_validation_mode": "deterministic-local",

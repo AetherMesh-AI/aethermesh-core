@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "src/aethermesh_core/runtime_service.py": {
-    "mtime": 1783875678.5198903,
-    "ast_hash": "8d3847f369f9aa70a515f006174c8467",
+    "mtime": 1783878899.4001873,
+    "ast_hash": "3254aa974ecbe9e4b5cfeefc970d5cd8",
     "semantic_hash": ""
   },
   "tests/test_aggregation.py": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "tests/test_runtime_service_api_cli.py": {
-    "mtime": 1783875871.079368,
-    "ast_hash": "e398cf6f1afe1325822c61a19fa4af01",
+    "mtime": 1783879139.333936,
+    "ast_hash": "06e0ba5731b088de14010a5dde1e0284",
     "semantic_hash": ""
   },
   "docs/persistent-goal.md": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "tests/test_audit_inspection.py": {
-    "mtime": 1783859970.787997,
-    "ast_hash": "fee58eea5f3b1b7240ccccf58a0b558e",
+    "mtime": 1783879131.357653,
+    "ast_hash": "b339ff18a5f8d0b45cd5f6dbb957aae0",
     "semantic_hash": ""
   },
   "tests/test_model_manifest_inspection.py": {
@@ -720,13 +720,13 @@
     "semantic_hash": ""
   },
   "tests/test_api_schema_contract.py": {
-    "mtime": 1783863464.5432212,
-    "ast_hash": "916c5dbf7a77de3e99f588881616a4fc",
+    "mtime": 1783879132.6866686,
+    "ast_hash": "2591f9bc937fec76c22a3af55258c023",
     "semantic_hash": ""
   },
   "docs/phase-1-api-schema-contract.md": {
-    "mtime": 1783863464.5424104,
-    "ast_hash": "1115c2e7bc6125ddd911b4ab5ead2267",
+    "mtime": 1783879128.783729,
+    "ast_hash": "73694cf3f1218a0108d0572ffdd91bc0",
     "semantic_hash": ""
   },
   "src/aethermesh_core/capability_record.py": {
@@ -735,7 +735,7 @@
     "semantic_hash": ""
   },
   "tests/test_api_errors.py": {
-    "mtime": 1783859970.7877238,
+    "mtime": 1783878597.9595964,
     "ast_hash": "00b6aa9bb4872c1d98b2161b02262b21",
     "semantic_hash": ""
   },

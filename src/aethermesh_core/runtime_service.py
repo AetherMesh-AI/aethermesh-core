@@ -762,6 +762,18 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission job_type must be a non-empty string"
             )
+        try:
+            requested_capability = self._requested_local_capability(
+                request.get("requested_capability"), job_type
+            )
+        except RuntimeServiceError as exc:
+            self._append_event(
+                "rejected local job submission "
+                f"creator_node_id={creator_node_id} "
+                f"requested_capability={_rejection_log_capability(request.get('requested_capability'))} "
+                f"reason={exc}"
+            )
+            raise
         input_payload, payload_hash = _validated_input_payload(
             request.get("input_payload")
         )
@@ -810,6 +822,7 @@ class NodeRuntimeService:
                     "job": {
                         "job_id": job_id,
                         "job_type": job_type,
+                        "requested_capability": requested_capability,
                         "input_payload": input_payload,
                         "input_payload_hash": payload_hash,
                         "local_safety": local_safety,
@@ -832,6 +845,7 @@ class NodeRuntimeService:
             "job_id": job_id,
             "status": "created",
             "creator_node_id": creator_node_id,
+            "requested_capability": requested_capability,
             "manifest_ref": manifest_ref,
             "lineage": {"job_id": job_id, "parent_refs": lineage_parent_refs},
             "contribution_attribution": {
@@ -854,9 +868,48 @@ class NodeRuntimeService:
             "job_id": job_id,
             "status": "queued",
             "manifest_ref": manifest_ref,
+            "requested_capability": requested_capability,
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
         }
+
+    def _requested_local_capability(
+        self, value: object, job_type: str
+    ) -> dict[str, str]:
+        """Resolve one job capability against this node's local capability manifest."""
+
+        if not isinstance(value, dict) or set(value) != {"identifier"}:
+            raise RuntimeServiceError(
+                "job submission requested_capability must be an object with identifier"
+            )
+        identifier = value.get("identifier")
+        if not isinstance(identifier, str) or not re.fullmatch(
+            r"work\.[a-z][a-z0-9_]*", identifier
+        ):
+            raise RuntimeServiceError(
+                "job submission requested_capability.identifier must be a canonical work capability identifier"
+            )
+        capability = next(
+            (
+                entry
+                for entry in self.list_capabilities()["capabilities"]
+                if entry["identifier"] == identifier
+            ),
+            None,
+        )
+        if capability is None:
+            raise RuntimeServiceError(
+                "job submission requested_capability.identifier is not present in the local node capability manifest"
+            )
+        if capability.get("work_type") != job_type:
+            raise RuntimeServiceError(
+                "job submission requested_capability.identifier does not match job_type"
+            )
+        if capability["status"] != "enabled":
+            raise RuntimeServiceError(
+                "job submission requested_capability.identifier is disabled in the local node capability manifest"
+            )
+        return {"identifier": identifier}
 
     def get_local_job_status(self, job_id: str) -> dict[str, Any]:
         """Read one submission and its optional local execution evidence."""
@@ -891,6 +944,7 @@ class NodeRuntimeService:
             "status": status.get("status", "queued"),
             "manifest_ref": f"data/job-submissions/{job_id}.json",
             "creator_node_id": manifest["creator_node_id"],
+            "requested_capability": manifest["job"]["requested_capability"],
             "requester_identity": manifest.get("requester_identity"),
             "worker_node_id": status.get("worker_node_id"),
             "lineage": manifest["lineage"],
@@ -1993,6 +2047,16 @@ def _safe_local_identifier(value: object) -> bool:
         and "://" not in value
         and ".." not in value
     )
+
+
+def _rejection_log_capability(value: object) -> str:
+    """Serialize a bounded submitted capability for local rejection diagnostics."""
+
+    try:
+        rendered = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return "<malformed>"
+    return rendered[:160]
 
 
 def _local_safety_metadata(value: object) -> dict[str, object] | None:

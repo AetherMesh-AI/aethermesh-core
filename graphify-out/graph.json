@@ -1050,7 +1050,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_electronstate",
-      "community": 6,
+      "community": 113,
       "norm_label": "electronstate.js"
     },
     {
@@ -1060,7 +1060,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_electronstate_isdestroyedelectronobject",
-      "community": 6,
+      "community": 113,
       "norm_label": "isdestroyedelectronobject()"
     },
     {
@@ -1070,7 +1070,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "bootstrap_electronstate_isdestroyederror",
-      "community": 6,
+      "community": 113,
       "norm_label": "isdestroyederror()"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "bootstrap_electronstate_sendwindowstate",
-      "community": 6,
+      "community": 113,
       "norm_label": "sendwindowstate()"
     },
     {
@@ -1160,7 +1160,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_python",
-      "community": 113,
+      "community": 107,
       "norm_label": "python.js"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "bootstrap_python_execfile",
-      "community": 113,
+      "community": 107,
       "norm_label": "{ execfile }"
     },
     {
@@ -1180,7 +1180,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "bootstrap_python_promisify",
-      "community": 113,
+      "community": 107,
       "norm_label": "{ promisify }"
     },
     {
@@ -1190,7 +1190,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "bootstrap_python_execfileasync",
-      "community": 113,
+      "community": 107,
       "norm_label": "execfileasync"
     },
     {
@@ -1200,7 +1200,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "bootstrap_python_parsepythonversion",
-      "community": 113,
+      "community": 107,
       "norm_label": "parsepythonversion()"
     },
     {
@@ -1210,7 +1210,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "bootstrap_python_isusablepythonversion",
-      "community": 113,
+      "community": 107,
       "norm_label": "isusablepythonversion()"
     },
     {
@@ -1220,7 +1220,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "bootstrap_python_detectpython",
-      "community": 113,
+      "community": 107,
       "norm_label": "detectpython()"
     },
     {
@@ -1230,7 +1230,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "bootstrap_python_runversion",
-      "community": 113,
+      "community": 107,
       "norm_label": "runversion()"
     },
     {
@@ -1670,7 +1670,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "src_main_bootstrap",
-      "community": 41,
+      "community": 6,
       "norm_label": "bootstrap()"
     },
     {
@@ -1680,7 +1680,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "src_main_getpaths",
-      "community": 41,
+      "community": 6,
       "norm_label": "getpaths()"
     },
     {
@@ -1690,7 +1690,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "src_main_ensurestorage",
-      "community": 41,
+      "community": 6,
       "norm_label": "ensurestorage()"
     },
     {
@@ -1700,7 +1700,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "src_main_createbackgroundmanager",
-      "community": 41,
+      "community": 6,
       "norm_label": "createbackgroundmanager()"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "src_main_createclimanager",
-      "community": 41,
+      "community": 6,
       "norm_label": "createclimanager()"
     },
     {
@@ -1720,7 +1720,7 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "src_main_ensurestableruntimeandcli",
-      "community": 41,
+      "community": 6,
       "norm_label": "ensurestableruntimeandcli()"
     },
     {
@@ -1750,7 +1750,7 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "src_main_startbackgroundnode",
-      "community": 41,
+      "community": 6,
       "norm_label": "startbackgroundnode()"
     },
     {
@@ -1780,7 +1780,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "src_main_stoptemporarynode",
-      "community": 7,
+      "community": 6,
       "norm_label": "stoptemporarynode()"
     },
     {
@@ -1790,7 +1790,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "src_main_getruntimecommand",
-      "community": 41,
+      "community": 6,
       "norm_label": "getruntimecommand()"
     },
     {
@@ -1810,7 +1810,7 @@
       "source_location": "L278",
       "_origin": "ast",
       "id": "src_main_readsettings",
-      "community": 41,
+      "community": 6,
       "norm_label": "readsettings()"
     },
     {
@@ -1830,7 +1830,7 @@
       "source_location": "L299",
       "_origin": "ast",
       "id": "src_main_writesettings",
-      "community": 41,
+      "community": 6,
       "norm_label": "writesettings()"
     },
     {
@@ -1840,7 +1840,7 @@
       "source_location": "L307",
       "_origin": "ast",
       "id": "src_main_backgroundstatefromsettings",
-      "community": 41,
+      "community": 6,
       "norm_label": "backgroundstatefromsettings()"
     },
     {
@@ -1850,7 +1850,7 @@
       "source_location": "L321",
       "_origin": "ast",
       "id": "src_main_clistatefromsettings",
-      "community": 41,
+      "community": 6,
       "norm_label": "clistatefromsettings()"
     },
     {
@@ -1860,7 +1860,7 @@
       "source_location": "L340",
       "_origin": "ast",
       "id": "src_main_settingsfromclimetadata",
-      "community": 41,
+      "community": 6,
       "norm_label": "settingsfromclimetadata()"
     },
     {
@@ -1870,7 +1870,7 @@
       "source_location": "L356",
       "_origin": "ast",
       "id": "src_main_settingsfromruntimemetadata",
-      "community": 41,
+      "community": 6,
       "norm_label": "settingsfromruntimemetadata()"
     },
     {
@@ -1880,7 +1880,7 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "src_main_checkruntimeupdates",
-      "community": 41,
+      "community": 6,
       "norm_label": "checkruntimeupdates()"
     },
     {
@@ -1890,7 +1890,7 @@
       "source_location": "L392",
       "_origin": "ast",
       "id": "src_main_scheduleruntimeupdatechecks",
-      "community": 41,
+      "community": 6,
       "norm_label": "scheduleruntimeupdatechecks()"
     },
     {
@@ -1900,7 +1900,7 @@
       "source_location": "L428",
       "_origin": "ast",
       "id": "src_main_repaircli",
-      "community": 41,
+      "community": 6,
       "norm_label": "repaircli()"
     },
     {
@@ -1910,7 +1910,7 @@
       "source_location": "L442",
       "_origin": "ast",
       "id": "src_main_uninstallcli",
-      "community": 41,
+      "community": 6,
       "norm_label": "uninstallcli()"
     },
     {
@@ -1920,7 +1920,7 @@
       "source_location": "L454",
       "_origin": "ast",
       "id": "src_main_refreshclistatus",
-      "community": 41,
+      "community": 6,
       "norm_label": "refreshclistatus()"
     },
     {
@@ -1930,7 +1930,7 @@
       "source_location": "L466",
       "_origin": "ast",
       "id": "src_main_enablebackgroundnode",
-      "community": 41,
+      "community": 6,
       "norm_label": "enablebackgroundnode()"
     },
     {
@@ -1940,7 +1940,7 @@
       "source_location": "L486",
       "_origin": "ast",
       "id": "src_main_disablebackgroundnode",
-      "community": 41,
+      "community": 6,
       "norm_label": "disablebackgroundnode()"
     },
     {
@@ -1950,7 +1950,7 @@
       "source_location": "L504",
       "_origin": "ast",
       "id": "src_main_removelocalaethermeshdata",
-      "community": 41,
+      "community": 6,
       "norm_label": "removelocalaethermeshdata()"
     },
     {
@@ -1960,7 +1960,7 @@
       "source_location": "L528",
       "_origin": "ast",
       "id": "src_main_appendbootstraplog",
-      "community": 6,
+      "community": 113,
       "norm_label": "appendbootstraplog()"
     },
     {
@@ -1970,7 +1970,7 @@
       "source_location": "L534",
       "_origin": "ast",
       "id": "src_main_updatebootstrap",
-      "community": 41,
+      "community": 6,
       "norm_label": "updatebootstrap()"
     },
     {
@@ -3190,7 +3190,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_lineage",
-      "community": 49,
+      "community": 77,
       "norm_label": "lineage"
     },
     {
@@ -3200,7 +3200,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_type",
-      "community": 49,
+      "community": 77,
       "norm_label": "type"
     },
     {
@@ -3210,7 +3210,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_additionalproperties",
-      "community": 49,
+      "community": 77,
       "norm_label": "additionalproperties"
     },
     {
@@ -3220,7 +3220,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_lineage_required",
-      "community": 49,
+      "community": 77,
       "norm_label": "required"
     },
     {
@@ -3430,7 +3430,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_properties_produced_artifacts",
-      "community": 49,
+      "community": 75,
       "norm_label": "produced_artifacts"
     },
     {
@@ -3440,7 +3440,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "schemas_phase_1_job_envelope_schema_produced_artifacts_type",
-      "community": 49,
+      "community": 75,
       "norm_label": "type"
     },
     {
@@ -4013,7 +4013,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "argumentparser",
-      "community": 57,
+      "community": 34,
       "norm_label": "argumentparser"
     },
     {
@@ -4183,7 +4183,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_release_metadata",
-      "community": 57,
+      "community": 17,
       "norm_label": "release_metadata.py"
     },
     {
@@ -4193,7 +4193,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "scripts_release_metadata_commit",
-      "community": 57,
+      "community": 17,
       "norm_label": "commit"
     },
     {
@@ -4203,7 +4203,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "scripts_release_metadata_releasemetadata",
-      "community": 57,
+      "community": 17,
       "norm_label": "releasemetadata"
     },
     {
@@ -4213,7 +4213,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "scripts_release_metadata_run_git",
-      "community": 57,
+      "community": 17,
       "norm_label": "run_git()"
     },
     {
@@ -4223,7 +4223,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "scripts_release_metadata_package_source_files",
-      "community": 57,
+      "community": 17,
       "norm_label": "package_source_files()"
     },
     {
@@ -4233,7 +4233,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "scripts_release_metadata_source_files_sha256",
-      "community": 57,
+      "community": 17,
       "norm_label": "source_files_sha256()"
     },
     {
@@ -4243,7 +4243,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "scripts_release_metadata_source_archive_sha256",
-      "community": 57,
+      "community": 17,
       "norm_label": "source_archive_sha256()"
     },
     {
@@ -4253,7 +4253,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "scripts_release_metadata_head_sha",
-      "community": 57,
+      "community": 17,
       "norm_label": "head_sha()"
     },
     {
@@ -4263,7 +4263,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "scripts_release_metadata_previous_alpha_release_tag",
-      "community": 57,
+      "community": 17,
       "norm_label": "previous_alpha_release_tag()"
     },
     {
@@ -4273,7 +4273,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "scripts_release_metadata_commits_since",
-      "community": 57,
+      "community": 17,
       "norm_label": "commits_since()"
     },
     {
@@ -4283,7 +4283,7 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "scripts_release_metadata_format_release_notes",
-      "community": 57,
+      "community": 17,
       "norm_label": "format_release_notes()"
     },
     {
@@ -4293,7 +4293,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "scripts_release_metadata_build_release_metadata",
-      "community": 57,
+      "community": 17,
       "norm_label": "build_release_metadata()"
     },
     {
@@ -4303,7 +4303,7 @@
       "source_location": "L168",
       "_origin": "ast",
       "id": "scripts_release_metadata_prepare_release",
-      "community": 57,
+      "community": 17,
       "norm_label": "prepare_release()"
     },
     {
@@ -4313,7 +4313,7 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "scripts_release_metadata_write_github_outputs",
-      "community": 57,
+      "community": 17,
       "norm_label": "write_github_outputs()"
     },
     {
@@ -4323,7 +4323,7 @@
       "source_location": "L206",
       "_origin": "ast",
       "id": "scripts_release_metadata_command_prepare",
-      "community": 57,
+      "community": 17,
       "norm_label": "command_prepare()"
     },
     {
@@ -4333,7 +4333,7 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "scripts_release_metadata_build_parser",
-      "community": 57,
+      "community": 17,
       "norm_label": "build_parser()"
     },
     {
@@ -4343,7 +4343,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "scripts_release_metadata_main",
-      "community": 57,
+      "community": 17,
       "norm_label": "main()"
     },
     {
@@ -4623,7 +4623,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "aethermesh_core_api_create_app",
-      "community": 68,
+      "community": 101,
       "norm_label": "create_app()"
     },
     {
@@ -4663,7 +4663,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "aethermesh_core_api_rationale_86",
-      "community": 68,
+      "community": 101,
       "norm_label": "create the localhost api/dashboard app used by cli and ui frontends."
     },
     {
@@ -5283,7 +5283,7 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "aethermesh_core_cli_inboxreplayrequest",
-      "community": 0,
+      "community": 56,
       "norm_label": "inboxreplayrequest"
     },
     {
@@ -5303,7 +5303,7 @@
       "source_location": "L550",
       "_origin": "ast",
       "id": "aethermesh_core_cli_mark_ephemeral_artifact",
-      "community": 110,
+      "community": 56,
       "norm_label": "_mark_ephemeral_artifact()"
     },
     {
@@ -5313,7 +5313,7 @@
       "source_location": "L556",
       "_origin": "ast",
       "id": "aethermesh_core_cli_mark_ephemeral_message_log",
-      "community": 110,
+      "community": 56,
       "norm_label": "_mark_ephemeral_message_log()"
     },
     {
@@ -5343,7 +5343,7 @@
       "source_location": "L584",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_demo",
-      "community": 27,
+      "community": 56,
       "norm_label": "run_demo()"
     },
     {
@@ -5373,7 +5373,7 @@
       "source_location": "L734",
       "_origin": "ast",
       "id": "aethermesh_core_cli_dispatch_local_batch_command",
-      "community": 110,
+      "community": 71,
       "norm_label": "dispatch_local_batch_command()"
     },
     {
@@ -5383,7 +5383,7 @@
       "source_location": "L758",
       "_origin": "ast",
       "id": "aethermesh_core_cli_dispatch_peer_batch_command",
-      "community": 103,
+      "community": 71,
       "norm_label": "dispatch_peer_batch_command()"
     },
     {
@@ -5393,7 +5393,7 @@
       "source_location": "L786",
       "_origin": "ast",
       "id": "aethermesh_core_cli_summarize_ledger",
-      "community": 110,
+      "community": 98,
       "norm_label": "summarize_ledger()"
     },
     {
@@ -5413,7 +5413,7 @@
       "source_location": "L799",
       "_origin": "ast",
       "id": "aethermesh_core_cli_ephemeral_roster",
-      "community": 111,
+      "community": 110,
       "norm_label": "_ephemeral_roster()"
     },
     {
@@ -5433,7 +5433,7 @@
       "source_location": "L831",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_local_transport_flow",
-      "community": 110,
+      "community": 14,
       "norm_label": "run_local_transport_flow()"
     },
     {
@@ -5463,7 +5463,7 @@
       "source_location": "L1091",
       "_origin": "ast",
       "id": "aethermesh_core_cli_require_int_result_field",
-      "community": 110,
+      "community": 98,
       "norm_label": "_require_int_result_field()"
     },
     {
@@ -5493,7 +5493,7 @@
       "source_location": "L1110",
       "_origin": "ast",
       "id": "aethermesh_core_cli_process_local_inbox",
-      "community": 110,
+      "community": 56,
       "norm_label": "process_local_inbox()"
     },
     {
@@ -5503,7 +5503,7 @@
       "source_location": "L1240",
       "_origin": "ast",
       "id": "aethermesh_core_cli_emitted_messages_from_inbox_result",
-      "community": 110,
+      "community": 56,
       "norm_label": "_emitted_messages_from_inbox_result()"
     },
     {
@@ -5513,7 +5513,7 @@
       "source_location": "L1250",
       "_origin": "ast",
       "id": "aethermesh_core_cli_node_ids_from_replayed_messages",
-      "community": 110,
+      "community": 56,
       "norm_label": "_node_ids_from_replayed_messages()"
     },
     {
@@ -5523,7 +5523,7 @@
       "source_location": "L1263",
       "_origin": "ast",
       "id": "aethermesh_core_cli_inbox_process_result_to_dict",
-      "community": 110,
+      "community": 56,
       "norm_label": "_inbox_process_result_to_dict()"
     },
     {
@@ -5533,7 +5533,7 @@
       "source_location": "L1324",
       "_origin": "ast",
       "id": "aethermesh_core_cli_run_json_command",
-      "community": 110,
+      "community": 44,
       "norm_label": "_run_json_command()"
     },
     {
@@ -5543,7 +5543,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "exception",
-      "community": 110,
+      "community": 44,
       "norm_label": "exception"
     },
     {
@@ -5593,7 +5593,7 @@
       "source_location": "L738",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_738",
-      "community": 110,
+      "community": 71,
       "norm_label": "dispatch a manifest batch to a local message log without execution."
     },
     {
@@ -5603,7 +5603,7 @@
       "source_location": "L763",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_763",
-      "community": 103,
+      "community": 71,
       "norm_label": "dispatch manifest jobs to heartbeat-derived peers without execution."
     },
     {
@@ -5613,7 +5613,7 @@
       "source_location": "L787",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_787",
-      "community": 110,
+      "community": 98,
       "norm_label": "load an existing ledger and return read-only aggregate totals."
     },
     {
@@ -5643,7 +5643,7 @@
       "source_location": "L834",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_834",
-      "community": 110,
+      "community": 14,
       "norm_label": "run the existing local flow with file-backed transport enabled."
     },
     {
@@ -5673,7 +5673,7 @@
       "source_location": "L1120",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1120",
-      "community": 110,
+      "community": 56,
       "norm_label": "replay a saved local message log or local transport inbox for one node."
     },
     {
@@ -5683,7 +5683,7 @@
       "source_location": "L1141",
       "_origin": "ast",
       "id": "aethermesh_core_cli_rationale_1141",
-      "community": 110,
+      "community": 56,
       "norm_label": "replay saved local messages and return payload plus structured result."
     },
     {
@@ -5813,7 +5813,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_dispatch",
-      "community": 48,
+      "community": 32,
       "norm_label": "dispatch.py"
     },
     {
@@ -5863,7 +5863,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_dispatch_rationale_1",
-      "community": 48,
+      "community": 32,
       "norm_label": "assignment-only local dispatch for manifest-backed batches."
     },
     {
@@ -5903,7 +5903,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit",
-      "community": 32,
+      "community": 14,
       "norm_label": "flow_audit.py"
     },
     {
@@ -5913,7 +5913,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_flowauditerror",
-      "community": 32,
+      "community": 14,
       "norm_label": "flowauditerror"
     },
     {
@@ -5923,7 +5923,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_audit_local_flow",
-      "community": 32,
+      "community": 14,
       "norm_label": "audit_local_flow()"
     },
     {
@@ -5933,7 +5933,7 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_receipt_context",
-      "community": 32,
+      "community": 14,
       "norm_label": "_receipt_context()"
     },
     {
@@ -5943,7 +5943,7 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_find_flow_message_for_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_find_flow_message_for_receipt()"
     },
     {
@@ -5953,7 +5953,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_assignment_matches_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_assignment_matches_receipt()"
     },
     {
@@ -5963,7 +5963,7 @@
       "source_location": "L203",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_result_message_matches_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_result_message_matches_receipt()"
     },
     {
@@ -5973,7 +5973,7 @@
       "source_location": "L247",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_contribution_message_matches_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_contribution_message_matches_receipt()"
     },
     {
@@ -5983,7 +5983,7 @@
       "source_location": "L287",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_validation_message_matches_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_validation_message_matches_receipt()"
     },
     {
@@ -5993,7 +5993,7 @@
       "source_location": "L333",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_message_order",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_message_order()"
     },
     {
@@ -6003,7 +6003,7 @@
       "source_location": "L349",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_message_index",
-      "community": 32,
+      "community": 14,
       "norm_label": "_message_index()"
     },
     {
@@ -6013,7 +6013,7 @@
       "source_location": "L356",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_ledger_claim_from_receipt",
-      "community": 32,
+      "community": 14,
       "norm_label": "_ledger_claim_from_receipt()"
     },
     {
@@ -6023,7 +6023,7 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_ledger_claim_from_record",
-      "community": 32,
+      "community": 14,
       "norm_label": "_ledger_claim_from_record()"
     },
     {
@@ -6033,7 +6033,7 @@
       "source_location": "L383",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_ledger_mismatch_detail",
-      "community": 32,
+      "community": 14,
       "norm_label": "_ledger_mismatch_detail()"
     },
     {
@@ -6043,7 +6043,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "counter",
-      "community": 32,
+      "community": 14,
       "norm_label": "counter"
     },
     {
@@ -6053,7 +6053,7 @@
       "source_location": "L394",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_format_claim",
-      "community": 32,
+      "community": 14,
       "norm_label": "_format_claim()"
     },
     {
@@ -6063,7 +6063,7 @@
       "source_location": "L406",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_assert_equal",
-      "community": 32,
+      "community": 14,
       "norm_label": "_assert_equal()"
     },
     {
@@ -6073,7 +6073,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_rationale_1",
-      "community": 32,
+      "community": 14,
       "norm_label": "read-only audit checks for completed local flow artifact directories."
     },
     {
@@ -6083,7 +6083,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_rationale_17",
-      "community": 32,
+      "community": 14,
       "norm_label": "raised when local flow artifacts are missing or internally inconsistent."
     },
     {
@@ -6093,7 +6093,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_rationale_21",
-      "community": 32,
+      "community": 14,
       "norm_label": "audit a completed ``run-local-flow`` artifact directory without writing files."
     },
     {
@@ -6103,7 +6103,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "aethermesh_core_flow_audit_rationale_156",
-      "community": 32,
+      "community": 14,
       "norm_label": "find the flow message that matches one receipt.      worker logs use determinist"
     },
     {
@@ -6113,7 +6113,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_identity",
-      "community": 54,
+      "community": 11,
       "norm_label": "identity.py"
     },
     {
@@ -6123,7 +6123,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "aethermesh_core_identity_hardwareidentityinputs",
-      "community": 11,
+      "community": 27,
       "norm_label": "hardwareidentityinputs"
     },
     {
@@ -6363,7 +6363,7 @@
       "source_location": "L517",
       "_origin": "ast",
       "id": "aethermesh_core_identity_resolved_hardware_inputs",
-      "community": 11,
+      "community": 27,
       "norm_label": "_resolved_hardware_inputs()"
     },
     {
@@ -6433,7 +6433,7 @@
       "source_location": "L649",
       "_origin": "ast",
       "id": "aethermesh_core_identity_node_name_wordlists",
-      "community": 27,
+      "community": 114,
       "norm_label": "_node_name_wordlists()"
     },
     {
@@ -6453,7 +6453,7 @@
       "source_location": "L663",
       "_origin": "ast",
       "id": "aethermesh_core_identity_gpu_input",
-      "community": 30,
+      "community": 11,
       "norm_label": "_gpu_input()"
     },
     {
@@ -6463,7 +6463,7 @@
       "source_location": "L690",
       "_origin": "ast",
       "id": "aethermesh_core_identity_join_normalized",
-      "community": 30,
+      "community": 11,
       "norm_label": "_join_normalized()"
     },
     {
@@ -6473,7 +6473,7 @@
       "source_location": "L696",
       "_origin": "ast",
       "id": "aethermesh_core_identity_normalize_value",
-      "community": 30,
+      "community": 11,
       "norm_label": "_normalize_value()"
     },
     {
@@ -6483,7 +6483,7 @@
       "source_location": "L701",
       "_origin": "ast",
       "id": "aethermesh_core_identity_rounded_gb_input",
-      "community": 30,
+      "community": 11,
       "norm_label": "_rounded_gb_input()"
     },
     {
@@ -6503,7 +6503,7 @@
       "source_location": "L717",
       "_origin": "ast",
       "id": "aethermesh_core_identity_round_installed_ram_gb",
-      "community": 30,
+      "community": 11,
       "norm_label": "_round_installed_ram_gb()"
     },
     {
@@ -6553,7 +6553,7 @@
       "source_location": "L829",
       "_origin": "ast",
       "id": "aethermesh_core_identity_default_goos",
-      "community": 11,
+      "community": 118,
       "norm_label": "_default_goos()"
     },
     {
@@ -6573,7 +6573,7 @@
       "source_location": "L843",
       "_origin": "ast",
       "id": "aethermesh_core_identity_run_command",
-      "community": 54,
+      "community": 37,
       "norm_label": "_run_command()"
     },
     {
@@ -6613,7 +6613,7 @@
       "source_location": "L878",
       "_origin": "ast",
       "id": "aethermesh_core_identity_physical_mac_addresses",
-      "community": 54,
+      "community": 11,
       "norm_label": "_physical_mac_addresses()"
     },
     {
@@ -6623,7 +6623,7 @@
       "source_location": "L888",
       "_origin": "ast",
       "id": "aethermesh_core_identity_darwin_physical_mac_addresses",
-      "community": 54,
+      "community": 11,
       "norm_label": "_darwin_physical_mac_addresses()"
     },
     {
@@ -6633,7 +6633,7 @@
       "source_location": "L900",
       "_origin": "ast",
       "id": "aethermesh_core_identity_linux_physical_mac_addresses",
-      "community": 54,
+      "community": 11,
       "norm_label": "_linux_physical_mac_addresses()"
     },
     {
@@ -6643,7 +6643,7 @@
       "source_location": "L914",
       "_origin": "ast",
       "id": "aethermesh_core_identity_windows_physical_mac_addresses",
-      "community": 54,
+      "community": 11,
       "norm_label": "_windows_physical_mac_addresses()"
     },
     {
@@ -6653,7 +6653,7 @@
       "source_location": "L931",
       "_origin": "ast",
       "id": "aethermesh_core_identity_is_physical_linux_network_interface",
-      "community": 54,
+      "community": 11,
       "norm_label": "_is_physical_linux_network_interface()"
     },
     {
@@ -6663,7 +6663,7 @@
       "source_location": "L938",
       "_origin": "ast",
       "id": "aethermesh_core_identity_is_darwin_physical_ethernet_or_wifi_port",
-      "community": 54,
+      "community": 11,
       "norm_label": "_is_darwin_physical_ethernet_or_wifi_port()"
     },
     {
@@ -6673,7 +6673,7 @@
       "source_location": "L951",
       "_origin": "ast",
       "id": "aethermesh_core_identity_is_physical_ethernet_or_wifi_name",
-      "community": 54,
+      "community": 11,
       "norm_label": "_is_physical_ethernet_or_wifi_name()"
     },
     {
@@ -6683,7 +6683,7 @@
       "source_location": "L958",
       "_origin": "ast",
       "id": "aethermesh_core_identity_normalize_network_name",
-      "community": 54,
+      "community": 11,
       "norm_label": "_normalize_network_name()"
     },
     {
@@ -6693,7 +6693,7 @@
       "source_location": "L962",
       "_origin": "ast",
       "id": "aethermesh_core_identity_is_virtual_or_non_hardware_network_name",
-      "community": 54,
+      "community": 11,
       "norm_label": "_is_virtual_or_non_hardware_network_name()"
     },
     {
@@ -6703,7 +6703,7 @@
       "source_location": "L986",
       "_origin": "ast",
       "id": "aethermesh_core_identity_is_usable_mac_address",
-      "community": 54,
+      "community": 11,
       "norm_label": "_is_usable_mac_address()"
     },
     {
@@ -6723,7 +6723,7 @@
       "source_location": "L999",
       "_origin": "ast",
       "id": "aethermesh_core_identity_extract_labeled_value",
-      "community": 54,
+      "community": 11,
       "norm_label": "_extract_labeled_value()"
     },
     {
@@ -7143,7 +7143,7 @@
       "source_location": "L1682",
       "_origin": "ast",
       "id": "aethermesh_core_identity_create_identity_document_without_overwrite",
-      "community": 54,
+      "community": 104,
       "norm_label": "_create_identity_document_without_overwrite()"
     },
     {
@@ -7163,7 +7163,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_identity_rationale_1",
-      "community": 54,
+      "community": 11,
       "norm_label": "local node identity persistence helpers."
     },
     {
@@ -7173,7 +7173,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "aethermesh_core_identity_rationale_92",
-      "community": 11,
+      "community": 27,
       "norm_label": "normalized-source hardware facts used to derive the public node id."
     },
     {
@@ -7333,7 +7333,7 @@
       "source_location": "L1685",
       "_origin": "ast",
       "id": "aethermesh_core_identity_rationale_1685",
-      "community": 54,
+      "community": 104,
       "norm_label": "create an identity json file atomically without replacing a winner."
     },
     {
@@ -8193,7 +8193,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_ledger",
-      "community": 56,
+      "community": 48,
       "norm_label": "ledger.py"
     },
     {
@@ -8213,7 +8213,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionrecord_to_dict",
-      "community": 56,
+      "community": 13,
       "norm_label": ".to_dict()"
     },
     {
@@ -8273,7 +8273,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_contributionledger_record",
-      "community": 56,
+      "community": 109,
       "norm_label": ".record()"
     },
     {
@@ -8373,7 +8373,7 @@
       "source_location": "L294",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_accounted_units",
-      "community": 56,
+      "community": 109,
       "norm_label": "_accounted_units()"
     },
     {
@@ -8383,7 +8383,7 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_string_output",
-      "community": 56,
+      "community": 109,
       "norm_label": "_string_output()"
     },
     {
@@ -8433,7 +8433,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_1",
-      "community": 56,
+      "community": 48,
       "norm_label": "contribution ledger helpers for local job results."
     },
     {
@@ -8453,7 +8453,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_32",
-      "community": 56,
+      "community": 13,
       "norm_label": "serialize the record into a json-compatible dictionary."
     },
     {
@@ -8503,7 +8503,7 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "aethermesh_core_ledger_rationale_120",
-      "community": 56,
+      "community": 109,
       "norm_label": "record one result and return its local contribution record.          only comple"
     },
     {
@@ -10383,7 +10383,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation",
-      "community": 5,
+      "community": 2,
       "norm_label": "local_validation.py"
     },
     {
@@ -10393,7 +10393,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_localvalidationerror",
-      "community": 5,
+      "community": 2,
       "norm_label": "localvalidationerror"
     },
     {
@@ -10403,7 +10403,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_validate_local_results",
-      "community": 5,
+      "community": 2,
       "norm_label": "validate_local_results()"
     },
     {
@@ -10413,7 +10413,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_assignment_key",
-      "community": 5,
+      "community": 2,
       "norm_label": "_assignment_key()"
     },
     {
@@ -10423,7 +10423,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "assignmentkey",
-      "community": 5,
+      "community": 2,
       "norm_label": "assignmentkey"
     },
     {
@@ -10433,7 +10433,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_sort_key",
-      "community": 5,
+      "community": 2,
       "norm_label": "_sort_key()"
     },
     {
@@ -10443,7 +10443,7 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_result_for_output_validation",
-      "community": 5,
+      "community": 2,
       "norm_label": "_result_for_output_validation()"
     },
     {
@@ -10453,7 +10453,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_job_from_assignment",
-      "community": 5,
+      "community": 2,
       "norm_label": "_job_from_assignment()"
     },
     {
@@ -10463,7 +10463,7 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_result_from_message",
-      "community": 5,
+      "community": 2,
       "norm_label": "_result_from_message()"
     },
     {
@@ -10473,7 +10473,7 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_required_non_empty_string",
-      "community": 5,
+      "community": 2,
       "norm_label": "_required_non_empty_string()"
     },
     {
@@ -10483,7 +10483,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_rationale_1",
-      "community": 5,
+      "community": 2,
       "norm_label": "independent local replay validation for reported aethermesh job results."
     },
     {
@@ -10493,7 +10493,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_rationale_20",
-      "community": 5,
+      "community": 2,
       "norm_label": "raised when local validation replay cannot safely produce an artifact."
     },
     {
@@ -10503,7 +10503,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_rationale_32",
-      "community": 5,
+      "community": 2,
       "norm_label": "replay assignment/result logs and write an independent validation report."
     },
     {
@@ -10513,7 +10513,7 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "aethermesh_core_local_validation_rationale_137",
-      "community": 5,
+      "community": 2,
       "norm_label": "normalize credited local result messages back to runner-result shape.      worke"
     },
     {
@@ -10523,7 +10523,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus",
-      "community": 43,
+      "community": 32,
       "norm_label": "message_bus.py"
     },
     {
@@ -10533,7 +10533,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_messagedelivery",
-      "community": 43,
+      "community": 32,
       "norm_label": "messagedelivery"
     },
     {
@@ -10613,7 +10613,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_rationale_1",
-      "community": 43,
+      "community": 32,
       "norm_label": "synchronous in-memory message bus for local aethermesh simulation."
     },
     {
@@ -10623,7 +10623,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "aethermesh_core_message_bus_rationale_14",
-      "community": 43,
+      "community": 32,
       "norm_label": "a message accepted by the local bus with its deterministic sequence."
     },
     {
@@ -10693,7 +10693,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_log",
-      "community": 16,
+      "community": 48,
       "norm_label": "message_log.py"
     },
     {
@@ -10733,7 +10733,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_build_collected_outbox_message_log_document",
-      "community": 16,
+      "community": 89,
       "norm_label": "build_collected_outbox_message_log_document()"
     },
     {
@@ -10753,7 +10753,7 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_build_flow_message_log_document",
-      "community": 16,
+      "community": 89,
       "norm_label": "build_flow_message_log_document()"
     },
     {
@@ -10803,7 +10803,7 @@
       "source_location": "L285",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_message_to_document_entry",
-      "community": 16,
+      "community": 89,
       "norm_label": "_message_to_document_entry()"
     },
     {
@@ -10813,7 +10813,7 @@
       "source_location": "L296",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_message_from_document_entry",
-      "community": 89,
+      "community": 16,
       "norm_label": "_message_from_document_entry()"
     },
     {
@@ -10823,7 +10823,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_1",
-      "community": 16,
+      "community": 48,
       "norm_label": "json-backed local message log persistence for batch simulations."
     },
     {
@@ -10863,7 +10863,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_92",
-      "community": 16,
+      "community": 89,
       "norm_label": "build a deterministic version 1 log from collected local transport outboxes."
     },
     {
@@ -10883,7 +10883,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "aethermesh_core_message_log_rationale_154",
-      "community": 16,
+      "community": 89,
       "norm_label": "build a deterministic version 1 run-level local flow message log."
     },
     {
@@ -10923,7 +10923,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_messages",
-      "community": 48,
+      "community": 66,
       "norm_label": "messages.py"
     },
     {
@@ -10943,7 +10943,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "aethermesh_core_messages_meshmessage_post_init",
-      "community": 48,
+      "community": 66,
       "norm_label": ".__post_init__()"
     },
     {
@@ -10963,7 +10963,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "aethermesh_core_messages_require_supported_message_type",
-      "community": 48,
+      "community": 66,
       "norm_label": "_require_supported_message_type()"
     },
     {
@@ -10973,7 +10973,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "aethermesh_core_messages_require_non_empty_string",
-      "community": 48,
+      "community": 66,
       "norm_label": "_require_non_empty_string()"
     },
     {
@@ -10983,7 +10983,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "aethermesh_core_messages_validate_json_compatible",
-      "community": 48,
+      "community": 66,
       "norm_label": "_validate_json_compatible()"
     },
     {
@@ -11003,7 +11003,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_messages_rationale_1",
-      "community": 48,
+      "community": 66,
       "norm_label": "local mesh message envelopes for deterministic simulation output."
     },
     {
@@ -11063,7 +11063,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "aethermesh_core_models_nodeidentity_ephemeral",
-      "community": 111,
+      "community": 110,
       "norm_label": ".ephemeral()"
     },
     {
@@ -11073,7 +11073,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "aethermesh_core_models_job",
-      "community": 24,
+      "community": 0,
       "norm_label": "job"
     },
     {
@@ -11093,7 +11093,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "aethermesh_core_models_jobresult_to_dict",
-      "community": 3,
+      "community": 13,
       "norm_label": ".to_dict()"
     },
     {
@@ -11123,7 +11123,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_19",
-      "community": 111,
+      "community": 110,
       "norm_label": "create a caller-usable ephemeral identity for local demo runs."
     },
     {
@@ -11133,7 +11133,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_26",
-      "community": 24,
+      "community": 0,
       "norm_label": "a small in-memory job assigned to a local node."
     },
     {
@@ -11153,7 +11153,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "aethermesh_core_models_rationale_45",
-      "community": 3,
+      "community": 13,
       "norm_label": "serialize the result into a json-compatible dictionary."
     },
     {
@@ -11323,7 +11323,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry",
-      "community": 48,
+      "community": 32,
       "norm_label": "node_registry.py"
     },
     {
@@ -11453,7 +11453,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_node_registry_rationale_1",
-      "community": 48,
+      "community": 32,
       "norm_label": "deterministic local node registry for simulation roster state."
     },
     {
@@ -11553,7 +11553,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_inboxprocessresult",
-      "community": 110,
+      "community": 56,
       "norm_label": "inboxprocessresult"
     },
     {
@@ -11573,7 +11573,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_localnodeservice_init",
-      "community": 0,
+      "community": 109,
       "norm_label": ".__init__()"
     },
     {
@@ -11653,7 +11653,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "aethermesh_core_node_service_rationale_37",
-      "community": 110,
+      "community": 56,
       "norm_label": "structured result returned by one local inbox processing pass."
     },
     {
@@ -12183,7 +12183,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_release_update",
-      "community": 10,
+      "community": 30,
       "norm_label": "release_update.py"
     },
     {
@@ -12193,7 +12193,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_releaseupdateerror",
-      "community": 10,
+      "community": 30,
       "norm_label": "releaseupdateerror"
     },
     {
@@ -12213,7 +12213,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_releaseupdateplan",
-      "community": 10,
+      "community": 30,
       "norm_label": "releaseupdateplan"
     },
     {
@@ -12223,7 +12223,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_releaseupdateresult",
-      "community": 10,
+      "community": 30,
       "norm_label": "releaseupdateresult"
     },
     {
@@ -12233,7 +12233,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_releaseupdateresult_to_dict",
-      "community": 10,
+      "community": 30,
       "norm_label": ".to_dict()"
     },
     {
@@ -12243,7 +12243,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_build_update_plan",
-      "community": 10,
+      "community": 30,
       "norm_label": "build_update_plan()"
     },
     {
@@ -12253,7 +12253,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_update_from_latest_release",
-      "community": 10,
+      "community": 30,
       "norm_label": "update_from_latest_release()"
     },
     {
@@ -12263,7 +12263,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_release_checksum_text",
-      "community": 10,
+      "community": 30,
       "norm_label": "_release_checksum_text()"
     },
     {
@@ -12273,7 +12273,7 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_release_assets",
-      "community": 10,
+      "community": 30,
       "norm_label": "_release_assets()"
     },
     {
@@ -12283,7 +12283,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_find_asset",
-      "community": 10,
+      "community": 30,
       "norm_label": "_find_asset()"
     },
     {
@@ -12293,7 +12293,7 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_checksum_for_asset",
-      "community": 10,
+      "community": 30,
       "norm_label": "_checksum_for_asset()"
     },
     {
@@ -12303,7 +12303,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_string_field",
-      "community": 10,
+      "community": 30,
       "norm_label": "_string_field()"
     },
     {
@@ -12313,7 +12313,7 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_optional_string_field",
-      "community": 10,
+      "community": 30,
       "norm_label": "_optional_string_field()"
     },
     {
@@ -12323,7 +12323,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_fetch_json",
-      "community": 10,
+      "community": 30,
       "norm_label": "_fetch_json()"
     },
     {
@@ -12333,7 +12333,7 @@
       "source_location": "L190",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_fetch_bytes",
-      "community": 10,
+      "community": 30,
       "norm_label": "_fetch_bytes()"
     },
     {
@@ -12343,7 +12343,7 @@
       "source_location": "L199",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_install_wheel",
-      "community": 10,
+      "community": 30,
       "norm_label": "_install_wheel()"
     },
     {
@@ -12353,7 +12353,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_rationale_1",
-      "community": 10,
+      "community": 30,
       "norm_label": "install the newest aethermesh package from the latest github release."
     },
     {
@@ -12363,7 +12363,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "aethermesh_core_release_update_rationale_22",
-      "community": 10,
+      "community": 30,
       "norm_label": "raised when the latest release cannot be downloaded or installed."
     },
     {
@@ -12383,7 +12383,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "aethermesh_core_result_hash_result_hash",
-      "community": 96,
+      "community": 41,
       "norm_label": "result_hash()"
     },
     {
@@ -12393,7 +12393,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "aethermesh_core_result_hash_result_hash_from_fields",
-      "community": 96,
+      "community": 41,
       "norm_label": "result_hash_from_fields()"
     },
     {
@@ -12453,7 +12453,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "aethermesh_core_result_hash_rationale_17",
-      "community": 96,
+      "community": 41,
       "norm_label": "return the canonical lowercase sha-256 digest for a ``jobresult``.      the hash"
     },
     {
@@ -12463,7 +12463,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "aethermesh_core_result_hash_rationale_43",
-      "community": 96,
+      "community": 41,
       "norm_label": "hash the canonical result fields used by result messages and audits."
     },
     {
@@ -12533,7 +12533,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "aethermesh_core_runner_localrunner_run",
-      "community": 66,
+      "community": 0,
       "norm_label": ".run()"
     },
     {
@@ -12543,7 +12543,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "aethermesh_core_runner_localrunner_run_payload_builder",
-      "community": 66,
+      "community": 0,
       "norm_label": "._run_payload_builder()"
     },
     {
@@ -12553,7 +12553,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "aethermesh_core_runner_run_local_job",
-      "community": 66,
+      "community": 0,
       "norm_label": "run_local_job()"
     },
     {
@@ -12563,7 +12563,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "aethermesh_core_runner_run_in_local_process",
-      "community": 66,
+      "community": 0,
       "norm_label": "_run_in_local_process()"
     },
     {
@@ -12573,7 +12573,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "aethermesh_core_runner_stopped_result",
-      "community": 66,
+      "community": 0,
       "norm_label": "_stopped_result()"
     },
     {
@@ -12583,7 +12583,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "aethermesh_core_runner_build_text_stats_output",
-      "community": 66,
+      "community": 3,
       "norm_label": "build_text_stats_output()"
     },
     {
@@ -12593,7 +12593,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "aethermesh_core_runner_build_keyword_extract_output",
-      "community": 48,
+      "community": 14,
       "norm_label": "build_keyword_extract_output()"
     },
     {
@@ -12603,7 +12603,7 @@
       "source_location": "L249",
       "_origin": "ast",
       "id": "aethermesh_core_runner_build_text_embed_output",
-      "community": 48,
+      "community": 14,
       "norm_label": "build_text_embed_output()"
     },
     {
@@ -12623,7 +12623,7 @@
       "source_location": "L361",
       "_origin": "ast",
       "id": "aethermesh_core_runner_build_text_chunk_output",
-      "community": 48,
+      "community": 117,
       "norm_label": "build_text_chunk_output()"
     },
     {
@@ -12633,7 +12633,7 @@
       "source_location": "L404",
       "_origin": "ast",
       "id": "aethermesh_core_runner_preferred_text_chunk_split",
-      "community": 48,
+      "community": 117,
       "norm_label": "_preferred_text_chunk_split()"
     },
     {
@@ -12663,7 +12663,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_29",
-      "community": 66,
+      "community": 0,
       "norm_label": "run one local job and return a structured result."
     },
     {
@@ -12673,7 +12673,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_111",
-      "community": 66,
+      "community": 0,
       "norm_label": "run local work with optional, local-only operator safety controls.      without"
     },
     {
@@ -12683,7 +12683,7 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_175",
-      "community": 66,
+      "community": 3,
       "norm_label": "build deterministic text statistics for a local ``text_stats`` job."
     },
     {
@@ -12693,7 +12693,7 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_212",
-      "community": 48,
+      "community": 14,
       "norm_label": "build deterministic keyword counts for a local ``keyword_extract`` job."
     },
     {
@@ -12703,7 +12703,7 @@
       "source_location": "L250",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_250",
-      "community": 48,
+      "community": 14,
       "norm_label": "build deterministic prototype feature counts for a local ``text_embed`` job."
     },
     {
@@ -12723,7 +12723,7 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_362",
-      "community": 48,
+      "community": 117,
       "norm_label": "build stable character chunks for a local ``text_chunk`` job."
     },
     {
@@ -12733,7 +12733,7 @@
       "source_location": "L405",
       "_origin": "ast",
       "id": "aethermesh_core_runner_rationale_405",
-      "community": 48,
+      "community": 117,
       "norm_label": "return a deterministic split point no later than ``hard_end``."
     },
     {
@@ -13043,7 +13043,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service",
-      "community": 58,
+      "community": 5,
       "norm_label": "runtime_service.py"
     },
     {
@@ -13063,7 +13063,7 @@
       "source_location": "L145",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_validationreceiptnotfounderror",
-      "community": 53,
+      "community": 0,
       "norm_label": "validationreceiptnotfounderror"
     },
     {
@@ -13073,7 +13073,7 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_runtimepaths",
-      "community": 58,
+      "community": 5,
       "norm_label": "runtimepaths"
     },
     {
@@ -13083,7 +13083,7 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_runtimepaths_from_home",
-      "community": 58,
+      "community": 5,
       "norm_label": ".from_home()"
     },
     {
@@ -13103,7 +13103,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_init",
-      "community": 58,
+      "community": 5,
       "norm_label": ".__init__()"
     },
     {
@@ -13203,7 +13203,7 @@
       "source_location": "L336",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_list_capabilities",
-      "community": 58,
+      "community": 5,
       "norm_label": ".list_capabilities()"
     },
     {
@@ -13233,7 +13233,7 @@
       "source_location": "L480",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_capability_record_summary",
-      "community": 53,
+      "community": 58,
       "norm_label": "._capability_record_summary()"
     },
     {
@@ -13283,7 +13283,7 @@
       "source_location": "L731",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_list_jobs",
-      "community": 58,
+      "community": 5,
       "norm_label": ".list_jobs()"
     },
     {
@@ -13297,10 +13297,20 @@
       "norm_label": ".submit_local_job()"
     },
     {
+      "label": "._requested_local_capability()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L876",
+      "_origin": "ast",
+      "id": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability",
+      "community": 53,
+      "norm_label": "._requested_local_capability()"
+    },
+    {
       "label": ".get_local_job_status()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L861",
+      "source_location": "L914",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status",
       "community": 53,
@@ -13310,7 +13320,7 @@
       "label": ".inspect_local_audit_events()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L908",
+      "source_location": "L962",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events",
       "community": 53,
@@ -13320,7 +13330,7 @@
       "label": "._audit_events_for_manifest()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1018",
+      "source_location": "L1072",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_audit_events_for_manifest",
       "community": 53,
@@ -13330,7 +13340,7 @@
       "label": ".contribution_summary()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1118",
+      "source_location": "L1172",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary",
       "community": 53,
@@ -13340,7 +13350,7 @@
       "label": ".get_local_validation_receipt()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1144",
+      "source_location": "L1198",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
       "community": 53,
@@ -13350,7 +13360,7 @@
       "label": "._receipt_id_for_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1263",
+      "source_location": "L1317",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_receipt_id_for_job",
       "community": 53,
@@ -13360,7 +13370,7 @@
       "label": "._job_id_from_receipt_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1266",
+      "source_location": "L1320",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_job_id_from_receipt_id",
       "community": 53,
@@ -13370,7 +13380,7 @@
       "label": "._latest_validation_receipt_work_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1280",
+      "source_location": "L1334",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_latest_validation_receipt_work_id",
       "community": 53,
@@ -13380,7 +13390,7 @@
       "label": "._contribution_summary_item()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1297",
+      "source_location": "L1351",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary_item",
       "community": 53,
@@ -13390,7 +13400,7 @@
       "label": "._load_summary_document()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1426",
+      "source_location": "L1480",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_load_summary_document",
       "community": 53,
@@ -13400,7 +13410,7 @@
       "label": ".execute_submitted_local_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1438",
+      "source_location": "L1492",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job",
       "community": 53,
@@ -13410,7 +13420,7 @@
       "label": ".cancel_submitted_local_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1545",
+      "source_location": "L1599",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_cancel_submitted_local_job",
       "community": 53,
@@ -13420,7 +13430,7 @@
       "label": "._job_status_path()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1555",
+      "source_location": "L1609",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_job_status_path",
       "community": 53,
@@ -13430,7 +13440,7 @@
       "label": "._transition_local_job_state()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1558",
+      "source_location": "L1612",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_transition_local_job_state",
       "community": 53,
@@ -13440,7 +13450,7 @@
       "label": "._append_job_state_audit()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1595",
+      "source_location": "L1649",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_append_job_state_audit",
       "community": 53,
@@ -13450,7 +13460,7 @@
       "label": "._is_local_job_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1621",
+      "source_location": "L1675",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_job_id",
       "community": 53,
@@ -13460,7 +13470,7 @@
       "label": "._is_local_lineage_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1632",
+      "source_location": "L1686",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_lineage_id",
       "community": 53,
@@ -13470,7 +13480,7 @@
       "label": "._is_local_attribution_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1641",
+      "source_location": "L1695",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_is_local_attribution_id",
       "community": 53,
@@ -13480,7 +13490,7 @@
       "label": "._load_local_job_document()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1650",
+      "source_location": "L1704",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_load_local_job_document",
       "community": 53,
@@ -13490,7 +13500,7 @@
       "label": ".health()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1661",
+      "source_location": "L1715",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_health",
       "community": 58,
@@ -13500,7 +13510,7 @@
       "label": ".recent_logs()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1673",
+      "source_location": "L1727",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_recent_logs",
       "community": 13,
@@ -13510,17 +13520,17 @@
       "label": ".system_info()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1679",
+      "source_location": "L1733",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_system_info",
-      "community": 58,
+      "community": 5,
       "norm_label": ".system_info()"
     },
     {
       "label": "._default_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1692",
+      "source_location": "L1746",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_default_config",
       "community": 58,
@@ -13530,27 +13540,27 @@
       "label": "._write_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1712",
+      "source_location": "L1766",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_write_config",
-      "community": 53,
+      "community": 58,
       "norm_label": "._write_config()"
     },
     {
       "label": "._runtime_marker()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1718",
+      "source_location": "L1772",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_runtime_marker",
-      "community": 58,
+      "community": 5,
       "norm_label": "._runtime_marker()"
     },
     {
       "label": "._append_event()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1734",
+      "source_location": "L1788",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_noderuntimeservice_append_event",
       "community": 53,
@@ -13560,17 +13570,17 @@
       "label": "_default_home()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1741",
+      "source_location": "L1795",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_default_home",
-      "community": 58,
+      "community": 5,
       "norm_label": "_default_home()"
     },
     {
       "label": "_merge_config()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1748",
+      "source_location": "L1802",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_merge_config",
       "community": 58,
@@ -13580,57 +13590,57 @@
       "label": "_capability_manifest_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1760",
+      "source_location": "L1814",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_manifest_id",
-      "community": 58,
+      "community": 5,
       "norm_label": "_capability_manifest_id()"
     },
     {
       "label": "_capability_provenance()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1766",
+      "source_location": "L1820",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_provenance",
-      "community": 58,
+      "community": 5,
       "norm_label": "_capability_provenance()"
     },
     {
       "label": "_availability()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1787",
+      "source_location": "L1841",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_availability",
-      "community": 58,
+      "community": 5,
       "norm_label": "_availability()"
     },
     {
       "label": "_metadata_capability_availability()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1798",
+      "source_location": "L1852",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_metadata_capability_availability",
-      "community": 58,
+      "community": 5,
       "norm_label": "_metadata_capability_availability()"
     },
     {
       "label": "_capability_check_payload()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1809",
+      "source_location": "L1863",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_capability_check_payload",
-      "community": 58,
+      "community": 5,
       "norm_label": "_capability_check_payload()"
     },
     {
       "label": "_config_node_id()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1819",
+      "source_location": "L1873",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_node_id",
       "community": 58,
@@ -13640,27 +13650,27 @@
       "label": "_config_enabled_work_types()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1827",
+      "source_location": "L1881",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_enabled_work_types",
-      "community": 58,
+      "community": 5,
       "norm_label": "_config_enabled_work_types()"
     },
     {
       "label": "_config_capability_resource_hints()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1843",
+      "source_location": "L1897",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_capability_resource_hints",
-      "community": 58,
+      "community": 5,
       "norm_label": "_config_capability_resource_hints()"
     },
     {
       "label": "_config_identity_persistence_enabled()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1890",
+      "source_location": "L1944",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_identity_persistence_enabled",
       "community": 58,
@@ -13670,7 +13680,7 @@
       "label": "_config_identity_path()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1904",
+      "source_location": "L1958",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_identity_path",
       "community": 58,
@@ -13680,7 +13690,7 @@
       "label": "_config_node_name()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1919",
+      "source_location": "L1973",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_node_name",
       "community": 58,
@@ -13690,7 +13700,7 @@
       "label": "_config_api_host()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1927",
+      "source_location": "L1981",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_api_host",
       "community": 58,
@@ -13700,7 +13710,7 @@
       "label": "_config_api_port()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1935",
+      "source_location": "L1989",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_config_api_port",
       "community": 58,
@@ -13710,17 +13720,17 @@
       "label": "_pid_is_alive()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1943",
+      "source_location": "L1997",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_pid_is_alive",
-      "community": 58,
+      "community": 5,
       "norm_label": "_pid_is_alive()"
     },
     {
       "label": "_provenance_matches_job()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1953",
+      "source_location": "L2007",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_provenance_matches_job",
       "community": 53,
@@ -13730,7 +13740,7 @@
       "label": "_safe_local_artifact_ref()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1970",
+      "source_location": "L2024",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_safe_local_artifact_ref",
       "community": 53,
@@ -13740,17 +13750,27 @@
       "label": "_safe_local_identifier()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1985",
+      "source_location": "L2039",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_safe_local_identifier",
       "community": 53,
       "norm_label": "_safe_local_identifier()"
     },
     {
+      "label": "_rejection_log_capability()",
+      "file_type": "code",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L2052",
+      "_origin": "ast",
+      "id": "aethermesh_core_runtime_service_rejection_log_capability",
+      "community": 5,
+      "norm_label": "_rejection_log_capability()"
+    },
+    {
       "label": "_local_safety_metadata()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1998",
+      "source_location": "L2062",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_local_safety_metadata",
       "community": 53,
@@ -13760,7 +13780,7 @@
       "label": "_validated_input_payload()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2034",
+      "source_location": "L2098",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_validated_input_payload",
       "community": 53,
@@ -13770,7 +13790,7 @@
       "label": "_requester_identity()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2081",
+      "source_location": "L2145",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_requester_identity",
       "community": 53,
@@ -13780,7 +13800,7 @@
       "label": "_package_version()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2109",
+      "source_location": "L2173",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_package_version",
       "community": 58,
@@ -13790,10 +13810,10 @@
       "label": "_memory_total_bytes()",
       "file_type": "code",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2113",
+      "source_location": "L2177",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_memory_total_bytes",
-      "community": 58,
+      "community": 5,
       "norm_label": "_memory_total_bytes()"
     },
     {
@@ -13803,7 +13823,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_1",
-      "community": 58,
+      "community": 5,
       "norm_label": "reusable local runtime service for aethermesh frontends.  the cli, local api, an"
     },
     {
@@ -13823,7 +13843,7 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_146",
-      "community": 53,
+      "community": 0,
       "norm_label": "raised when a requested local validation receipt is not stored."
     },
     {
@@ -13833,7 +13853,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_151",
-      "community": 58,
+      "community": 5,
       "norm_label": "filesystem paths used by one local aethermesh runtime."
     },
     {
@@ -13903,7 +13923,7 @@
       "source_location": "L337",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_337",
-      "community": 58,
+      "community": 5,
       "norm_label": "return the versioned local capability response used by ``/capabilities``."
     },
     {
@@ -13963,7 +13983,7 @@
       "source_location": "L732",
       "_origin": "ast",
       "id": "aethermesh_core_runtime_service_rationale_732",
-      "community": 58,
+      "community": 5,
       "norm_label": "return local job buckets without faking work."
     },
     {
@@ -13977,12 +13997,22 @@
       "norm_label": "accept one local job request without dispatching or validating it."
     },
     {
+      "label": "Resolve one job capability against this node's local capability manifest.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L879",
+      "_origin": "ast",
+      "id": "aethermesh_core_runtime_service_rationale_879",
+      "community": 53,
+      "norm_label": "resolve one job capability against this node's local capability manifest."
+    },
+    {
       "label": "Read one submission and its optional local execution evidence.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L862",
+      "source_location": "L915",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_862",
+      "id": "aethermesh_core_runtime_service_rationale_915",
       "community": 53,
       "norm_label": "read one submission and its optional local execution evidence."
     },
@@ -13990,9 +14020,9 @@
       "label": "Read derived local job audit events without mutating stored evidence.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L922",
+      "source_location": "L976",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_922",
+      "id": "aethermesh_core_runtime_service_rationale_976",
       "community": 53,
       "norm_label": "read derived local job audit events without mutating stored evidence."
     },
@@ -14000,9 +14030,9 @@
       "label": "Read local job evidence into a deterministic, non-mutating summary.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1119",
+      "source_location": "L1173",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1119",
+      "id": "aethermesh_core_runtime_service_rationale_1173",
       "community": 53,
       "norm_label": "read local job evidence into a deterministic, non-mutating summary."
     },
@@ -14010,9 +14040,9 @@
       "label": "Return one stored local receipt without creating validation evidence.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1151",
+      "source_location": "L1205",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1151",
+      "id": "aethermesh_core_runtime_service_rationale_1205",
       "community": 53,
       "norm_label": "return one stored local receipt without creating validation evidence."
     },
@@ -14020,9 +14050,9 @@
       "label": "Run a queued local submission; this is not a daemon or remote boundary.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1441",
+      "source_location": "L1495",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1441",
+      "id": "aethermesh_core_runtime_service_rationale_1495",
       "community": 53,
       "norm_label": "run a queued local submission; this is not a daemon or remote boundary."
     },
@@ -14030,9 +14060,9 @@
       "label": "Cancel an unstarted local job without altering its manifest evidence.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1546",
+      "source_location": "L1600",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1546",
+      "id": "aethermesh_core_runtime_service_rationale_1600",
       "community": 53,
       "norm_label": "cancel an unstarted local job without altering its manifest evidence."
     },
@@ -14040,9 +14070,9 @@
       "label": "Persist one allowed transition and append a local audit entry first.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1561",
+      "source_location": "L1615",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1561",
+      "id": "aethermesh_core_runtime_service_rationale_1615",
       "community": 53,
       "norm_label": "persist one allowed transition and append a local audit entry first."
     },
@@ -14050,39 +14080,39 @@
       "label": "Return the stable local manifest identity for one registered capability.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1761",
+      "source_location": "L1815",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1761",
-      "community": 58,
+      "id": "aethermesh_core_runtime_service_rationale_1815",
+      "community": 5,
       "norm_label": "return the stable local manifest identity for one registered capability."
     },
     {
       "label": "Build shared local provenance and optional advisory metadata.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1771",
+      "source_location": "L1825",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1771",
-      "community": 58,
+      "id": "aethermesh_core_runtime_service_rationale_1825",
+      "community": 5,
       "norm_label": "build shared local provenance and optional advisory metadata."
     },
     {
       "label": "Load optional non-economic, advisory hints for registered capabilities.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1846",
+      "source_location": "L1900",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1846",
-      "community": 58,
+      "id": "aethermesh_core_runtime_service_rationale_1900",
+      "community": 5,
       "norm_label": "load optional non-economic, advisory hints for registered capabilities."
     },
     {
       "label": "Return whether local lineage and attribution retain one job identity.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1959",
+      "source_location": "L2013",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1959",
+      "id": "aethermesh_core_runtime_service_rationale_2013",
       "community": 53,
       "norm_label": "return whether local lineage and attribution retain one job identity."
     },
@@ -14090,19 +14120,29 @@
       "label": "Allow readable local identifiers while rejecting path and URI-shaped values.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1986",
+      "source_location": "L2040",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1986",
+      "id": "aethermesh_core_runtime_service_rationale_2040",
       "community": 53,
       "norm_label": "allow readable local identifiers while rejecting path and uri-shaped values."
+    },
+    {
+      "label": "Serialize a bounded submitted capability for local rejection diagnostics.",
+      "file_type": "rationale",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L2053",
+      "_origin": "ast",
+      "id": "aethermesh_core_runtime_service_rationale_2053",
+      "community": 5,
+      "norm_label": "serialize a bounded submitted capability for local rejection diagnostics."
     },
     {
       "label": "Validate optional local-only execution controls stored with one job.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1999",
+      "source_location": "L2063",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_1999",
+      "id": "aethermesh_core_runtime_service_rationale_2063",
       "community": 53,
       "norm_label": "validate optional local-only execution controls stored with one job."
     },
@@ -14110,9 +14150,9 @@
       "label": "Validate and hash the bounded, canonical local work input object.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2035",
+      "source_location": "L2099",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_2035",
+      "id": "aethermesh_core_runtime_service_rationale_2099",
       "community": 53,
       "norm_label": "validate and hash the bounded, canonical local work input object."
     },
@@ -14120,9 +14160,9 @@
       "label": "Validate optional request-origin identity without conflating provenance roles.",
       "file_type": "rationale",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2082",
+      "source_location": "L2146",
       "_origin": "ast",
-      "id": "aethermesh_core_runtime_service_rationale_2082",
+      "id": "aethermesh_core_runtime_service_rationale_2146",
       "community": 53,
       "norm_label": "validate optional request-origin identity without conflating provenance roles."
     },
@@ -14133,7 +14173,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler",
-      "community": 48,
+      "community": 32,
       "norm_label": "scheduler.py"
     },
     {
@@ -14143,7 +14183,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_noavailablenodeserror",
-      "community": 123,
+      "community": 22,
       "norm_label": "noavailablenodeserror"
     },
     {
@@ -14193,7 +14233,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_scheduledjob",
-      "community": 123,
+      "community": 109,
       "norm_label": "scheduledjob"
     },
     {
@@ -14243,7 +14283,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_localscheduler_assign_jobs",
-      "community": 123,
+      "community": 22,
       "norm_label": ".assign_jobs()"
     },
     {
@@ -14263,7 +14303,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_coerce_job",
-      "community": 123,
+      "community": 109,
       "norm_label": "_coerce_job()"
     },
     {
@@ -14283,7 +14323,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_1",
-      "community": 48,
+      "community": 32,
       "norm_label": "deterministic local scheduler for the aethermesh prototype."
     },
     {
@@ -14293,7 +14333,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_11",
-      "community": 123,
+      "community": 22,
       "norm_label": "raised when local job assignment has jobs but no available nodes."
     },
     {
@@ -14323,7 +14363,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_52",
-      "community": 123,
+      "community": 109,
       "norm_label": "minimal scheduler view of a job."
     },
     {
@@ -14363,7 +14403,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "aethermesh_core_scheduler_rationale_78",
-      "community": 123,
+      "community": 22,
       "norm_label": "assign jobs to available capable nodes with deterministic fair ordering."
     },
     {
@@ -14383,7 +14423,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult",
-      "community": 109,
+      "community": 24,
       "norm_label": "localsimulationresult"
     },
     {
@@ -14393,7 +14433,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_localsimulationresult_to_dict",
-      "community": 109,
+      "community": 13,
       "norm_label": ".to_dict()"
     },
     {
@@ -14423,7 +14463,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_summary_to_simulation_dict",
-      "community": 48,
+      "community": 56,
       "norm_label": "_summary_to_simulation_dict()"
     },
     {
@@ -14433,7 +14473,7 @@
       "source_location": "L217",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_validation_summary",
-      "community": 109,
+      "community": 24,
       "norm_label": "_validation_summary()"
     },
     {
@@ -14453,7 +14493,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_31",
-      "community": 109,
+      "community": 24,
       "norm_label": "structured, deterministic output from a local multi-node simulation."
     },
     {
@@ -14463,7 +14503,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "aethermesh_core_simulation_rationale_45",
-      "community": 109,
+      "community": 13,
       "norm_label": "serialize the simulation result into a json-compatible dictionary.          vali"
     },
     {
@@ -14493,7 +14533,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "aethermesh_core_validation_validationresult",
-      "community": 109,
+      "community": 24,
       "norm_label": "validationresult"
     },
     {
@@ -14503,7 +14543,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "aethermesh_core_validation_validationresult_to_dict",
-      "community": 109,
+      "community": 13,
       "norm_label": ".to_dict()"
     },
     {
@@ -14523,7 +14563,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "aethermesh_core_validation_invalid",
-      "community": 109,
+      "community": 3,
       "norm_label": "_invalid()"
     },
     {
@@ -14543,7 +14583,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_20",
-      "community": 109,
+      "community": 24,
       "norm_label": "deterministic outcome from validating one reported job result."
     },
     {
@@ -14553,7 +14593,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "aethermesh_core_validation_rationale_28",
-      "community": 109,
+      "community": 13,
       "norm_label": "serialize the validation result into a json-compatible dictionary."
     },
     {
@@ -14873,7 +14913,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "tests_test_api_errors_apierrortests",
-      "community": 68,
+      "community": 101,
       "norm_label": "apierrortests"
     },
     {
@@ -14883,7 +14923,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_test_api_errors_apierrortests_test_failures_have_safe_structured_errors_and_local_diagnostics",
-      "community": 68,
+      "community": 101,
       "norm_label": ".test_failures_have_safe_structured_errors_and_local_diagnostics()"
     },
     {
@@ -14893,7 +14933,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "tests_test_api_errors_apierrortests_test_invalid_api_inputs_fail_closed_without_local_artifact_mutation",
-      "community": 68,
+      "community": 101,
       "norm_label": ".test_invalid_api_inputs_fail_closed_without_local_artifact_mutation()"
     },
     {
@@ -14923,7 +14963,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_test_api_schema_contract_apischemacontracttests_test_documented_submission_example_and_provenance_routes",
-      "community": 68,
+      "community": 101,
       "norm_label": ".test_documented_submission_example_and_provenance_routes()"
     },
     {
@@ -14960,7 +15000,7 @@
       "label": ".test_endpoint_returns_events_and_clear_filter_errors()",
       "file_type": "code",
       "source_file": "tests/test_audit_inspection.py",
-      "source_location": "L84",
+      "source_location": "L85",
       "_origin": "ast",
       "id": "tests_test_audit_inspection_auditinspectiontests_test_endpoint_returns_events_and_clear_filter_errors",
       "community": 101,
@@ -15343,7 +15383,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_cli",
-      "community": 10,
+      "community": 110,
       "norm_label": "test_cli.py"
     },
     {
@@ -16383,7 +16423,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_dispatch",
-      "community": 103,
+      "community": 32,
       "norm_label": "test_dispatch.py"
     },
     {
@@ -16543,7 +16583,7 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "tests_test_flow_audit_flowaudittests_test_cross_artifact_assertion_error_messages_name_each_field",
-      "community": 32,
+      "community": 14,
       "norm_label": ".test_cross_artifact_assertion_error_messages_name_each_field()"
     },
     {
@@ -16593,7 +16633,7 @@
       "source_location": "L540",
       "_origin": "ast",
       "id": "tests_test_flow_audit_sample_message",
-      "community": 89,
+      "community": 14,
       "norm_label": "_sample_message()"
     },
     {
@@ -16953,7 +16993,7 @@
       "source_location": "L296",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_node_name_wordlists_exist_and_are_valid",
-      "community": 37,
+      "community": 114,
       "norm_label": ".test_node_name_wordlists_exist_and_are_valid()"
     },
     {
@@ -17333,7 +17373,7 @@
       "source_location": "L1341",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_physical_mac_filter_keeps_only_ethernet_and_wifi_hardware",
-      "community": 54,
+      "community": 37,
       "norm_label": ".test_physical_mac_filter_keeps_only_ethernet_and_wifi_hardware()"
     },
     {
@@ -17343,7 +17383,7 @@
       "source_location": "L1419",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_hardware_collectors_cover_linux_windows_and_unknown_os",
-      "community": 11,
+      "community": 37,
       "norm_label": ".test_hardware_collectors_cover_linux_windows_and_unknown_os()"
     },
     {
@@ -17533,7 +17573,7 @@
       "source_location": "L2182",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_default_goos_maps_common_python_platforms",
-      "community": 11,
+      "community": 118,
       "norm_label": ".test_default_goos_maps_common_python_platforms()"
     },
     {
@@ -17543,7 +17583,7 @@
       "source_location": "L2195",
       "_origin": "ast",
       "id": "tests_test_identity_identitypersistencetests_test_default_command_runner_trims_stdout",
-      "community": 54,
+      "community": 37,
       "norm_label": ".test_default_command_runner_trims_stdout()"
     },
     {
@@ -17823,7 +17863,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_job_manifest",
-      "community": 48,
+      "community": 20,
       "norm_label": "test_job_manifest.py"
     },
     {
@@ -18223,7 +18263,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_completed_result_adds_positive_contribution_units",
-      "community": 56,
+      "community": 41,
       "norm_label": ".test_completed_result_adds_positive_contribution_units()"
     },
     {
@@ -18303,7 +18343,7 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_record_persists_validation_metadata_when_supplied",
-      "community": 56,
+      "community": 41,
       "norm_label": ".test_record_persists_validation_metadata_when_supplied()"
     },
     {
@@ -18363,7 +18403,7 @@
       "source_location": "L352",
       "_origin": "ast",
       "id": "tests_test_ledger_contributionledgertests_test_save_ledger_document_uses_stable_json_and_cleans_temp_files",
-      "community": 56,
+      "community": 41,
       "norm_label": ".test_save_ledger_document_uses_stable_json_and_cleans_temp_files()"
     },
     {
@@ -19283,7 +19323,7 @@
       "source_location": "L399",
       "_origin": "ast",
       "id": "tests_test_local_validation_localvalidationreplaytests_test_validation_helpers_preserve_message_context_and_payload_shape",
-      "community": 5,
+      "community": 2,
       "norm_label": ".test_validation_helpers_preserve_message_context_and_payload_shape()"
     },
     {
@@ -19483,7 +19523,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_write_message_log_uses_stable_json_and_creates_parents",
-      "community": 16,
+      "community": 2,
       "norm_label": ".test_write_message_log_uses_stable_json_and_creates_parents()"
     },
     {
@@ -19513,7 +19553,7 @@
       "source_location": "L220",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order",
-      "community": 16,
+      "community": 89,
       "norm_label": ".test_build_flow_message_log_document_merges_dispatch_then_emitted_by_node_order()"
     },
     {
@@ -19523,7 +19563,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_build_flow_message_log_document_treats_missing_node_as_empty",
-      "community": 16,
+      "community": 89,
       "norm_label": ".test_build_flow_message_log_document_treats_missing_node_as_empty()"
     },
     {
@@ -19573,7 +19613,7 @@
       "source_location": "L470",
       "_origin": "ast",
       "id": "tests_test_message_log_messagelogtests_test_write_message_log_failure_preserves_existing_path",
-      "community": 16,
+      "community": 2,
       "norm_label": ".test_write_message_log_failure_preserves_existing_path()"
     },
     {
@@ -19773,7 +19813,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection",
-      "community": 68,
+      "community": 111,
       "norm_label": "test_model_manifest_inspection.py"
     },
     {
@@ -19783,7 +19823,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection_modelmanifestinspectiontests",
-      "community": 68,
+      "community": 111,
       "norm_label": "modelmanifestinspectiontests"
     },
     {
@@ -19793,7 +19833,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection_modelmanifestinspectiontests_test_empty_endpoint_is_honest_and_local_only",
-      "community": 68,
+      "community": 111,
       "norm_label": ".test_empty_endpoint_is_honest_and_local_only()"
     },
     {
@@ -19803,7 +19843,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection_modelmanifestinspectiontests_test_valid_manifest_is_redacted_and_read_only",
-      "community": 68,
+      "community": 111,
       "norm_label": ".test_valid_manifest_is_redacted_and_read_only()"
     },
     {
@@ -19813,7 +19853,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection_modelmanifestinspectiontests_test_malformed_and_invalid_manifests_degrade_without_leaking_paths",
-      "community": 68,
+      "community": 111,
       "norm_label": ".test_malformed_and_invalid_manifests_degrade_without_leaking_paths()"
     },
     {
@@ -19823,7 +19863,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "tests_test_model_manifest_inspection_modelmanifestinspectiontests_test_untrusted_nested_values_and_symlinks_are_not_exposed",
-      "community": 68,
+      "community": 111,
       "norm_label": ".test_untrusted_nested_values_and_symlinks_are_not_exposed()"
     },
     {
@@ -19833,7 +19873,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_models",
-      "community": 111,
+      "community": 110,
       "norm_label": "test_models.py"
     },
     {
@@ -19843,7 +19883,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_test_models_nodeidentitytests",
-      "community": 111,
+      "community": 110,
       "norm_label": "nodeidentitytests"
     },
     {
@@ -19853,7 +19893,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_test_models_nodeidentitytests_test_ephemeral_node_identity_keeps_node_prefix_shape",
-      "community": 111,
+      "community": 110,
       "norm_label": ".test_ephemeral_node_identity_keeps_node_prefix_shape()"
     },
     {
@@ -20023,7 +20063,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_node_registry",
-      "community": 48,
+      "community": 32,
       "norm_label": "test_node_registry.py"
     },
     {
@@ -20113,7 +20153,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_node_service",
-      "community": 107,
+      "community": 48,
       "norm_label": "test_node_service.py"
     },
     {
@@ -20123,7 +20163,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests",
-      "community": 107,
+      "community": 43,
       "norm_label": "localnodeservicetests"
     },
     {
@@ -20133,7 +20173,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_echo_assignment_is_processed_from_inbox",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_successful_echo_assignment_is_processed_from_inbox()"
     },
     {
@@ -20143,7 +20183,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_text_stats_assignment_is_processed_from_inbox",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_successful_text_stats_assignment_is_processed_from_inbox()"
     },
     {
@@ -20153,7 +20193,7 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_text_embed_assignment_is_processed_from_inbox",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_successful_text_embed_assignment_is_processed_from_inbox()"
     },
     {
@@ -20163,7 +20203,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_successful_text_retrieve_assignment_is_processed_from_inbox",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_successful_text_retrieve_assignment_is_processed_from_inbox()"
     },
     {
@@ -20173,7 +20213,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_malformed_assignment_is_failed_invalid_and_zero_contribution",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_malformed_assignment_is_failed_invalid_and_zero_contribution()"
     },
     {
@@ -20183,7 +20223,7 @@
       "source_location": "L238",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_unsupported_job_type_is_reported_with_zero_contribution",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_unsupported_job_type_is_reported_with_zero_contribution()"
     },
     {
@@ -20193,7 +20233,7 @@
       "source_location": "L263",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_assignment_for_another_node_is_not_executed_by_this_node",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_assignment_for_another_node_is_not_executed_by_this_node()"
     },
     {
@@ -20203,7 +20243,7 @@
       "source_location": "L302",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_repeated_process_inbox_does_not_double_record_contribution",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_repeated_process_inbox_does_not_double_record_contribution()"
     },
     {
@@ -20213,7 +20253,7 @@
       "source_location": "L331",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_seeded_processed_message_ids_skip_assignment_without_contribution",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_seeded_processed_message_ids_skip_assignment_without_contribution()"
     },
     {
@@ -20223,7 +20263,7 @@
       "source_location": "L372",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_assignment_payload_fallbacks_are_explicit",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_assignment_payload_fallbacks_are_explicit()"
     },
     {
@@ -20233,7 +20273,7 @@
       "source_location": "L395",
       "_origin": "ast",
       "id": "tests_test_node_service_localnodeservicetests_test_contribution_is_recorded_only_after_validation",
-      "community": 107,
+      "community": 43,
       "norm_label": ".test_contribution_is_recorded_only_after_validation()"
     },
     {
@@ -20243,7 +20283,7 @@
       "source_location": "L431",
       "_origin": "ast",
       "id": "tests_test_node_service_service",
-      "community": 107,
+      "community": 43,
       "norm_label": "_service()"
     },
     {
@@ -20253,7 +20293,7 @@
       "source_location": "L455",
       "_origin": "ast",
       "id": "tests_test_node_service_assignment",
-      "community": 107,
+      "community": 43,
       "norm_label": "_assignment()"
     },
     {
@@ -20563,7 +20603,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges",
-      "community": 48,
+      "community": 32,
       "norm_label": "test_quality_gate_edges.py"
     },
     {
@@ -20573,7 +20613,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests",
-      "community": 89,
+      "community": 56,
       "norm_label": "qualitygateedgecoveragetests"
     },
     {
@@ -20583,7 +20623,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_pr_size_excludes_generated_static_data_from_reviewability_counts",
-      "community": 89,
+      "community": 56,
       "norm_label": ".test_pr_size_excludes_generated_static_data_from_reviewability_counts()"
     },
     {
@@ -20593,7 +20633,7 @@
       "source_location": "L112",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_remove_temp_helpers_ignore_missing_files",
-      "community": 89,
+      "community": 56,
       "norm_label": ".test_remove_temp_helpers_ignore_missing_files()"
     },
     {
@@ -20613,7 +20653,7 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_message_mapping_rejects_bad_entries",
-      "community": 89,
+      "community": 16,
       "norm_label": ".test_message_mapping_rejects_bad_entries()"
     },
     {
@@ -20623,7 +20663,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_manifest_and_identity_os_errors_are_reported",
-      "community": 89,
+      "community": 54,
       "norm_label": ".test_manifest_and_identity_os_errors_are_reported()"
     },
     {
@@ -20643,7 +20683,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_cli_defensive_branches",
-      "community": 110,
+      "community": 56,
       "norm_label": ".test_cli_defensive_branches()"
     },
     {
@@ -20663,7 +20703,7 @@
       "source_location": "L231",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_peer_registry_defensive_branches",
-      "community": 89,
+      "community": 56,
       "norm_label": ".test_peer_registry_defensive_branches()"
     },
     {
@@ -20673,7 +20713,7 @@
       "source_location": "L283",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_receipt_defensive_branches",
-      "community": 32,
+      "community": 98,
       "norm_label": ".test_receipt_defensive_branches()"
     },
     {
@@ -20683,7 +20723,7 @@
       "source_location": "L390",
       "_origin": "ast",
       "id": "tests_test_quality_gate_edges_qualitygateedgecoveragetests_test_flow_audit_edge_helpers",
-      "community": 32,
+      "community": 14,
       "norm_label": ".test_flow_audit_edge_helpers()"
     },
     {
@@ -21113,7 +21153,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests",
-      "community": 96,
+      "community": 41,
       "norm_label": "resulthashtests"
     },
     {
@@ -21123,7 +21163,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests_setup",
-      "community": 96,
+      "community": 41,
       "norm_label": ".setup()"
     },
     {
@@ -21173,7 +21213,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests_test_hash_is_stable_for_semantically_identical_dict_output",
-      "community": 96,
+      "community": 41,
       "norm_label": ".test_hash_is_stable_for_semantically_identical_dict_output()"
     },
     {
@@ -21183,7 +21223,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests_test_hash_matches_canonical_failed_result_digest",
-      "community": 96,
+      "community": 41,
       "norm_label": ".test_hash_matches_canonical_failed_result_digest()"
     },
     {
@@ -21193,7 +21233,7 @@
       "source_location": "L116",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests_test_hash_uses_only_result_identity_and_content_fields",
-      "community": 96,
+      "community": 41,
       "norm_label": ".test_hash_uses_only_result_identity_and_content_fields()"
     },
     {
@@ -21203,7 +21243,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "tests_test_result_hash_resulthashtests_test_non_json_compatible_values_raise_clear_error",
-      "community": 96,
+      "community": 41,
       "norm_label": ".test_non_json_compatible_values_raise_clear_error()"
     },
     {
@@ -21493,7 +21533,7 @@
       "source_location": "L674",
       "_origin": "ast",
       "id": "tests_test_runner_localsafetyrunnertests",
-      "community": 66,
+      "community": 0,
       "norm_label": "localsafetyrunnertests"
     },
     {
@@ -21503,7 +21543,7 @@
       "source_location": "L675",
       "_origin": "ast",
       "id": "tests_test_runner_localsafetyrunnertests_test_declared_timeout_can_complete_and_process_helper_reports_result",
-      "community": 66,
+      "community": 0,
       "norm_label": ".test_declared_timeout_can_complete_and_process_helper_reports_result()"
     },
     {
@@ -21513,7 +21553,7 @@
       "source_location": "L687",
       "_origin": "ast",
       "id": "tests_test_runner_localsafetyrunnertests_test_timeout_runner_records_missing_child_result_as_failed",
-      "community": 66,
+      "community": 0,
       "norm_label": ".test_timeout_runner_records_missing_child_result_as_failed()"
     },
     {
@@ -21660,7 +21700,7 @@
       "label": ".test_supplied_local_job_id_persists_and_rejects_overwrite()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L138",
+      "source_location": "L140",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_supplied_local_job_id_persists_and_rejects_overwrite",
       "community": 68,
@@ -21670,7 +21710,7 @@
       "label": ".test_local_job_states_are_auditable_and_terminal()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L210",
+      "source_location": "L213",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_states_are_auditable_and_terminal",
       "community": 68,
@@ -21680,7 +21720,7 @@
       "label": ".test_local_job_requester_identity_preserves_request_origin()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L278",
+      "source_location": "L282",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_requester_identity_preserves_request_origin",
       "community": 68,
@@ -21690,7 +21730,7 @@
       "label": ".test_local_job_submission_rejects_invalid_request_without_manifest()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L365",
+      "source_location": "L370",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_submission_rejects_invalid_request_without_manifest",
       "community": 68,
@@ -21700,17 +21740,27 @@
       "label": ".test_malformed_job_admission_preserves_local_evidence()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L391",
+      "source_location": "L397",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_malformed_job_admission_preserves_local_evidence",
       "community": 68,
       "norm_label": ".test_malformed_job_admission_preserves_local_evidence()"
     },
     {
+      "label": ".test_job_submission_requires_enabled_local_manifest_capability()",
+      "file_type": "code",
+      "source_file": "tests/test_runtime_service_api_cli.py",
+      "source_location": "L490",
+      "_origin": "ast",
+      "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_job_submission_requires_enabled_local_manifest_capability",
+      "community": 68,
+      "norm_label": ".test_job_submission_requires_enabled_local_manifest_capability()"
+    },
+    {
       "label": ".test_input_payload_is_hashed_bounded_and_receipt_linked()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L483",
+      "source_location": "L584",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_input_payload_is_hashed_bounded_and_receipt_linked",
       "community": 68,
@@ -21720,7 +21770,7 @@
       "label": ".test_local_job_submission_api_reports_local_validation_state()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L542",
+      "source_location": "L644",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_submission_api_reports_local_validation_state",
       "community": 68,
@@ -21730,7 +21780,7 @@
       "label": ".test_local_job_status_tracks_queued_succeeded_failed_and_not_found()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L583",
+      "source_location": "L687",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_status_tracks_queued_succeeded_failed_and_not_found",
       "community": 68,
@@ -21740,7 +21790,7 @@
       "label": ".test_local_job_status_api_returns_success_and_stable_not_found()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L683",
+      "source_location": "L788",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_local_job_status_api_returns_success_and_stable_not_found",
       "community": 68,
@@ -21750,7 +21800,7 @@
       "label": ".test_validation_receipt_api_reads_stored_evidence_and_rejects_bad_lookups()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L728",
+      "source_location": "L834",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_validation_receipt_api_reads_stored_evidence_and_rejects_bad_lookups",
       "community": 68,
@@ -21760,7 +21810,7 @@
       "label": ".test_contribution_summary_is_deterministic_and_honest_about_evidence()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L856",
+      "source_location": "L963",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_contribution_summary_is_deterministic_and_honest_about_evidence",
       "community": 68,
@@ -21770,7 +21820,7 @@
       "label": ".test_contribution_summary_rejects_mismatched_evidence()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L986",
+      "source_location": "L1094",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_contribution_summary_rejects_mismatched_evidence",
       "community": 68,
@@ -21780,7 +21830,7 @@
       "label": ".test_init_creates_reusable_local_node_data_and_status()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1123",
+      "source_location": "L1232",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_init_creates_reusable_local_node_data_and_status",
       "community": 68,
@@ -21790,7 +21840,7 @@
       "label": ".test_identity_persistence_only_when_configured()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1237",
+      "source_location": "L1346",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_identity_persistence_only_when_configured",
       "community": 68,
@@ -21800,7 +21850,7 @@
       "label": ".test_persisted_identity_manifest_survives_restart_without_rewrite()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1286",
+      "source_location": "L1395",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_persisted_identity_manifest_survives_restart_without_rewrite",
       "community": 68,
@@ -21810,7 +21860,7 @@
       "label": ".test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1391",
+      "source_location": "L1500",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_peers_jobs_and_health_are_honest_when_node_has_no_runtime_work",
       "community": 68,
@@ -21820,7 +21870,7 @@
       "label": ".test_capability_listing_uses_configured_work_type_enablement()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1464",
+      "source_location": "L1573",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_listing_uses_configured_work_type_enablement",
       "community": 68,
@@ -21830,7 +21880,7 @@
       "label": ".test_capability_availability_is_local_validation_gated_and_deterministic()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1492",
+      "source_location": "L1601",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_availability_is_local_validation_gated_and_deterministic",
       "community": 68,
@@ -21840,7 +21890,7 @@
       "label": ".test_capability_resource_hints_are_advisory_and_preserve_provenance()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1531",
+      "source_location": "L1640",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_are_advisory_and_preserve_provenance",
       "community": 68,
@@ -21850,27 +21900,27 @@
       "label": ".test_capability_resource_hints_reject_economic_metadata()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1574",
+      "source_location": "L1683",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_reject_economic_metadata",
-      "community": 58,
+      "community": 68,
       "norm_label": ".test_capability_resource_hints_reject_economic_metadata()"
     },
     {
       "label": ".test_capability_resource_hints_validate_registered_text_metadata()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1603",
+      "source_location": "L1712",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_resource_hints_validate_registered_text_metadata",
-      "community": 58,
+      "community": 68,
       "norm_label": ".test_capability_resource_hints_validate_registered_text_metadata()"
     },
     {
       "label": ".test_capability_availability_reports_local_failure_and_capacity()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1615",
+      "source_location": "L1724",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_capability_availability_reports_local_failure_and_capacity",
       "community": 68,
@@ -21880,7 +21930,7 @@
       "label": ".test_existing_config_is_merged_and_logs_are_limited()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1679",
+      "source_location": "L1788",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_existing_config_is_merged_and_logs_are_limited",
       "community": 68,
@@ -21890,7 +21940,7 @@
       "label": ".test_runtime_markers_cover_started_stopped_and_bad_marker_states()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1716",
+      "source_location": "L1825",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_runtime_markers_cover_started_stopped_and_bad_marker_states",
       "community": 68,
@@ -21900,7 +21950,7 @@
       "label": ".test_config_errors_and_defaults_are_explicit()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1767",
+      "source_location": "L1876",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_config_errors_and_defaults_are_explicit",
       "community": 58,
@@ -21910,17 +21960,17 @@
       "label": ".test_environment_and_platform_fallback_helpers()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1846",
+      "source_location": "L1955",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_runtimeservicetests_test_environment_and_platform_fallback_helpers",
-      "community": 58,
+      "community": 5,
       "norm_label": ".test_environment_and_platform_fallback_helpers()"
     },
     {
       "label": "ApiTests",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1904",
+      "source_location": "L2013",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests",
       "community": 101,
@@ -21930,17 +21980,17 @@
       "label": ".test_local_api_routes_return_service_status()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L1905",
+      "source_location": "L2014",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests_test_local_api_routes_return_service_status",
-      "community": 68,
+      "community": 101,
       "norm_label": ".test_local_api_routes_return_service_status()"
     },
     {
       "label": ".test_lifespan_uses_same_runtime_service()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2021",
+      "source_location": "L2130",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_apitests_test_lifespan_uses_same_runtime_service",
       "community": 101,
@@ -21950,117 +22000,117 @@
       "label": "AppCliTests",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2033",
+      "source_location": "L2142",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests",
-      "community": 10,
+      "community": 57,
       "norm_label": "appclitests"
     },
     {
       "label": ".test_cli_smoke_commands_use_runtime_service()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2034",
+      "source_location": "L2143",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_smoke_commands_use_runtime_service",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_smoke_commands_use_runtime_service()"
     },
     {
       "label": ".test_cli_node_start_dry_run_reports_localhost_binding()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2061",
+      "source_location": "L2170",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_dry_run_reports_localhost_binding",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_node_start_dry_run_reports_localhost_binding()"
     },
     {
       "label": ".test_cli_node_start_stop_delegate_to_background_manager()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2070",
+      "source_location": "L2179",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_stop_delegate_to_background_manager",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_node_start_stop_delegate_to_background_manager()"
     },
     {
       "label": ".test_cli_node_start_reuses_existing_local_api()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2101",
+      "source_location": "L2210",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_node_start_reuses_existing_local_api",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_node_start_reuses_existing_local_api()"
     },
     {
       "label": ".test_cli_ui_reuses_existing_local_api_without_runtime_mutation()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2116",
+      "source_location": "L2225",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_ui_reuses_existing_local_api_without_runtime_mutation",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_ui_reuses_existing_local_api_without_runtime_mutation()"
     },
     {
       "label": ".test_background_control_helper_platforms_and_errors()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2163",
+      "source_location": "L2272",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_background_control_helper_platforms_and_errors",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_background_control_helper_platforms_and_errors()"
     },
     {
       "label": ".test_local_api_health_detection_handles_false_paths()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2199",
+      "source_location": "L2308",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_local_api_health_detection_handles_false_paths",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_local_api_health_detection_handles_false_paths()"
     },
     {
       "label": ".test_cli_update_installs_latest_release_and_reports_errors()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2256",
+      "source_location": "L2365",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_update_installs_latest_release_and_reports_errors",
-      "community": 10,
+      "community": 30,
       "norm_label": ".test_cli_update_installs_latest_release_and_reports_errors()"
     },
     {
       "label": ".test_cli_warning_and_table_branches_are_exercised()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2305",
+      "source_location": "L2414",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_cli_warning_and_table_branches_are_exercised",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_cli_warning_and_table_branches_are_exercised()"
     },
     {
       "label": ".test_serve_uses_uvicorn_and_reports_missing_ui_dependencies()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2413",
+      "source_location": "L2522",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_appclitests_test_serve_uses_uvicorn_and_reports_missing_ui_dependencies",
-      "community": 10,
+      "community": 57,
       "norm_label": ".test_serve_uses_uvicorn_and_reports_missing_ui_dependencies()"
     },
     {
       "label": "LocalSafetyMetadataTests",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2522",
+      "source_location": "L2631",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_localsafetymetadatatests",
       "community": 101,
@@ -22070,7 +22120,7 @@
       "label": ".test_timeout_and_cancellation_record_failed_local_evidence()",
       "file_type": "code",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L2523",
+      "source_location": "L2632",
       "_origin": "ast",
       "id": "tests_test_runtime_service_api_cli_localsafetymetadatatests_test_timeout_and_cancellation_record_failed_local_evidence",
       "community": 101,
@@ -22080,9 +22130,9 @@
       "label": "Reject malformed local submissions before they can create durable evidence.",
       "file_type": "rationale",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L392",
+      "source_location": "L398",
       "_origin": "ast",
-      "id": "tests_test_runtime_service_api_cli_rationale_392",
+      "id": "tests_test_runtime_service_api_cli_rationale_398",
       "community": 68,
       "norm_label": "reject malformed local submissions before they can create durable evidence."
     },
@@ -22093,7 +22143,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_scheduler",
-      "community": 48,
+      "community": 32,
       "norm_label": "test_scheduler.py"
     },
     {
@@ -24173,7 +24223,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_local_node_identity",
-      "community": 91,
+      "community": 78,
       "norm_label": "local-node-identity.md"
     },
     {
@@ -24600,7 +24650,7 @@
       "label": "Local Job Status v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L66",
+      "source_location": "L67",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_job_status_v1",
       "community": 38,
@@ -24610,7 +24660,7 @@
       "label": "Local Validation Receipt v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L106",
+      "source_location": "L108",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_validation_receipt_v1",
       "community": 38,
@@ -24620,7 +24670,7 @@
       "label": "Local Contribution Lookup v1",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L132",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_local_contribution_lookup_v1",
       "community": 38,
@@ -24630,7 +24680,7 @@
       "label": "Validation receipt",
       "file_type": "document",
       "source_file": "docs/phase-1-api-schema-contract.md",
-      "source_location": "L161",
+      "source_location": "L163",
       "_origin": "ast",
       "id": "docs_phase_1_api_schema_contract_validation_receipt",
       "community": 38,
@@ -76068,6 +76118,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L2046",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service",
+      "target": "aethermesh_core_runtime_service_rejection_log_capability"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L1829",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -76373,6 +76433,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_noderuntimeservice_load_local_job_document",
+      "target": "aethermesh_core_runtime_service_runtimeserviceerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L880",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability",
       "target": "aethermesh_core_runtime_service_runtimeserviceerror"
     },
     {
@@ -76968,6 +77039,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L876",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service_noderuntimeservice",
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L799",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -77462,6 +77543,17 @@
       "source_location": "L304",
       "weight": 1.0,
       "source": "tests_test_runtime_service_api_cli_runtimeservicetests_test_input_payload_is_hashed_bounded_and_receipt_linked",
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_from_home"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tests/test_runtime_service_api_cli.py",
+      "source_location": "L493",
+      "weight": 1.0,
+      "source": "tests_test_runtime_service_api_cli_runtimeservicetests_test_job_submission_requires_enabled_local_manifest_capability",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_from_home"
     },
     {
@@ -78164,6 +78256,17 @@
       "target": "aethermesh_core_runtime_service_noderuntimeservice_work_capability_availability"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L893",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability",
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_list_capabilities"
+    },
+    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
@@ -78403,11 +78506,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L766",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service_noderuntimeservice_submit_local_job",
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
       "source_location": "L841",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "aethermesh_core_runtime_service_noderuntimeservice_submit_local_job",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_transition_local_job_state"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L773",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "aethermesh_core_runtime_service_noderuntimeservice_submit_local_job",
+      "target": "aethermesh_core_runtime_service_rejection_log_capability"
     },
     {
       "relation": "calls",
@@ -78464,6 +78589,16 @@
       "target": "aethermesh_core_runtime_service_noderuntimeservice_submit_local_job"
     },
     {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L879",
+      "weight": 1.0,
+      "source": "aethermesh_core_runtime_service_rationale_879",
+      "target": "aethermesh_core_runtime_service_noderuntimeservice_requested_local_capability",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -78511,9 +78646,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L862",
+      "source_location": "L915",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_862",
+      "source": "aethermesh_core_runtime_service_rationale_915",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_job_status",
       "confidence_score": 1.0
     },
@@ -78576,9 +78711,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L922",
+      "source_location": "L976",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_922",
+      "source": "aethermesh_core_runtime_service_rationale_976",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_inspect_local_audit_events",
       "confidence_score": 1.0
     },
@@ -78641,9 +78776,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1119",
+      "source_location": "L1173",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1119",
+      "source": "aethermesh_core_runtime_service_rationale_1173",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_contribution_summary",
       "confidence_score": 1.0
     },
@@ -78739,9 +78874,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1151",
+      "source_location": "L1205",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1151",
+      "source": "aethermesh_core_runtime_service_rationale_1205",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_get_local_validation_receipt",
       "confidence_score": 1.0
     },
@@ -78859,9 +78994,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1441",
+      "source_location": "L1495",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1441",
+      "source": "aethermesh_core_runtime_service_rationale_1495",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_execute_submitted_local_job",
       "confidence_score": 1.0
     },
@@ -78891,9 +79026,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1546",
+      "source_location": "L1600",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1546",
+      "source": "aethermesh_core_runtime_service_rationale_1600",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_cancel_submitted_local_job",
       "confidence_score": 1.0
     },
@@ -78934,9 +79069,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1561",
+      "source_location": "L1615",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1561",
+      "source": "aethermesh_core_runtime_service_rationale_1615",
       "target": "aethermesh_core_runtime_service_noderuntimeservice_transition_local_job_state",
       "confidence_score": 1.0
     },
@@ -79054,9 +79189,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1761",
+      "source_location": "L1815",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1761",
+      "source": "aethermesh_core_runtime_service_rationale_1815",
       "target": "aethermesh_core_runtime_service_capability_manifest_id",
       "confidence_score": 1.0
     },
@@ -79064,9 +79199,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1771",
+      "source_location": "L1825",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1771",
+      "source": "aethermesh_core_runtime_service_rationale_1825",
       "target": "aethermesh_core_runtime_service_capability_provenance",
       "confidence_score": 1.0
     },
@@ -79107,9 +79242,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1846",
+      "source_location": "L1900",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1846",
+      "source": "aethermesh_core_runtime_service_rationale_1900",
       "target": "aethermesh_core_runtime_service_config_capability_resource_hints",
       "confidence_score": 1.0
     },
@@ -79216,9 +79351,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1959",
+      "source_location": "L2013",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1959",
+      "source": "aethermesh_core_runtime_service_rationale_2013",
       "target": "aethermesh_core_runtime_service_provenance_matches_job",
       "confidence_score": 1.0
     },
@@ -79226,9 +79361,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1986",
+      "source_location": "L2040",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1986",
+      "source": "aethermesh_core_runtime_service_rationale_2040",
       "target": "aethermesh_core_runtime_service_safe_local_identifier",
       "confidence_score": 1.0
     },
@@ -79247,9 +79382,19 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L1999",
+      "source_location": "L2053",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_1999",
+      "source": "aethermesh_core_runtime_service_rationale_2053",
+      "target": "aethermesh_core_runtime_service_rejection_log_capability",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/aethermesh_core/runtime_service.py",
+      "source_location": "L2063",
+      "weight": 1.0,
+      "source": "aethermesh_core_runtime_service_rationale_2063",
       "target": "aethermesh_core_runtime_service_local_safety_metadata",
       "confidence_score": 1.0
     },
@@ -79257,9 +79402,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2035",
+      "source_location": "L2099",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_2035",
+      "source": "aethermesh_core_runtime_service_rationale_2099",
       "target": "aethermesh_core_runtime_service_validated_input_payload",
       "confidence_score": 1.0
     },
@@ -79267,9 +79412,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/aethermesh_core/runtime_service.py",
-      "source_location": "L2082",
+      "source_location": "L2146",
       "weight": 1.0,
-      "source": "aethermesh_core_runtime_service_rationale_2082",
+      "source": "aethermesh_core_runtime_service_rationale_2146",
       "target": "aethermesh_core_runtime_service_requester_identity",
       "confidence_score": 1.0
     },
@@ -91464,6 +91609,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_runtime_service_api_cli.py",
+      "source_location": "L490",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_runtime_service_api_cli_runtimeservicetests",
+      "target": "tests_test_runtime_service_api_cli_runtimeservicetests_test_job_submission_requires_enabled_local_manifest_capability"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_runtime_service_api_cli.py",
       "source_location": "L112",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -91594,11 +91749,11 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "tests/test_runtime_service_api_cli.py",
-      "source_location": "L392",
+      "source_location": "L398",
       "weight": 1.0,
-      "source": "tests_test_runtime_service_api_cli_rationale_392",
-      "target": "tests_test_runtime_service_api_cli_runtimeservicetests_test_malformed_job_admission_preserves_local_evidence",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "tests_test_runtime_service_api_cli_rationale_398",
+      "target": "tests_test_runtime_service_api_cli_runtimeservicetests_test_malformed_job_admission_preserves_local_evidence"
     },
     {
       "relation": "method",
@@ -94504,5 +94659,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9ab024f4633f6004850962880d88c434f08e8f7c"
+  "built_at_commit": "b056c3d94b39e4070766ee86c4cb0b83dceb80c3"
 }

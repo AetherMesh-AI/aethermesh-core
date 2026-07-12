@@ -42,6 +42,7 @@ class ApiSchemaContractTests(unittest.TestCase):
                     "status",
                     "manifest_ref",
                     "creator_node_id",
+                    "requested_capability",
                     "requester_identity",
                     "worker_node_id",
                     "lineage",
