@@ -17,13 +17,13 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
 | `metadata.supported_input_formats`, `metadata.supported_output_formats` | Non-empty lists of non-empty strings. |
-| `metadata.supported_input_schemas` | Non-empty list of local schema references. Each entry has `schema_ref`, Semantic Version `schema_version`, and content-addressed `sha256:` `schema_digest`. The referenced JSON Schema must be readable below the local schema root, use draft 2020-12, and declare the same `x-aethermesh-schema-version`. |
+| `metadata.supported_input_schemas`, `metadata.supported_output_schemas` | Non-empty lists of local schema references. Each entry has `schema_ref`, schema document `$id` as `schema_id`, Semantic Version `schema_version`, and content-addressed `sha256:` `schema_digest`. The referenced JSON Schema must be readable below the local schema root, use draft 2020-12, and declare matching `$id` and `x-aethermesh-schema-version` values. |
 | `metadata.constraints` | Object describing local limits or assumptions. |
 | `metadata.local_execution_requirements` | Non-empty list of non-empty strings. |
 | `manifest_refs` | Non-empty list of safe local relative references backing the claim. |
 | `validation.status` | One of `unvalidated`, `passed`, `failed`. |
 | `validation.receipt_ids` | List of stable local receipt IDs. |
-| `validation.receipt_evidence` | Required list aligned with `receipt_ids`; each receipt records its ID, advertised capability name and version, creator node ID, and source manifest reference. |
+| `validation.receipt_evidence` | Required list aligned with `receipt_ids`; each receipt records its ID, advertised capability name and version, creator node ID, source manifest reference, and supported input/output schema references. |
 | `lineage.source_manifest_ref` | Safe local relative reference for the source manifest. |
 | `contribution_attribution.creator_node_id` | Required and exactly equal to top-level `creator_node_id`. |
 | `contribution_attribution.maintainer_node_id` | Stable local identifier. |
@@ -63,10 +63,17 @@ Use Semantic Versioning for the capability interface or behavior only: increment
     "supported_input_formats": ["application/json"],
     "supported_input_schemas": [{
       "schema_ref": "examples/schemas/local-echo-input.schema.json",
+      "schema_id": "local-echo-input",
       "schema_version": "1.0.0",
       "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790"
     }],
     "supported_output_formats": ["application/json"],
+    "supported_output_schemas": [{
+      "schema_ref": "examples/schemas/local-echo-output.schema.json",
+      "schema_id": "local-echo-output",
+      "schema_version": "1.0.0",
+      "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073"
+    }],
     "constraints": {"network_mode": "local-only-no-p2p"},
     "local_execution_requirements": ["python>=3.11"]
   },
@@ -82,8 +89,15 @@ Use Semantic Versioning for the capability interface or behavior only: increment
       "manifest_ref": "manifests/local-echo-worker.json",
       "input_schema": {
         "schema_ref": "examples/schemas/local-echo-input.schema.json",
+        "schema_id": "local-echo-input",
         "schema_version": "1.0.0",
         "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790"
+      },
+      "output_schema": {
+        "schema_ref": "examples/schemas/local-echo-output.schema.json",
+        "schema_id": "local-echo-output",
+        "schema_version": "1.0.0",
+        "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073"
       }
     }],
     "last_validated_at": "2026-07-11T12:05:00Z",

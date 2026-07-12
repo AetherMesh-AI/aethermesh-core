@@ -27,11 +27,20 @@ class CapabilityRecordTests(unittest.TestCase):
                 "supported_input_schemas": [
                     {
                         "schema_ref": "examples/schemas/local-echo-input.schema.json",
+                        "schema_id": "local-echo-input",
                         "schema_version": "1.0.0",
                         "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790",
                     }
                 ],
                 "supported_output_formats": ["application/json"],
+                "supported_output_schemas": [
+                    {
+                        "schema_ref": "examples/schemas/local-echo-output.schema.json",
+                        "schema_id": "local-echo-output",
+                        "schema_version": "1.0.0",
+                        "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073",
+                    }
+                ],
                 "constraints": {"network_mode": "local-only-no-p2p"},
                 "local_execution_requirements": ["python>=3.11"],
             },
@@ -48,8 +57,15 @@ class CapabilityRecordTests(unittest.TestCase):
                         "manifest_ref": "manifests/local-echo-worker.json",
                         "input_schema": {
                             "schema_ref": "examples/schemas/local-echo-input.schema.json",
+                            "schema_id": "local-echo-input",
                             "schema_version": "1.0.0",
                             "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790",
+                        },
+                        "output_schema": {
+                            "schema_ref": "examples/schemas/local-echo-output.schema.json",
+                            "schema_id": "local-echo-output",
+                            "schema_version": "1.0.0",
+                            "schema_digest": "sha256:13c661c1f26b58c74a0c5c165b602408e9f8e408b217b171aff2798fe2ccc073",
                         },
                     }
                 ],
@@ -384,6 +400,44 @@ class CapabilityRecordTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(CapabilityRecordError, "supported input schema"):
+            self.validate(record)
+
+    def test_rejects_missing_unknown_or_drifting_output_schemas(self) -> None:
+        cases = (
+            (
+                lambda record: record["metadata"].pop("supported_output_schemas"),
+                "supported_output_schemas",
+            ),
+            (
+                lambda record: record["metadata"]["supported_output_schemas"][0].update(
+                    schema_ref="examples/schemas/unknown.schema.json"
+                ),
+                "readable local schema",
+            ),
+            (
+                lambda record: record["metadata"]["supported_output_schemas"][0].update(
+                    schema_id="other-output"
+                ),
+                "schema ID",
+            ),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                record = copy.deepcopy(self.record)
+                mutate(record)
+                with self.assertRaisesRegex(CapabilityRecordError, expected):
+                    self.validate(record)
+
+    def test_rejects_receipt_with_different_output_schema_reference(self) -> None:
+        record = copy.deepcopy(self.record)
+        record["validation"]["receipt_evidence"][0]["output_schema"] = {
+            "schema_ref": "examples/schemas/other.schema.json",
+            "schema_id": "other-output",
+            "schema_version": "1.0.0",
+            "schema_digest": "sha256:" + "0" * 64,
+        }
+
+        with self.assertRaisesRegex(CapabilityRecordError, "supported output schema"):
             self.validate(record)
 
 
