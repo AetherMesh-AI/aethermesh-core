@@ -1,0 +1,8 @@
+{
+  "job_type": "echo",
+  "payload": {"message": "schema example"},
+  "creator_node_id": "creator-local-example",
+  "requested_validation_mode": "deterministic-local",
+  "lineage_parent_refs": ["data/prior-work.json"],
+  "attribution_metadata": {"source": "phase-1-schema-example"}
+}

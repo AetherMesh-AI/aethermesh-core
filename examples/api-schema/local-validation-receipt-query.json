@@ -1,0 +1,15 @@
+{
+  "work_id": "local-job-generated-by-submission-example",
+  "response": {
+    "receipt_id": "local-validation-receipt-local-job-generated-by-submission-example",
+    "work_id": "local-job-generated-by-submission-example",
+    "creator_node_id": "creator-local-example",
+    "manifest_ref": "data/job-submissions/local-job-generated-by-submission-example.json",
+    "lineage_parent_ids": ["data/prior-work.json"],
+    "validation_status": "passed",
+    "validator_identity": "worker-local-example",
+    "contribution_attribution": {"creator_node_id": "creator-local-example"},
+    "evidence": {"receipt_ref": "data/job-validation-receipts/local-job-generated-by-submission-example.json"},
+    "validation_scope": "local-only-not-consensus"
+  }
+}

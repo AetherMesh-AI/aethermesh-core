@@ -1,0 +1,42 @@
+{
+  "contract_version": "1.0.0",
+  "compatibility_policy": "Additive optional fields are compatible. Removing, renaming, changing a field type, or making an optional field required is breaking and requires a migration note plus updated examples in this directory.",
+  "scope": "Local-only Phase 1 API. Routes not listed as a domain contract are dashboard/status routes whose generated FastAPI OpenAPI document is the published contract.",
+  "published_openapi_route": "/openapi.json",
+  "operations": {
+    "local_node_startup": {
+      "boundary": "start_local_node_runtime(runtime_dir, reset_creator_identity=False)",
+      "request_required": ["runtime_dir"],
+      "response_required": ["node_id", "creator_node_id", "manifest_path", "manifest_hash", "validation_receipt_path", "lineage_path", "validation_result", "network_mode"],
+      "schema_version_field": null,
+      "notes": "A persisted creator_node_id, startup manifest, validation receipt, and lineage reference are required startup evidence. This is a local Python/CLI boundary, not an HTTP registration route."
+    },
+    "submit_local_job": {
+      "route": "POST /api/jobs",
+      "request_required": ["job_type", "payload", "creator_node_id", "requested_validation_mode"],
+      "request_optional": ["lineage_parent_refs", "attribution_metadata"],
+      "response_required": ["job_id", "status", "manifest_ref", "next_validation_expectation", "network_mode"],
+      "manifest_required": ["version", "manifest_type", "job", "creator_node_id", "requested_validation_mode", "lineage", "contribution_attribution"],
+      "schema_version_field": "version",
+      "notes": "creator_node_id is required. Optional lineage_parent_refs and attribution_metadata are preserved as required lineage and contribution_attribution manifest objects."
+    },
+    "local_validation_receipt": {
+      "route": "GET /api/validation-receipts",
+      "query_one_of": ["receipt_id", "work_id", "latest=true"],
+      "response_required": ["receipt_id", "work_id", "creator_node_id", "manifest_ref", "lineage_parent_ids", "validation_status", "validator_identity", "contribution_attribution", "evidence", "validation_scope"],
+      "schema_version_field": "version",
+      "notes": "This read-only route records no result. The local execution helper creates the receipt; it must retain creator, manifest, lineage, validation, and attribution evidence."
+    },
+    "contribution_lookup": {
+      "route": "GET /api/contributions",
+      "response_required": ["network_mode", "summary_status", "accepted_work_count", "non_accepted_work_count", "items"],
+      "item_required": ["work_item_id", "creator_node_id", "contributing_node_id", "manifest_ref", "validation_receipt_ref", "lineage_links", "timestamps", "acceptance_status"],
+      "schema_version_field": null,
+      "notes": "Only validation-accepted work may be reported as accepted contribution; this is not a reward or balance API."
+    }
+  },
+  "route_inventory": [
+    "GET /health", "GET /status", "GET /api/status", "GET /version", "GET /node", "GET /api/node", "GET /peers", "GET /api/peers", "GET /api/jobs", "POST /api/jobs", "GET /api/jobs/{job_id}", "GET /api/contributions", "GET /api/validation-receipts", "GET /api/audit-events", "GET /capabilities", "GET /api/capabilities", "GET /api/model-manifests", "GET /api/package", "GET /api/network", "GET /logs", "GET /api/logs", "GET /api/events", "POST /shutdown", "POST /restart", "GET /"
+  ],
+  "migration_notes": []
+}

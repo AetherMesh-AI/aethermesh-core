@@ -1,0 +1,13 @@
+{
+  "runtime_dir": "local-runtime",
+  "response": {
+    "node_id": "local-node-example",
+    "creator_node_id": "local-node-example",
+    "manifest_path": "manifests/local-node-manifest.json",
+    "manifest_hash": "sha256:example",
+    "validation_receipt_path": "receipts/startup-validation-example.json",
+    "lineage_path": "lineage/startup-lineage-example.json",
+    "validation_result": "passed",
+    "network_mode": "local-only-no-p2p"
+  }
+}
