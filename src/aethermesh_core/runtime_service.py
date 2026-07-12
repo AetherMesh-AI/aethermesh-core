@@ -749,7 +749,7 @@ class NodeRuntimeService:
         }
 
     def submit_local_job(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Accept one local job request without dispatching or validating it."""
+        """Validate and queue one local job request without dispatching it."""
 
         if not isinstance(request, dict):
             raise RuntimeServiceError("job submission must be a JSON object")
@@ -2163,17 +2163,20 @@ def _attribution_metadata(value: object) -> dict[str, Any]:
             f"provenance fields: {', '.join(reserved)}"
         )
     try:
-        encoded = json.dumps(
+        canonical = json.dumps(
             value,
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=False,
             allow_nan=False,
-        ).encode("utf-8")
+        )
+        if json.loads(canonical) != value:
+            raise ValueError("canonical JSON does not preserve the metadata")
     except (TypeError, ValueError, RecursionError) as exc:
         raise RuntimeServiceError(
             "job submission attribution_metadata must contain JSON-compatible data"
         ) from exc
+    encoded = canonical.encode("utf-8")
     if len(encoded) > MAX_LOCAL_ATTRIBUTION_METADATA_BYTES:
         raise RuntimeServiceError(
             "job submission attribution_metadata exceeds the 4096-byte local limit"

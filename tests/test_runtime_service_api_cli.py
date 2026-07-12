@@ -471,6 +471,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     "reserved provenance fields: creator_node_id",
                 ),
                 (
+                    "attribution must preserve JSON object keys",
+                    {**valid_request, "attribution_metadata": {1: "not-json-key"}},
+                    "JSON-compatible data",
+                ),
+                (
                     "oversized attribution metadata",
                     {
                         **valid_request,
