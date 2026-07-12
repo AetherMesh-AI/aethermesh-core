@@ -800,28 +800,68 @@
     "semantic_hash": ""
   },
   "examples/job-results/local-echo-failed.json": {
-    "mtime": 1783863576.6174004,
+    "mtime": 1783864614.8547747,
     "ast_hash": "c4f89ef155c9425165cf1864e5d52371",
     "semantic_hash": ""
   },
   "examples/job-results/local-echo-success.json": {
-    "mtime": 1783863576.6440594,
+    "mtime": 1783864614.8551807,
     "ast_hash": "648317e7b5a6824ab134652b08726e46",
     "semantic_hash": ""
   },
   "src/aethermesh_core/job_result_schema.py": {
-    "mtime": 1783863576.7949018,
-    "ast_hash": "0bd58121d970a280a9f45e7aae0e2d87",
+    "mtime": 1783864614.8711178,
+    "ast_hash": "1ba96e0ee1a13f977b1bfbdd5aef1785",
     "semantic_hash": ""
   },
   "tests/test_job_result_schema.py": {
-    "mtime": 1783863607.705857,
-    "ast_hash": "5dc8b89f64699aa70a115f4271d184d7",
+    "mtime": 1783864614.871323,
+    "ast_hash": "17dff70bbd12465e3b25ad7388a394a4",
     "semantic_hash": ""
   },
   "docs/phase-1-job-result-schema.md": {
-    "mtime": 1783863607.697837,
+    "mtime": 1783864614.8544934,
     "ast_hash": "ff6606d0a492ed4b28b9120e1a0ccdec",
+    "semantic_hash": ""
+  },
+  "examples/job-failures/manifest-mismatch.json": {
+    "mtime": 1783864759.6665692,
+    "ast_hash": "eee956ae852b2e03cb6dff4d7b39607f",
+    "semantic_hash": ""
+  },
+  "examples/job-failures/rejected-contribution.json": {
+    "mtime": 1783864759.6507404,
+    "ast_hash": "9a7a4edf6b020217f6cbfd4aeff333eb",
+    "semantic_hash": ""
+  },
+  "examples/job-failures/task-crash.json": {
+    "mtime": 1783864759.672041,
+    "ast_hash": "9d50d4ac9911477c0be9c7de76d63485",
+    "semantic_hash": ""
+  },
+  "examples/job-failures/timeout.json": {
+    "mtime": 1783864759.6757264,
+    "ast_hash": "50a2fc924e28249f4aaed4fed216ae6e",
+    "semantic_hash": ""
+  },
+  "examples/job-failures/validation-failure.json": {
+    "mtime": 1783864759.6806786,
+    "ast_hash": "d71145a9ccb64f37a51759630a3a5ae1",
+    "semantic_hash": ""
+  },
+  "src/aethermesh_core/job_failure_schema.py": {
+    "mtime": 1783864965.3174129,
+    "ast_hash": "d92374dcf9e71dcdb4176e114f11148d",
+    "semantic_hash": ""
+  },
+  "tests/test_job_failure_schema.py": {
+    "mtime": 1783864965.3173835,
+    "ast_hash": "59081a0e4dc6ceaebfb1f89c3976fbce",
+    "semantic_hash": ""
+  },
+  "docs/phase-1-job-failure-schema.md": {
+    "mtime": 1783864791.277258,
+    "ast_hash": "94bfab68e1d2033f6406018bea524fd5",
     "semantic_hash": ""
   }
 }

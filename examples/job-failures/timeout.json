@@ -1,0 +1,8 @@
+{
+  "schema_version": 1, "failure_id": "failure-timeout-001", "job_id": "job-003", "task_id": "task-003", "creator_node_id": "node.creator", "executing_node_id": "node.worker", "observed_at": "2026-07-12T14:02:00.000Z",
+  "failure_type": "timeout", "failure_stage": "execution", "retryable": true, "severity": "warning", "human_summary": "Task exceeded its local execution limit.",
+  "details": {"exit_code": null, "signal": 15, "timeout_ms": 30000, "validation_error": null, "missing_input": null, "manifest_mismatch": null, "receipt_mismatch": null, "environment_issue": null},
+  "links": {"job_manifest_hash": "sha256:job003", "input_manifest_hash": "sha256:input003", "output_manifest_hash": null, "validation_receipt_ids": [], "lineage_parent_ids": []},
+  "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-003", "accepted_work_amount": 0, "rejection_reason": "task timed out"},
+  "evidence": {"local_log_paths": ["logs/job-003.timeout"], "content_hashes": [], "validation_command_refs": [], "observed_at": ["2026-07-12T14:02:00.000Z"]}
+}

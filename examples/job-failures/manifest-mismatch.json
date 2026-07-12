@@ -1,0 +1,8 @@
+{
+  "schema_version": 1, "failure_id": "failure-manifest-001", "job_id": "job-004", "task_id": null, "creator_node_id": "node.creator", "executing_node_id": "node.worker", "observed_at": "2026-07-12T14:03:00.000Z",
+  "failure_type": "manifest_mismatch", "failure_stage": "input", "retryable": false, "severity": "critical", "human_summary": "Resolved input did not match its declared manifest.",
+  "details": {"exit_code": null, "signal": null, "timeout_ms": null, "validation_error": null, "missing_input": null, "manifest_mismatch": "declared and observed input hashes differ", "receipt_mismatch": null, "environment_issue": null},
+  "links": {"job_manifest_hash": "sha256:job004", "input_manifest_hash": "sha256:input004", "output_manifest_hash": null, "validation_receipt_ids": ["receipt-004"], "lineage_parent_ids": ["job-parent-004"]},
+  "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-004", "accepted_work_amount": 0, "rejection_reason": "input integrity check failed"},
+  "evidence": {"local_log_paths": [], "content_hashes": ["sha256:observed-input004"], "validation_command_refs": ["manifest-check-004"], "observed_at": ["2026-07-12T14:03:00.000Z"]}
+}

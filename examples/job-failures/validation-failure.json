@@ -1,0 +1,8 @@
+{
+  "schema_version": 1, "failure_id": "failure-validation-001", "job_id": "job-002", "task_id": "task-002", "creator_node_id": "node.creator", "executing_node_id": "node.worker", "observed_at": "2026-07-12T14:01:00.000Z",
+  "failure_type": "validation_failure", "failure_stage": "validation", "retryable": false, "severity": "error", "human_summary": "Output failed deterministic validation.",
+  "details": {"exit_code": 0, "signal": null, "timeout_ms": null, "validation_error": "expected hash did not match", "missing_input": null, "manifest_mismatch": null, "receipt_mismatch": null, "environment_issue": null},
+  "links": {"job_manifest_hash": "sha256:job002", "input_manifest_hash": "sha256:input002", "output_manifest_hash": "sha256:output002", "validation_receipt_ids": ["receipt-002"], "lineage_parent_ids": ["task-parent-002"]},
+  "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-002", "accepted_work_amount": 0, "rejection_reason": "validation failed"},
+  "evidence": {"local_log_paths": [], "content_hashes": ["sha256:receipt002"], "validation_command_refs": ["validator-command-002"], "observed_at": ["2026-07-12T14:01:00.000Z"]}
+}

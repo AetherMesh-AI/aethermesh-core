@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "failure_id": "failure-crash-001",
+  "job_id": "job-001",
+  "task_id": "task-001",
+  "creator_node_id": "node.creator",
+  "executing_node_id": "node.worker",
+  "observed_at": "2026-07-12T14:00:00.000Z",
+  "failure_type": "task_crash",
+  "failure_stage": "execution",
+  "retryable": true,
+  "severity": "error",
+  "human_summary": "Worker process exited before producing output.",
+  "details": {"exit_code": 1, "signal": null, "timeout_ms": null, "validation_error": null, "missing_input": null, "manifest_mismatch": null, "receipt_mismatch": null, "environment_issue": null},
+  "links": {"job_manifest_hash": "sha256:job001", "input_manifest_hash": "sha256:input001", "output_manifest_hash": null, "validation_receipt_ids": [], "lineage_parent_ids": ["job-parent-001"]},
+  "attribution": {"attempted_contributor_node_id": "node.worker", "claimed_work_unit": "work-unit-001", "accepted_work_amount": 0, "rejection_reason": "execution did not complete"},
+  "evidence": {"local_log_paths": ["logs/job-001.stderr"], "content_hashes": ["sha256:log001"], "validation_command_refs": [], "observed_at": ["2026-07-12T14:00:00.000Z"]}
+}
