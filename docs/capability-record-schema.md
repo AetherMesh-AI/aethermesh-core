@@ -17,6 +17,7 @@ Fields not defined by version 1 are rejected at the top level and inside its str
 | `metadata.name`, `metadata.description` | Non-empty strings. `name` is a stable, human-readable description of the local function offered. |
 | `metadata.type` | Required machine-checkable type: one of `model`, `tool`, `worker`, `runtime`. |
 | `metadata.supported_input_formats`, `metadata.supported_output_formats` | Non-empty lists of non-empty strings. |
+| `metadata.supported_input_schemas` | Non-empty list of local schema references. Each entry has `schema_ref`, Semantic Version `schema_version`, and content-addressed `sha256:` `schema_digest`. The referenced JSON Schema must be readable below the local schema root, use draft 2020-12, and declare the same `x-aethermesh-schema-version`. |
 | `metadata.constraints` | Object describing local limits or assumptions. |
 | `metadata.local_execution_requirements` | Non-empty list of non-empty strings. |
 | `manifest_refs` | Non-empty list of safe local relative references backing the claim. |
@@ -60,6 +61,11 @@ Use Semantic Versioning for the capability interface or behavior only: increment
     "description": "Returns an input message without remote execution.",
     "type": "worker",
     "supported_input_formats": ["application/json"],
+    "supported_input_schemas": [{
+      "schema_ref": "examples/schemas/local-echo-input.schema.json",
+      "schema_version": "1.0.0",
+      "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790"
+    }],
     "supported_output_formats": ["application/json"],
     "constraints": {"network_mode": "local-only-no-p2p"},
     "local_execution_requirements": ["python>=3.11"]
@@ -73,7 +79,12 @@ Use Semantic Versioning for the capability interface or behavior only: increment
       "capability_name": "Local echo worker",
       "capability_version": "1.0.0",
       "creator_node_id": "node.local-01",
-      "manifest_ref": "manifests/local-echo-worker.json"
+      "manifest_ref": "manifests/local-echo-worker.json",
+      "input_schema": {
+        "schema_ref": "examples/schemas/local-echo-input.schema.json",
+        "schema_version": "1.0.0",
+        "schema_digest": "sha256:f25619d3f165bd8802258148a37ab97f62fee632354fd9c29765d253cefb4790"
+      }
     }],
     "last_validated_at": "2026-07-11T12:05:00Z",
     "check_name": "echo-smoke-test"
