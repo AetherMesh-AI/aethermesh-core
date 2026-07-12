@@ -1,0 +1,36 @@
+{
+  "examples": {
+    "contribution-lookup-response.json": "aff5212b42e5c3a5bac2b14f929f8c71c29390f7f25d952de019c86997195a37",
+    "local-node-registration-response.json": "146a8a24c6f459751b3e4cff3f793fe13342f50a215767701410a12427274549",
+    "validation-receipt-response.json": "817040c3b627b67b3d1a9c7430eaeaecd411224edc00f7b03a55ff3b2fc7c707",
+    "work-submission-request.json": "bb2b583276bd7b5d5f53f6296134639f96a975c9944f5a0e361e3a1f469f87de"
+  },
+  "published_routes": [
+    "/api/audit-events",
+    "/api/capabilities",
+    "/api/contributions",
+    "/api/events",
+    "/api/jobs",
+    "/api/logs",
+    "/api/model-manifests",
+    "/api/network",
+    "/api/node",
+    "/api/package",
+    "/api/peers",
+    "/api/status",
+    "/api/validation-receipts",
+    "/capabilities",
+    "/health",
+    "/logs",
+    "/node",
+    "/peers",
+    "/restart",
+    "/shutdown",
+    "/status",
+    "/version"
+  ],
+  "receipt_type": "phase_1_api_schema_validation",
+  "result": "passed",
+  "schema_version": 1,
+  "validated_at": "2026-07-12T00:12:16+00:00"
+}

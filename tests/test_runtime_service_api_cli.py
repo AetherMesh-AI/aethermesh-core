@@ -1856,5 +1856,45 @@ class AppCliTests(unittest.TestCase):
                     app_cli._serve(host="127.0.0.1", port=7280, open_browser=False)
 
 
+class LocalApiSchemaContractTests(unittest.TestCase):
+    def test_v1_submission_requires_provenance_and_versions_its_response(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "payload": {"message": "contract"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+            for missing_field in (
+                "creator_node_id",
+                "requested_validation_mode",
+                "lineage_parent_refs",
+                "attribution_metadata",
+            ):
+                invalid = dict(request)
+                invalid.pop(missing_field)
+                with self.assertRaises(RuntimeServiceError):
+                    service.submit_local_job(invalid)
+            accepted = service.submit_local_job(request)
+            self.assertEqual(accepted["schema_version"], 1)
+
+    def test_documented_json_routes_are_published_by_openapi(self) -> None:
+        published = set(create_app().openapi()["paths"])
+        self.assertTrue(
+            {
+                "/api/jobs",
+                "/api/contributions",
+                "/api/validation-receipts",
+                "/api/audit-events",
+                "/api/capabilities",
+            }
+            <= published
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

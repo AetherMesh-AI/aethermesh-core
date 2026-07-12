@@ -520,10 +520,24 @@ class NodeRuntimeService:
         }
 
     def submit_local_job(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Accept one local job request without dispatching or validating it."""
+        """Accept one local job request without dispatching or validating it.
+
+        Schema version 1 makes provenance fields explicit.  Versionless requests
+        remain a local compatibility path for pre-contract callers; they are
+        persisted as the same version-1 local manifest.
+        """
 
         if not isinstance(request, dict):
             raise RuntimeServiceError("job submission must be a JSON object")
+        schema_version = request.get("schema_version", 0)
+        if (
+            not isinstance(schema_version, int)
+            or isinstance(schema_version, bool)
+            or schema_version not in {0, 1}
+        ):
+            raise RuntimeServiceError(
+                "job submission schema_version must be integer 0 or 1"
+            )
         creator_node_id = request.get("creator_node_id")
         if not isinstance(creator_node_id, str) or not creator_node_id.strip():
             raise RuntimeServiceError(
@@ -542,12 +556,20 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission requested_validation_mode must be a non-empty string"
             )
+        if schema_version == 1 and "lineage_parent_refs" not in request:
+            raise RuntimeServiceError(
+                "job submission schema_version 1 requires lineage_parent_refs"
+            )
         lineage_parent_refs = request.get("lineage_parent_refs", [])
         if not isinstance(lineage_parent_refs, list) or not all(
             isinstance(ref, str) and ref.strip() for ref in lineage_parent_refs
         ):
             raise RuntimeServiceError(
                 "job submission lineage_parent_refs must be a list of non-empty strings"
+            )
+        if schema_version == 1 and "attribution_metadata" not in request:
+            raise RuntimeServiceError(
+                "job submission schema_version 1 requires attribution_metadata"
             )
         attribution_metadata = request.get("attribution_metadata", {})
         if not isinstance(attribution_metadata, dict):
@@ -583,6 +605,7 @@ class NodeRuntimeService:
         )
         self._append_event(f"accepted local job submission {job_id}")
         return {
+            "schema_version": 1,
             "job_id": job_id,
             "status": "accepted_pending_execution",
             "manifest_ref": manifest_ref,

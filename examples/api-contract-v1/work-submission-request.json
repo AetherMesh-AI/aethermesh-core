@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "job_type": "echo",
+  "payload": {"message": "contract example"},
+  "creator_node_id": "creator-local-example",
+  "requested_validation_mode": "deterministic-local",
+  "lineage_parent_refs": ["data/prior-job.json"],
+  "attribution_metadata": {"source": "api-contract-v1"}
+}

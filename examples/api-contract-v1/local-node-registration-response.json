@@ -1,0 +1,12 @@
+{
+  "node_id": "node-local-example",
+  "creator_node_id": "creator-local-example",
+  "identity_path": "identity/creator-node.json",
+  "manifest_path": "manifests/local-node-manifest.json",
+  "manifest_hash": "sha256:example",
+  "validation_receipt_path": "receipts/startup-validation-example.json",
+  "lineage_path": "lineage/startup-lineage-example.json",
+  "runtime_directories": {},
+  "validation_result": "passed",
+  "network_mode": "local-only-no-p2p"
+}

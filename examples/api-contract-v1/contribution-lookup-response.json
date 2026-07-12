@@ -1,0 +1,7 @@
+{
+  "network_mode": "local-only-no-p2p",
+  "summary_status": "recorded",
+  "accepted_work_count": 1,
+  "non_accepted_work_count": 0,
+  "items": [{"work_item_id": "local-job-00000000000000000000000000000000", "status": "succeeded", "acceptance_status": "accepted", "creator_node_id": "creator-local-example", "contributing_node_id": "worker-local-example", "manifest_ref": "data/job-submissions/local-job-00000000000000000000000000000000.json", "status_ref": "data/job-status/local-job-00000000000000000000000000000000.json", "validation_receipt_ref": "data/job-validation-receipts/local-job-00000000000000000000000000000000.json", "lineage_links": ["data/prior-job.json"], "timestamps": {"submitted_at": 0}, "evidence_errors": []}]
+}

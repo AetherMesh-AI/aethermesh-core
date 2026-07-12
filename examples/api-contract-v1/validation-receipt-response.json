@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "network_mode": "local-only-no-p2p",
+  "validation_scope": "local-only-not-consensus",
+  "receipt_id": "local-validation-receipt-local-job-00000000000000000000000000000000",
+  "work_id": "local-job-00000000000000000000000000000000",
+  "creator_node_id": "creator-local-example",
+  "manifest_ref": "data/job-submissions/local-job-00000000000000000000000000000000.json",
+  "validation_status": "passed",
+  "validation": {"valid": true, "reason": "ok"},
+  "validation_timestamp": 0,
+  "validation_timestamp_source": "receipt_record",
+  "validator_identity": "worker-local-example",
+  "lineage_parent_ids": ["data/prior-job.json"],
+  "contribution_attribution": {"creator_node_id": "creator-local-example", "worker_node_id": "worker-local-example", "metadata": {}},
+  "evidence": {"receipt_ref": "data/job-validation-receipts/local-job-00000000000000000000000000000000.json", "result_ref": "data/job-results/local-job-00000000000000000000000000000000.json", "status_ref": "data/job-status/local-job-00000000000000000000000000000000.json"}
+}
