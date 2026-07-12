@@ -6,6 +6,41 @@ from aethermesh_core.validation import validate_job_result
 
 
 class ValidationTests(unittest.TestCase):
+    def test_phase_one_simple_job_validation_is_strict(self) -> None:
+        valid_job = Job(job_id="hash-1", job_type="hash", payload={"value": {"a": 1}})
+        valid_result = JobResult(
+            job_id="hash-1",
+            node_id="node-a",
+            status="completed",
+            output={
+                "algorithm": "sha256",
+                "digest": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+            },
+            error=None,
+            contribution_units=1,
+        )
+        self.assertTrue(validate_job_result(valid_job, valid_result).valid)
+        self.assertEqual(
+            validate_job_result(
+                valid_job,
+                valid_result.__class__(**{**valid_result.to_dict(), "output": {}}),
+            ).reason,
+            "output_mismatch",
+        )
+        malformed = Job(job_id="compute-1", job_type="basic_compute", payload={})
+        malformed_result = JobResult(
+            job_id="compute-1",
+            node_id="node-a",
+            status="completed",
+            output={},
+            error=None,
+            contribution_units=1,
+        )
+        self.assertEqual(
+            validate_job_result(malformed, malformed_result).reason,
+            "malformed_basic_compute_payload",
+        )
+
     def test_completed_echo_result_with_matching_output_is_valid(self) -> None:
         job = Job(job_id="echo-1", job_type="echo", payload={"message": "hello"})
         result = JobResult(

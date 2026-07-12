@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import math
 import multiprocessing
 import re
 from collections import Counter
@@ -18,6 +20,9 @@ class LocalRunner:
     EXECUTOR_NAME = "aethermesh-local-runner"
     EXECUTOR_VERSION = "1"
     SUPPORTED_ECHO_JOB_TYPE = "echo"
+    SUPPORTED_HASH_JOB_TYPE = "hash"
+    SUPPORTED_BASIC_COMPUTE_JOB_TYPE = "basic_compute"
+    SUPPORTED_SCHEMA_TRANSFORM_JOB_TYPE = "schema_transform"
     SUPPORTED_TEXT_STATS_JOB_TYPE = "text_stats"
     SUPPORTED_KEYWORD_EXTRACT_JOB_TYPE = "keyword_extract"
     SUPPORTED_TEXT_CHUNK_JOB_TYPE = "text_chunk"
@@ -39,6 +44,15 @@ class LocalRunner:
                 error=None,
                 contribution_units=1,
             )
+
+        if job.job_type == self.SUPPORTED_HASH_JOB_TYPE:
+            return self._run_payload_builder(job, build_hash_output)
+
+        if job.job_type == self.SUPPORTED_BASIC_COMPUTE_JOB_TYPE:
+            return self._run_payload_builder(job, build_basic_compute_output)
+
+        if job.job_type == self.SUPPORTED_SCHEMA_TRANSFORM_JOB_TYPE:
+            return self._run_payload_builder(job, build_schema_transform_output)
 
         if job.job_type == self.SUPPORTED_TEXT_STATS_JOB_TYPE:
             text = job.payload.get("text")
@@ -171,6 +185,102 @@ def _stopped_result(
         error=error,
         contribution_units=0,
     )
+
+
+def build_hash_output(payload: dict[str, Any]) -> dict[str, str]:
+    """Hash one JSON-compatible value with the fixed SHA-256 algorithm."""
+
+    if set(payload) != {"value"}:
+        raise ValueError("hash payload requires exactly one field: value")
+    try:
+        encoded = json.dumps(
+            payload["value"], sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("hash payload value must be JSON-compatible") from exc
+    return {
+        "algorithm": "sha256",
+        "digest": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+    }
+
+
+def build_basic_compute_output(payload: dict[str, Any]) -> dict[str, int | float | str]:
+    """Run one bounded deterministic arithmetic operation."""
+
+    operation = payload.get("operation")
+    operands = payload.get("operands")
+    if operation not in {"add", "multiply"}:
+        raise ValueError("basic_compute payload operation must be add or multiply")
+    if (
+        not isinstance(operands, list)
+        or not 1 <= len(operands) <= 32
+        or any(
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            for value in operands
+        )
+    ):
+        raise ValueError(
+            "basic_compute payload operands must be a list of 1 to 32 numbers"
+        )
+    result: int | float = 0 if operation == "add" else 1
+    for operand in operands:
+        result = result + operand if operation == "add" else result * operand
+        if not math.isfinite(result):
+            raise ValueError("basic_compute result must be a finite number")
+    return {"operation": operation, "result": result}
+
+
+def build_schema_transform_output(payload: dict[str, Any]) -> dict[str, Any]:
+    """Select and validate declared primitive fields from one local record."""
+
+    record = payload.get("record")
+    schema = payload.get("schema")
+    if (
+        not isinstance(record, dict)
+        or not isinstance(schema, dict)
+        or set(schema) != {"fields"}
+    ):
+        raise ValueError(
+            "schema_transform payload requires record and schema.fields objects"
+        )
+    fields = schema["fields"]
+    if (
+        not isinstance(fields, dict)
+        or not fields
+        or any(
+            not isinstance(name, str)
+            or not name
+            or field_type not in {"string", "integer", "boolean"}
+            for name, field_type in fields.items()
+        )
+    ):
+        raise ValueError(
+            "schema_transform schema.fields must map names to string, integer, or boolean"
+        )
+    if set(record) != set(fields):
+        raise ValueError(
+            "schema_transform record fields must exactly match schema.fields"
+        )
+    output: dict[str, Any] = {}
+    for name, field_type in sorted(fields.items()):
+        value = record[name]
+        valid = (
+            (field_type == "string" and isinstance(value, str))
+            or (
+                field_type == "integer"
+                and isinstance(value, int)
+                and not isinstance(value, bool)
+            )
+            or (field_type == "boolean" and isinstance(value, bool))
+        )
+        if not valid:
+            raise ValueError(
+                f"schema_transform record.{name} does not match declared {field_type} schema"
+            )
+        output[name] = value
+    return output
 
 
 def build_text_stats_output(text: str) -> dict[str, int | str]:
