@@ -4,6 +4,12 @@ Phase 1 exposes a deliberately small, local-only boundary for a runnable prototy
 
 The dashboard HTTP app is a separate localhost status surface. Its status/dashboard routes are read-only (except local process shutdown and restart signals). `POST /api/jobs` is the single local work-submission exception; it records a request but does not execute it, issue receipts, or award contribution credit.
 
+## Stable schema contract
+
+`phase-1-local-api-schemas.json` is the machine-readable, human-reviewable contract for the provenance-bearing Phase 1 boundary. It provides required-field schemas and examples for local node registration/create-load, job submission and status, validation receipt lookup, and contribution lookup. The schema file also contains the complete published route inventory; `python3 scripts/validate_phase1_api_schema.py` checks that inventory against FastAPI's generated OpenAPI routes and validates every example. Use `--receipt <path>` to save the deterministic validation receipt.
+
+The contract is versioned independently as `contract_version: 1`. Existing artifact and response `schema_version` fields remain authoritative where present. Within version 1, fields may only be added; a removed, renamed, or type-changed required field needs contract version 2, a migration note in this document, and refreshed examples. No breaking change has been recorded for version 1.
+
 ## Scope and locality
 
 Every path in this document is an operator-selected local filesystem path. Artifact references written by the runtime are relative to the selected runtime directory. The supported runtime mode is `local-only-no-p2p`; no operation contacts an external service.

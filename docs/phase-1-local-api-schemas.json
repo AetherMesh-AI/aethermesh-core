@@ -1,0 +1,129 @@
+{
+  "contract_name": "AetherMesh Phase 1 local provenance API",
+  "contract_version": 1,
+  "network_mode": "local-only-no-p2p",
+  "stability_policy": {
+    "compatibility": "Additive fields are allowed within contract_version 1. Removing, renaming, or changing a required field or its type requires contract_version 2 and a migration note in docs/phase-1-local-api-boundary.md.",
+    "breaking_change_migration_note": "No breaking changes have been recorded for contract_version 1."
+  },
+  "route_contracts": [
+    {
+      "method": "POST",
+      "path": "/api/jobs",
+      "request_schema": "LocalJobSubmissionRequest",
+      "response_schema": "LocalJobSubmissionAccepted"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs/{job_id}",
+      "response_schema": "LocalJobStatus"
+    },
+    {
+      "method": "GET",
+      "path": "/api/validation-receipts",
+      "response_schema": "LocalValidationReceipt"
+    },
+    {
+      "method": "GET",
+      "path": "/api/contributions",
+      "response_schema": "LocalContributionLookup"
+    }
+  ],
+  "published_route_inventory": [
+    "GET /", "GET /api/audit-events", "GET /api/capabilities", "GET /api/contributions",
+    "GET /api/events", "GET /api/jobs", "POST /api/jobs", "GET /api/jobs/{job_id}",
+    "GET /api/logs", "GET /api/model-manifests", "GET /api/network", "GET /api/node",
+    "GET /api/package", "GET /api/peers", "GET /api/status", "GET /api/validation-receipts",
+    "GET /capabilities", "GET /health", "GET /logs", "GET /node", "GET /peers",
+    "POST /restart", "POST /shutdown", "GET /status", "GET /version"
+  ],
+  "schemas": {
+    "LocalNodeRegistration": {
+      "description": "Local node registration is the create/load startup function, not an HTTP mutation route. Its persisted startup manifest, receipt, lineage, and attribution records are documented in phase-1-local-api-boundary.md.",
+      "required": ["node_id", "creator_node_id", "manifest_path", "validation_receipt_path", "lineage_path", "validation_result", "network_mode"],
+      "properties": {
+        "node_id": {"type": "string", "minLength": 1},
+        "creator_node_id": {"type": "string", "minLength": 1},
+        "manifest_path": {"type": "string", "minLength": 1},
+        "validation_receipt_path": {"type": "string", "minLength": 1},
+        "lineage_path": {"type": "string", "minLength": 1},
+        "validation_result": {"const": "passed"},
+        "network_mode": {"const": "local-only-no-p2p"}
+      }
+    },
+    "LocalJobSubmissionRequest": {
+      "required": ["job_type", "payload", "creator_node_id", "requested_validation_mode"],
+      "properties": {
+        "job_type": {"type": "string", "minLength": 1},
+        "payload": {"type": "object"},
+        "creator_node_id": {"type": "string", "minLength": 1},
+        "requested_validation_mode": {"type": "string", "minLength": 1},
+        "lineage_parent_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "attribution_metadata": {"type": "object"}
+      },
+      "required_provenance": ["creator_node_id"],
+      "preserved_provenance": ["lineage_parent_refs", "attribution_metadata"]
+    },
+    "LocalJobSubmissionAccepted": {
+      "required": ["job_id", "status", "manifest_ref", "next_validation_expectation", "network_mode"],
+      "properties": {
+        "job_id": {"type": "string", "minLength": 1},
+        "status": {"const": "accepted_pending_execution"},
+        "manifest_ref": {"type": "string", "minLength": 1},
+        "next_validation_expectation": {"const": "pending_requested_local_validation"},
+        "network_mode": {"const": "local-only-no-p2p"}
+      },
+      "required_provenance": ["manifest_ref"]
+    },
+    "LocalJobStatus": {
+      "required": ["job_id", "status", "manifest_ref", "creator_node_id", "lineage", "contribution_attribution", "network_mode"],
+      "properties": {
+        "job_id": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1},
+        "manifest_ref": {"type": "string", "minLength": 1},
+        "creator_node_id": {"type": "string", "minLength": 1},
+        "lineage": {"type": "object", "required": ["parent_refs"], "properties": {"parent_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}}},
+        "contribution_attribution": {"type": "object", "required": ["creator_node_id"], "properties": {"creator_node_id": {"type": "string", "minLength": 1}}},
+        "network_mode": {"const": "local-only-no-p2p"}
+      },
+      "required_provenance": ["creator_node_id", "manifest_ref", "lineage", "contribution_attribution"]
+    },
+    "LocalValidationReceipt": {
+      "required": ["schema_version", "network_mode", "validation_scope", "receipt_id", "work_id", "creator_node_id", "manifest_ref", "validation_status", "validation", "validator_identity", "lineage_parent_ids", "contribution_attribution", "evidence"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "network_mode": {"const": "local-only-no-p2p"},
+        "validation_scope": {"const": "local-only-not-consensus"},
+        "receipt_id": {"type": "string", "minLength": 1},
+        "work_id": {"type": "string", "minLength": 1},
+        "creator_node_id": {"type": "string", "minLength": 1},
+        "manifest_ref": {"type": "string", "minLength": 1},
+        "validation_status": {"enum": ["passed", "failed"]},
+        "validation": {"type": "object", "required": ["valid", "reason"], "properties": {"valid": {"type": "boolean"}, "reason": {"type": "string"}}},
+        "validator_identity": {"type": "string", "minLength": 1},
+        "lineage_parent_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "contribution_attribution": {"type": "object", "required": ["creator_node_id"], "properties": {"creator_node_id": {"type": "string", "minLength": 1}}},
+        "evidence": {"type": "object", "required": ["receipt_ref", "result_ref", "status_ref"], "properties": {"receipt_ref": {"type": "string", "minLength": 1}, "result_ref": {"type": "string", "minLength": 1}, "status_ref": {"type": "string", "minLength": 1}}}
+      },
+      "required_provenance": ["creator_node_id", "manifest_ref", "validation", "lineage_parent_ids", "contribution_attribution", "evidence"]
+    },
+    "LocalContributionLookup": {
+      "required": ["network_mode", "summary_status", "accepted_work_count", "non_accepted_work_count", "items"],
+      "properties": {
+        "network_mode": {"const": "local-only-no-p2p"},
+        "summary_status": {"enum": ["empty", "recorded"]},
+        "accepted_work_count": {"type": "integer", "minimum": 0},
+        "non_accepted_work_count": {"type": "integer", "minimum": 0},
+        "items": {"type": "array"}
+      }
+    }
+  },
+  "examples": [
+    {"schema": "LocalNodeRegistration", "payload": {"node_id": "node-local-a", "creator_node_id": "creator-local-a", "manifest_path": "manifests/local-node-manifest.json", "validation_receipt_path": "receipts/startup-validation-1.json", "lineage_path": "lineage/startup-lineage-1.json", "validation_result": "passed", "network_mode": "local-only-no-p2p"}},
+    {"schema": "LocalJobSubmissionRequest", "payload": {"job_type": "echo", "payload": {"message": "hello"}, "creator_node_id": "creator-local-a", "requested_validation_mode": "deterministic-local", "lineage_parent_refs": ["data/prior-job.json"], "attribution_metadata": {"source": "local-example"}}},
+    {"schema": "LocalJobSubmissionAccepted", "payload": {"job_id": "local-job-example", "status": "accepted_pending_execution", "manifest_ref": "data/job-submissions/local-job-example.json", "next_validation_expectation": "pending_requested_local_validation", "network_mode": "local-only-no-p2p"}},
+    {"schema": "LocalJobStatus", "payload": {"job_id": "local-job-example", "status": "queued", "manifest_ref": "data/job-submissions/local-job-example.json", "creator_node_id": "creator-local-a", "lineage": {"parent_refs": ["data/prior-job.json"]}, "contribution_attribution": {"creator_node_id": "creator-local-a"}, "network_mode": "local-only-no-p2p"}},
+    {"schema": "LocalValidationReceipt", "payload": {"schema_version": 1, "network_mode": "local-only-no-p2p", "validation_scope": "local-only-not-consensus", "receipt_id": "local-validation-receipt-local-job-example", "work_id": "local-job-example", "creator_node_id": "creator-local-a", "manifest_ref": "data/job-submissions/local-job-example.json", "validation_status": "passed", "validation": {"valid": true, "reason": "ok"}, "validator_identity": "worker-local-a", "lineage_parent_ids": ["data/prior-job.json"], "contribution_attribution": {"creator_node_id": "creator-local-a"}, "evidence": {"receipt_ref": "data/job-validation-receipts/local-job-example.json", "result_ref": "data/job-results/local-job-example.json", "status_ref": "data/job-status/local-job-example.json"}}},
+    {"schema": "LocalContributionLookup", "payload": {"network_mode": "local-only-no-p2p", "summary_status": "empty", "accepted_work_count": 0, "non_accepted_work_count": 0, "items": []}}
+  ]
+}

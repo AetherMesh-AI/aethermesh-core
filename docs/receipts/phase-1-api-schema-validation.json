@@ -1,0 +1,8 @@
+{
+  "contract_sha256": "f893a3644b09848a1ac1e56195737ffd18cd4d5cd587e789a41cd7f51f6b67e7",
+  "contract_version": 1,
+  "example_count": 6,
+  "published_route_count": 25,
+  "receipt_kind": "phase_1_local_api_schema_validation",
+  "result": "passed"
+}
