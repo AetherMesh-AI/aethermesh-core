@@ -36,7 +36,7 @@ All references are relative local references. They cannot be absolute, URI-shape
 
 `lineage` requires `source_manifest_ref`, `prior_capability_record_id`, and `local_build_artifact_ref`; each may be `null` when irrelevant. Non-null manifest/build values are safe local references, and a predecessor is a safe capability ID.
 
-`contribution_attribution` requires `creator_node_id` (which must exactly equal the top-level creator), nullable `maintainer_node_id`, and `local_work_receipt_ids`. Receipt IDs use the same strict local form and are attribution evidence, not display-only labels.
+`contribution_attribution` requires `creator_node_id` (which must exactly equal the top-level creator), nullable `maintainer_node_id`, and `local_work_receipt_ids`. Work receipt IDs use the safe local identifier form; they are attribution evidence, not validation receipt IDs or display-only labels.
 
 ## Valid example
 

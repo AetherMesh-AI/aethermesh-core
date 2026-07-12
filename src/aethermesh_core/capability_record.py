@@ -236,7 +236,7 @@ def _validate_attribution(value: Any, creator_node_id: str) -> None:
         )
     receipts = value["local_work_receipt_ids"]
     if not isinstance(receipts, list) or not all(
-        isinstance(receipt, str) and _RECEIPT_ID.fullmatch(receipt)
+        isinstance(receipt, str) and _IDENTIFIER.fullmatch(receipt)
         for receipt in receipts
     ):
         raise CapabilityRecordError(

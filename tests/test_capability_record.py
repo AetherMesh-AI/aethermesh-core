@@ -63,9 +63,20 @@ class CapabilityRecordTests(unittest.TestCase):
             validate_capability_record(record)
 
         record = copy.deepcopy(self.record)
-        record["contribution_attribution"]["local_work_receipt_ids"] = ["bad"]
+        record["contribution_attribution"]["local_work_receipt_ids"] = ["../bad"]
         with self.assertRaisesRegex(CapabilityRecordError, "malformed receipt ID"):
             validate_capability_record(record)
+
+        record = copy.deepcopy(self.record)
+        record["contribution_attribution"]["local_work_receipt_ids"] = [
+            "work-receipt-local-echo-worker-v1"
+        ]
+        self.assertEqual(
+            validate_capability_record(record)["contribution_attribution"][
+                "local_work_receipt_ids"
+            ],
+            ["work-receipt-local-echo-worker-v1"],
+        )
 
     def test_unvalidated_record_is_explicitly_not_trusted(self) -> None:
         record = copy.deepcopy(self.record)
