@@ -5,6 +5,7 @@ from aethermesh_core.capability_record import (
     CapabilityRecordError,
     validate_capability_record,
 )
+from aethermesh_core.identity import load_or_create_identity
 
 
 class CapabilityRecordTests(unittest.TestCase):
@@ -12,6 +13,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
             "updated_at": "2026-07-11T12:05:00Z",
@@ -68,6 +70,7 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_rejects_required_identity_manifest_and_validation_fields(self) -> None:
         for field, expected in (
+            ("node_id", "node_id"),
             ("creator_node_id", "creator_node_id"),
             ("manifest_refs", "manifest_refs"),
             ("validation", "validation"),
@@ -77,6 +80,30 @@ class CapabilityRecordTests(unittest.TestCase):
                 record.pop(field)
                 with self.assertRaisesRegex(CapabilityRecordError, expected):
                     validate_capability_record(record)
+
+    def test_rejects_blank_node_id(self) -> None:
+        record = copy.deepcopy(self.record)
+        record["node_id"] = ""
+
+        with self.assertRaisesRegex(CapabilityRecordError, "node_id"):
+            validate_capability_record(record)
+
+    def test_validates_node_id_against_persisted_local_identity(self) -> None:
+        with self.assertRaisesRegex(CapabilityRecordError, "local node identity"):
+            validate_capability_record(self.record, local_node_id="node.other-01")
+
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as directory:
+            identity = load_or_create_identity(
+                f"{directory}/identity.json",
+                node_id_factory=lambda: "node.local-01",
+            )
+            self.assertEqual(identity.node_id, self.record["node_id"])
+            self.assertIs(
+                validate_capability_record(self.record, local_node_id=identity.node_id),
+                self.record,
+            )
 
     def test_rejects_unknown_type_malformed_receipt_and_unsafe_reference(self) -> None:
         cases = (
