@@ -38,7 +38,9 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 
 ## Local Job Submission v1
 
-Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `payload` (object), `creator_node_id` (non-empty string), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of non-empty strings; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The server rejects a request missing any required field. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
+Required request fields are `schema_version` (integer `1`), `job_type` (non-empty string), `payload` (object), `creator_node_id` (a safe non-empty local identifier), `requested_validation_mode` (non-empty string), `lineage_parent_refs` (array of safe relative local references; empty is the root-lineage value), and `attribution_metadata` (object; empty is allowed). The server rejects a request missing any required field. Creator IDs and lineage references reject path traversal, absolute paths, URI-shaped values, and private-key-shaped references. It writes a version-1 submission manifest that preserves the creator ID, manifest reference, lineage object, and contribution attribution object.
+
+Version 1 intentionally accepts unknown additive submission fields for forward compatibility, but does not persist them in the local submission manifest. Unknown query parameters are likewise ignored by the local read-only routes. Known path and audit artifact IDs remain strict: job/manifest IDs, receipt IDs, lineage IDs, and contribution-attribution IDs must use their documented local ID forms.
 
 Successful response required fields are `schema_version` (`1`), `job_id`, `status` (`accepted_pending_execution`), `manifest_ref`, `next_validation_expectation`, and `network_mode` (`local-only-no-p2p`).
 
@@ -58,7 +60,7 @@ Example request:
 
 ## Local Job Status v1
 
-A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A not-found response contains `schema_version`, `job_id`, `status: not_found`, and `error`.
+A known submission response includes `schema_version` (`1`), `job_id`, `status`, `manifest_ref`, `creator_node_id`, `worker_node_id`, `lineage`, `contribution_attribution`, `validation`, `result`, `error`, and `network_mode`. Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 

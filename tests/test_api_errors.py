@@ -79,6 +79,99 @@ class ApiErrorTests(unittest.TestCase):
                     all(value not in response.text for value in sensitive_values)
                 )
 
+    def test_invalid_api_inputs_fail_closed_without_local_artifact_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            home = Path(temp_dir)
+            service = NodeRuntimeService.from_home(home)
+            app = create_app(service)
+            valid_request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "payload": {"message": "safe"},
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+
+            def local_artifacts() -> dict[str, bytes]:
+                data_dir = home / "data"
+                return (
+                    {
+                        str(path.relative_to(home)): path.read_bytes()
+                        for path in data_dir.rglob("*")
+                        if path.is_file()
+                    }
+                    if data_dir.exists()
+                    else {}
+                )
+
+            async def exercise() -> tuple[httpx.Response, ...]:
+                transport = httpx.ASGITransport(app=app)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return (
+                        await client.post(
+                            "/api/jobs",
+                            json={
+                                key: value
+                                for key, value in valid_request.items()
+                                if key != "creator_node_id"
+                            },
+                        ),
+                        await client.post(
+                            "/api/jobs",
+                            json={**valid_request, "payload": []},
+                        ),
+                        await client.post(
+                            "/api/jobs",
+                            json={**valid_request, "creator_node_id": "../creator"},
+                        ),
+                        await client.post(
+                            "/api/jobs",
+                            json={
+                                **valid_request,
+                                "lineage_parent_refs": ["../outside.json"],
+                            },
+                        ),
+                        await client.post(
+                            "/api/jobs",
+                            json={**valid_request, "attribution_metadata": []},
+                        ),
+                        await client.get("/api/jobs/not-a-local-job-id"),
+                        await client.get(
+                            "/api/validation-receipts",
+                            params={"receipt_id": "not-a-local-receipt"},
+                        ),
+                        await client.get(
+                            "/api/audit-events",
+                            params={"manifest_id": "not-a-local-job-id"},
+                        ),
+                        await client.get(
+                            "/api/audit-events",
+                            params={"lineage_id": "not-a-local-lineage-id"},
+                        ),
+                        await client.get(
+                            "/api/audit-events",
+                            params={
+                                "contribution_attribution_id": "not-a-local-attribution-id"
+                            },
+                        ),
+                    )
+
+            before = local_artifacts()
+            responses = asyncio.run(exercise())
+            self.assertEqual(local_artifacts(), before)
+            for response in responses:
+                self.assertEqual(response.status_code, 400)
+                payload = response.json()
+                self.assertEqual(payload["error"]["details"], {})
+                self.assertNotIn("creator-local-a", response.text)
+                self.assertNotIn("outside.json", response.text)
+
 
 if __name__ == "__main__":
     unittest.main()
