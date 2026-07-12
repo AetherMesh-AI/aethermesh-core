@@ -748,6 +748,73 @@ class NodeRuntimeService:
             "note": "No persistent daemon job queue is active yet.",
         }
 
+    def submit_local_job_status(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Return one explicit local-only outcome for every API job submission."""
+
+        try:
+            accepted = self.submit_local_job(request)
+        except RuntimeServiceError as exc:
+            return self._submission_status(
+                status="rejected",
+                message=str(exc),
+                validation_state="rejected",
+                request=request,
+            )
+        except OSError:
+            return self._submission_status(
+                status="failed",
+                message="Local submission could not be recorded.",
+                validation_state="passed",
+                request=request,
+            )
+        return self._submission_status(
+            status="accepted",
+            message="Local submission passed required checks and was recorded.",
+            validation_state="passed",
+            request=request,
+            job_id=accepted["job_id"],
+            manifest_ref=accepted["manifest_ref"],
+        )
+
+    @staticmethod
+    def _submission_status(
+        *,
+        status: str,
+        message: str,
+        validation_state: str,
+        request: object,
+        job_id: str | None = None,
+        manifest_ref: str | None = None,
+    ) -> dict[str, Any]:
+        """Build the concise machine-readable local submission status shape."""
+
+        request_data = request if isinstance(request, dict) else {}
+        creator_node_id = request_data.get("creator_node_id")
+        supplied_job_id = request_data.get("job_id")
+        known_job_id = job_id or (
+            supplied_job_id if isinstance(supplied_job_id, str) else None
+        )
+        return {
+            "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
+            "status": status,
+            "job_id": known_job_id,
+            "creator_node_id": (
+                creator_node_id if isinstance(creator_node_id, str) else None
+            ),
+            "manifest_ref": manifest_ref,
+            "validation": {"state": validation_state, "receipt_ref": None},
+            "lineage_ref": (
+                f"local-lineage-{known_job_id}" if manifest_ref is not None else None
+            ),
+            "attribution_ref": (
+                f"local-contribution-{known_job_id}"
+                if manifest_ref is not None
+                else None
+            ),
+            "message": message,
+            "network_mode": "local-only-no-p2p",
+        }
+
     def submit_local_job(self, request: dict[str, Any]) -> dict[str, Any]:
         """Validate and queue one local job request without dispatching it."""
 

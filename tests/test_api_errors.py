@@ -168,7 +168,12 @@ class ApiErrorTests(unittest.TestCase):
             before = local_artifacts()
             responses = asyncio.run(exercise())
             self.assertEqual(local_artifacts(), before)
-            for response in responses:
+            for response in responses[:5]:
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()
+                self.assertEqual(payload["status"], "rejected")
+                self.assertEqual(payload["validation"]["state"], "rejected")
+            for response in responses[5:]:
                 self.assertEqual(response.status_code, 400)
                 payload = response.json()
                 self.assertEqual(payload["error"]["details"], {})

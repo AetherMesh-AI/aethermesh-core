@@ -153,7 +153,13 @@ class ApiSchemaContractTests(unittest.TestCase):
 
             self.assertEqual(accepted.status_code, 200)
             self.assertEqual(accepted.json()["schema_version"], 1)
-            self.assertEqual(accepted.json()["status"], "queued")
+            accepted_payload = accepted.json()
+            self.assertEqual(accepted_payload["status"], "accepted")
+            self.assertEqual(
+                accepted_payload["creator_node_id"], request["creator_node_id"]
+            )
+            self.assertTrue(accepted_payload["manifest_ref"])
+            self.assertTrue(accepted_payload["attribution_ref"])
             for response in (
                 missing_version,
                 boolean_version,
@@ -161,8 +167,9 @@ class ApiSchemaContractTests(unittest.TestCase):
                 missing_lineage,
                 missing_attribution,
             ):
-                self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json()["error"]["code"], "INVALID_INPUT")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["status"], "rejected")
+                self.assertEqual(response.json()["validation"]["state"], "rejected")
 
             status_payload = status.json()
             self.assertEqual(status_payload["schema_version"], 1)

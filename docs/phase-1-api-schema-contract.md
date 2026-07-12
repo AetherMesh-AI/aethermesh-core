@@ -48,7 +48,7 @@ Accepted payload normalization is deterministic: the validated input payload is 
 
 Version 1 intentionally accepts unknown additive submission fields for forward compatibility, but does not persist them in the local submission manifest. Unknown query parameters are likewise ignored by the local read-only routes. Known path and audit artifact IDs remain strict: job/manifest IDs, receipt IDs, lineage IDs, and contribution-attribution IDs must use their documented local ID forms.
 
-Successful response required fields are `schema_version` (`1`), `job_id`, `status` (`queued`), `manifest_ref`, `next_validation_expectation`, and `network_mode` (`local-only-no-p2p`).
+Every submission response is a local-only status object with `schema_version` (`1`), `status` (`accepted`, `rejected`, or `failed`), `job_id` (when assigned), `creator_node_id` (when supplied), `manifest_ref` (when recorded), `validation` (admission state and any receipt reference), `lineage_ref`, `attribution_ref`, concise `message`, and `network_mode` (`local-only-no-p2p`). `accepted` means the required local admission checks passed and the manifest plus queued status record were recorded; it does not mean execution, validation receipt creation, network consensus, or contribution acceptance. `rejected` means request, manifest, creator, lineage, or attribution admission validation failed. `failed` means admission passed but local persistence could not complete; its validation state remains `passed` so callers retain that context.
 
 Example request:
 

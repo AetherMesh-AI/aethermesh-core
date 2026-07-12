@@ -50,8 +50,6 @@ def _runtime_error_code(
     """Classify expected local runtime failures without exposing their text."""
 
     diagnostic = str(error).lower()
-    if request.url.path == "/api/jobs" and request.method == "POST":
-        return 400, "INVALID_INPUT", "The request is invalid."
     if request.url.path == "/api/validation-receipts":
         return 400, "VALIDATION_FAILURE", "Local validation evidence could not be read."
     if (
@@ -218,7 +216,7 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
     def submit_job(request: dict[str, Any]) -> dict[str, Any]:
         """Submit one local-only job for later execution and validation."""
 
-        return runtime_service.submit_local_job(request)
+        return runtime_service.submit_local_job_status(request)
 
     @app.get("/api/jobs/{job_id}")
     def job_status(job_id: str) -> dict[str, Any]:
