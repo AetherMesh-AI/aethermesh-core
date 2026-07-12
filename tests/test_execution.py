@@ -98,6 +98,28 @@ class ExecutorBoundaryTests(unittest.TestCase):
         self.assertEqual(receipt.validation_status, "invalid")
         self.assertEqual(receipt.to_dict()["lineage"], dict(assignment.lineage))
 
+    def test_executor_rejects_result_reported_by_a_different_node(self) -> None:
+        assignment = self._assignment()
+        runner = RecordingRunner(
+            JobResult(
+                job_id="echo-1",
+                node_id="node-other",
+                status="completed",
+                output="hello",
+                error=None,
+                contribution_units=1,
+            )
+        )
+
+        receipt = LocalExecutor(node_id="node-executor", runner=runner).execute(
+            assignment
+        )
+
+        self.assertFalse(receipt.validation.valid)
+        self.assertEqual(receipt.validation.reason, "executor_node_id_mismatch")
+        self.assertEqual(receipt.executor_node_id, "node-executor")
+        self.assertEqual(receipt.result.node_id, "node-other")
+
     def test_invalid_assignments_fail_before_execution(self) -> None:
         runner = RecordingRunner(
             JobResult("echo-1", "node-executor", "completed", "hello", None, 1)

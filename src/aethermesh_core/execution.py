@@ -116,6 +116,13 @@ class LocalExecutor:
             )
         result = self.runner.run(assignment.work_item)
         validation = validate_job_result(assignment.work_item, result)
+        if result.node_id != self.node_id:
+            validation = ValidationResult(
+                job_id=assignment.work_item.job_id,
+                result_job_id=result.job_id,
+                valid=False,
+                reason="executor_node_id_mismatch",
+            )
         return ExecutionReceipt(
             assignment_id=assignment.assignment_id,
             manifest_ref=assignment.manifest_ref,
