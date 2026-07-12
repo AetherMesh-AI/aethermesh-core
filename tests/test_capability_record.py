@@ -14,6 +14,7 @@ class CapabilityRecordTests(unittest.TestCase):
         self.record = {
             "schema_version": 1,
             "capability_id": "capability.echo-v1",
+            "capability_version": "1.0.0",
             "node_id": "node.local-01",
             "creator_node_id": "node.local-01",
             "created_at": "2026-07-11T12:00:00Z",
@@ -31,6 +32,15 @@ class CapabilityRecordTests(unittest.TestCase):
             "validation": {
                 "status": "passed",
                 "receipt_ids": ["receipt.echo-smoke-01"],
+                "receipt_evidence": [
+                    {
+                        "receipt_id": "receipt.echo-smoke-01",
+                        "capability_name": "Local echo worker",
+                        "capability_version": "1.0.0",
+                        "creator_node_id": "node.local-01",
+                        "manifest_ref": "manifests/local-echo-worker.json",
+                    }
+                ],
                 "last_validated_at": "2026-07-11T12:05:00Z",
                 "check_name": "echo-smoke-test",
             },
@@ -56,7 +66,11 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_accepts_explicitly_unvalidated_record_without_trust_evidence(self) -> None:
         record = copy.deepcopy(self.record)
-        record["validation"] = {"status": "unvalidated", "receipt_ids": []}
+        record["validation"] = {
+            "status": "unvalidated",
+            "receipt_ids": [],
+            "receipt_evidence": [],
+        }
         record["lineage"].pop("prior_capability_id")
         record["lineage"].pop("local_build_artifact_ref")
 
@@ -67,6 +81,7 @@ class CapabilityRecordTests(unittest.TestCase):
         record["validation"] = {
             "status": "failed",
             "receipt_ids": [],
+            "receipt_evidence": [],
             "last_validated_at": "2026-07-11T12:05:00Z",
             "check_name": "echo-smoke-test",
             "failure_reason": "expected echo output was absent",
@@ -76,6 +91,7 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_rejects_required_identity_manifest_and_validation_fields(self) -> None:
         for field, expected in (
+            ("capability_version", "capability_version"),
             ("node_id", "node_id"),
             ("creator_node_id", "creator_node_id"),
             ("manifest_refs", "manifest_refs"),
@@ -186,6 +202,26 @@ class CapabilityRecordTests(unittest.TestCase):
 
     def test_rejects_invalid_stable_and_attribution_fields(self) -> None:
         cases = (
+            (
+                lambda record: record.update(capability_version="1.0"),
+                "semantic version",
+            ),
+            (
+                lambda record: record.update(capability_version="1.0.0-01"),
+                "semantic version",
+            ),
+            (
+                lambda record: record["validation"]["receipt_evidence"][0].update(
+                    capability_version="2.0.0"
+                ),
+                "capability name, version",
+            ),
+            (
+                lambda record: record["validation"]["receipt_evidence"][0].update(
+                    manifest_ref="manifests/other.json"
+                ),
+                "manifest reference",
+            ),
             (lambda record: record.update(schema_version=True), "schema_version"),
             (lambda record: record.update(capability_id="Bad"), "capability_id"),
             (lambda record: record.update(created_at="2026-07-11"), "created_at"),
@@ -236,6 +272,12 @@ class CapabilityRecordTests(unittest.TestCase):
             (
                 lambda record: record["validation"].update(network_verified=True),
                 "validation",
+            ),
+            (
+                lambda record: record["validation"]["receipt_evidence"][0].update(
+                    network_verified=True
+                ),
+                "documented receipt fields",
             ),
             (lambda record: record["lineage"].update(remote_parent="peer"), "lineage"),
             (

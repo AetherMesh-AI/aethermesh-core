@@ -13,6 +13,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "capability_id",
+        "capability_version",
         "node_id",
         "creator_node_id",
         "created_at",
@@ -25,6 +26,12 @@ _TOP_LEVEL_FIELDS = frozenset(
     }
 )
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.-]{2,127}\Z")
+_SEMVER = re.compile(
+    r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?\Z"
+)
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
 
@@ -46,6 +53,7 @@ def validate_capability_record(
     _reject_unknown_fields(document)
     _require_int(document, "schema_version", CAPABILITY_RECORD_SCHEMA_VERSION)
     _require_identifier(document, "capability_id")
+    _require_capability_version(document)
     node_id = _require_identifier(document, "node_id")
     if node_id != _require_identifier_value(local_node_id, "local_node_id"):
         raise CapabilityRecordError("node_id must match the local node identity")
@@ -77,6 +85,7 @@ def _reject_unknown_fields(document: dict[str, Any]) -> None:
             {
                 "status",
                 "receipt_ids",
+                "receipt_evidence",
                 "last_validated_at",
                 "check_name",
                 "failure_reason",
@@ -147,6 +156,46 @@ def _require_validation(document: dict[str, Any]) -> None:
                 raise CapabilityRecordError(
                     f"unvalidated capability must not include {field}"
                 )
+    _require_receipt_evidence(validation, document)
+
+
+def _require_receipt_evidence(
+    validation: dict[str, Any], document: dict[str, Any]
+) -> None:
+    evidence = validation.get("receipt_evidence")
+    if not isinstance(evidence, list):
+        raise CapabilityRecordError("validation.receipt_evidence must be a list")
+    receipt_ids = validation["receipt_ids"]
+    if len(evidence) != len(receipt_ids):
+        raise CapabilityRecordError(
+            "validation.receipt_evidence must match validation.receipt_ids"
+        )
+    expected = {
+        "capability_name": document["metadata"]["name"],
+        "capability_version": document["capability_version"],
+        "creator_node_id": document["creator_node_id"],
+        "manifest_ref": document["lineage"]["source_manifest_ref"],
+    }
+    for index, receipt in enumerate(evidence):
+        if not isinstance(receipt, dict):
+            raise CapabilityRecordError(
+                f"validation.receipt_evidence[{index}] must be an object"
+            )
+        allowed_fields = {"receipt_id", *expected}
+        if receipt.keys() != allowed_fields:
+            raise CapabilityRecordError(
+                f"validation.receipt_evidence[{index}] must contain exactly the "
+                "documented receipt fields"
+            )
+        if receipt.get("receipt_id") != receipt_ids[index]:
+            raise CapabilityRecordError(
+                "validation.receipt_evidence receipt_id must match validation.receipt_ids"
+            )
+        if {key: receipt.get(key) for key in expected} != expected:
+            raise CapabilityRecordError(
+                "validation receipt must record matching capability name, version, "
+                "creator node ID, and manifest reference"
+            )
 
 
 def _require_lineage(document: dict[str, Any]) -> None:
@@ -187,6 +236,13 @@ def _require_int(document: dict[str, Any], field: str, expected: int) -> None:
     value = document.get(field)
     if not isinstance(value, int) or isinstance(value, bool) or value != expected:
         raise CapabilityRecordError(f"{field} must be integer {expected}")
+
+
+def _require_capability_version(document: dict[str, Any]) -> str:
+    value = _require_string(document, "capability_version")
+    if not _SEMVER.fullmatch(value):
+        raise CapabilityRecordError("capability_version must be a semantic version")
+    return value
 
 
 def _require_identifier(document: dict[str, Any], field: str) -> str:
