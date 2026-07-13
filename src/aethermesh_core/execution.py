@@ -97,6 +97,10 @@ class ExecutionReceipt:
                 contribution_units=self.result.contribution_units,
             ),
         )
+        object.__setattr__(self, "lineage", _snapshot_metadata(self.lineage, "lineage"))
+        object.__setattr__(
+            self, "attribution", _snapshot_metadata(self.attribution, "attribution")
+        )
 
     @property
     def validation_status(self) -> str:
@@ -138,7 +142,15 @@ class LocalExecutor:
             raise ExecutionAssignmentError(
                 "assignment executor_node_id does not match this executor node_id"
             )
-        result = self.runner.run(assignment.work_item)
+        # A runner owns its execution inputs, not the provenance-bearing assignment.
+        # Isolating the payload prevents runner mutations from changing what the
+        # validator subsequently treats as the assigned work.
+        execution_job = Job(
+            job_id=assignment.work_item.job_id,
+            job_type=assignment.work_item.job_type,
+            payload=deepcopy(assignment.work_item.payload),
+        )
+        result = self.runner.run(execution_job)
         validation = validate_job_result(assignment.work_item, result)
         if result.node_id != self.node_id:
             validation = ValidationResult(

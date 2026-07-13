@@ -23,6 +23,19 @@ class RecordingRunner:
         return self.result
 
 
+class MutatingRunner:
+    def run(self, job: Job) -> JobResult:
+        job.payload["message"] = "changed during execution"
+        return JobResult(
+            job_id=job.job_id,
+            node_id="node-executor",
+            status="completed",
+            output="changed during execution",
+            error=None,
+            contribution_units=1,
+        )
+
+
 class ExecutorBoundaryTests(unittest.TestCase):
     def _assignment(self) -> PreparedWorkAssignment:
         return PreparedWorkAssignment(
@@ -98,6 +111,17 @@ class ExecutorBoundaryTests(unittest.TestCase):
         self.assertFalse(receipt.validation.valid)
         self.assertEqual(receipt.validation_status, "invalid")
         self.assertEqual(receipt.to_dict()["lineage"], dict(assignment.lineage))
+
+    def test_runner_cannot_mutate_the_assignment_used_for_validation(self) -> None:
+        assignment = self._assignment()
+
+        receipt = LocalExecutor(
+            node_id="node-executor", runner=MutatingRunner()
+        ).execute(assignment)
+
+        self.assertEqual(assignment.work_item.payload, {"message": "hello"})
+        self.assertFalse(receipt.validation.valid)
+        self.assertEqual(receipt.validation.reason, "output_mismatch")
 
     def test_executor_rejects_result_reported_by_a_different_node(self) -> None:
         assignment = self._assignment()
