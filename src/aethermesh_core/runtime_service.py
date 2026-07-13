@@ -1839,11 +1839,14 @@ class NodeRuntimeService:
                 "validation_receipt_ids": [self._receipt_id_for_job(job_id)],
                 "log_refs": [],
             },
-            "created_at": executor_started_at,
+            "created_at": _utc_timestamp_from_unix_seconds(manifest["submitted_at"]),
             "status": "succeeded" if succeeded else "failed",
             "exit_code": 0 if succeeded else 1,
             "started_at": executor_started_at,
             "finished_at": executor_finished_at,
+            # This is audit metadata generated locally just before persisting
+            # the report; it is deliberately excluded from result_hash.
+            "reported_at": _utc_timestamp(),
             "duration_ms": _duration_ms(executor_started_at, executor_finished_at),
             "summary": _result_summary(result.output if succeeded else error),
             "error_summary": None if succeeded else _result_summary(error),
@@ -2665,6 +2668,16 @@ def _requester_identity(value: object) -> dict[str, str] | None:
 
 def _utc_timestamp() -> str:
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _utc_timestamp_from_unix_seconds(timestamp: int) -> str:
+    """Format a locally stored Unix-second lifecycle timestamp as UTC."""
+
+    return (
+        datetime.fromtimestamp(timestamp, UTC)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def _duration_ms(started_at: str, finished_at: str) -> int:

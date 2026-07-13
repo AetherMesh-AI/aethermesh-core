@@ -192,6 +192,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 side_effect=[
                     "2024-07-03T09:46:40.000000Z",
                     "2024-07-03T09:46:40.000000Z",
+                    "2024-07-03T09:46:40.000000Z",
                 ],
             ),
         ):
@@ -674,18 +675,32 @@ class RuntimeServiceTests(unittest.TestCase):
                 "2026-07-12T20:36:43.000002Z",
                 "2026-07-12T20:36:43.000003Z",
                 "2026-07-12T20:36:43.000004Z",
+                "2026-07-12T20:36:43.000005Z",
+                "2026-07-12T20:36:43.000006Z",
             ]
-            with patch(
-                "aethermesh_core.runtime_service._utc_timestamp",
-                side_effect=execution_timestamps,
+            with (
+                patch(
+                    "aethermesh_core.runtime_service._utc_timestamp",
+                    side_effect=execution_timestamps,
+                ),
+                patch(
+                    "aethermesh_core.runtime_service._utc_timestamp_from_unix_seconds",
+                    return_value="2026-07-11T20:36:43.000000Z",
+                ),
             ):
                 service.execute_submitted_local_job(first["job_id"], "worker-local-a")
                 service.execute_submitted_local_job(second["job_id"], "worker-local-a")
 
-            for submission, expected_started_at, expected_finished_at in zip(
+            for (
+                submission,
+                expected_started_at,
+                expected_finished_at,
+                expected_reported_at,
+            ) in zip(
                 (first, second),
-                execution_timestamps[::2],
-                execution_timestamps[1::2],
+                execution_timestamps[::3],
+                execution_timestamps[1::3],
+                execution_timestamps[2::3],
                 strict=True,
             ):
                 job_id = submission["job_id"]
@@ -710,6 +725,8 @@ class RuntimeServiceTests(unittest.TestCase):
                     receipt["execution"]["executor_finished_at"], expected_finished_at
                 )
                 self.assertLessEqual(expected_started_at, expected_finished_at)
+                self.assertEqual(result["reported_at"], expected_reported_at)
+                self.assertLessEqual(expected_finished_at, expected_reported_at)
                 self.assertRegex(
                     expected_started_at,
                     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$",
@@ -750,7 +767,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     expected_finished_at,
                 )
 
-            self.assertNotEqual(*execution_timestamps[::2])
+            self.assertNotEqual(*execution_timestamps[::3])
             self.assertEqual(
                 _duration_ms(execution_timestamps[0], execution_timestamps[1]), 0
             )

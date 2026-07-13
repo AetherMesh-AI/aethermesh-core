@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "result_hash": "2fc96fbbe09700dec2a956c386eb8810307cf6718b88c7dfd7f2f893afcaa6e0",
+  "schema_version": 6,
+  "result_hash": "f730232b5656fd51400b73b5e257e1269374b06a98f5a1d91c1f4102ade84884",
   "result_id": "local-result-echo-001",
   "job_id": "local-job-echo-001",
   "task_id": "local-task-echo-001",
@@ -24,6 +24,7 @@
   "exit_code": 0,
   "started_at": "2026-07-12T12:00:01.000Z",
   "finished_at": "2026-07-12T12:00:01.125Z",
+  "reported_at": "2026-07-12T12:00:01.126Z",
   "duration_ms": 125,
   "summary": "Echo completed with one local output artifact.",
   "error_summary": null,

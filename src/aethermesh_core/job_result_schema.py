@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 5
+JOB_RESULT_SCHEMA_VERSION = 6
 MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
@@ -62,6 +62,7 @@ _REQUIRED_FIELDS = frozenset(
         "exit_code",
         "started_at",
         "finished_at",
+        "reported_at",
         "duration_ms",
         "summary",
         "error_summary",
@@ -109,7 +110,8 @@ def validate_job_result_document(
     created_at = _timestamp(result["created_at"], "job result.created_at")
     started_at = _timestamp(result["started_at"], "job result.started_at")
     finished_at = _timestamp(result["finished_at"], "job result.finished_at")
-    if created_at > started_at or finished_at < started_at:
+    reported_at = _timestamp(result["reported_at"], "job result.reported_at")
+    if created_at > started_at or finished_at < started_at or reported_at < finished_at:
         raise JobResultSchemaError(
             "job result timestamps must be chronologically ordered"
         )

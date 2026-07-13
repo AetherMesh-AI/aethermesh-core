@@ -1,6 +1,6 @@
 {
-  "schema_version": 5,
-  "result_hash": "187c56a65fd9c004b3c8f2d30c3fa2c8ce3dc450923a68418f7ce8ff7e8360f6",
+  "schema_version": 6,
+  "result_hash": "f98fcd273dd42197193bc687b87178266e036b85a041c896b1cc2b653904a6c6",
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",
@@ -24,6 +24,7 @@
   "exit_code": 2,
   "started_at": "2026-07-12T12:10:01.000Z",
   "finished_at": "2026-07-12T12:10:01.050Z",
+  "reported_at": "2026-07-12T12:10:01.051Z",
   "duration_ms": 50,
   "summary": "Echo could not read its declared local input artifact.",
   "error_summary": "required output was not produced",
