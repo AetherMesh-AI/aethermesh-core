@@ -4,9 +4,9 @@ A result report is the durable, local-first record for one completed, interrupte
 
 ## Required top-level fields
 
-Every version 2 record contains `schema_version`, `result_id`, `job_id`, `task_id`, `creator_node_id`, `executor_node_id`, `manifest_id`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
+Every version 7 record contains `schema_version`, `result_hash`, `result_id`, `job_id`, `task_id`, `capability`, `creator_node_id`, `executor_node_id`, `manifest_id`, `output_payload`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `reported_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
 
-Version 2 replaces the earlier version 1 durable job-result shape because it adds required reference and error evidence and replaces executor-only contribution attribution with explicit creator, executor, validator, and upstream attribution. Version 1 records remain identifiable by their version but must be migrated before validation as version 2; they must never be silently reinterpreted as the new shape.
+Version 7 supersedes version 6 by adding the explicit `pending` validation state and requiring a null result hash until validation reaches a final local outcome. Earlier records remain identifiable by their version but must be migrated before validation as version 7; they must never be silently reinterpreted as the current shape.
 
 `creator_node_id` is retained even for failures. `manifest_id` and `references.manifest_hash` are matching SHA-256 content-addressed IDs. Timestamps are UTC and duration is derived from the execution timestamps.
 
@@ -14,7 +14,9 @@ Version 2 replaces the earlier version 1 durable job-result shape because it add
 
 Allowed outcome statuses are `succeeded`, `failed`, `timed_out`, `cancelled`, `validation_failed`, and `partially_completed`. `summary` is a short human-readable outcome description. `error_summary` is null only for `succeeded`; it supplements structured status and never replaces it.
 
-Validation status is one of `passed`, `failed`, `error`, or `not_run`. The record always identifies its local validation receipt by both `validation_receipt_id` and an entry in `references.validation_receipt_ids`.
+Validation status is one of `pending`, `passed`, `failed`, `error`, or `not_run`. `pending` explicitly means local validation has not reached a final outcome; it is not a trust or consensus claim. The record identifies its local validation receipt or reserved local receipt ID by both `validation_receipt_id` and an entry in `references.validation_receipt_ids`.
+
+Final local validation statuses (`passed`, `failed`, and `error`) require a canonical `result_hash`. Pending and not-run reports require `result_hash: null`, so an unvalidated report cannot appear to have final validation evidence. A receipt reference is local evidence only, including when it reserves a pending local receipt ID.
 
 ## References and lineage
 

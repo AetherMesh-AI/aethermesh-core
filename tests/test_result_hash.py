@@ -84,6 +84,7 @@ class ResultHashTests(unittest.TestCase):
 
         pending = deepcopy(self.document)
         pending["validation_status"] = "not_run"
+        pending["result_hash"] = None
         with self.assertRaisesRegex(ValueError, "requires a passed, failed, or error"):
             canonical_result_document_hash(pending)
 
