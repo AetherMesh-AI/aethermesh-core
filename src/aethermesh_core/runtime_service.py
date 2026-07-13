@@ -1475,6 +1475,16 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "validation receipt has invalid validation evidence"
             )
+        validation_method = receipt.get("validation_method")
+        if (
+            not isinstance(validation_method, dict)
+            or not isinstance(validation_method.get("kind"), str)
+            or not validation_method["kind"]
+            or not isinstance(validation_method.get("description"), str)
+            or not validation_method["description"].strip()
+        ):
+            raise RuntimeServiceError("validation receipt has no validation method")
+        validation_method = cast(dict[str, Any], validation_method)
 
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
@@ -1516,6 +1526,17 @@ class NodeRuntimeService:
                 "validation receipt has incomplete provenance evidence"
             )
         lineage = cast(dict[str, Any], lineage)
+        if (
+            validation_method.get("manifest_ref") != manifest_ref
+            or validation_method.get("creator_node_id") != manifest["creator_node_id"]
+            or validation_method.get("work_id") != job_id
+            or validation_method.get("lineage_parent_refs")
+            != lineage.get("parent_refs")
+            or validation_method.get("contribution_attribution") != attribution
+        ):
+            raise RuntimeServiceError(
+                "validation method does not match receipt provenance"
+            )
         receipt_execution = receipt.get("execution")
         executor_started_at = (
             receipt_execution.get("executor_started_at")
@@ -1598,6 +1619,7 @@ class NodeRuntimeService:
             "result_hash": result["result_hash"],
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
+            "validation_method": validation_method,
             "validation_timestamp": validated_at,
             "validation_timestamp_source": timestamp_source,
             "executor_started_at": receipt_execution["executor_started_at"],
@@ -1983,6 +2005,19 @@ class NodeRuntimeService:
                 "creator_node_id": manifest["creator_node_id"],
                 "lineage_parent_refs": manifest["lineage"]["parent_refs"],
                 "contribution_attribution": contribution_attribution,
+                "validation_method": {
+                    "kind": "deterministic_local_result_check",
+                    "description": (
+                        "Recomputed the expected local "
+                        f"{job.job_type} result and compared it to the executor result "
+                        f"(validation: {validation.reason})."
+                    ),
+                    "manifest_ref": manifest_ref,
+                    "creator_node_id": manifest["creator_node_id"],
+                    "work_id": job_id,
+                    "lineage_parent_refs": manifest["lineage"]["parent_refs"],
+                    "contribution_attribution": contribution_attribution,
+                },
                 "validation": {
                     **validation.to_dict(),
                     "execution_outcome": result.status,

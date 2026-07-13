@@ -254,6 +254,21 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertTrue(completed["validation"]["passed"])
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
+            self.assertEqual(
+                receipt["validation_method"],
+                {
+                    "kind": "deterministic_local_result_check",
+                    "description": (
+                        "Recomputed the expected local echo result and compared it to "
+                        "the executor result (validation: ok)."
+                    ),
+                    "manifest_ref": submission["manifest_ref"],
+                    "creator_node_id": request["creator_node_id"],
+                    "work_id": submission["job_id"],
+                    "lineage_parent_refs": request["lineage_parent_refs"],
+                    "contribution_attribution": completed["contribution_attribution"],
+                },
+            )
             self.assertEqual(receipt["job_id"], submission["job_id"])
             self.assertEqual(receipt["work_id"], submission["job_id"])
             self.assertEqual(result["job_id"], request["job_id"])
@@ -396,6 +411,28 @@ class RuntimeServiceTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 RuntimeServiceError,
                 "capability does not match manifest result",
+            ):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
+
+    def test_local_validation_receipt_rejects_missing_validation_method(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("validation_method")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "has no validation method"
             ):
                 NodeRuntimeService.from_home(root).get_local_validation_receipt(
                     work_id=evidence["submission"]["job_id"]

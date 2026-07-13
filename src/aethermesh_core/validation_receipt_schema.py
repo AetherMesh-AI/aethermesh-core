@@ -23,6 +23,7 @@ _REQUIRED_FIELDS = frozenset(
         "work_id",
         "manifest_id",
         "validation_status",
+        "validation_method",
         "validator_id",
         "lineage",
         "contribution",
@@ -130,6 +131,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         )
     _lineage(receipt["lineage"])
     _contribution(receipt["contribution"])
+    _validation_method(receipt["validation_method"], receipt)
     _evidence(receipt["evidence"])
     if not isinstance(receipt["receipt_hash"], str) or receipt[
         "receipt_hash"
@@ -233,6 +235,52 @@ def _nullable_string(value: object, label: str) -> None:
 def _nullable_identifier(value: object, label: str) -> None:
     if value is not None:
         _identifier(value, label)
+
+
+def _validation_method(value: object, receipt: dict[str, Any]) -> None:
+    method = _object(
+        value,
+        "validation receipt.validation_method",
+        frozenset(
+            {
+                "kind",
+                "description",
+                "manifest_id",
+                "creator_node_id",
+                "work_id",
+                "lineage_parent_work_ids",
+                "contribution_manifest_ref",
+            }
+        ),
+    )
+    if not isinstance(method["kind"], str) or not method["kind"].strip():
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validation_method.kind must be a non-empty string"
+        )
+    if not isinstance(method["description"], str) or not method["description"].strip():
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validation_method.description must be a non-empty string"
+        )
+    for field in ("manifest_id", "creator_node_id", "work_id"):
+        if method[field] != receipt[field]:
+            raise ValidationReceiptSchemaError(
+                f"validation receipt.validation_method.{field} must match receipt"
+            )
+    _string_list(
+        method["lineage_parent_work_ids"],
+        "validation receipt.validation_method.lineage_parent_work_ids",
+    )
+    if method["lineage_parent_work_ids"] != receipt["lineage"]["parent_work_ids"]:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validation_method.lineage_parent_work_ids must match receipt"
+        )
+    if (
+        method["contribution_manifest_ref"]
+        != receipt["contribution"]["contribution_manifest_ref"]
+    ):
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validation_method.contribution_manifest_ref must match receipt"
+        )
 
 
 def _lineage(value: object) -> None:

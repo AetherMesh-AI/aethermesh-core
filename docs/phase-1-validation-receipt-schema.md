@@ -18,12 +18,15 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | `work_id` | Work item validated by the receipt. |
 | `manifest_id` | Content-addressed source work manifest identifier. |
 | `validation_status` | One of `pass`, `fail`, `error`, or `skipped`. |
+| `validation_method` | Required machine-parseable, human-readable description of the concrete local check and its linked provenance. |
 | `validator_id` | Local validator or deterministic validator implementation identity. |
 | `lineage` | Required lineage block described below. |
 | `contribution` | Required local attribution block described below. |
 | `evidence` | Required local validation evidence block described below. |
 
 `pass` means the listed local check completed and met its expectation. `fail` means it completed but did not meet that expectation. `error` means validation could not complete reliably. `skipped` means it was deliberately not run. None is a network or consensus claim.
+
+`validation_method` has exactly `kind`, `description`, `manifest_id`, `creator_node_id`, `work_id`, `lineage_parent_work_ids`, and `contribution_manifest_ref`. `kind` names a concrete local check such as `deterministic_fixture_replay`, `manifest_comparison`, `schema_validation`, or `hash_verification`; `description` explains what was checked. Its manifest, creator, work, lineage, and contribution references must exactly match their receipt fields. This makes a stored or exported receipt self-describing without changing attribution.
 
 Version 2 supersedes version 1 by requiring the algorithm-prefixed `result_hash` format. Existing version 1 receipts with an unprefixed digest remain identifiable as version 1 records and must be migrated explicitly rather than silently reinterpreted.
 

@@ -55,6 +55,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "missing: job_id"):
             validate_validation_receipt_document(missing)
 
+        missing_method = copy.deepcopy(self.passing)
+        missing_method.pop("validation_method")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: validation_method"
+        ):
+            validate_validation_receipt_document(missing_method)
+
         blank = copy.deepcopy(self.passing)
         blank["job_id"] = ""
         with self.assertRaisesRegex(
