@@ -8,7 +8,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 2
+VALIDATION_RECEIPT_SCHEMA_VERSION = 3
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 _REQUIRED_FIELDS = frozenset(
@@ -100,7 +100,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 2"
+            "validation receipt.schema_version must be integer 3"
         )
     for field in (
         "receipt_id",

@@ -438,6 +438,26 @@ class RuntimeServiceTests(unittest.TestCase):
                     work_id=evidence["submission"]["job_id"]
                 )
 
+    def test_local_validation_receipt_rejects_old_stored_version(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt["version"] = 1
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(RuntimeServiceError, "unsupported version"):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
+
     def test_local_validation_receipt_rejects_missing_receipt_id(self) -> None:
         request, _ = _valid_local_work_fixture()
         with tempfile.TemporaryDirectory() as temp_dir:
