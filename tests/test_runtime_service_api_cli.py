@@ -259,8 +259,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 {
                     "kind": "deterministic_local_result_check",
                     "description": (
-                        "Recomputed the expected local echo result and compared it to "
-                        "the executor result (validation: ok)."
+                        "Ran the deterministic local echo validator against the assigned "
+                        "job and executor result. The validator checks completion, work "
+                        "identity, contribution units, payload validity, and expected "
+                        "output in order; outcome: ok."
                     ),
                     "manifest_ref": submission["manifest_ref"],
                     "creator_node_id": request["creator_node_id"],
@@ -1795,6 +1797,13 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertFalse(failed_receipt["validation"]["valid"])
             self.assertEqual(
                 failed_receipt["validation"]["reason"], "result_not_completed"
+            )
+            self.assertEqual(
+                failed_receipt["validation_method"]["description"],
+                "Ran the deterministic local echo validator against the assigned job and "
+                "executor result. The validator checks completion, work identity, "
+                "contribution units, payload validity, and expected output in order; "
+                "outcome: result_not_completed.",
             )
             following_accepted = service.submit_local_job(request)
             following = service.execute_submitted_local_job(

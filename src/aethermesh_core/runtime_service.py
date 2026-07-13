@@ -2032,9 +2032,11 @@ class NodeRuntimeService:
                 "validation_method": {
                     "kind": "deterministic_local_result_check",
                     "description": (
-                        "Recomputed the expected local "
-                        f"{job.job_type} result and compared it to the executor result "
-                        f"(validation: {validation.reason})."
+                        f"Ran the deterministic local {job.job_type} validator against "
+                        "the assigned job and executor result. The validator checks "
+                        "completion, work identity, contribution units, payload validity, "
+                        "and expected output in order; "
+                        f"outcome: {validation.reason}."
                     ),
                     "manifest_ref": manifest_ref,
                     "creator_node_id": manifest["creator_node_id"],
