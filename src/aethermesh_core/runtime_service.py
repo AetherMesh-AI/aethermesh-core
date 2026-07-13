@@ -1439,12 +1439,21 @@ class NodeRuntimeService:
             if isinstance(receipt_execution, dict)
             else None
         )
+        executor_finished_at = (
+            receipt_execution.get("executor_finished_at")
+            if isinstance(receipt_execution, dict)
+            else None
+        )
         if (
             not isinstance(receipt_execution, dict)
             or not isinstance(result_execution, dict)
             or executor_started_at != result_execution.get("executor_started_at")
+            or executor_finished_at != result_execution.get("executor_finished_at")
+            or not _is_utc_timestamp_before_or_at_timestamp(
+                executor_started_at, executor_finished_at
+            )
             or not _is_utc_timestamp_before_or_at(
-                executor_started_at, result_execution.get("executed_at")
+                executor_finished_at, result_execution.get("executed_at")
             )
             or result.get("job_id") != job_id
             or result.get("worker_node_id") != validator_id
@@ -1453,7 +1462,7 @@ class NodeRuntimeService:
             or result_execution.get("lineage_parent_refs") != lineage.get("parent_refs")
         ):
             raise RuntimeServiceError(
-                "validation receipt has invalid executor start timestamp evidence"
+                "validation receipt has invalid executor timing evidence"
             )
         if status.get("validation", {}).get("receipt_ref") != receipt_ref:
             raise RuntimeServiceError(
@@ -1480,6 +1489,7 @@ class NodeRuntimeService:
             "validation_timestamp": validated_at,
             "validation_timestamp_source": timestamp_source,
             "executor_started_at": receipt_execution["executor_started_at"],
+            "executor_finished_at": receipt_execution["executor_finished_at"],
             "validator_identity": validator_id,
             "lineage_parent_ids": lineage["parent_refs"],
             "contribution_attribution": attribution,
@@ -1702,20 +1712,23 @@ class NodeRuntimeService:
         if local_safety is not None and not isinstance(local_safety, dict):
             raise RuntimeServiceError("job submission manifest local_safety is invalid")
         executor_started_at = _utc_timestamp()
-        result = run_local_job(
-            job,
-            NodeIdentity(node_id=worker_node_id),
-            timeout_seconds=(
-                local_safety.get("timeout_seconds")
-                if local_safety is not None
-                else None
-            ),
-            cancellation_requested=(
-                local_safety.get("cancellation_requested", False)
-                if local_safety is not None
-                else False
-            ),
-        )
+        try:
+            result = run_local_job(
+                job,
+                NodeIdentity(node_id=worker_node_id),
+                timeout_seconds=(
+                    local_safety.get("timeout_seconds")
+                    if local_safety is not None
+                    else None
+                ),
+                cancellation_requested=(
+                    local_safety.get("cancellation_requested", False)
+                    if local_safety is not None
+                    else False
+                ),
+            )
+        finally:
+            executor_finished_at = _utc_timestamp()
         validation = validate_job_result(job, result)
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
@@ -1727,6 +1740,7 @@ class NodeRuntimeService:
                 {"output": result.output}, prefix="sha256:"
             ),
             "executor_started_at": executor_started_at,
+            "executor_finished_at": executor_finished_at,
             "executed_at": int(time.time()),
             "creator_node_id": manifest["creator_node_id"],
             "lineage_parent_refs": manifest["lineage"]["parent_refs"],
@@ -2450,6 +2464,15 @@ def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool
     # Completion timestamps currently have whole-second precision, so their value
     # represents the full UTC second in which completion was recorded.
     return parsed.timestamp() < epoch_seconds + 1
+
+
+def _is_utc_timestamp_before_or_at_timestamp(earlier: object, later: object) -> bool:
+    if not _is_utc_timestamp(earlier) or not _is_utc_timestamp(later):
+        return False
+    format_string = "%Y-%m-%dT%H:%M:%S.%fZ"
+    return datetime.strptime(cast(str, earlier), format_string) <= datetime.strptime(
+        cast(str, later), format_string
+    )
 
 
 def _package_version() -> str:

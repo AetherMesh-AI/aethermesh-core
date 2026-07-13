@@ -35,6 +35,7 @@ from aethermesh_core.runtime_service import (
     _default_home,
     _is_utc_timestamp,
     _is_utc_timestamp_before_or_at,
+    _is_utc_timestamp_before_or_at_timestamp,
     _memory_total_bytes,
     _merge_config,
     _package_version,
@@ -352,19 +353,24 @@ class RuntimeServiceTests(unittest.TestCase):
             }
             first = service.submit_local_job(request)
             second = service.submit_local_job(request)
-            start_timestamps = [
+            execution_timestamps = [
                 "2026-07-12T20:36:43.000001Z",
                 "2026-07-12T20:36:43.000002Z",
+                "2026-07-12T20:36:43.000003Z",
+                "2026-07-12T20:36:43.000004Z",
             ]
             with patch(
                 "aethermesh_core.runtime_service._utc_timestamp",
-                side_effect=start_timestamps,
+                side_effect=execution_timestamps,
             ):
                 service.execute_submitted_local_job(first["job_id"], "worker-local-a")
                 service.execute_submitted_local_job(second["job_id"], "worker-local-a")
 
-            for submission, expected_started_at in zip(
-                (first, second), start_timestamps, strict=True
+            for submission, expected_started_at, expected_finished_at in zip(
+                (first, second),
+                execution_timestamps[::2],
+                execution_timestamps[1::2],
+                strict=True,
             ):
                 job_id = submission["job_id"]
                 manifest = json.loads(
@@ -385,6 +391,13 @@ class RuntimeServiceTests(unittest.TestCase):
                 self.assertEqual(
                     receipt["execution"]["executor_started_at"], expected_started_at
                 )
+                self.assertEqual(
+                    result["execution"]["executor_finished_at"], expected_finished_at
+                )
+                self.assertEqual(
+                    receipt["execution"]["executor_finished_at"], expected_finished_at
+                )
+                self.assertLessEqual(expected_started_at, expected_finished_at)
                 self.assertRegex(
                     expected_started_at,
                     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$",
@@ -407,15 +420,45 @@ class RuntimeServiceTests(unittest.TestCase):
                     ],
                     expected_started_at,
                 )
+                self.assertEqual(
+                    service.get_local_validation_receipt(work_id=job_id)[
+                        "executor_finished_at"
+                    ],
+                    expected_finished_at,
+                )
+                self.assertEqual(
+                    json.loads(receipt_path.read_text(encoding="utf-8"))["execution"][
+                        "executor_finished_at"
+                    ],
+                    expected_finished_at,
+                )
 
-            self.assertNotEqual(*start_timestamps)
+            self.assertNotEqual(*execution_timestamps[::2])
             self.assertFalse(_is_utc_timestamp(None))
             self.assertFalse(_is_utc_timestamp("not-a-timestamp"))
             self.assertTrue(
-                _is_utc_timestamp_before_or_at(start_timestamps[0], 1783888603)
+                _is_utc_timestamp_before_or_at(execution_timestamps[0], 1783888603)
             )
-            self.assertFalse(_is_utc_timestamp_before_or_at(start_timestamps[0], None))
+            self.assertFalse(
+                _is_utc_timestamp_before_or_at(execution_timestamps[0], None)
+            )
             self.assertFalse(_is_utc_timestamp_before_or_at(None, 1783888603))
+            self.assertTrue(
+                _is_utc_timestamp_before_or_at_timestamp(
+                    execution_timestamps[0], execution_timestamps[1]
+                )
+            )
+            self.assertFalse(
+                _is_utc_timestamp_before_or_at_timestamp(
+                    execution_timestamps[1], execution_timestamps[0]
+                )
+            )
+            self.assertFalse(
+                _is_utc_timestamp_before_or_at_timestamp(None, execution_timestamps[1])
+            )
+            self.assertFalse(
+                _is_utc_timestamp_before_or_at_timestamp(execution_timestamps[0], None)
+            )
             second_receipt_path = (
                 root / "data" / "job-validation-receipts" / f"{second['job_id']}.json"
             )
@@ -423,7 +466,7 @@ class RuntimeServiceTests(unittest.TestCase):
             second_receipt["execution"]["executor_started_at"] = "not-a-timestamp"
             second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
             with self.assertRaisesRegex(
-                RuntimeServiceError, "invalid executor start timestamp evidence"
+                RuntimeServiceError, "invalid executor timing evidence"
             ):
                 service.get_local_validation_receipt(work_id=second["job_id"])
 
@@ -437,7 +480,7 @@ class RuntimeServiceTests(unittest.TestCase):
             second_result["execution"]["executor_started_at"] = future_started_at
             second_result_path.write_text(json.dumps(second_result), encoding="utf-8")
             with self.assertRaisesRegex(
-                RuntimeServiceError, "invalid executor start timestamp evidence"
+                RuntimeServiceError, "invalid executor timing evidence"
             ):
                 service.get_local_validation_receipt(work_id=second["job_id"])
 
@@ -3088,6 +3131,14 @@ class LocalSafetyMetadataTests(unittest.TestCase):
                         receipt["validation"]["execution_outcome"], outcome
                     )
                     self.assertFalse(receipt["validation"]["valid"])
+                    self.assertRegex(
+                        receipt["execution"]["executor_finished_at"],
+                        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$",
+                    )
+                    self.assertLessEqual(
+                        receipt["execution"]["executor_started_at"],
+                        receipt["execution"]["executor_finished_at"],
+                    )
 
 
 if __name__ == "__main__":
