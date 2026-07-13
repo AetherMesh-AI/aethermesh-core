@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 7
+JOB_RESULT_SCHEMA_VERSION = 8
 MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
@@ -324,8 +324,13 @@ def _references(value: object, manifest_id: object, receipt_id: object) -> None:
 
 
 def _content_hash(value: object, context: str) -> None:
-    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
-        raise JobResultSchemaError(f"{context} must be a lowercase SHA-256 digest")
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", value) is None
+    ):
+        raise JobResultSchemaError(
+            f"{context} must be an algorithm-prefixed lowercase SHA-256 digest"
+        )
 
 
 def _content_addressed_id(value: object, context: str) -> None:

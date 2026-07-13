@@ -109,10 +109,14 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "content-addressed"):
             validate_validation_receipt_document(receipt)
 
-        receipt = copy.deepcopy(self.passing)
-        receipt["result_hash"] = "sha256:not-a-digest"
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "SHA-256 digest"):
-            validate_validation_receipt_document(receipt)
+        for result_hash in (None, "c" * 64, "sha256:not-a-digest"):
+            with self.subTest(result_hash=result_hash):
+                receipt = copy.deepcopy(self.passing)
+                receipt["result_hash"] = result_hash
+                with self.assertRaisesRegex(
+                    ValidationReceiptSchemaError, "SHA-256 digest"
+                ):
+                    validate_validation_receipt_document(receipt)
 
         receipt = copy.deepcopy(self.passing)
         receipt["not_json"] = {float("nan")}
