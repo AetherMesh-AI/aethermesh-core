@@ -8,8 +8,9 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 4
+VALIDATION_RECEIPT_SCHEMA_VERSION = 5
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
+RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 _REQUIRED_FIELDS = frozenset(
     {
@@ -23,6 +24,8 @@ _REQUIRED_FIELDS = frozenset(
         "job_id",
         "work_id",
         "manifest_id",
+        "status",
+        "rejection_reason",
         "validation_status",
         "validation_method",
         "validator_id",
@@ -101,7 +104,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 4"
+            "validation receipt.schema_version must be integer 5"
         )
     for field in (
         "receipt_id",
@@ -124,12 +127,34 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     _sha256_content_id(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
     _timestamp(receipt["validated_at"], "validation receipt.validated_at")
+    status = receipt["status"]
+    if not isinstance(status, str) or status not in RECEIPT_STATUSES:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.status must be accepted or rejected"
+        )
     if (
         not isinstance(receipt["validation_status"], str)
         or receipt["validation_status"] not in VALIDATION_STATUSES
     ):
         raise ValidationReceiptSchemaError(
             "validation receipt.validation_status is unsupported"
+        )
+    expected_status = (
+        "accepted" if receipt["validation_status"] == "pass" else "rejected"
+    )
+    if status != expected_status:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.status does not match validation_status"
+        )
+    rejection_reason = receipt["rejection_reason"]
+    if status == "rejected":
+        if not isinstance(rejection_reason, str) or not rejection_reason.strip():
+            raise ValidationReceiptSchemaError(
+                "rejected validation receipt.rejection_reason must be a non-empty string"
+            )
+    elif rejection_reason is not None:
+        raise ValidationReceiptSchemaError(
+            "accepted validation receipt.rejection_reason must be null"
         )
     _lineage(receipt["lineage"])
     _contribution(receipt["contribution"])

@@ -32,7 +32,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 | `GET /health`, `/status`, `/api/status`, `/version`, `/node`, `/api/node`, `/peers`, `/api/peers`, `/api/jobs`, `/capabilities`, `/api/capabilities`, `/api/model-manifests`, `/api/package`, `/api/network`, `/logs`, `/api/logs`, `/api/events`, `/`, `/shutdown`, `/restart` | None, except local control signal posts | Current local status/control shape described in the API boundary; none writes provenance. |
 | `POST /api/jobs` | Local Job Submission v1 | Local Job Submission Acceptance v1 |
 | `GET /api/jobs/{job_id}` | Required path `job_id` | Local Job Status v1 artifact projection |
-| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v3 |
+| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v4 |
 | `GET /api/contributions` | None | Local Contribution Lookup v1 |
 | `GET /api/audit-events` | Optional documented filters | Local Audit Page v1 |
 
@@ -107,9 +107,9 @@ Example completed projection (dynamic IDs and timestamps omitted):
 }
 ```
 
-## Local Validation Receipt v3
+## Local Validation Receipt v4
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`3`), `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validation_method`, `validated_at`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `validated_at` is recorded locally after validation completes as a UTC ISO 8601 timestamp ending in `Z`; it is audit timing, not consensus time. `validation_method` identifies the concrete local check and repeats the receipt's manifest, creator, work, lineage, and contribution provenance so exports remain self-describing. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. Every receipt includes `schema_version` (`4`), machine-readable `status` (`accepted` or `rejected`), `rejection_reason` (null only when accepted), `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validation_method`, `validated_at`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `accepted` means required local validation passed; it is not network consensus. `validated_at` is recorded locally after validation completes as a UTC ISO 8601 timestamp ending in `Z`; it is audit timing, not consensus time. `validation_method` identifies the concrete local check and repeats the receipt's manifest, creator, work, lineage, and contribution provenance so exports remain self-describing. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
@@ -117,7 +117,7 @@ Example response:
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "receipt_id": "local-validation-receipt-local-job-<generated>",
   "validation_receipt_id": "local-validation-receipt-local-job-<generated>",
   "work_id": "local-job-<generated>",
@@ -125,6 +125,8 @@ Example response:
   "requester_identity": {"local_requester_identity": "developer-cli"},
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
   "lineage_parent_ids": ["data/prior-job.json"],
+  "status": "accepted",
+  "rejection_reason": null,
   "validation_status": "passed",
   "validated_at": "2026-07-13T12:00:01.000000Z",
   "validation_method": {

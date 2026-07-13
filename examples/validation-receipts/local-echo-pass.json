@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "receipt_id": "local-validation-receipt-local-job-echo-001",
-  "receipt_hash": "sha256:b8290eed0c796930f2f6ae89ea921bea648a2fb92e2ffc3821b3b0fff1b47a52",
+  "receipt_hash": "sha256:52db67087a47deed183f86d4a3d97fdcf6501f49da22ccc83e867e4fd65f786d",
   "result_hash": "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
@@ -9,6 +9,8 @@
   "job_id": "local-job-echo-001",
   "work_id": "local-job-echo-001",
   "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "accepted",
+  "rejection_reason": null,
   "validation_status": "pass",
   "validation_method": {
     "kind": "deterministic_fixture_replay",

@@ -38,6 +38,12 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.assertIs(validate_validation_receipt_document(self.failing), self.failing)
         self.assertEqual(self.passing["validation_status"], "pass")
         self.assertEqual(self.failing["validation_status"], "fail")
+        self.assertEqual(self.passing["status"], "accepted")
+        self.assertEqual(self.failing["status"], "rejected")
+        self.assertEqual(
+            self.failing["rejection_reason"],
+            "output did not match deterministic echo expectation",
+        )
         self.assertEqual(
             self.failing["lineage"]["prior_receipt_ids"],
             [self.passing["receipt_id"]],
@@ -91,13 +97,43 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "unsupported fields"):
             validate_validation_receipt_document(unknown)
 
-    def test_all_documented_validation_states_are_allowed(self) -> None:
-        for state in ("pass", "fail", "error", "skipped"):
+    def test_validation_statuses_map_to_explicit_receipt_statuses(self) -> None:
+        for state, status in (
+            ("pass", "accepted"),
+            ("fail", "rejected"),
+            ("error", "rejected"),
+            ("skipped", "rejected"),
+        ):
             with self.subTest(state=state):
                 receipt = copy.deepcopy(self.passing)
                 receipt["validation_status"] = state
+                receipt["status"] = status
+                receipt["rejection_reason"] = (
+                    None if status == "accepted" else "required validation did not pass"
+                )
                 receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
                 self.assertIs(validate_validation_receipt_document(receipt), receipt)
+
+    def test_invalid_or_mismatched_receipt_status_is_rejected(self) -> None:
+        cases = (
+            ("pending", None, "must be accepted or rejected"),
+            ("accepted", "unexpected", "must be null"),
+            ("rejected", "required validation failed", "does not match"),
+        )
+        for status, rejection_reason, error in cases:
+            with self.subTest(status=status):
+                receipt = copy.deepcopy(self.passing)
+                receipt["status"] = status
+                receipt["rejection_reason"] = rejection_reason
+                receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+                with self.assertRaisesRegex(ValidationReceiptSchemaError, error):
+                    validate_validation_receipt_document(receipt)
+
+        receipt = copy.deepcopy(self.failing)
+        receipt["rejection_reason"] = None
+        receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "rejection_reason"):
+            validate_validation_receipt_document(receipt)
 
     def test_identical_local_evidence_has_stable_id_and_hash(self) -> None:
         first = copy.deepcopy(self.passing)
@@ -135,7 +171,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             validate_validation_receipt_document(receipt)
 
     def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
-        for field, value in (("schema_version", 4.0), ("validation_status", [])):
+        for field, value in (("schema_version", 5.0), ("validation_status", [])):
             with self.subTest(field=field):
                 receipt = copy.deepcopy(self.passing)
                 receipt[field] = value
@@ -143,8 +179,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 3
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 4"):
+        old_version["schema_version"] = 4
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 5"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)
