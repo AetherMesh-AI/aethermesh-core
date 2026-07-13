@@ -3,7 +3,10 @@ import json
 import unittest
 from pathlib import Path
 
-from aethermesh_core.result_hash import validate_validation_receipt_result_hash
+from aethermesh_core.result_hash import (
+    canonical_result_document_hash,
+    validate_validation_receipt_result_hash,
+)
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     canonical_validation_receipt_hash,
@@ -22,6 +25,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.failing = json.loads(
             (examples / "local-echo-fail.json").read_text("utf-8")
         )
+        results = root / "examples" / "job-results"
+        self.success_result = json.loads(
+            (results / "local-echo-success.json").read_text("utf-8")
+        )
+        self.failed_result = json.loads(
+            (results / "local-echo-failed.json").read_text("utf-8")
+        )
 
     def test_passing_and_failing_examples_validate(self) -> None:
         self.assertIs(validate_validation_receipt_document(self.passing), self.passing)
@@ -33,7 +43,10 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             [self.passing["receipt_id"]],
         )
         validate_validation_receipt_result_hash(
-            self.passing, self.passing["result_hash"]
+            self.passing, canonical_result_document_hash(self.success_result)
+        )
+        validate_validation_receipt_result_hash(
+            self.failing, canonical_result_document_hash(self.failed_result)
         )
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
