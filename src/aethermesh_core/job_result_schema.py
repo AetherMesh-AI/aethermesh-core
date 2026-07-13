@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -221,9 +222,7 @@ def _references(value: object, manifest_id: object, receipt_id: object) -> None:
 def _content_addressed_id(value: object, context: str) -> None:
     if (
         not isinstance(value, str)
-        or not value.startswith("sha256:")
-        or len(value) != 71
-        or any(character not in "0123456789abcdef" for character in value[7:])
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", value) is None
     ):
         raise JobResultSchemaError(f"{context} must be a SHA-256 content-addressed ID")
 
