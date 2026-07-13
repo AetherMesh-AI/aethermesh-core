@@ -254,6 +254,8 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertTrue(completed["validation"]["passed"])
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
+            self.assertEqual(receipt["job_id"], submission["job_id"])
+            self.assertEqual(receipt["work_id"], submission["job_id"])
             self.assertEqual(result["job_id"], request["job_id"])
             self.assertEqual(result["capability"], "work.echo")
             self.assertEqual(
@@ -278,6 +280,9 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertEqual(receipt["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                receipt["contribution_attribution"]["job_id"], receipt["job_id"]
+            )
             self.assertEqual(
                 service.get_local_validation_receipt(work_id=submission["job_id"])[
                     "validation_receipt_id"

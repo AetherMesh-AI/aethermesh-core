@@ -19,6 +19,7 @@ _REQUIRED_FIELDS = frozenset(
         "result_hash",
         "created_at",
         "creator_node_id",
+        "job_id",
         "work_id",
         "manifest_id",
         "validation_status",
@@ -103,6 +104,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     for field in (
         "receipt_id",
         "creator_node_id",
+        "job_id",
         "work_id",
         "manifest_id",
         "validator_id",
@@ -111,6 +113,10 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     if receipt["receipt_id"] != validation_receipt_id(receipt["work_id"]):
         raise ValidationReceiptSchemaError(
             "validation receipt.receipt_id must match its work_id"
+        )
+    if receipt["job_id"] != receipt["work_id"]:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.job_id must match its work_id"
         )
     _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
     _sha256_digest(receipt["result_hash"], "validation receipt.result_hash")
