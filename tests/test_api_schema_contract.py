@@ -192,7 +192,9 @@ class ApiSchemaContractTests(unittest.TestCase):
                 set(status_payload["result"]), set(status_example["result"])
             )
             self.assertEqual(receipt.status_code, 200)
-            self.assertEqual(receipt.json()["schema_version"], 3)
+            self.assertEqual(receipt.json()["schema_version"], 4)
+            self.assertEqual(receipt.json()["status"], "accepted")
+            self.assertIsNone(receipt.json()["rejection_reason"])
             self.assertEqual(receipt.json()["work_id"], accepted.json()["job_id"])
             self.assertEqual(
                 receipt.json()["creator_node_id"], request["creator_node_id"]

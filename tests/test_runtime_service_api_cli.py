@@ -276,6 +276,8 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertTrue(completed["validation"]["passed"])
+            self.assertEqual(receipt["status"], "accepted")
+            self.assertIsNone(receipt["rejection_reason"])
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
             self.assertEqual(
@@ -542,6 +544,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 self.assertTrue(receipt["creator_node_id"])
                 self.assertTrue(receipt["manifest_ref"])
                 self.assertIsInstance(receipt["lineage_parent_ids"], list)
+                self.assertIn(receipt["status"], {"accepted", "rejected"})
                 self.assertIn(receipt["validation_status"], {"passed", "failed"})
                 self.assertIsInstance(receipt["contribution_attribution"], dict)
 
@@ -2197,7 +2200,7 @@ class RuntimeServiceTests(unittest.TestCase):
             ) = asyncio.run(fetch())
             self.assertEqual(by_receipt.status_code, 200)
             payload = by_receipt.json()
-            self.assertEqual(payload["schema_version"], 3)
+            self.assertEqual(payload["schema_version"], 4)
             self.assertEqual(payload, by_work.json())
             self.assertEqual(payload, latest.json())
             self.assertEqual(

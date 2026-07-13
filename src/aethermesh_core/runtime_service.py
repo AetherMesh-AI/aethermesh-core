@@ -1459,7 +1459,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 3:
+        if receipt.get("version") != 4:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1479,6 +1479,12 @@ class NodeRuntimeService:
         ):
             raise RuntimeServiceError(
                 "validation receipt has invalid validation evidence"
+            )
+        receipt_status = receipt.get("status")
+        rejection_reason = receipt.get("rejection_reason")
+        if receipt_status not in {"accepted", "rejected"}:
+            raise RuntimeServiceError(
+                "validation receipt status must be accepted or rejected"
             )
         validation_method = _validated_runtime_validation_method(
             receipt.get("validation_method")
@@ -1590,6 +1596,25 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "validation receipt has invalid executor timing evidence"
             )
+        expected_status = (
+            "accepted"
+            if validation["valid"] and result.get("status") == "succeeded"
+            else "rejected"
+        )
+        if receipt_status != expected_status:
+            raise RuntimeServiceError(
+                "validation receipt status does not match validation evidence"
+            )
+        if receipt_status == "rejected" and (
+            not isinstance(rejection_reason, str) or not rejection_reason.strip()
+        ):
+            raise RuntimeServiceError(
+                "rejected validation receipt has no rejection reason"
+            )
+        if receipt_status == "accepted" and rejection_reason is not None:
+            raise RuntimeServiceError(
+                "accepted validation receipt has a rejection reason"
+            )
         if status.get("validation", {}).get("receipt_ref") != receipt_ref:
             raise RuntimeServiceError(
                 "job status does not reference validation receipt"
@@ -1601,7 +1626,7 @@ class NodeRuntimeService:
                 "validation receipt has missing or invalid validated_at timestamp"
             )
         return {
-            "schema_version": 3,
+            "schema_version": 4,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
@@ -1615,6 +1640,8 @@ class NodeRuntimeService:
             "manifest_ref": manifest_ref,
             "input_payload_hash": expected_payload_hash,
             "result_hash": result["result_hash"],
+            "status": receipt_status,
+            "rejection_reason": rejection_reason,
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_method": validation_method,
@@ -1700,7 +1727,7 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 3:
+                    if receipt.get("version") != 4:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
@@ -2017,7 +2044,7 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 3,
+                "version": 4,
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
@@ -2026,6 +2053,8 @@ class NodeRuntimeService:
                 "input_payload_hash": payload_hash,
                 "output_hash": execution_metadata["output_digest"],
                 "result_hash": result_document["result_hash"],
+                "status": "accepted" if succeeded else "rejected",
+                "rejection_reason": None if succeeded else validation.reason,
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "executor_node_id": worker_node_id,
