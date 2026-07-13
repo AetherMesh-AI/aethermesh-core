@@ -52,6 +52,26 @@ class JobResultSchemaTests(unittest.TestCase):
             self.pending["creator_node_id"],
         )
 
+    def test_model_ref_is_optional_nullable_local_provenance(self) -> None:
+        self.assertEqual(
+            self.success["model_ref"], "local-worker:aethermesh-local-runner@1"
+        )
+        self.assertIs(validate_job_result_document(self.success), self.success)
+
+        absent = copy.deepcopy(self.success)
+        absent.pop("model_ref")
+        absent["result_hash"] = canonical_result_document_hash(absent)
+        self.assertIs(validate_job_result_document(absent), absent)
+
+        null = copy.deepcopy(self.pending)
+        self.assertIsNone(null["model_ref"])
+        self.assertIs(validate_job_result_document(null), null)
+
+        invalid = copy.deepcopy(self.success)
+        invalid["model_ref"] = "ambiguous local worker"
+        with self.assertRaisesRegex(JobResultSchemaError, "model_ref"):
+            validate_job_result_document(invalid)
+
     def test_required_attribution_lineage_manifest_and_validation_fields_reject_omission(
         self,
     ) -> None:

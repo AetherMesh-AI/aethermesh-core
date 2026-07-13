@@ -1499,6 +1499,9 @@ class RuntimeServiceTests(unittest.TestCase):
                     self.assertEqual(document["job_id"], submission["job_id"])
                     self.assertEqual(document["creator_node_id"], "creator-local-a")
                     self.assertEqual(document["executor_node_id"], worker)
+                    self.assertEqual(
+                        document["model_ref"], "local-worker:aethermesh-local-runner@1"
+                    )
                     self.assertEqual(document["status"], expected_status)
                     self.assertEqual(
                         document["validation_status"],

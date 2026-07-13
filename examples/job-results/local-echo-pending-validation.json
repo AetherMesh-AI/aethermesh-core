@@ -5,6 +5,7 @@
   "job_id": "local-job-echo-pending-001",
   "task_id": "local-task-echo-pending-001",
   "capability": "work.echo",
+  "model_ref": null,
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
