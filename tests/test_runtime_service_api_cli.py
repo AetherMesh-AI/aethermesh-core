@@ -1749,6 +1749,93 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
 
+    def test_local_job_result_read_path_returns_stored_report_and_preserves_identity(
+        self,
+    ) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            completed = service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            report_path = root / completed["result"]["ref"]
+            report_before_read = report_path.read_bytes()
+
+            report = service.get_local_job_result(submission["job_id"])
+
+            self.assertEqual(report["job_id"], submission["job_id"])
+            self.assertEqual(report["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(report["validation_status"], "passed")
+            self.assertEqual(
+                report["references"]["validation_receipt_ids"],
+                [f"local-validation-receipt-{submission['job_id']}"],
+            )
+            self.assertEqual(
+                report["lineage"]["parent_job_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                report["contribution"]["creator_node_id"], request["creator_node_id"]
+            )
+            self.assertEqual(report_path.read_bytes(), report_before_read)
+
+    def test_local_job_result_read_path_rejects_missing_invalid_and_mismatched_reports(
+        self,
+    ) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            with self.assertRaisesRegex(RuntimeServiceError, "job_id"):
+                service.get_local_job_result("not-a-local-job")
+            with self.assertRaisesRegex(RuntimeServiceError, "result report not found"):
+                service.get_local_job_result(request["job_id"])
+
+            submission = service.submit_local_job(request)
+            completed = service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            report_path = root / completed["result"]["ref"]
+            mismatched = json.loads(report_path.read_text(encoding="utf-8"))
+            mismatched["job_id"] = "local-job-ffffffffffffffffffffffffffffffff"
+            mismatched["result_hash"] = canonical_result_document_hash(mismatched)
+            report_path.write_text(json.dumps(mismatched), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "does not match its job ID"
+            ):
+                service.get_local_job_result(submission["job_id"])
+
+    def test_local_job_result_api_reads_stored_report_and_returns_not_found(
+        self,
+    ) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(Path(temp_dir))
+            submission = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            api = create_app(service)
+
+            async def fetch() -> tuple[httpx.Response, httpx.Response]:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return (
+                        await client.get(f"/api/jobs/{submission['job_id']}/result"),
+                        await client.get(
+                            "/api/jobs/local-job-00000000000000000000000000000000/result"
+                        ),
+                    )
+
+            stored, missing = asyncio.run(fetch())
+            self.assertEqual(stored.status_code, 200)
+            self.assertEqual(stored.json()["job_id"], submission["job_id"])
+            self.assertEqual(missing.status_code, 404)
+            self.assertEqual(missing.json()["error"]["code"], "RESULT_REPORT_NOT_FOUND")
+
     def test_validation_receipt_api_reads_stored_evidence_and_rejects_bad_lookups(
         self,
     ) -> None:
