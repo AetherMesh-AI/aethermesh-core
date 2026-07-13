@@ -2097,6 +2097,132 @@ class RuntimeServiceTests(unittest.TestCase):
             ):
                 service.get_local_job_result(submission["job_id"])
 
+    def test_result_report_preflight_rejects_malformed_candidates_without_evidence_mutation(
+        self,
+    ) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            report = service.get_local_job_result(submission["job_id"])
+
+            def evidence_snapshot() -> dict[str, bytes]:
+                return {
+                    str(path.relative_to(root / "data")): path.read_bytes()
+                    for directory in (
+                        "job-results",
+                        "job-validation-receipts",
+                        "job-status",
+                    )
+                    for path in (root / "data" / directory).glob("*.json")
+                }
+
+            pending_candidate = deepcopy(report)
+            pending_candidate["validation_status"] = "not_run"
+            pending_candidate["result_hash"] = None
+            ready = service.preflight_local_result_report(pending_candidate)
+            self.assertEqual(ready["status"], "ready_for_validation")
+            self.assertEqual(ready["job_id"], submission["job_id"])
+
+            malformed_timestamp = deepcopy(report)
+            malformed_timestamp["reported_at"] = "not-a-timestamp"
+            mismatched_manifest = deepcopy(report)
+            mismatched_manifest["manifest_id"] = "sha256:" + "f" * 64
+            mismatched_manifest["references"]["manifest_hash"] = mismatched_manifest[
+                "manifest_id"
+            ]
+            mismatched_manifest["result_hash"] = canonical_result_document_hash(
+                mismatched_manifest
+            )
+            mismatched_worker = deepcopy(pending_candidate)
+            mismatched_worker["result_id"] = "local-result-forged"
+            mismatched_worker["executor_node_id"] = "worker-forged"
+            mismatched_worker["validator_node_id"] = "worker-forged"
+            mismatched_worker["contribution"]["executor_node_id"] = "worker-forged"
+            mismatched_worker["contribution"]["validator_node_id"] = "worker-forged"
+            missing_manifest = deepcopy(report)
+            missing_manifest["job_id"] = "local-job-ffffffffffffffffffffffffffffffff"
+            missing_manifest["task_id"] = missing_manifest["job_id"]
+            missing_manifest["result_hash"] = canonical_result_document_hash(
+                missing_manifest
+            )
+            candidates: tuple[object, ...] = (
+                {},
+                ["wrong-type"],
+                malformed_timestamp,
+                mismatched_manifest,
+                mismatched_worker,
+                missing_manifest,
+                {"unsupported": "x" * (17 * 1024)},
+                {f"unsupported-{'x' * 128}-{index}": None for index in range(32)},
+                {"unserializable": {"not-json"}},
+            )
+            evidence_before = evidence_snapshot()
+            contributions_before = service.contribution_summary()
+
+            for candidate in candidates:
+                rejection = service.preflight_local_result_report(candidate)
+                self.assertEqual(rejection["status"], "rejected")
+                self.assertIn(
+                    rejection["reason_code"],
+                    {
+                        "invalid_result_report",
+                        "manifest_mismatch",
+                        "missing_manifest",
+                    },
+                )
+                self.assertRegex(
+                    rejection["attempt_id"], r"^local-rejected-result-report-"
+                )
+                self.assertLessEqual(len(rejection["reason"]), 512)
+
+            self.assertEqual(evidence_snapshot(), evidence_before)
+            self.assertEqual(service.contribution_summary(), contributions_before)
+            logs = sorted((root / "data" / "rejected-result-reports").glob("*.json"))
+            self.assertEqual(len(logs), len(candidates))
+            rejection_logs = [
+                json.loads(path.read_text(encoding="utf-8")) for path in logs
+            ]
+            for rejection_log in rejection_logs:
+                self.assertEqual(rejection_log["status"], "rejected")
+                self.assertIn(
+                    rejection_log["reason_code"],
+                    {
+                        "invalid_result_report",
+                        "manifest_mismatch",
+                        "missing_manifest",
+                    },
+                )
+                self.assertRegex(rejection_log["processed_at"], r"Z$")
+                self.assertLessEqual(len(rejection_log["reason"]), 512)
+                self.assertIn("report", rejection_log)
+            self.assertTrue(
+                any(log["report"].get("truncated") is True for log in rejection_logs)
+            )
+            self.assertTrue(
+                any(
+                    log["report"].get("unserializable_type") == "dict"
+                    for log in rejection_logs
+                )
+            )
+
+            api = create_app(service)
+
+            async def preflight_via_api() -> httpx.Response:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return await client.post("/api/result-reports/preflight", json={})
+
+            response = asyncio.run(preflight_via_api())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["status"], "rejected")
+
     def test_local_job_result_api_lists_metadata_and_reads_controlled_details(
         self,
     ) -> None:

@@ -66,6 +66,9 @@ MANIFEST_INSPECTION_SCHEMA_VERSION = 1
 CAPABILITY_RECORD_INSPECTION_SCHEMA_VERSION = 1
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
+RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION = 1
+MAX_REJECTED_RESULT_REPORT_BYTES = 16 * 1024
+MAX_REJECTED_RESULT_REPORT_REASON_CHARS = 512
 LOCAL_JOB_STATES = frozenset(
     {"created", "queued", "running", "succeeded", "failed", "canceled"}
 )
@@ -178,6 +181,14 @@ LOCAL_PROVENANCE_CAPABILITY_DEFINITIONS = (
 
 class RuntimeServiceError(ValueError):
     """Raised when local runtime state cannot be safely loaded or written."""
+
+
+class _ResultReportPreflightError(RuntimeServiceError):
+    """Internal structured rejection for a local result-report candidate."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class ValidationReceiptNotFoundError(RuntimeServiceError):
@@ -1141,6 +1152,147 @@ class NodeRuntimeService:
         if result["job_id"] != job_id:
             raise RuntimeServiceError("job result record does not match its job ID")
         return result
+
+    def preflight_local_result_report(self, report: object) -> dict[str, Any]:
+        """Check an incoming report without creating accepted work evidence."""
+
+        try:
+            checked = validate_job_result_document(report)
+            job_id = checked["job_id"]
+            if not self._is_local_job_id(job_id):
+                raise _ResultReportPreflightError(
+                    "invalid_work_id", "result report job_id must be a local job ID"
+                )
+            manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
+            if not manifest_path.exists():
+                raise _ResultReportPreflightError(
+                    "missing_manifest",
+                    "result report does not reference an existing local work manifest",
+                )
+            manifest = self._load_local_job_document(
+                manifest_path, "job submission manifest"
+            )
+            status_path = self._job_status_path(job_id)
+            if not status_path.exists():
+                raise _ResultReportPreflightError(
+                    "missing_work_state",
+                    "result report does not reference existing local work state",
+                )
+            status = self._load_local_job_document(status_path, "job status record")
+            self._validate_result_report_manifest_binding(
+                checked, manifest, status, job_id
+            )
+        except _ResultReportPreflightError as exc:
+            return self._reject_local_result_report(report, exc.code, str(exc))
+        except ValueError as exc:
+            return self._reject_local_result_report(
+                report, "invalid_result_report", str(exc)
+            )
+
+        return {
+            "schema_version": RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION,
+            "status": "ready_for_validation",
+            "job_id": job_id,
+            "manifest_ref": f"data/job-submissions/{job_id}.json",
+            "network_mode": "local-only-no-p2p",
+        }
+
+    def _validate_result_report_manifest_binding(
+        self,
+        report: dict[str, Any],
+        manifest: dict[str, Any],
+        status: dict[str, Any],
+        job_id: str,
+    ) -> None:
+        """Require a candidate report to match its immutable local work manifest."""
+
+        manifest_job = manifest.get("job")
+        lineage = manifest.get("lineage")
+        if not isinstance(manifest_job, dict) or not isinstance(lineage, dict):
+            raise _ResultReportPreflightError(
+                "invalid_manifest", "referenced local work manifest is invalid"
+            )
+        manifest_id = canonical_json_hash(manifest, prefix="sha256:")
+        expected_receipt_id = self._receipt_id_for_job(job_id)
+        expected_executor = status.get("executor_node_id")
+        submitted_at = manifest.get("submitted_at")
+        if not isinstance(submitted_at, int) or isinstance(submitted_at, bool):
+            raise _ResultReportPreflightError(
+                "invalid_manifest", "referenced local work manifest has invalid timing"
+            )
+        expected_created_at = _utc_timestamp_from_unix_seconds(submitted_at)
+        if manifest_job.get("job_id") != job_id:
+            raise _ResultReportPreflightError(
+                "invalid_manifest",
+                "referenced local work manifest does not match work ID",
+            )
+        if (
+            report["manifest_id"] != manifest_id
+            or report["references"]["manifest_hash"] != manifest_id
+        ):
+            raise _ResultReportPreflightError(
+                "manifest_mismatch",
+                "result report manifest reference does not match local work manifest",
+            )
+        if (
+            status.get("job_id") != job_id
+            or not _safe_local_identifier(expected_executor)
+            or status.get("worker_node_id") != expected_executor
+            or report["result_id"] != f"local-result-{job_id}"
+            or report["creator_node_id"] != manifest.get("creator_node_id")
+            or report["capability"]
+            != manifest_job.get("requested_capability", {}).get("identifier")
+            or report["task_id"] != job_id
+            or report["created_at"] != expected_created_at
+            or report["validation_receipt_id"] != expected_receipt_id
+            or report["references"]["validation_receipt_ids"] != [expected_receipt_id]
+            or report["executor_node_id"] != expected_executor
+            or report["validator_node_id"] != expected_executor
+            or report["lineage"]["input_manifest_ids"] != [manifest_id]
+            or report["lineage"]["parent_job_ids"] != lineage.get("parent_refs")
+        ):
+            raise _ResultReportPreflightError(
+                "manifest_mismatch",
+                "result report provenance does not match local work manifest",
+            )
+        if (
+            report["validation_status"] not in {"pending", "not_run"}
+            or report["result_hash"] is not None
+        ):
+            raise _ResultReportPreflightError(
+                "premature_validation",
+                "result report must remain unvalidated until local validation completes",
+            )
+
+    def _reject_local_result_report(
+        self, report: object, reason_code: str, reason: str
+    ) -> dict[str, Any]:
+        """Persist bounded rejected input without changing accepted evidence."""
+
+        attempt_id = f"local-rejected-result-report-{uuid4().hex}"
+        bounded_reason = reason[:MAX_REJECTED_RESULT_REPORT_REASON_CHARS]
+        rejection = {
+            "schema_version": RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION,
+            "attempt_id": attempt_id,
+            "status": "rejected",
+            "reason_code": reason_code,
+            "reason": bounded_reason,
+            "processed_at": _utc_timestamp(),
+            "report": _bounded_rejected_result_report(report),
+            "network_mode": "local-only-no-p2p",
+        }
+        atomic_create_json(
+            self.paths.data_dir / "rejected-result-reports" / f"{attempt_id}.json",
+            rejection,
+        )
+        return {
+            "schema_version": RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION,
+            "status": "rejected",
+            "attempt_id": attempt_id,
+            "reason_code": reason_code,
+            "reason": bounded_reason,
+            "network_mode": "local-only-no-p2p",
+        }
 
     def list_local_job_results(self) -> dict[str, Any]:
         """List redacted summaries of stored local result reports deterministically.
@@ -2920,6 +3072,28 @@ def _result_summary(value: object) -> str:
         return value[:512]
     summary = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
     return (summary or "local execution completed")[:512]
+
+
+def _bounded_rejected_result_report(report: object) -> dict[str, object]:
+    """Keep a debuggable report copy while bounding local rejection-log growth."""
+
+    try:
+        encoded = json.dumps(
+            report, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
+    except (TypeError, ValueError):
+        return {"unserializable_type": type(report).__name__}
+    digest = f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+    if len(encoded) <= MAX_REJECTED_RESULT_REPORT_BYTES:
+        return {"original": json.loads(encoded), "sha256": digest, "truncated": False}
+    return {
+        "original_prefix": encoded[:MAX_REJECTED_RESULT_REPORT_BYTES].decode(
+            "utf-8", errors="replace"
+        ),
+        "sha256": digest,
+        "truncated": True,
+        "original_size_bytes": len(encoded),
+    }
 
 
 def _is_utc_timestamp(value: object) -> bool:

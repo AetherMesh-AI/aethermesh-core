@@ -8,7 +8,7 @@ import logging
 from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import Body, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -255,6 +255,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         """List deterministic, metadata-only summaries of local result reports."""
 
         return runtime_service.list_local_job_results()
+
+    @app.post("/api/result-reports/preflight")
+    def preflight_result_report(report: Any = Body(...)) -> dict[str, Any]:
+        """Reject malformed report candidates before local validation can begin."""
+
+        return runtime_service.preflight_local_result_report(report)
 
     @app.get("/api/contributions")
     def contributions() -> dict[str, Any]:
