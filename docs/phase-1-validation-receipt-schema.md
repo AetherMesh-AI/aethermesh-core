@@ -4,17 +4,17 @@
 
 ## Required fields
 
-Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 1 requires:
+Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 2 requires:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | Fixed integer `1`. |
+| `schema_version` | Fixed integer `2`. |
 | `receipt_id` | Stable local receipt identifier derived as `local-validation-receipt-{work_id}`. |
 | `receipt_hash` | SHA-256 hash of the canonical stable receipt content. |
 | `result_hash` | Required `sha256:<64 lowercase hex>` digest of the durable job result being validated. |
 | `created_at` | UTC ISO 8601 creation timestamp; audit ordering only. |
 | `creator_node_id` | Node that created the submitted work. |
-| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 1. |
+| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 2. |
 | `work_id` | Work item validated by the receipt. |
 | `manifest_id` | Content-addressed source work manifest identifier. |
 | `validation_status` | One of `pass`, `fail`, `error`, or `skipped`. |
@@ -24,6 +24,8 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | `evidence` | Required local validation evidence block described below. |
 
 `pass` means the listed local check completed and met its expectation. `fail` means it completed but did not meet that expectation. `error` means validation could not complete reliably. `skipped` means it was deliberately not run. None is a network or consensus claim.
+
+Version 2 supersedes version 1 by requiring the algorithm-prefixed `result_hash` format. Existing version 1 receipts with an unprefixed digest remain identifiable as version 1 records and must be migrated explicitly rather than silently reinterpreted.
 
 ## Nested blocks and reserved nullable placeholders
 
