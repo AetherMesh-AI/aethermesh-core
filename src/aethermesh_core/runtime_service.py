@@ -1138,6 +1138,53 @@ class NodeRuntimeService:
             raise RuntimeServiceError("job result record does not match its job ID")
         return result
 
+    def list_local_job_results(self) -> dict[str, Any]:
+        """List redacted summaries of stored local result reports deterministically.
+
+        This inspection boundary excludes output payloads, failure details, and
+        local artifact paths. Detail reads remain available for one validated
+        report through ``get_local_job_result``.
+        """
+
+        result_directory = self.paths.data_dir / "job-results"
+        reports: list[dict[str, Any]] = []
+        if not result_directory.exists():
+            return {"schema_version": 1, "total": 0, "result_reports": reports}
+        for result_path in sorted(result_directory.glob("*.json")):
+            job_id = result_path.stem
+            # Ignore unrelated filenames rather than interpreting them as reports.
+            if not self._is_local_job_id(job_id):
+                continue
+            result = self.get_local_job_result(job_id)
+            reports.append(
+                {
+                    "result_id": result["result_id"],
+                    "job_id": result["job_id"],
+                    "status": result["status"],
+                    "capability": result["capability"],
+                    "timestamps": {
+                        "created_at": result["created_at"],
+                        "started_at": result["started_at"],
+                        "finished_at": result["finished_at"],
+                        "reported_at": result["reported_at"],
+                    },
+                    "validation": {
+                        "status": result["validation_status"],
+                        "receipt_id": result["validation_receipt_id"],
+                        "receipt_ids": result["references"]["validation_receipt_ids"],
+                    },
+                    "manifest": {
+                        "id": result["manifest_id"],
+                        "hash": result["references"]["manifest_hash"],
+                    },
+                    "lineage": result["lineage"],
+                    "creator_node_id": result["creator_node_id"],
+                    "contribution": result["contribution"],
+                    "result_hash": result["result_hash"],
+                }
+            )
+        return {"schema_version": 1, "total": len(reports), "result_reports": reports}
+
     def inspect_local_audit_events(
         self,
         *,

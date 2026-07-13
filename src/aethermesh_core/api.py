@@ -250,6 +250,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
 
         return runtime_service.get_local_job_result(job_id)
 
+    @app.get("/api/result-reports")
+    def result_reports() -> dict[str, Any]:
+        """List deterministic, metadata-only summaries of local result reports."""
+
+        return runtime_service.list_local_job_results()
+
     @app.get("/api/contributions")
     def contributions() -> dict[str, Any]:
         """Return read-only local contribution attribution and validation evidence."""

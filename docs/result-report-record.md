@@ -26,7 +26,9 @@ Final local validation statuses (`passed`, `failed`, and `error`) require a cano
 
 ## Local storage and read path
 
-The runtime creates each report once at `data/job-results/<job-id>.json` with an atomic, no-replace write. A repeated submission with the same job ID cannot replace an existing report. Local tooling can load and schema-check a report with `NodeRuntimeService.get_local_job_result(job_id)` or read it through `GET /api/jobs/{job_id}/result`; neither read path changes local state.
+The runtime creates each report once at `data/job-results/<job-id>.json` with an atomic, no-replace write. A repeated submission with the same job ID cannot replace an existing report. Local tooling can load and schema-check a report with `NodeRuntimeService.get_local_job_result(job_id)` or read it through `GET /api/jobs/{job_id}/result`; neither read path changes local state. Invalid job IDs receive the stable local API `400 INVALID_INPUT` envelope, and absent reports receive `404 RESULT_REPORT_NOT_FOUND`.
+
+`GET /api/result-reports` and `NodeRuntimeService.list_local_job_results()` provide a local-only, job-ID-sorted listing. The version 1 response is `{schema_version, total, result_reports}`. Each summary has `result_id`, `job_id`, `status`, `capability`, `timestamps`, `validation` (status, receipt ID, and receipt IDs), `manifest` (ID and hash), `lineage`, `creator_node_id`, `contribution`, and `result_hash`. It deliberately excludes `output_payload`, `summary`, `error_summary`, `failure_reasons`, artifact references, and log references; use the detail route only for a known local job ID when that fuller validated record is required.
 
 ## Local validation expectations
 

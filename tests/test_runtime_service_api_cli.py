@@ -1806,7 +1806,7 @@ class RuntimeServiceTests(unittest.TestCase):
             ):
                 service.get_local_job_result(submission["job_id"])
 
-    def test_local_job_result_api_reads_stored_report_and_returns_not_found(
+    def test_local_job_result_api_lists_metadata_and_reads_controlled_details(
         self,
     ) -> None:
         request, _expected_output = _valid_local_work_fixture()
@@ -1816,25 +1816,90 @@ class RuntimeServiceTests(unittest.TestCase):
             service.execute_submitted_local_job(
                 submission["job_id"], "worker-local-fixture"
             )
+            second_request = deepcopy(request)
+            second_request["job_id"] = "local-job-fedcba9876543210fedcba9876543210"
+            second_submission = service.submit_local_job(second_request)
+            service.execute_submitted_local_job(
+                second_submission["job_id"], "worker-local-fixture"
+            )
             api = create_app(service)
 
-            async def fetch() -> tuple[httpx.Response, httpx.Response]:
+            async def fetch() -> tuple[httpx.Response, ...]:
                 transport = httpx.ASGITransport(app=api)
                 async with httpx.AsyncClient(
                     transport=transport, base_url="http://testserver"
                 ) as client:
                     return (
+                        await client.get("/api/result-reports"),
                         await client.get(f"/api/jobs/{submission['job_id']}/result"),
                         await client.get(
                             "/api/jobs/local-job-00000000000000000000000000000000/result"
                         ),
+                        await client.get("/api/jobs/not-a-local-job/result"),
                     )
 
-            stored, missing = asyncio.run(fetch())
+            listed, stored, missing, invalid = asyncio.run(fetch())
+            self.assertEqual(listed.status_code, 200)
+            listing = listed.json()
+            self.assertEqual(listing["schema_version"], 1)
+            self.assertEqual(listing["total"], 2)
+            summaries = listing["result_reports"]
+            self.assertEqual(
+                [summary["job_id"] for summary in summaries],
+                sorted([submission["job_id"], second_submission["job_id"]]),
+            )
+            summary = next(
+                item for item in summaries if item["job_id"] == submission["job_id"]
+            )
+            stored_report = service.get_local_job_result(submission["job_id"])
+            self.assertEqual(summary["validation"]["status"], "passed")
+            self.assertEqual(
+                summary["validation"]["receipt_id"],
+                f"local-validation-receipt-{submission['job_id']}",
+            )
+            self.assertEqual(summary["manifest"]["id"], stored_report["manifest_id"])
+            self.assertEqual(
+                summary["lineage"]["parent_job_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(summary["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                summary["contribution"]["creator_node_id"], request["creator_node_id"]
+            )
+            self.assertNotIn("output_payload", summary)
+            self.assertNotIn("summary", summary)
+            self.assertNotIn("failure_reasons", summary)
             self.assertEqual(stored.status_code, 200)
-            self.assertEqual(stored.json()["job_id"], submission["job_id"])
+            detail = stored.json()
+            self.assertEqual(detail["job_id"], submission["job_id"])
+            self.assertEqual(detail["validation_status"], "passed")
+            self.assertEqual(detail["manifest_id"], stored_report["manifest_id"])
+            self.assertEqual(detail["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                detail["lineage"]["parent_job_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                detail["contribution"]["creator_node_id"], request["creator_node_id"]
+            )
             self.assertEqual(missing.status_code, 404)
             self.assertEqual(missing.json()["error"]["code"], "RESULT_REPORT_NOT_FOUND")
+            self.assertEqual(invalid.status_code, 400)
+            self.assertEqual(invalid.json()["error"]["code"], "INVALID_INPUT")
+
+    def test_local_job_result_listing_ignores_unrelated_storage_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            self.assertEqual(
+                service.list_local_job_results(),
+                {"schema_version": 1, "total": 0, "result_reports": []},
+            )
+            result_directory = root / "data" / "job-results"
+            result_directory.mkdir(parents=True)
+            (result_directory / "unrelated.json").write_text("not a report")
+            self.assertEqual(
+                service.list_local_job_results(),
+                {"schema_version": 1, "total": 0, "result_reports": []},
+            )
 
     def test_validation_receipt_api_reads_stored_evidence_and_rejects_bad_lookups(
         self,
