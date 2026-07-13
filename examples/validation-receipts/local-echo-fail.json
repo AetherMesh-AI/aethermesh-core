@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "receipt_id": "local-validation-receipt-echo-002",
-  "receipt_hash": "sha256:ab63e838d1dc8608dfc6296fd8e2058da2d2b398da307bcd8c8f460ca40afefe",
+  "receipt_hash": "sha256:bae619908eae957140371d16a401ca3cfde8b2da69d88e32f83b08fb2c62ca28",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "creator_node_id": "node.local-creator",
   "work_id": "local-job-echo-002",
-  "manifest_id": "sha256:manifest-echo-002",
+  "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "validation_status": "fail",
   "validator_id": "node.local-validator",
   "lineage": {
     "parent_work_ids": ["local-job-echo-001"],
     "source_manifest_refs": ["data/job-submissions/local-job-echo-002.json"],
-    "input_hashes": ["sha256:input-echo-002"],
-    "output_hashes": ["sha256:output-echo-002"],
+    "input_hashes": ["sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"],
+    "output_hashes": ["sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],
     "prior_receipt_ids": ["local-validation-receipt-echo-001"]
   },
   "contribution": {

@@ -66,3 +66,43 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         receipt["evidence"]["reason"] = "changed after hashing"
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "does not match"):
             validate_validation_receipt_document(receipt)
+
+    def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
+        for field, value in (("schema_version", 1.0), ("validation_status", [])):
+            with self.subTest(field=field):
+                receipt = copy.deepcopy(self.passing)
+                receipt[field] = value
+                with self.assertRaises(ValidationReceiptSchemaError):
+                    validate_validation_receipt_document(receipt)
+
+        receipt = copy.deepcopy(self.passing)
+        receipt["lineage"]["input_hashes"] = ["sha256:not-a-digest"]
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "content-addressed"):
+            validate_validation_receipt_document(receipt)
+
+        receipt = copy.deepcopy(self.passing)
+        receipt["not_json"] = {float("nan")}
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "JSON-compatible"):
+            canonical_validation_receipt_hash(receipt)
+
+    def test_local_references_cannot_leak_machine_paths(self) -> None:
+        cases = (
+            ("lineage", "source_manifest_refs", "/Users/example/private.json"),
+            ("contribution", "contribution_manifest_ref", "../private.json"),
+            ("evidence", "log_path", "C:\\Users\\example\\private.log"),
+            ("evidence", "artifact_path", "https://example.test/result.json"),
+        )
+        for block, field, value in cases:
+            with self.subTest(block=block, field=field):
+                receipt = copy.deepcopy(self.passing)
+                receipt[block][field] = [value] if block == "lineage" else value
+                with self.assertRaisesRegex(ValidationReceiptSchemaError, "relative"):
+                    validate_validation_receipt_document(receipt)
+
+    def test_reason_is_required_validation_evidence(self) -> None:
+        for value in (None, ""):
+            with self.subTest(value=value):
+                receipt = copy.deepcopy(self.passing)
+                receipt["evidence"]["reason"] = value
+                with self.assertRaisesRegex(ValidationReceiptSchemaError, "non-empty"):
+                    validate_validation_receipt_document(receipt)

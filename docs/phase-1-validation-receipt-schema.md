@@ -25,11 +25,11 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 
 ## Nested blocks and reserved nullable placeholders
 
-All five `lineage` arrays are required and may be empty for root work: `parent_work_ids`, `source_manifest_refs`, `input_hashes`, `output_hashes`, and `prior_receipt_ids`.
+All five `lineage` arrays are required and may be empty for root work: `parent_work_ids`, `source_manifest_refs`, `input_hashes`, `output_hashes`, and `prior_receipt_ids`. Manifest, input, and output hashes use lowercase `sha256:` content-addressed IDs with 64 hexadecimal digits. Source manifest references must be safe repository-relative local paths.
 
-All `contribution` fields are required. `submitter_id`, `local_node_id`, `claimed_role`, and `contribution_manifest_ref` are nullable placeholders when the local input did not provide the corresponding attribution. They record a claim only; they do not calculate credit or rewards.
+All `contribution` fields are required. `submitter_id`, `local_node_id`, `claimed_role`, and `contribution_manifest_ref` are nullable placeholders when the local input did not provide the corresponding attribution. A non-null contribution manifest reference must be a safe repository-relative local path. These fields record a claim only; they do not calculate credit or rewards.
 
-All `evidence` fields are required. `test_command`, `environment_summary`, `log_path`, and `artifact_path` are nullable when unavailable. `exit_code` is nullable when no command was run. `reason` is a required deterministic local pass/fail/error/skip explanation; it may be null only when no deterministic explanation exists yet. Paths are portable local references, never machine-absolute paths.
+All `evidence` fields are required. `test_command`, `environment_summary`, `log_path`, and `artifact_path` are nullable when unavailable. `exit_code` is nullable when no command was run. `reason` is a required, non-empty deterministic local pass/fail/error/skip explanation. Paths are safe repository-relative local references, never URLs, home-relative references, parent traversals, or machine-absolute paths.
 
 ## Stable hash and replay expectation
 

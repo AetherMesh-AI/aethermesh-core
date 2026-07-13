@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -63,9 +64,18 @@ def canonical_validation_receipt_hash(document: object) -> str:
         for key, value in document.items()
         if key not in {"created_at", "receipt_hash"}
     }
-    encoded = json.dumps(
-        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
+    try:
+        encoded = json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ValidationReceiptSchemaError(
+            "validation receipt must contain JSON-compatible data"
+        ) from exc
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
@@ -73,8 +83,10 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     """Validate one JSON-only local receipt without filesystem access."""
 
     receipt = _object(document, "validation receipt", _REQUIRED_FIELDS)
-    if receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION or isinstance(
-        receipt["schema_version"], bool
+    if (
+        not isinstance(receipt["schema_version"], int)
+        or isinstance(receipt["schema_version"], bool)
+        or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
             "validation receipt.schema_version must be integer 1"
@@ -87,8 +99,12 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         "validator_id",
     ):
         _identifier(receipt[field], f"validation receipt.{field}")
+    _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
-    if receipt["validation_status"] not in VALIDATION_STATUSES:
+    if (
+        not isinstance(receipt["validation_status"], str)
+        or receipt["validation_status"] not in VALIDATION_STATUSES
+    ):
         raise ValidationReceiptSchemaError(
             "validation receipt.validation_status is unsupported"
         )
@@ -147,6 +163,34 @@ def _string_list(value: object, label: str) -> None:
         raise ValidationReceiptSchemaError(f"{label} must be a string list")
 
 
+def _content_addressed_id(value: object, label: str) -> None:
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", value) is None
+    ):
+        raise ValidationReceiptSchemaError(
+            f"{label} must be a SHA-256 content-addressed ID"
+        )
+
+
+def _local_reference(value: object, label: str, *, nullable: bool = False) -> None:
+    if value is None and nullable:
+        return
+    if not isinstance(value, str) or not value or value.strip() != value:
+        raise ValidationReceiptSchemaError(
+            f"{label} must be a safe relative local path"
+        )
+    if (
+        value.startswith(("/", "~"))
+        or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", value) is not None
+        or "\\" in value
+        or any(part == ".." for part in value.split("/"))
+    ):
+        raise ValidationReceiptSchemaError(
+            f"{label} must be a safe relative local path"
+        )
+
+
 def _nullable_string(value: object, label: str) -> None:
     if value is not None and (
         not isinstance(value, str) or not value or value.strip() != value
@@ -158,8 +202,22 @@ def _nullable_string(value: object, label: str) -> None:
 
 def _lineage(value: object) -> None:
     lineage = _object(value, "validation receipt.lineage", _LINEAGE_FIELDS)
-    for field in _LINEAGE_FIELDS:
+    for field in ("parent_work_ids", "prior_receipt_ids"):
         _string_list(lineage[field], f"validation receipt.lineage.{field}")
+    _string_list(
+        lineage["source_manifest_refs"],
+        "validation receipt.lineage.source_manifest_refs",
+    )
+    for reference in lineage["source_manifest_refs"]:
+        _local_reference(
+            reference, "validation receipt.lineage.source_manifest_refs entries"
+        )
+    for field in ("input_hashes", "output_hashes"):
+        _string_list(lineage[field], f"validation receipt.lineage.{field}")
+        for content_hash in lineage[field]:
+            _content_addressed_id(
+                content_hash, f"validation receipt.lineage.{field} entries"
+            )
 
 
 def _contribution(value: object) -> None:
@@ -170,13 +228,25 @@ def _contribution(value: object) -> None:
         _nullable_string(
             contribution[field], f"validation receipt.contribution.{field}"
         )
+    _local_reference(
+        contribution["contribution_manifest_ref"],
+        "validation receipt.contribution.contribution_manifest_ref",
+        nullable=True,
+    )
 
 
 def _evidence(value: object) -> None:
     evidence = _object(value, "validation receipt.evidence", _EVIDENCE_FIELDS)
     for field in ("test_command", "environment_summary", "log_path", "artifact_path"):
         _nullable_string(evidence[field], f"validation receipt.evidence.{field}")
-    _nullable_string(evidence["reason"], "validation receipt.evidence.reason")
+    for field in ("log_path", "artifact_path"):
+        _local_reference(
+            evidence[field], f"validation receipt.evidence.{field}", nullable=True
+        )
+    if not isinstance(evidence["reason"], str) or not evidence["reason"].strip():
+        raise ValidationReceiptSchemaError(
+            "validation receipt.evidence.reason must be a non-empty string"
+        )
     exit_code = evidence["exit_code"]
     if exit_code is not None and (
         not isinstance(exit_code, int) or isinstance(exit_code, bool)
