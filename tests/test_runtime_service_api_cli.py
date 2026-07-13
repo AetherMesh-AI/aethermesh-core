@@ -2138,6 +2138,12 @@ class RuntimeServiceTests(unittest.TestCase):
             mismatched_manifest["result_hash"] = canonical_result_document_hash(
                 mismatched_manifest
             )
+            mismatched_worker = deepcopy(pending_candidate)
+            mismatched_worker["result_id"] = "local-result-forged"
+            mismatched_worker["executor_node_id"] = "worker-forged"
+            mismatched_worker["validator_node_id"] = "worker-forged"
+            mismatched_worker["contribution"]["executor_node_id"] = "worker-forged"
+            mismatched_worker["contribution"]["validator_node_id"] = "worker-forged"
             missing_manifest = deepcopy(report)
             missing_manifest["job_id"] = "local-job-ffffffffffffffffffffffffffffffff"
             missing_manifest["task_id"] = missing_manifest["job_id"]
@@ -2149,6 +2155,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 ["wrong-type"],
                 malformed_timestamp,
                 mismatched_manifest,
+                mismatched_worker,
                 missing_manifest,
                 {"unsupported": "x" * (17 * 1024)},
                 {f"unsupported-{'x' * 128}-{index}": None for index in range(32)},

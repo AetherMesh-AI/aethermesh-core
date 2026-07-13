@@ -1172,7 +1172,16 @@ class NodeRuntimeService:
             manifest = self._load_local_job_document(
                 manifest_path, "job submission manifest"
             )
-            self._validate_result_report_manifest_binding(checked, manifest, job_id)
+            status_path = self._job_status_path(job_id)
+            if not status_path.exists():
+                raise _ResultReportPreflightError(
+                    "missing_work_state",
+                    "result report does not reference existing local work state",
+                )
+            status = self._load_local_job_document(status_path, "job status record")
+            self._validate_result_report_manifest_binding(
+                checked, manifest, status, job_id
+            )
         except _ResultReportPreflightError as exc:
             return self._reject_local_result_report(report, exc.code, str(exc))
         except ValueError as exc:
@@ -1189,7 +1198,11 @@ class NodeRuntimeService:
         }
 
     def _validate_result_report_manifest_binding(
-        self, report: dict[str, Any], manifest: dict[str, Any], job_id: str
+        self,
+        report: dict[str, Any],
+        manifest: dict[str, Any],
+        status: dict[str, Any],
+        job_id: str,
     ) -> None:
         """Require a candidate report to match its immutable local work manifest."""
 
@@ -1201,6 +1214,13 @@ class NodeRuntimeService:
             )
         manifest_id = canonical_json_hash(manifest, prefix="sha256:")
         expected_receipt_id = self._receipt_id_for_job(job_id)
+        expected_executor = status.get("executor_node_id")
+        submitted_at = manifest.get("submitted_at")
+        if not isinstance(submitted_at, int) or isinstance(submitted_at, bool):
+            raise _ResultReportPreflightError(
+                "invalid_manifest", "referenced local work manifest has invalid timing"
+            )
+        expected_created_at = _utc_timestamp_from_unix_seconds(submitted_at)
         if manifest_job.get("job_id") != job_id:
             raise _ResultReportPreflightError(
                 "invalid_manifest",
@@ -1215,14 +1235,19 @@ class NodeRuntimeService:
                 "result report manifest reference does not match local work manifest",
             )
         if (
-            report["creator_node_id"] != manifest.get("creator_node_id")
+            status.get("job_id") != job_id
+            or not _safe_local_identifier(expected_executor)
+            or status.get("worker_node_id") != expected_executor
+            or report["result_id"] != f"local-result-{job_id}"
+            or report["creator_node_id"] != manifest.get("creator_node_id")
             or report["capability"]
             != manifest_job.get("requested_capability", {}).get("identifier")
             or report["task_id"] != job_id
+            or report["created_at"] != expected_created_at
             or report["validation_receipt_id"] != expected_receipt_id
             or report["references"]["validation_receipt_ids"] != [expected_receipt_id]
-            or report["validator_node_id"] != report["executor_node_id"]
-            or not _safe_local_identifier(report["executor_node_id"])
+            or report["executor_node_id"] != expected_executor
+            or report["validator_node_id"] != expected_executor
             or report["lineage"]["input_manifest_ids"] != [manifest_id]
             or report["lineage"]["parent_job_ids"] != lineage.get("parent_refs")
         ):
