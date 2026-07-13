@@ -16,6 +16,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
@@ -1405,6 +1406,9 @@ class NodeRuntimeService:
             manifest_path, "job submission manifest"
         )
         status = self._load_local_job_document(status_path, "job status record")
+        result = self._load_local_job_document(
+            self.paths.home / expected_result_ref, "job result record"
+        )
         _, expected_payload_hash = _validated_input_payload(
             manifest.get("job", {}).get("input_payload")
         )
@@ -1428,6 +1432,29 @@ class NodeRuntimeService:
                 "validation receipt has incomplete provenance evidence"
             )
         lineage = cast(dict[str, Any], lineage)
+        receipt_execution = receipt.get("execution")
+        result_execution = result.get("execution")
+        executor_started_at = (
+            receipt_execution.get("executor_started_at")
+            if isinstance(receipt_execution, dict)
+            else None
+        )
+        if (
+            not isinstance(receipt_execution, dict)
+            or not isinstance(result_execution, dict)
+            or executor_started_at != result_execution.get("executor_started_at")
+            or not _is_utc_timestamp_before_or_at(
+                executor_started_at, result_execution.get("executed_at")
+            )
+            or result.get("job_id") != job_id
+            or result.get("worker_node_id") != validator_id
+            or result_execution.get("creator_node_id")
+            != manifest.get("creator_node_id")
+            or result_execution.get("lineage_parent_refs") != lineage.get("parent_refs")
+        ):
+            raise RuntimeServiceError(
+                "validation receipt has invalid executor start timestamp evidence"
+            )
         if status.get("validation", {}).get("receipt_ref") != receipt_ref:
             raise RuntimeServiceError(
                 "job status does not reference validation receipt"
@@ -1452,6 +1479,7 @@ class NodeRuntimeService:
             "validation": validation,
             "validation_timestamp": validated_at,
             "validation_timestamp_source": timestamp_source,
+            "executor_started_at": receipt_execution["executor_started_at"],
             "validator_identity": validator_id,
             "lineage_parent_ids": lineage["parent_refs"],
             "contribution_attribution": attribution,
@@ -1673,6 +1701,7 @@ class NodeRuntimeService:
         local_safety = job_data.get("local_safety")
         if local_safety is not None and not isinstance(local_safety, dict):
             raise RuntimeServiceError("job submission manifest local_safety is invalid")
+        executor_started_at = _utc_timestamp()
         result = run_local_job(
             job,
             NodeIdentity(node_id=worker_node_id),
@@ -1697,6 +1726,7 @@ class NodeRuntimeService:
             "output_digest": canonical_json_hash(
                 {"output": result.output}, prefix="sha256:"
             ),
+            "executor_started_at": executor_started_at,
             "executed_at": int(time.time()),
             "creator_node_id": manifest["creator_node_id"],
             "lineage_parent_refs": manifest["lineage"]["parent_refs"],
@@ -2393,6 +2423,33 @@ def _requester_identity(value: object) -> dict[str, str] | None:
         "requester_identity must contain exactly one of requesting_node_id, "
         "local_requester_identity, or status 'unknown'"
     )
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _is_utc_timestamp(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        return False
+    return parsed.tzinfo is None
+
+
+def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool:
+    if not _is_utc_timestamp(value):
+        return False
+    if not isinstance(epoch_seconds, int) or isinstance(epoch_seconds, bool):
+        return False
+    parsed = datetime.strptime(cast(str, value), "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=UTC
+    )
+    # Completion timestamps currently have whole-second precision, so their value
+    # represents the full UTC second in which completion was recorded.
+    return parsed.timestamp() < epoch_seconds + 1
 
 
 def _package_version() -> str:
