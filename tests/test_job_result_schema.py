@@ -19,10 +19,38 @@ class JobResultSchemaTests(unittest.TestCase):
         self.failed = json.loads(
             (root / "examples/job-results/local-echo-failed.json").read_text("utf-8")
         )
+        self.pending = json.loads(
+            (
+                root / "examples/job-results/local-echo-pending-validation.json"
+            ).read_text("utf-8")
+        )
 
     def test_success_and_failed_examples_validate(self) -> None:
         self.assertIs(validate_job_result_document(self.success), self.success)
         self.assertIs(validate_job_result_document(self.failed), self.failed)
+        self.assertEqual(self.failed["validation_status"], "failed")
+
+    def test_pending_validation_is_explicit_and_retains_provenance(self) -> None:
+        self.assertIs(validate_job_result_document(self.pending), self.pending)
+        self.assertEqual(self.pending["validation_status"], "pending")
+        self.assertEqual(
+            self.pending["validation_receipt_id"],
+            "local-validation-receipt-echo-pending-001",
+        )
+        self.assertIn(
+            self.pending["validation_receipt_id"],
+            self.pending["references"]["validation_receipt_ids"],
+        )
+        self.assertIsNone(self.pending["result_hash"])
+        self.assertEqual(self.pending["creator_node_id"], "node.local-creator")
+        self.assertEqual(
+            self.pending["manifest_id"], self.pending["references"]["manifest_hash"]
+        )
+        self.assertEqual(self.pending["lineage"]["parent_job_ids"], [])
+        self.assertEqual(
+            self.pending["contribution"]["creator_node_id"],
+            self.pending["creator_node_id"],
+        )
 
     def test_required_attribution_lineage_manifest_and_validation_fields_reject_omission(
         self,
@@ -116,7 +144,7 @@ class JobResultSchemaTests(unittest.TestCase):
         cases = (
             ("duration_ms", 124, "must match"),
             ("summary", "x" * 513, "up to 512"),
-            ("validation_status", "pending", "is unsupported"),
+            ("validation_status", "unknown", "is unsupported"),
         )
         for field, value, message in cases:
             with self.subTest(field=field):
@@ -185,6 +213,19 @@ class JobResultSchemaTests(unittest.TestCase):
         document["error_summary"] = "contradictory failure detail"
         with self.assertRaisesRegex(
             JobResultSchemaError, "must be null when the job succeeded"
+        ):
+            validate_job_result_document(document)
+
+    def test_unvalidated_results_cannot_claim_a_durable_result_hash(self) -> None:
+        document = copy.deepcopy(self.pending)
+        document["result_hash"] = self.success["result_hash"]
+        with self.assertRaisesRegex(JobResultSchemaError, "must be null"):
+            validate_job_result_document(document)
+
+        document = copy.deepcopy(self.success)
+        document["result_hash"] = None
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "required after final validation"
         ):
             validate_job_result_document(document)
 

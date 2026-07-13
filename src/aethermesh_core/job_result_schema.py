@@ -19,7 +19,8 @@ RESULT_STATUSES = frozenset(
         "partially_completed",
     }
 )
-VALIDATION_STATUSES = frozenset({"passed", "failed", "error", "not_run"})
+VALIDATION_STATUSES = frozenset({"pending", "passed", "failed", "error", "not_run"})
+_FINAL_VALIDATION_STATUSES = frozenset({"passed", "failed", "error"})
 _FAILURE_FIELDS = frozenset(
     {"execution", "validation", "malformed_input", "missing_artifact"}
 )
@@ -159,9 +160,20 @@ def validate_job_result_document(
         result["validator_node_id"],
         result["lineage"],
     )
+    validation_is_final = result["validation_status"] in _FINAL_VALIDATION_STATUSES
+    result_hash = result.get("result_hash")
     if "result_hash" in result:
-        _content_hash(result["result_hash"], "job result.result_hash")
-    if verify_result_hash:
+        if validation_is_final and result_hash is None:
+            raise JobResultSchemaError(
+                "job result.result_hash is required after final validation"
+            )
+        if not validation_is_final and result_hash is not None:
+            raise JobResultSchemaError(
+                "job result.result_hash must be null while validation is pending or not run"
+            )
+        if result_hash is not None:
+            _content_hash(result_hash, "job result.result_hash")
+    if verify_result_hash and validation_is_final:
         # Import lazily because result hashing first uses this validator to
         # establish the canonical payload shape.
         from aethermesh_core.result_hash import canonical_result_document_hash
