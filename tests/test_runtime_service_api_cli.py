@@ -1158,12 +1158,85 @@ class RuntimeServiceTests(unittest.TestCase):
                 succeeded["contribution_attribution"]["validated_contribution_units"], 1
             )
             self.assertIsNone(succeeded["error"])
+            success_record = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-status"
+                    / f"{accepted['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )["execution_status"]
+            self.assertEqual(success_record["status"], "success")
+            self.assertEqual(success_record["work_id"], accepted["job_id"])
+            self.assertEqual(success_record["creator_node_id"], "creator-local-a")
+            self.assertEqual(success_record["manifest_ref"], accepted["manifest_ref"])
+            self.assertEqual(
+                success_record["input_lineage_ref"],
+                f"{accepted['manifest_ref']}#lineage",
+            )
+            self.assertEqual(success_record["output_ref"], succeeded["result"]["ref"])
+            self.assertEqual(
+                success_record["validation_receipt_ref"],
+                succeeded["validation"]["receipt_ref"],
+            )
+            self.assertEqual(
+                success_record["contribution_attribution"],
+                succeeded["contribution_attribution"],
+            )
+            self.assertIsNone(success_record["failure_reason"])
+            self.assertIsNone(success_record["error_summary"])
+            self.assertFalse(success_record["retry_eligible"])
             self.assertEqual(failed["status"], "failed")
             self.assertFalse(failed["validation"]["passed"])
             self.assertEqual(
                 failed["contribution_attribution"]["creator_node_id"], "creator-local-a"
             )
             self.assertIn("requires string field: text", str(failed["error"]))
+            failure_record = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-status"
+                    / f"{failed_accepted['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )["execution_status"]
+            self.assertEqual(failure_record["status"], "failure")
+            self.assertEqual(failure_record["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                failure_record["contribution_attribution"],
+                failed["contribution_attribution"],
+            )
+            self.assertEqual(
+                failure_record["failure_reason"], failed["validation"]["reason"]
+            )
+            self.assertEqual(failure_record["error_summary"], failed["error"])
+            self.assertFalse(failure_record["retry_eligible"])
+            execution_error_accepted = service.submit_local_job(request)
+            with patch(
+                "aethermesh_core.runtime_service.run_local_job",
+                side_effect=OSError("controlled runner fault"),
+            ):
+                execution_error = service.execute_submitted_local_job(
+                    execution_error_accepted["job_id"], "worker-local-c"
+                )
+            execution_error_record = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-status"
+                    / f"{execution_error_accepted['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )["execution_status"]
+            self.assertEqual(execution_error["status"], "failed")
+            self.assertEqual(execution_error_record["status"], "failure")
+            self.assertEqual(
+                execution_error_record["error_summary"],
+                "local execution error: OSError: controlled runner fault",
+            )
+            self.assertEqual(
+                execution_error_record["validation_receipt_ref"],
+                execution_error["validation"]["receipt_ref"],
+            )
             self.assertEqual(
                 service.get_local_job_status(
                     "local-job-00000000000000000000000000000000"
