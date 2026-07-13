@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "receipt_id": "local-validation-receipt-echo-001",
+  "receipt_hash": "sha256:618c854192655ffbce0c38d5817af5db3dd87e1fe6083a5020fa5c3b5bc59c24",
+  "created_at": "2026-07-13T12:00:00.000000Z",
+  "creator_node_id": "node.local-creator",
+  "work_id": "local-job-echo-001",
+  "manifest_id": "sha256:manifest-echo-001",
+  "validation_status": "pass",
+  "validator_id": "node.local-validator",
+  "lineage": {
+    "parent_work_ids": [],
+    "source_manifest_refs": ["data/job-submissions/local-job-echo-001.json"],
+    "input_hashes": ["sha256:input-echo-001"],
+    "output_hashes": ["sha256:output-echo-001"],
+    "prior_receipt_ids": []
+  },
+  "contribution": {
+    "submitter_id": "node.local-creator",
+    "local_node_id": "node.local-validator",
+    "claimed_role": "local-validator",
+    "contribution_manifest_ref": null
+  },
+  "evidence": {
+    "test_command": "aethermesh-local-runner echo",
+    "environment_summary": "local deterministic echo runner",
+    "exit_code": 0,
+    "log_path": null,
+    "artifact_path": "data/job-results/local-job-echo-001.json",
+    "reason": "output matched deterministic echo expectation"
+  }
+}
