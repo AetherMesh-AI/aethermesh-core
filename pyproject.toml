@@ -44,6 +44,9 @@ where = ["src"]
 branch = true
 source = ["aethermesh_core"]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [tool.coverage.report]
 show_missing = true
 fail_under = 100

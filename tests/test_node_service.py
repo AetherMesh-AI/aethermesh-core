@@ -1,9 +1,10 @@
 import unittest
+from unittest.mock import patch
 
 from aethermesh_core.ledger import ContributionLedger
 from aethermesh_core.message_bus import LocalMessageBus
 from aethermesh_core.messages import MeshMessage
-from aethermesh_core.models import NodeIdentity
+from aethermesh_core.models import JobResult, NodeIdentity
 from aethermesh_core.node_service import LocalNodeService
 from aethermesh_core.result_hash import result_hash
 from aethermesh_core.runner import LocalRunner
@@ -426,6 +427,46 @@ class LocalNodeServiceTests(unittest.TestCase):
             processed.emitted_messages[2].payload["validation"],
             "missing_payload_message",
         )
+
+    def test_schema_rejection_has_no_accepted_contribution(self) -> None:
+        service, bus, ledger = _service("node-a")
+
+        def malformed_result(job: object) -> JobResult:
+            job_id = getattr(job, "job_id")
+            return JobResult(
+                job_id=job_id,
+                node_id="node-a",
+                status="completed",
+                output={"character_count": "wrong"},
+                error=None,
+                contribution_units=1,
+            )
+
+        bus.send(
+            _assignment(
+                message_id="msg-0001",
+                sender_node_id="local-scheduler",
+                recipient_node_id="node-a",
+                payload={
+                    "job_id": "text-stats-1",
+                    "job_type": "text_stats",
+                    "payload": {"text": "hello"},
+                },
+            )
+        )
+        with patch.object(service.runner, "run", side_effect=malformed_result):
+            processed = service.process_inbox().processed[0]
+
+        self.assertFalse(processed.validation.valid)
+        self.assertEqual(
+            processed.validation.reason,
+            "output_schema.v1.text_stats.output: missing required field line_count",
+        )
+        self.assertEqual(processed.contribution_record.contribution_units, 0)
+        self.assertFalse(processed.contribution_record.validation_valid)
+        self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 0)
+        self.assertFalse(processed.emitted_messages[1].payload["valid"])
+        self.assertEqual(processed.emitted_messages[2].payload["contribution_units"], 0)
 
 
 def _service(
