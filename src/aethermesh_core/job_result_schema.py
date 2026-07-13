@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 3
+JOB_RESULT_SCHEMA_VERSION = 4
+MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
         "succeeded",
@@ -33,6 +35,7 @@ _LINEAGE_FIELDS = frozenset(
 _REFERENCE_FIELDS = frozenset(
     {"manifest_hash", "artifact_refs", "validation_receipt_ids", "log_refs"}
 )
+_OUTPUT_PAYLOAD_FIELDS = frozenset({"inline_payload", "payload_ref", "payload_digest"})
 _CONTRIBUTION_FIELDS = frozenset(
     {
         "creator_node_id",
@@ -52,6 +55,7 @@ _REQUIRED_FIELDS = frozenset(
         "creator_node_id",
         "executor_node_id",
         "manifest_id",
+        "output_payload",
         "references",
         "created_at",
         "status",
@@ -134,6 +138,7 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
         )
     if result["validation_status"] not in VALIDATION_STATUSES:
         raise JobResultSchemaError("job result.validation_status is unsupported")
+    _output_payload(result["output_payload"], result["status"])
     _references(
         result["references"], result["manifest_id"], result["validation_receipt_id"]
     )
@@ -206,6 +211,49 @@ def _failure_reasons(value: object) -> None:
             raise JobResultSchemaError(
                 f"job result.failure_reasons.{field} must be a non-empty string or null"
             )
+
+
+def _output_payload(value: object, status: object) -> None:
+    payload = _object(value, "job result.output_payload", _OUTPUT_PAYLOAD_FIELDS)
+    inline_payload = payload["inline_payload"]
+    payload_ref = payload["payload_ref"]
+    payload_digest = payload["payload_digest"]
+    has_inline_payload = inline_payload is not None
+    has_payload_ref = payload_ref is not None
+    if not has_inline_payload and not has_payload_ref:
+        if status == "succeeded":
+            raise JobResultSchemaError(
+                "successful job result must include an output payload"
+            )
+        if payload_digest is not None:
+            raise JobResultSchemaError(
+                "job result.output_payload.payload_digest requires a payload reference"
+            )
+        return
+    if has_inline_payload and has_payload_ref:
+        raise JobResultSchemaError(
+            "job result.output_payload must contain exactly one of inline_payload or payload_ref"
+        )
+    if has_inline_payload:
+        if payload_digest is not None:
+            raise JobResultSchemaError(
+                "job result.output_payload.payload_digest must be null for inline payloads"
+            )
+        try:
+            encoded = json.dumps(
+                inline_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+            raise JobResultSchemaError(
+                "job result.output_payload.inline_payload must be JSON-compatible"
+            ) from exc
+        if len(encoded) > MAX_INLINE_OUTPUT_PAYLOAD_BYTES:
+            raise JobResultSchemaError(
+                "job result.output_payload.inline_payload exceeds the local inline size limit"
+            )
+        return
+    _artifact_reference_list([payload_ref], "job result.output_payload.payload_ref")
+    _content_addressed_id(payload_digest, "job result.output_payload.payload_digest")
 
 
 def _references(value: object, manifest_id: object, receipt_id: object) -> None:
