@@ -84,6 +84,20 @@ class ExecutionReceipt:
     lineage: Mapping[str, object]
     attribution: Mapping[str, object]
 
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "result",
+            JobResult(
+                job_id=self.result.job_id,
+                node_id=self.result.node_id,
+                status=self.result.status,
+                output=deepcopy(self.result.output),
+                error=self.result.error,
+                contribution_units=self.result.contribution_units,
+            ),
+        )
+
     @property
     def validation_status(self) -> str:
         """Return the stable validation state consumed by downstream accounting."""
@@ -157,7 +171,7 @@ def _snapshot_metadata(value: object, field_name: str) -> Mapping[str, object]:
     if not all(isinstance(key, str) and key.strip() for key in value):
         raise ExecutionAssignmentError(f"{field_name} keys must be non-empty strings")
     return MappingProxyType(
-        {key: _freeze_metadata(item) for key, item in deepcopy(dict(value)).items()}
+        {key: _freeze_metadata(item) for key, item in value.items()}
     )
 
 

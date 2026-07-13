@@ -194,6 +194,28 @@ class ExecutorBoundaryTests(unittest.TestCase):
         serialized_lineage["parent"]["id"] = "serialized mutation"
         self.assertEqual(dict(receipt.lineage), {"parent": {"id": "before"}})
 
+        replaced = replace(assignment, creator_node_id="replacement-creator")
+        self.assertEqual(dict(replaced.lineage), {"parent": {"id": "before"}})
+
+    def test_receipt_snapshots_mutable_runner_output(self) -> None:
+        assignment = replace(
+            self._assignment(),
+            work_item=Job(
+                job_id="stats-1", job_type="text_stats", payload={"text": "hello"}
+            ),
+        )
+        result = LocalRunner(NodeIdentity("node-executor")).run(assignment.work_item)
+        runner = RecordingRunner(result)
+
+        receipt = LocalExecutor(node_id="node-executor", runner=runner).execute(
+            assignment
+        )
+        cast(dict[str, Any], result.output)["character_count"] = 999
+
+        self.assertEqual(
+            cast(dict[str, Any], receipt.result.output)["character_count"], 5
+        )
+
     def test_metadata_sequences_and_sets_are_frozen_and_serialized(self) -> None:
         assignment = replace(
             self._assignment(),
