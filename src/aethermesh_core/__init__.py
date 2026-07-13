@@ -1,5 +1,11 @@
 """AetherMesh Core local prototype package."""
 
+from aethermesh_core.execution import (
+    ExecutionAssignmentError,
+    ExecutionReceipt,
+    LocalExecutor,
+    PreparedWorkAssignment,
+)
 from aethermesh_core.ledger import (
     ContributionLedger,
     ContributionRecord,
@@ -33,11 +39,14 @@ __all__ = [
     "ContributionLedger",
     "ContributionRecord",
     "ContributionSummary",
+    "ExecutionAssignmentError",
+    "ExecutionReceipt",
     "InboxProcessResult",
     "Job",
     "JobAssignment",
     "JobResult",
     "LocalNodeService",
+    "LocalExecutor",
     "LocalRunner",
     "LocalScheduler",
     "LocalSimulationResult",
@@ -46,6 +55,7 @@ __all__ = [
     "NodeIdentity",
     "NodeStatus",
     "ProcessedAssignment",
+    "PreparedWorkAssignment",
     "SUPPORTED_MESSAGE_TYPES",
     "ScheduledNode",
     "SimulationJobAssignment",
