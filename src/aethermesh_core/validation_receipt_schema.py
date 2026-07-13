@@ -8,7 +8,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 1
+VALIDATION_RECEIPT_SCHEMA_VERSION = 2
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 _REQUIRED_FIELDS = frozenset(
@@ -99,7 +99,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 1"
+            "validation receipt.schema_version must be integer 2"
         )
     for field in (
         "receipt_id",
@@ -119,7 +119,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
             "validation receipt.job_id must match its work_id"
         )
     _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
-    _sha256_digest(receipt["result_hash"], "validation receipt.result_hash")
+    _sha256_content_id(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
     if (
         not isinstance(receipt["validation_status"], str)
@@ -193,10 +193,13 @@ def _content_addressed_id(value: object, label: str) -> None:
         )
 
 
-def _sha256_digest(value: object, label: str) -> None:
-    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+def _sha256_content_id(value: object, label: str) -> None:
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", value) is None
+    ):
         raise ValidationReceiptSchemaError(
-            f"{label} must be a lowercase SHA-256 digest"
+            f"{label} must be an algorithm-prefixed lowercase SHA-256 digest"
         )
 
 

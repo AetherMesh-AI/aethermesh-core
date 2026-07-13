@@ -4,9 +4,9 @@ A result report is the durable, local-first record for one completed, interrupte
 
 ## Required top-level fields
 
-Every version 7 record contains `schema_version`, `result_hash`, `result_id`, `job_id`, `task_id`, `capability`, `creator_node_id`, `executor_node_id`, `manifest_id`, `output_payload`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `reported_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
+Every version 8 record contains `schema_version`, `result_hash`, `result_id`, `job_id`, `task_id`, `capability`, `creator_node_id`, `executor_node_id`, `manifest_id`, `output_payload`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `reported_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
 
-Version 7 supersedes version 6 by adding the explicit `pending` validation state and requiring a null result hash until validation reaches a final local outcome. Earlier records remain identifiable by their version but must be migrated before validation as version 7; they must never be silently reinterpreted as the current shape.
+Version 8 supersedes version 7 by requiring a `sha256:<64 lowercase hex>` result hash after final local validation. Earlier records remain identifiable by their version but must be migrated before validation as version 8; they must never be silently reinterpreted as the current shape.
 
 `creator_node_id` is retained even for failures. `manifest_id` and `references.manifest_hash` are matching SHA-256 content-addressed IDs. Timestamps are UTC and duration is derived from the execution timestamps.
 

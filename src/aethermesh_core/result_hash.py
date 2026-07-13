@@ -92,7 +92,7 @@ def canonical_result_document_hash(document: object) -> str:
     }
     if "model_ref" in result:
         payload["model_ref"] = result["model_ref"]
-    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
+    return "sha256:" + hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
 
 
 def result_hash_manifest(document: object) -> dict[str, str]:

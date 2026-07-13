@@ -80,7 +80,9 @@ class ResultHashTests(unittest.TestCase):
         failed["exit_code"] = 1
         failed["error_summary"] = "local failure"
         failed["validation_status"] = "error"
-        self.assertRegex(canonical_result_document_hash(failed), r"^[0-9a-f]{64}$")
+        self.assertRegex(
+            canonical_result_document_hash(failed), r"^sha256:[0-9a-f]{64}$"
+        )
 
         pending = deepcopy(self.document)
         pending["validation_status"] = "not_run"
@@ -92,7 +94,9 @@ class ResultHashTests(unittest.TestCase):
         digest = canonical_result_document_hash(self.document)
         validate_validation_receipt_result_hash({"result_hash": digest}, digest)
         with self.assertRaisesRegex(ValueError, "does not match"):
-            validate_validation_receipt_result_hash({"result_hash": "f" * 64}, digest)
+            validate_validation_receipt_result_hash(
+                {"result_hash": "sha256:" + "f" * 64}, digest
+            )
 
     def test_hash_is_stable_for_semantically_identical_dict_output(self) -> None:
         first = JobResult(

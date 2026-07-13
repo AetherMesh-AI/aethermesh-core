@@ -4,17 +4,17 @@
 
 ## Required fields
 
-Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 1 requires:
+Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 2 requires:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | Fixed integer `1`. |
+| `schema_version` | Fixed integer `2`. |
 | `receipt_id` | Stable local receipt identifier derived as `local-validation-receipt-{work_id}`. |
 | `receipt_hash` | SHA-256 hash of the canonical stable receipt content. |
-| `result_hash` | Exact lowercase SHA-256 digest of the durable job result being validated. |
+| `result_hash` | Required `sha256:<64 lowercase hex>` digest of the durable job result being validated. |
 | `created_at` | UTC ISO 8601 creation timestamp; audit ordering only. |
 | `creator_node_id` | Node that created the submitted work. |
-| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 1. |
+| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 2. |
 | `work_id` | Work item validated by the receipt. |
 | `manifest_id` | Content-addressed source work manifest identifier. |
 | `validation_status` | One of `pass`, `fail`, `error`, or `skipped`. |
@@ -24,6 +24,8 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | `evidence` | Required local validation evidence block described below. |
 
 `pass` means the listed local check completed and met its expectation. `fail` means it completed but did not meet that expectation. `error` means validation could not complete reliably. `skipped` means it was deliberately not run. None is a network or consensus claim.
+
+Version 2 supersedes version 1 by requiring the algorithm-prefixed `result_hash` format. Existing version 1 receipts with an unprefixed digest remain identifiable as version 1 records and must be migrated explicitly rather than silently reinterpreted.
 
 ## Nested blocks and reserved nullable placeholders
 
@@ -35,7 +37,7 @@ All `evidence` fields are required. `test_command`, `environment_summary`, `log_
 
 ## Stable hash and replay expectation
 
-Receipts are plain JSON and use compact UTF-8 JSON with sorted keys for `receipt_hash`. The hash deliberately excludes `created_at` and `receipt_hash`, so repeated local validation of identical work, result content, lineage, attribution, and evidence produces the same receipt hash even when audit timestamps differ. `job_id` is assigned in the submission manifest before execution and is copied unchanged to the receipt, result artifact, lineage references, and contribution attribution; `creator_node_id` identifies the node that submitted that job, while the manifest records the task input and its hash. `result_hash` preserves the durable job-result link and is compatible with `validate_validation_receipt_result_hash`. `validation_receipt_id(work_id)` deterministically derives the receipt ID using the existing local runtime convention, and validation rejects IDs that do not match their work item. These are local audit links only, not network consensus or decentralized finality. Future replay code should validate the schema and recompute `receipt_hash` before using the evidence.
+Receipts are plain JSON and use compact UTF-8 JSON with sorted keys for `receipt_hash`. The hash deliberately excludes `created_at` and `receipt_hash`, so repeated local validation of identical work, result content, lineage, attribution, and evidence produces the same receipt hash even when audit timestamps differ. `job_id` is assigned in the submission manifest before execution and is copied unchanged to the receipt, result artifact, lineage references, and contribution attribution; `creator_node_id` identifies the node that submitted that job, while the manifest records the task input and its hash. `result_hash` is required for completed work and stores the independently recomputable durable-result hash as `sha256:<64 lowercase hex>`; it is compatible with `validate_validation_receipt_result_hash`. The canonical payload excludes timestamps, machine-local paths, and formatting-only metadata. `validation_receipt_id(work_id)` deterministically derives the receipt ID using the existing local runtime convention, and validation rejects IDs that do not match their work item. These are local audit links only, not network consensus or decentralized finality. Future replay code should validate the schema and recompute `receipt_hash` before using the evidence.
 
 ## Examples and verification
 

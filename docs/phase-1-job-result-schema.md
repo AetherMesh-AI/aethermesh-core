@@ -1,15 +1,15 @@
 # Phase 1 Job Result Schema
 
-`aethermesh_core.job_result_schema.validate_job_result_document` defines the local-only version-7 record emitted after a job has executed. It is an audit record for the runnable prototype, not a peer protocol, consensus claim, dashboard model, or reward ledger. The existing in-memory `JobResult` runner value remains intentionally small; this record is its durable provenance contract.
+`aethermesh_core.job_result_schema.validate_job_result_document` defines the local-only version-8 record emitted after a job has executed. It is an audit record for the runnable prototype, not a peer protocol, consensus claim, dashboard model, or reward ledger. The existing in-memory `JobResult` runner value remains intentionally small; this record is its durable provenance contract.
 
-Version 7 supersedes version 6 by adding the explicit `pending` validation state and requiring `result_hash` to remain null for pending or not-run validation. Existing version 6 records are not version 7 records and must not be silently reinterpreted; migrate them explicitly before passing them to the version 7 validator.
+Version 8 supersedes version 7 by requiring algorithm-prefixed final `result_hash` values. Existing version 7 records are not version 8 records and must not be silently reinterpreted; migrate them explicitly before passing them to the version 8 validator.
 
 ## Required record fields
 
 | Field | Source | Purpose |
 | --- | --- | --- |
-| `schema_version` | locally generated | Fixed integer `7`. |
-| `result_hash` | canonical result payload | Required field. It is `null` while validation is `pending` or `not_run`; final local validation outcomes require a 64-character lowercase SHA-256 digest, which schema validation recomputes to reject stale values. |
+| `schema_version` | locally generated | Fixed integer `8`. |
+| `result_hash` | canonical result payload | Required field. It is `null` while validation is `pending` or `not_run`; final local validation outcomes require a `sha256:<64 lowercase hex>` digest, which schema validation recomputes to reject stale values. |
 | `result_id`, `job_id`, `task_id` | locally generated / referenced | Stable result, job, and task references. |
 | `capability` | accepted manifest | Required machine-readable capability identifier (for example, `work.echo`), copied from the accepted manifest rather than worker output. |
 | `model_ref` | optional local worker metadata | Optional nullable stable identifier for the implementation that produced a capability-routed result (for example, `local-worker:aethermesh-local-runner@1`). It is local Phase 1 audit metadata, not an expert registry, model claim, or routing-consensus claim. Readers must accept an absent field or `null` when no model/expert distinction applies. |
@@ -32,7 +32,7 @@ The schema deliberately records local provenance only. A validation receipt is l
 
 ## Result hash behavior
 
-`aethermesh_core.result_hash.canonical_result_document_hash` creates the Phase 1 durable result hash only after execution and a local validation receipt have reached `passed`, `failed`, or `error`; `pending` and `not_run` records retain `result_hash: null` and are intentionally not hashable. The sole supported algorithm is `sha256`. Store `result_hash_manifest(document)` beside the task manifest, result record, validation receipt, lineage references, and contribution identity metadata. Its explicit format is `{ "algorithm": "sha256", "result_hash": "<64 lowercase hex characters>" }`.
+`aethermesh_core.result_hash.canonical_result_document_hash` creates the Phase 1 durable result hash only after execution and a local validation receipt have reached `passed`, `failed`, or `error`; `pending` and `not_run` records retain `result_hash: null` and are intentionally not hashable. The sole supported algorithm is `sha256`. Store `result_hash_manifest(document)` beside the task manifest, result record, validation receipt, lineage references, and contribution identity metadata. Its explicit format is `{ "algorithm": "sha256", "result_hash": "sha256:<64 lowercase hex characters>" }`.
 
 The UTF-8 hash payload uses compact JSON with lexicographically sorted object keys. It includes schema/result/job/task IDs, capability, and optional `model_ref`; creator and executor node IDs; the immutable `manifest_id` reference; inline output content or a referenced payload digest (never its machine-local storage path); portable content-addressed evidence and validation receipt IDs from `references`; result content (`status`, `exit_code`, `summary`, `error_summary`, and `failure_reasons`); validation status, receipt ID, and validator ID; full lineage (including parent task IDs); and contribution attribution. It intentionally excludes `result_hash` itself, lifecycle timestamps (`created_at`, `started_at`, `finished_at`, `reported_at`), `duration_ms`, machine-local artifact and log paths, runtime state, and display formatting. Array order remains meaningful provenance order.
 
