@@ -6,6 +6,12 @@
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "references": {
+    "manifest_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifact_refs": ["artifacts/echo-001.json", "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+    "validation_receipt_ids": ["local-validation-receipt-echo-001"],
+    "log_refs": ["logs/echo-001.log"]
+  },
   "created_at": "2026-07-12T12:00:00.000Z",
   "status": "succeeded",
   "exit_code": 0,
@@ -13,6 +19,7 @@
   "finished_at": "2026-07-12T12:00:01.125Z",
   "duration_ms": 125,
   "summary": "Echo completed with one local output artifact.",
+  "error_summary": null,
   "validation_status": "passed",
   "validation_receipt_id": "local-validation-receipt-echo-001",
   "validator_node_id": "node.local-validator",
@@ -30,7 +37,10 @@
     "artifact_ids": ["sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"]
   },
   "contribution": {
-    "attribution_node_id": "node.local-worker",
+    "creator_node_id": "node.local-creator",
+    "executor_node_id": "node.local-worker",
+    "validator_node_id": "node.local-validator",
+    "upstream_lineage_sources": [],
     "local_operator_id": "operator.local"
   }
 }

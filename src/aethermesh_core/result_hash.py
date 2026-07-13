@@ -72,10 +72,12 @@ def canonical_result_document_hash(document: object) -> str:
         "creator_node_id": result["creator_node_id"],
         "executor_node_id": result["executor_node_id"],
         "manifest_ref": result["manifest_id"],
+        "references": result["references"],
         "result_content": {
             "status": result["status"],
             "exit_code": result["exit_code"],
             "summary": result["summary"],
+            "error_summary": result["error_summary"],
             "failure_reasons": result["failure_reasons"],
         },
         "validation": {

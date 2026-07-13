@@ -52,6 +52,10 @@ class ResultHashTests(unittest.TestCase):
                 for parent in parents:
                     target = target[parent]
                 target[leaf] = value
+                if field == "manifest_id":
+                    changed["references"]["manifest_hash"] = value
+                if field == "creator_node_id":
+                    changed["contribution"]["creator_node_id"] = value
                 self.assertNotEqual(original, canonical_result_document_hash(changed))
 
     def test_durable_failed_and_error_results_are_hashable_after_validation(
@@ -60,6 +64,7 @@ class ResultHashTests(unittest.TestCase):
         failed = deepcopy(self.document)
         failed["status"] = "failed"
         failed["exit_code"] = 1
+        failed["error_summary"] = "local failure"
         failed["validation_status"] = "error"
         self.assertRegex(canonical_result_document_hash(failed), r"^[0-9a-f]{64}$")
 

@@ -30,6 +30,8 @@ class JobResultSchemaTests(unittest.TestCase):
             "creator_node_id",
             "executor_node_id",
             "manifest_id",
+            "references",
+            "error_summary",
             "validation_status",
             "validation_receipt_id",
             "validator_node_id",
@@ -45,7 +47,7 @@ class JobResultSchemaTests(unittest.TestCase):
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         invalid_status = copy.deepcopy(self.success)
         invalid_status["status"] = "complete"
-        with self.assertRaisesRegex(JobResultSchemaError, "status must be"):
+        with self.assertRaisesRegex(JobResultSchemaError, "status is unsupported"):
             validate_job_result_document(invalid_status)
 
         for field in ("result_id", "job_id", "task_id"):
@@ -61,7 +63,7 @@ class JobResultSchemaTests(unittest.TestCase):
         cases = (
             ("duration_ms", 124, "must match"),
             ("summary", "x" * 513, "up to 512"),
-            ("validation_status", "pending", "must be passed"),
+            ("validation_status", "pending", "is unsupported"),
         )
         for field, value, message in cases:
             with self.subTest(field=field):
@@ -71,9 +73,9 @@ class JobResultSchemaTests(unittest.TestCase):
                     validate_job_result_document(document)
 
         document = copy.deepcopy(self.success)
-        document["contribution"]["attribution_node_id"] = "node.other"
+        document["contribution"]["executor_node_id"] = "node.other"
         with self.assertRaisesRegex(
-            JobResultSchemaError, "must match executor_node_id"
+            JobResultSchemaError, "must match the top-level record"
         ):
             validate_job_result_document(document)
 
@@ -85,6 +87,35 @@ class JobResultSchemaTests(unittest.TestCase):
         document = copy.deepcopy(self.success)
         document["future"] = True
         with self.assertRaisesRegex(JobResultSchemaError, "unsupported: future"):
+            validate_job_result_document(document)
+
+    def test_outcome_statuses_and_local_artifact_reference_rules(self) -> None:
+        for status in (
+            "succeeded",
+            "failed",
+            "timed_out",
+            "cancelled",
+            "validation_failed",
+            "partially_completed",
+        ):
+            with self.subTest(status=status):
+                document = copy.deepcopy(self.success)
+                document["status"] = status
+                document["error_summary"] = (
+                    None if status == "succeeded" else "local outcome"
+                )
+                self.assertIs(validate_job_result_document(document), document)
+
+        document = copy.deepcopy(self.success)
+        document["references"]["artifact_refs"] = ["https://dashboard.example/result"]
+        with self.assertRaisesRegex(JobResultSchemaError, "relative local paths"):
+            validate_job_result_document(document)
+
+        document = copy.deepcopy(self.failed)
+        document["error_summary"] = None
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "required when the job did not succeed"
+        ):
             validate_job_result_document(document)
 
 
