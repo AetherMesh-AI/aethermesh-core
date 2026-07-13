@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 5
+VALIDATION_RECEIPT_SCHEMA_VERSION = 6
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -109,7 +109,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 5"
+            "validation receipt.schema_version must be integer 6"
         )
     for field in (
         "receipt_id",
@@ -249,7 +249,12 @@ def validate_validator_software_metadata(
         raise ValidationReceiptSchemaError(
             "validation receipt.validator_software.validator_build_identifier must not be a path"
         )
-    if metadata_document["receipt_schema_version"] != receipt_schema_version:
+    metadata_schema_version = metadata_document["receipt_schema_version"]
+    if (
+        not isinstance(metadata_schema_version, int)
+        or isinstance(metadata_schema_version, bool)
+        or metadata_schema_version != receipt_schema_version
+    ):
         raise ValidationReceiptSchemaError(
             "validation receipt.validator_software.receipt_schema_version must match receipt"
         )

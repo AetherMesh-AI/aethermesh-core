@@ -70,11 +70,11 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             patch.dict(os.environ, {"AETHERMESH_BUILD_ID": "/private/build"}),
         ):
             captured = capture_validator_software_metadata(
-                validator_name="deterministic_fixture_replay", receipt_schema_version=5
+                validator_name="deterministic_fixture_replay", receipt_schema_version=6
             )
 
         self.assertEqual(captured["validator_build_identifier"], "unknown")
-        self.assertEqual(captured["receipt_schema_version"], 5)
+        self.assertEqual(captured["receipt_schema_version"], 6)
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
@@ -213,8 +213,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 4
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 5"):
+        old_version["schema_version"] = 5
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 6"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)

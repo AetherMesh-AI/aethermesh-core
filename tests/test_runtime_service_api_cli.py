@@ -288,7 +288,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 receipt["validator_software"]["validator_name"],
                 "deterministic_local_result_check",
             )
-            self.assertEqual(receipt["validator_software"]["receipt_schema_version"], 4)
+            self.assertEqual(receipt["validator_software"]["receipt_schema_version"], 5)
             self.assertEqual(
                 receipt["validation_method"],
                 {
@@ -497,6 +497,28 @@ class RuntimeServiceTests(unittest.TestCase):
                     work_id=evidence["submission"]["job_id"]
                 )
 
+    def test_local_validation_receipt_rejects_missing_validator_software(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("validator_software")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "invalid validator software metadata"
+            ):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
+
     def test_local_validation_receipt_rejects_old_stored_version(self) -> None:
         request, _ = _valid_local_work_fixture()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -509,7 +531,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 / f"{evidence['submission']['job_id']}.json"
             )
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            receipt["version"] = 2
+            receipt["version"] = 4
             receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
 
             with self.assertRaisesRegex(RuntimeServiceError, "unsupported version"):
@@ -2236,7 +2258,7 @@ class RuntimeServiceTests(unittest.TestCase):
             ) = asyncio.run(fetch())
             self.assertEqual(by_receipt.status_code, 200)
             payload = by_receipt.json()
-            self.assertEqual(payload["schema_version"], 4)
+            self.assertEqual(payload["schema_version"], 5)
             self.assertEqual(payload, by_work.json())
             self.assertEqual(payload, latest.json())
             self.assertEqual(

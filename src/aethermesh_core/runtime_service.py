@@ -1463,7 +1463,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 4:
+        if receipt.get("version") != 5:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1642,7 +1642,7 @@ class NodeRuntimeService:
                 "validation receipt has missing or invalid validated_at timestamp"
             )
         return {
-            "schema_version": 4,
+            "schema_version": 5,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
@@ -1745,7 +1745,7 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 4:
+                    if receipt.get("version") != 5:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
@@ -2062,7 +2062,7 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 4,
+                "version": 5,
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
@@ -2083,7 +2083,7 @@ class NodeRuntimeService:
                 "validator_id": worker_node_id,
                 "validator_software": capture_validator_software_metadata(
                     validator_name="deterministic_local_result_check",
-                    receipt_schema_version=4,
+                    receipt_schema_version=5,
                 ),
                 "executor_node_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),

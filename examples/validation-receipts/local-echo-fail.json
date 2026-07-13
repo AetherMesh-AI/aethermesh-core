@@ -1,7 +1,7 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
   "receipt_id": "local-validation-receipt-local-job-echo-002",
-  "receipt_hash": "sha256:52f5936d75e1c116c0d05926ff0b4a00e6b2400628c4752f6b0562e19dec197c",
+  "receipt_hash": "sha256:ddc58f03ae35813bee788e343dd4279f3eed88dad3c297da8dbe2c55a270fb65",
   "result_hash": "sha256:3b0d225f1447065d935a498778b499a59c7fe30283b0d5830eb983322effe35a",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
@@ -31,7 +31,7 @@
     "runtime_name": "CPython",
     "runtime_version": "3.14.2",
     "platform": "Darwin/arm64",
-    "receipt_schema_version": 5
+    "receipt_schema_version": 6
   },
   "lineage": {
     "parent_work_ids": [
