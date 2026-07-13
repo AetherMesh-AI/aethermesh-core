@@ -1,5 +1,6 @@
 import asyncio
 import builtins
+from copy import deepcopy
 import json
 import os
 import subprocess
@@ -21,6 +22,7 @@ from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.local_json_helpers import canonical_json_hash
+from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
@@ -98,6 +100,111 @@ def _valid_local_work_fixture() -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 class RuntimeServiceTests(unittest.TestCase):
+    def test_deterministic_local_work_repeats_with_stable_provenance(self) -> None:
+        request, expected_output = _valid_local_work_fixture()
+        request_before_execution = deepcopy(request)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first = self._execute_fixed_deterministic_fixture(root / "first", request)
+            second = self._execute_fixed_deterministic_fixture(root / "second", request)
+
+        self.assertEqual(first["manifest"], second["manifest"])
+        self.assertEqual(first["result"], second["result"])
+        self.assertEqual(first["receipt"], second["receipt"])
+        self.assertEqual(first["receipt_document"], second["receipt_document"])
+        self.assertEqual(first["completed"], second["completed"])
+        self.assertEqual(first["result"]["summary"], expected_output["output"])
+        self.assertEqual(
+            canonical_result_document_hash(first["result"]),
+            canonical_result_document_hash(second["result"]),
+        )
+        self.assertEqual(first["result"]["creator_node_id"], request["creator_node_id"])
+        self.assertEqual(
+            first["completed"]["contribution_attribution"],
+            {
+                "job_id": request["job_id"],
+                "creator_node_id": request["creator_node_id"],
+                "metadata": request["attribution_metadata"],
+                "worker_node_id": "worker-local-fixture",
+                "validated_contribution_units": 1,
+            },
+        )
+        self.assertEqual(
+            first["receipt"]["manifest_ref"], first["submission"]["manifest_ref"]
+        )
+        self.assertEqual(
+            first["receipt"]["lineage_parent_ids"], request["lineage_parent_refs"]
+        )
+        self.assertEqual(
+            first["receipt"]["contribution_attribution"],
+            first["completed"]["contribution_attribution"],
+        )
+        self.assertEqual(request, request_before_execution)
+
+    def test_deterministic_local_work_input_change_changes_result_hash(self) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        changed_request = deepcopy(request)
+        changed_request["input_payload"]["content"]["message"] = "changed local work"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            original = self._execute_fixed_deterministic_fixture(
+                root / "original", request
+            )
+            changed = self._execute_fixed_deterministic_fixture(
+                root / "changed", changed_request
+            )
+
+        self.assertNotEqual(original["result"]["summary"], changed["result"]["summary"])
+        self.assertNotEqual(
+            canonical_result_document_hash(original["result"]),
+            canonical_result_document_hash(changed["result"]),
+        )
+        self.assertNotEqual(
+            original["receipt_document"]["output_hash"],
+            changed["receipt_document"]["output_hash"],
+        )
+
+    def _execute_fixed_deterministic_fixture(
+        self, root: Path, request: dict[str, Any]
+    ) -> dict[str, Any]:
+        with (
+            patch(
+                "aethermesh_core.runtime_service.time.time", return_value=1_720_000_000
+            ),
+            patch(
+                "aethermesh_core.runtime_service._utc_timestamp",
+                side_effect=[
+                    "2024-07-03T09:46:40.000000Z",
+                    "2024-07-03T09:46:40.000000Z",
+                ],
+            ),
+        ):
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            completed = service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+
+        return {
+            "submission": submission,
+            "completed": completed,
+            "manifest": json.loads((root / submission["manifest_ref"]).read_text()),
+            "result": json.loads((root / completed["result"]["ref"]).read_text()),
+            "receipt_document": json.loads(
+                (
+                    root
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{submission['job_id']}.json"
+                ).read_text()
+            ),
+            "receipt": service.get_local_validation_receipt(
+                work_id=submission["job_id"]
+            ),
+        }
+
     def test_valid_local_work_fixture_completes_with_receipted_provenance(self) -> None:
         request, expected_output = _valid_local_work_fixture()
         request_before_execution = json.loads(json.dumps(request))
