@@ -55,6 +55,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "missing: job_id"):
             validate_validation_receipt_document(missing)
 
+        missing_method = copy.deepcopy(self.passing)
+        missing_method.pop("validation_method")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: validation_method"
+        ):
+            validate_validation_receipt_document(missing_method)
+
         blank = copy.deepcopy(self.passing)
         blank["job_id"] = ""
         with self.assertRaisesRegex(
@@ -110,7 +117,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             validate_validation_receipt_document(receipt)
 
     def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
-        for field, value in (("schema_version", 2.0), ("validation_status", [])):
+        for field, value in (("schema_version", 3.0), ("validation_status", [])):
             with self.subTest(field=field):
                 receipt = copy.deepcopy(self.passing)
                 receipt[field] = value
@@ -118,8 +125,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 1
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 2"):
+        old_version["schema_version"] = 2
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 3"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)

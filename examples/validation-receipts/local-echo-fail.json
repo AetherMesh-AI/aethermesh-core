@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "receipt_id": "local-validation-receipt-local-job-echo-002",
-  "receipt_hash": "sha256:e93bbe6e6eb38184f0e17da78c4bd2dfccfcbadbd6956d2a79b620bd71c4994c",
+  "receipt_hash": "sha256:290fa4f1b5a4f9ef293228f3e78b3148ee63fc23f308267f0b7626412f741876",
   "result_hash": "sha256:3b0d225f1447065d935a498778b499a59c7fe30283b0d5830eb983322effe35a",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "creator_node_id": "node.local-creator",
@@ -9,6 +9,17 @@
   "work_id": "local-job-echo-002",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "validation_status": "fail",
+  "validation_method": {
+    "kind": "deterministic_fixture_replay",
+    "description": "Replayed the deterministic local echo fixture and found that its output differs from the result artifact.",
+    "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "creator_node_id": "node.local-creator",
+    "work_id": "local-job-echo-002",
+    "lineage_parent_work_ids": [
+      "local-job-echo-001"
+    ],
+    "contribution_manifest_ref": "data/contribution-manifests/local-job-echo-002.json"
+  },
   "validator_id": "node.local-validator",
   "lineage": {
     "parent_work_ids": [

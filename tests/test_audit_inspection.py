@@ -65,6 +65,12 @@ class AuditInspectionTests(unittest.TestCase):
                 event["artifacts"]["contribution_attribution"]["worker_node_id"],
                 "worker-local-a",
             )
+            self.assertEqual(
+                event["artifacts"]["validation_method"],
+                service.get_local_validation_receipt(work_id=accepted["job_id"])[
+                    "validation_method"
+                ],
+            )
             self.assertEqual(event["validation_status"], "passed")
             self.assertEqual(filtered["total_matching"], 1)
             self.assertEqual(before, after)
@@ -80,6 +86,17 @@ class AuditInspectionTests(unittest.TestCase):
             status["validation"]["receipt_ref"] = "../outside.json"
             status_path.write_text(json.dumps(status), encoding="utf-8")
             with self.assertRaisesRegex(RuntimeServiceError, "job status"):
+                service.inspect_local_audit_events()
+
+            status["validation"]["receipt_ref"] = (
+                f"data/job-validation-receipts/{accepted['job_id']}.json"
+            )
+            status_path.write_text(json.dumps(status), encoding="utf-8")
+            receipt_path = home / status["validation"]["receipt_ref"]
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("validation_method")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeServiceError, "no validation method"):
                 service.inspect_local_audit_events()
 
     def test_endpoint_returns_events_and_clear_filter_errors(self) -> None:

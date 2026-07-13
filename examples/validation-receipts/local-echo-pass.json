@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "receipt_id": "local-validation-receipt-local-job-echo-001",
-  "receipt_hash": "sha256:4ae9df5c09137bbd903c23a1a75211cee64badcb607680bbb2c6a215d568ad2f",
+  "receipt_hash": "sha256:4d55891f0c4da078e58dbea567d7e67fb85207549baa56285b24fd97dd968617",
   "result_hash": "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "creator_node_id": "node.local-creator",
@@ -9,6 +9,15 @@
   "work_id": "local-job-echo-001",
   "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "validation_status": "pass",
+  "validation_method": {
+    "kind": "deterministic_fixture_replay",
+    "description": "Replayed the deterministic local echo fixture and compared its output to the result artifact.",
+    "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "creator_node_id": "node.local-creator",
+    "work_id": "local-job-echo-001",
+    "lineage_parent_work_ids": [],
+    "contribution_manifest_ref": null
+  },
   "validator_id": "node.local-validator",
   "lineage": {
     "parent_work_ids": [],
