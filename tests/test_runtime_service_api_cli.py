@@ -1271,12 +1271,51 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(execution_error_record["status"], "failure")
             self.assertEqual(
                 execution_error_record["error_summary"],
-                "local execution error: OSError: controlled runner fault",
+                "local execution error: OSError",
             )
             self.assertEqual(
                 execution_error_record["validation_receipt_ref"],
                 execution_error["validation"]["receipt_ref"],
             )
+            failed_result = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-results"
+                    / f"{execution_error_accepted['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )
+            failed_receipt = json.loads(
+                (
+                    Path(temp_dir)
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{execution_error_accepted['job_id']}.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(failed_result["status"], "failed")
+            self.assertEqual(failed_result["validation_status"], "failed")
+            self.assertEqual(failed_result["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                failed_receipt["manifest_ref"], execution_error_accepted["manifest_ref"]
+            )
+            self.assertEqual(failed_receipt["creator_node_id"], "creator-local-a")
+            self.assertEqual(
+                failed_receipt["lineage_parent_refs"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                failed_receipt["contribution_attribution"]["creator_node_id"],
+                "creator-local-a",
+            )
+            self.assertFalse(failed_receipt["validation"]["valid"])
+            self.assertEqual(
+                failed_receipt["validation"]["reason"], "result_not_completed"
+            )
+            following_accepted = service.submit_local_job(request)
+            following = service.execute_submitted_local_job(
+                following_accepted["job_id"], "worker-local-c"
+            )
+            self.assertEqual(following["status"], "succeeded")
             self.assertEqual(
                 service.get_local_job_status(
                     "local-job-00000000000000000000000000000000"

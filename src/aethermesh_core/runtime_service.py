@@ -1737,7 +1737,10 @@ class NodeRuntimeService:
                 node_id=worker_node_id,
                 status="failed",
                 output=None,
-                error=f"local execution error: {type(exc).__name__}: {exc}",
+                # Preserve an auditable error class without persisting arbitrary
+                # executor text, which can expose local paths or implementation
+                # details in a receipt.
+                error=f"local execution error: {type(exc).__name__}",
                 contribution_units=0,
             )
         finally:
