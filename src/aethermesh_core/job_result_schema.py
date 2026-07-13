@@ -6,7 +6,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 2
+JOB_RESULT_SCHEMA_VERSION = 3
 RESULT_STATUSES = frozenset(
     {
         "succeeded",
@@ -48,6 +48,7 @@ _REQUIRED_FIELDS = frozenset(
         "result_id",
         "job_id",
         "task_id",
+        "capability",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",
@@ -87,6 +88,7 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
         "result_id",
         "job_id",
         "task_id",
+        "capability",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",

@@ -1454,10 +1454,20 @@ class NodeRuntimeService:
             else None
         )
         result_lineage = result.get("lineage")
+        manifest_capability = manifest.get("job", {}).get("requested_capability")
+        capability = receipt.get("capability")
         try:
             validate_job_result_document(result)
         except ValueError as exc:
             raise RuntimeServiceError("job result record violates its schema") from exc
+        if (
+            not isinstance(manifest_capability, dict)
+            or capability != manifest_capability.get("identifier")
+            or result.get("capability") != capability
+        ):
+            raise RuntimeServiceError(
+                "validation receipt capability does not match manifest result"
+            )
         if (
             not isinstance(receipt_execution, dict)
             or receipt_execution.get("executor_node_id") != executor_node_id
@@ -1496,6 +1506,7 @@ class NodeRuntimeService:
             "validation_scope": "local-only-not-consensus",
             "receipt_id": self._receipt_id_for_job(job_id),
             "work_id": job_id,
+            "capability": capability,
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": executor_node_id,
             "requester_identity": requester_identity,
@@ -1718,6 +1729,17 @@ class NodeRuntimeService:
             "job submission manifest",
         )
         job_data = manifest["job"]
+        requested_capability = job_data.get("requested_capability")
+        if (
+            not isinstance(requested_capability, dict)
+            or set(requested_capability) != {"identifier"}
+            or not isinstance(requested_capability.get("identifier"), str)
+            or not requested_capability["identifier"]
+        ):
+            raise RuntimeServiceError(
+                "job submission manifest requested_capability is invalid"
+            )
+        capability = requested_capability["identifier"]
         input_payload, payload_hash = _validated_input_payload(
             job_data.get("input_payload")
         )
@@ -1792,6 +1814,7 @@ class NodeRuntimeService:
             "result_id": f"local-result-{job_id}",
             "job_id": job_id,
             "task_id": job_id,
+            "capability": capability,
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,
             "manifest_id": manifest_id,
@@ -1850,6 +1873,7 @@ class NodeRuntimeService:
             {
                 "version": 1,
                 "job_id": job_id,
+                "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
                 "manifest_ref": manifest_ref,
                 "input_payload_hash": payload_hash,

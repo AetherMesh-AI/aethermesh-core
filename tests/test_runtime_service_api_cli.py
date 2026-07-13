@@ -233,6 +233,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
             self.assertEqual(result["job_id"], request["job_id"])
+            self.assertEqual(result["capability"], "work.echo")
             self.assertEqual(
                 result["manifest_id"],
                 canonical_json_hash(
@@ -255,6 +256,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertEqual(receipt["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(receipt["capability"], result["capability"])
             self.assertEqual(
                 receipt["lineage_parent_ids"], request["lineage_parent_refs"]
             )
@@ -264,6 +266,29 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(manifest_path.read_bytes(), manifest_before_execution)
             self.assertEqual(request, request_before_execution)
+
+    def test_local_validation_receipt_rejects_missing_capability(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("capability")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError,
+                "capability does not match manifest result",
+            ):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
 
     def test_local_job_submission_persists_provenance_without_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
