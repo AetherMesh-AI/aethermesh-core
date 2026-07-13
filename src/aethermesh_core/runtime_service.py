@@ -41,6 +41,10 @@ from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
+from aethermesh_core.validation_receipt_schema import (
+    capture_validator_software_metadata,
+    validate_validator_software_metadata,
+)
 
 CONFIG_SCHEMA_VERSION = 1
 DEFAULT_API_HOST = "127.0.0.1"
@@ -1459,7 +1463,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 4:
+        if receipt.get("version") != 5:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1474,6 +1478,15 @@ class NodeRuntimeService:
             raise RuntimeServiceError("validation receipt has no validator identity")
         if not isinstance(executor_node_id, str) or not executor_node_id:
             raise RuntimeServiceError("validation receipt has no executor identity")
+        try:
+            validate_validator_software_metadata(
+                receipt.get("validator_software"),
+                receipt_schema_version=receipt["version"],
+            )
+        except (KeyError, ValueError) as exc:
+            raise RuntimeServiceError(
+                "validation receipt has missing or invalid validator software metadata"
+            ) from exc
         if not isinstance(validation, dict) or not isinstance(
             validation.get("valid"), bool
         ):
@@ -1629,7 +1642,7 @@ class NodeRuntimeService:
                 "validation receipt has missing or invalid validated_at timestamp"
             )
         return {
-            "schema_version": 4,
+            "schema_version": 5,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
@@ -1653,6 +1666,7 @@ class NodeRuntimeService:
             "executor_started_at": receipt_execution["executor_started_at"],
             "executor_finished_at": receipt_execution["executor_finished_at"],
             "validator_identity": validator_id,
+            "validator_software": receipt["validator_software"],
             "lineage_parent_ids": lineage["parent_refs"],
             "contribution_attribution": attribution,
             "evidence": {
@@ -1731,7 +1745,7 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 4:
+                    if receipt.get("version") != 5:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
@@ -2048,7 +2062,7 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 4,
+                "version": 5,
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
@@ -2067,6 +2081,10 @@ class NodeRuntimeService:
                 ),
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
+                "validator_software": capture_validator_software_metadata(
+                    validator_name="deterministic_local_result_check",
+                    receipt_schema_version=5,
+                ),
                 "executor_node_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
                 "execution": execution_metadata,

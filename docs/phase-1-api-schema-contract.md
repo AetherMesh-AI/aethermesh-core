@@ -32,7 +32,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 | `GET /health`, `/status`, `/api/status`, `/version`, `/node`, `/api/node`, `/peers`, `/api/peers`, `/api/jobs`, `/capabilities`, `/api/capabilities`, `/api/model-manifests`, `/api/package`, `/api/network`, `/logs`, `/api/logs`, `/api/events`, `/`, `/shutdown`, `/restart` | None, except local control signal posts | Current local status/control shape described in the API boundary; none writes provenance. |
 | `POST /api/jobs` | Local Job Submission v1 | Local Job Submission Acceptance v1 |
 | `GET /api/jobs/{job_id}` | Required path `job_id` | Local Job Status v1 artifact projection |
-| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v4 |
+| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v5 |
 | `GET /api/contributions` | None | Local Contribution Lookup v1 |
 | `GET /api/audit-events` | Optional documented filters | Local Audit Page v1 |
 
@@ -107,9 +107,9 @@ Example completed projection (dynamic IDs and timestamps omitted):
 }
 ```
 
-## Local Validation Receipt v4
+## Local Validation Receipt v5
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. Every receipt includes `schema_version` (`4`), machine-readable `status` (`accepted` or `rejected`), `rejection_reason` (null only when accepted), `next_local_action`, `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validation_method`, `validated_at`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `accepted` means required local validation passed; it is not network consensus. `validated_at` is recorded locally after validation completes as a UTC ISO 8601 timestamp ending in `Z`; it is audit timing, not consensus time. `next_local_action` is a concrete local replay, retention, inspection, or correction action; it is required even for rejected receipts so a reason cannot create false confidence. `validation_method` identifies the concrete local check and repeats the receipt's manifest, creator, work, lineage, and contribution provenance so exports remain self-describing. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. Every receipt includes `schema_version` (`5`), machine-readable `status` (`accepted` or `rejected`), `rejection_reason` (null only when accepted), `next_local_action`, `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validation_method`, `validated_at`, `validator_identity`, `validator_software`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `validator_software` records the validator implementation version, optional build identity, runtime, platform, and matching receipt schema version at receipt creation time without local paths. `accepted` means required local validation passed; it is not network consensus. `validated_at` is recorded locally after validation completes as a UTC ISO 8601 timestamp ending in `Z`; it is audit timing, not consensus time. `next_local_action` is a concrete local replay, retention, inspection, or correction action; it is required even for rejected receipts so a reason cannot create false confidence. `validation_method` identifies the concrete local check and repeats the receipt's manifest, creator, work, lineage, and contribution provenance so exports remain self-describing. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
@@ -117,7 +117,7 @@ Example response:
 
 ```json
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "receipt_id": "local-validation-receipt-local-job-<generated>",
   "validation_receipt_id": "local-validation-receipt-local-job-<generated>",
   "work_id": "local-job-<generated>",
@@ -140,6 +140,15 @@ Example response:
     "contribution_attribution": {"validated_contribution_units": 1}
   },
   "validator_identity": "worker-local-example",
+  "validator_software": {
+    "validator_name": "deterministic_local_result_check",
+    "validator_version": "0.2.0-alpha",
+    "validator_build_identifier": "unknown",
+    "runtime_name": "CPython",
+    "runtime_version": "3.14.2",
+    "platform": "Darwin/arm64",
+    "receipt_schema_version": 5
+  },
   "contribution_attribution": {"validated_contribution_units": 1},
   "validation_scope": "local-only-not-consensus",
   "validation": {"job_id": "local-job-<generated>", "valid": true},

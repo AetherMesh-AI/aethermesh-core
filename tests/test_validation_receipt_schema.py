@@ -1,7 +1,10 @@
 import copy
 import json
+import os
 import unittest
+from importlib import metadata
 from pathlib import Path
+from unittest.mock import patch
 
 from aethermesh_core.result_hash import (
     canonical_result_document_hash,
@@ -10,6 +13,7 @@ from aethermesh_core.result_hash import (
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     canonical_validation_receipt_hash,
+    capture_validator_software_metadata,
     validation_receipt_id,
     validate_validation_receipt_document,
 )
@@ -55,6 +59,23 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             self.failing, canonical_result_document_hash(self.failed_result)
         )
 
+    def test_capture_validator_software_uses_explicit_unknown_for_unsafe_builds(
+        self,
+    ) -> None:
+        with (
+            patch(
+                "aethermesh_core.validation_receipt_schema.metadata.version",
+                side_effect=metadata.PackageNotFoundError,
+            ),
+            patch.dict(os.environ, {"AETHERMESH_BUILD_ID": "/private/build"}),
+        ):
+            captured = capture_validator_software_metadata(
+                validator_name="deterministic_fixture_replay", receipt_schema_version=6
+            )
+
+        self.assertEqual(captured["validator_build_identifier"], "unknown")
+        self.assertEqual(captured["receipt_schema_version"], 6)
+
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
         missing.pop("job_id")
@@ -67,6 +88,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             ValidationReceiptSchemaError, "missing: validation_method"
         ):
             validate_validation_receipt_document(missing_method)
+
+        missing_validator_software = copy.deepcopy(self.passing)
+        missing_validator_software.pop("validator_software")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: validator_software"
+        ):
+            validate_validation_receipt_document(missing_validator_software)
 
         missing_timestamp = copy.deepcopy(self.passing)
         missing_timestamp.pop("validated_at")
@@ -170,6 +198,12 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "does not match"):
             validate_validation_receipt_document(receipt)
 
+    def test_validator_software_metadata_is_hash_bound_to_work_lineage(self) -> None:
+        receipt = copy.deepcopy(self.failing)
+        receipt["validator_software"]["validator_version"] = "changed-after-validation"
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "receipt_hash"):
+            validate_validation_receipt_document(receipt)
+
     def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
         for field, value in (("schema_version", 5.0), ("validation_status", [])):
             with self.subTest(field=field):
@@ -179,8 +213,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 4
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 5"):
+        old_version["schema_version"] = 5
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 6"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)

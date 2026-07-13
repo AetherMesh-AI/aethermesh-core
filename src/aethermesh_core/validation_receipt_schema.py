@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import platform
 import re
 from datetime import UTC, datetime
+from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 5
+VALIDATION_RECEIPT_SCHEMA_VERSION = 6
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -29,6 +32,7 @@ _REQUIRED_FIELDS = frozenset(
         "validation_status",
         "validation_method",
         "validator_id",
+        "validator_software",
         "lineage",
         "contribution",
         "evidence",
@@ -105,7 +109,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 5"
+            "validation receipt.schema_version must be integer 6"
         )
     for field in (
         "receipt_id",
@@ -159,6 +163,9 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         )
     _lineage(receipt["lineage"])
     _contribution(receipt["contribution"])
+    validate_validator_software_metadata(
+        receipt["validator_software"], receipt_schema_version=receipt["schema_version"]
+    )
     _validation_method(receipt["validation_method"], receipt)
     _evidence(receipt["evidence"])
     if not isinstance(receipt["receipt_hash"], str) or receipt[
@@ -168,6 +175,90 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
             "validation receipt.receipt_hash does not match"
         )
     return receipt
+
+
+def capture_validator_software_metadata(
+    *, validator_name: str, receipt_schema_version: int
+) -> dict[str, object]:
+    """Capture minimal local software/runtime facts when a receipt is created."""
+
+    try:
+        validator_version = metadata.version("aethermesh")
+    except metadata.PackageNotFoundError:
+        from aethermesh_core import __version__
+
+        validator_version = __version__
+    document: dict[str, object] = {
+        "validator_name": validator_name,
+        "validator_version": validator_version or "unknown",
+        "validator_build_identifier": os.environ.get("AETHERMESH_BUILD_ID", "unknown"),
+        "runtime_name": platform.python_implementation() or "unknown",
+        "runtime_version": platform.python_version() or "unknown",
+        "platform": f"{platform.system() or 'unknown'}/{platform.machine() or 'unknown'}",
+        "receipt_schema_version": receipt_schema_version,
+    }
+    try:
+        validate_validator_software_metadata(
+            document, receipt_schema_version=receipt_schema_version
+        )
+    except ValidationReceiptSchemaError:
+        document["validator_build_identifier"] = "unknown"
+        validate_validator_software_metadata(
+            document, receipt_schema_version=receipt_schema_version
+        )
+    return document
+
+
+def validate_validator_software_metadata(
+    value: object, *, receipt_schema_version: int
+) -> dict[str, object]:
+    """Validate minimal, path-safe validator software/runtime metadata."""
+
+    metadata_document = _object(
+        value,
+        "validation receipt.validator_software",
+        frozenset(
+            {
+                "validator_name",
+                "validator_version",
+                "validator_build_identifier",
+                "runtime_name",
+                "runtime_version",
+                "platform",
+                "receipt_schema_version",
+            }
+        ),
+    )
+    for field in (
+        "validator_name",
+        "validator_version",
+        "validator_build_identifier",
+        "runtime_name",
+        "runtime_version",
+        "platform",
+    ):
+        if (
+            not isinstance(metadata_document[field], str)
+            or not metadata_document[field].strip()
+        ):
+            raise ValidationReceiptSchemaError(
+                f"validation receipt.validator_software.{field} must be a non-empty string"
+            )
+    build_identifier = metadata_document["validator_build_identifier"]
+    if "/" in build_identifier or "\\" in build_identifier:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validator_software.validator_build_identifier must not be a path"
+        )
+    metadata_schema_version = metadata_document["receipt_schema_version"]
+    if (
+        not isinstance(metadata_schema_version, int)
+        or isinstance(metadata_schema_version, bool)
+        or metadata_schema_version != receipt_schema_version
+    ):
+        raise ValidationReceiptSchemaError(
+            "validation receipt.validator_software.receipt_schema_version must match receipt"
+        )
+    return dict(metadata_document)
 
 
 def _object(value: object, label: str, required: frozenset[str]) -> dict[str, Any]:

@@ -4,18 +4,18 @@
 
 ## Required fields
 
-Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 5 requires:
+Every top-level field is required and unknown top-level fields are rejected. This strict rule prevents a reader from silently accepting an unreviewed critical field. Version 6 requires:
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | Fixed integer `5`. |
+| `schema_version` | Fixed integer `6`. |
 | `receipt_id` | Stable local receipt identifier derived as `local-validation-receipt-{work_id}`. |
 | `receipt_hash` | SHA-256 hash of the canonical stable receipt content. |
 | `result_hash` | Required `sha256:<64 lowercase hex>` digest of the durable job result being validated. |
 | `created_at` | UTC ISO 8601 creation timestamp; audit ordering only. |
 | `validated_at` | UTC ISO 8601 timestamp recorded locally when validation completes; it must end in `Z` and is audit timing only, not consensus time. |
 | `creator_node_id` | Node that created the submitted work. |
-| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 5. |
+| `job_id` | Required local job identifier assigned before execution; it must equal `work_id` in schema version 6. |
 | `work_id` | Work item validated by the receipt. |
 | `manifest_id` | Content-addressed source work manifest identifier. |
 | `status` | `accepted` only when `validation_status` is `pass`; otherwise `rejected`. This is a local result, not network consensus. |
@@ -23,6 +23,7 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | `validation_status` | One of `pass`, `fail`, `error`, or `skipped`. |
 | `validation_method` | Required machine-parseable, human-readable description of the concrete local check and its linked provenance. |
 | `validator_id` | Local validator or deterministic validator implementation identity. |
+| `validator_software` | Required machine-readable validator name/version/build, runtime, platform, and matching receipt schema version. Unavailable build identity is exactly `unknown`; paths are rejected. |
 | `lineage` | Required lineage block described below. |
 | `contribution` | Required local attribution block described below. |
 | `evidence` | Required local validation evidence block described below. |
@@ -31,7 +32,7 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 
 `validation_method` has exactly `kind`, `description`, `manifest_id`, `creator_node_id`, `work_id`, `lineage_parent_work_ids`, and `contribution_manifest_ref`. `kind` names a concrete local check such as `deterministic_fixture_replay`, `manifest_comparison`, `schema_validation`, or `hash_verification`; `description` explains what was checked. Its manifest, creator, work, lineage, and contribution references must exactly match their receipt fields. This makes a stored or exported receipt self-describing without changing attribution.
 
-Version 5 supersedes version 4 by requiring `status` and `rejection_reason`. Existing version 4 receipts remain identifiable as version 4 records and must be migrated explicitly rather than silently reinterpreted. Version 4 superseded version 3 by requiring `validated_at`, a canonical UTC ISO 8601 completion timestamp. Version 3 superseded version 2 by requiring `validation_method`. Version 2 superseded version 1 by requiring the algorithm-prefixed `result_hash` format.
+Version 6 supersedes version 5 by requiring `validator_software`. Existing version 5 receipts remain identifiable as version 5 records and must be migrated explicitly rather than silently reinterpreted. Version 5 superseded version 4 by requiring `status` and `rejection_reason`. Version 4 superseded version 3 by requiring `validated_at`, a canonical UTC ISO 8601 completion timestamp. Version 3 superseded version 2 by requiring `validation_method`. Version 2 superseded version 1 by requiring the algorithm-prefixed `result_hash` format.
 
 ## Nested blocks and reserved nullable placeholders
 
