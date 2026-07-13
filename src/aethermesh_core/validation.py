@@ -33,13 +33,79 @@ class ValidationResult:
         return asdict(self)
 
 
-def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
+@dataclass(frozen=True)
+class _SchemaNode:
+    """One node in a declared, local output schema."""
+
+    type_name: str
+    accepted_types: tuple[type[object], ...]
+    fields: dict[str, "_SchemaNode"] | None = None
+    items: "_SchemaNode | None" = None
+
+
+_STRING = _SchemaNode("str", (str,))
+_INTEGER = _SchemaNode("int", (int,))
+_NUMBER = _SchemaNode("number", (int, float))
+_BOOLEAN = _SchemaNode("bool", (bool,))
+
+
+def _object(**fields: _SchemaNode) -> _SchemaNode:
+    return _SchemaNode("object", (dict,), fields=fields)
+
+
+def _array(items: _SchemaNode) -> _SchemaNode:
+    return _SchemaNode("array", (list,), items=items)
+
+
+_OUTPUT_SCHEMAS_V1 = {
+    "echo": _STRING,
+    "hash": _object(algorithm=_STRING, digest=_STRING),
+    "basic_compute": _object(operation=_STRING, result=_NUMBER),
+    "text_stats": _object(
+        character_count=_INTEGER,
+        word_count=_INTEGER,
+        line_count=_INTEGER,
+        normalized_preview=_STRING,
+    ),
+    "keyword_extract": _object(
+        keywords=_array(_object(term=_STRING, count=_INTEGER)),
+        unique_terms=_INTEGER,
+        total_terms=_INTEGER,
+    ),
+    "text_chunk": _object(
+        chunks=_array(_object(index=_INTEGER, text=_STRING, character_count=_INTEGER)),
+        chunk_count=_INTEGER,
+        character_count=_INTEGER,
+    ),
+    "text_embed": _object(
+        dimensions=_INTEGER,
+        token_count=_INTEGER,
+        unique_terms=_INTEGER,
+        vector=_array(_INTEGER),
+    ),
+    "text_retrieve": _object(
+        query_terms=_array(_STRING),
+        matches=_array(
+            _object(
+                id=_STRING,
+                score=_NUMBER,
+                matched_term_count=_INTEGER,
+                matched_terms=_array(_STRING),
+            )
+        ),
+    ),
+}
+
+
+def validate_job_result(
+    job: Job, result: JobResult, *, expected_node_id: str | None = None
+) -> ValidationResult:
     """Validate a reported result against the assigned local job.
 
-    Each supported work item declares output schema version 1 through its
-    deterministic expected output. The schema gate runs before semantic value
-    validation, so malformed, partial, or unexpected output is rejected with a
-    stable schema path. This is fully local and deterministic.
+    Each supported work type has an explicit output schema version 1. The
+    schema gate runs before semantic value validation, so malformed, partial,
+    or unexpected output is rejected with a stable schema path. This is fully
+    local and deterministic.
     """
 
     if job.job_type not in {
@@ -58,6 +124,8 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
         return _invalid(job, result, "result_not_completed")
     if result.job_id != job.job_id:
         return _invalid(job, result, "job_id_mismatch")
+    if expected_node_id is not None and result.node_id != expected_node_id:
+        return _invalid(job, result, "result_node_id_mismatch")
     if result.contribution_units != 1:
         return _invalid(job, result, "unexpected_contribution_units")
 
@@ -101,8 +169,9 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
         except ValueError:
             return _invalid(job, result, "malformed_text_retrieve_payload")
 
+    schema = _declared_output_schema(job)
     if schema_error := _validate_declared_output_schema(
-        job.job_type, expected_output, result.output
+        job.job_type, schema, result.output
     ):
         return _invalid(job, result, schema_error)
     if result.output != expected_output:
@@ -110,22 +179,41 @@ def validate_job_result(job: Job, result: JobResult) -> ValidationResult:
     return ValidationResult(job.job_id, result.job_id, True, "ok")
 
 
-def _validate_declared_output_schema(
-    job_type: str, expected: object, actual: object, path: str = "output"
-) -> str | None:
-    """Validate the versioned output schema declared by one work item.
+def _declared_output_schema(job: Job) -> _SchemaNode:
+    """Return the version 1 output schema declared for a supported work item."""
 
-    Version 1 has no optional output fields: the deterministic local work item
-    declares its complete output shape from its assigned payload. Semantic
-    equality is checked separately to distinguish a correctly-shaped but wrong
-    output from a schema failure.
+    if job.job_type != "schema_transform":
+        return _OUTPUT_SCHEMAS_V1[job.job_type]
+
+    declared_fields = job.payload["schema"]["fields"]
+    primitive_schemas = {
+        "string": _STRING,
+        "integer": _INTEGER,
+        "boolean": _BOOLEAN,
+    }
+    return _object(
+        **{
+            name: primitive_schemas[field_type]
+            for name, field_type in declared_fields.items()
+        }
+    )
+
+
+def _validate_declared_output_schema(
+    job_type: str, schema: _SchemaNode, actual: object, path: str = "output"
+) -> str | None:
+    """Validate an output against a work item's declared version 1 schema.
+
+    Version 1 explicitly declares required fields and array item types and has
+    no optional fields. Semantic equality is checked separately to distinguish
+    a correctly-shaped but wrong output from a schema failure.
     """
 
     schema_path = f"output_schema.v1.{job_type}.{path}"
-    if isinstance(expected, dict):
+    if schema.fields is not None:
         if not isinstance(actual, dict):
             return f"{schema_path}: expected object"
-        expected_fields = set(expected)
+        expected_fields = set(schema.fields)
         actual_fields = set(actual)
         missing = sorted(expected_fields - actual_fields)
         if missing:
@@ -135,32 +223,24 @@ def _validate_declared_output_schema(
             return f"{schema_path}: unknown field {unknown[0]}"
         for field in sorted(expected_fields):
             if reason := _validate_declared_output_schema(
-                job_type, expected[field], actual[field], f"{path}.{field}"
+                job_type, schema.fields[field], actual[field], f"{path}.{field}"
             ):
                 return reason
         return None
-    if isinstance(expected, list):
+    if schema.items is not None:
         if not isinstance(actual, list):
             return f"{schema_path}: expected array"
-        if expected:
-            for index, value in enumerate(actual):
-                if reason := _validate_declared_output_schema(
-                    job_type, expected[0], value, f"{path}[{index}]"
-                ):
-                    return reason
+        for index, value in enumerate(actual):
+            if reason := _validate_declared_output_schema(
+                job_type, schema.items, value, f"{path}[{index}]"
+            ):
+                return reason
         return None
-    if isinstance(expected, bool):
-        valid = isinstance(actual, bool)
-    elif isinstance(expected, int):
-        valid = isinstance(actual, int) and not isinstance(actual, bool)
-    elif isinstance(expected, float):
-        valid = isinstance(actual, float)
-    elif expected is None:
-        valid = actual is None
-    else:
-        valid = isinstance(actual, type(expected))
+    valid = isinstance(actual, schema.accepted_types)
+    if schema.type_name in {"int", "number"} and isinstance(actual, bool):
+        valid = False
     if not valid:
-        return f"{schema_path}: expected {type(expected).__name__}"
+        return f"{schema_path}: expected {schema.type_name}"
     return None
 
 

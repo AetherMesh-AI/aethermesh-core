@@ -3,6 +3,9 @@ import unittest
 from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.models import Job, JobResult
 from aethermesh_core.validation import (
+    _INTEGER,
+    _SchemaNode,
+    _array,
     _validate_declared_output_schema,
     validate_job_result,
 )
@@ -84,6 +87,23 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "job_id_mismatch")
+
+    def test_mismatched_executor_node_id_is_invalid_when_declared(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
+            JobResult(
+                job_id="echo-1",
+                node_id="other-node",
+                status="completed",
+                output="hello",
+                error=None,
+                contribution_units=1,
+            ),
+            expected_node_id="node-a",
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_node_id_mismatch")
 
     def test_unsupported_job_type_is_invalid(self) -> None:
         validation = validate_job_result(
@@ -1008,12 +1028,22 @@ class ValidationTests(unittest.TestCase):
 
     def test_declared_output_schema_covers_array_and_null_rules(self) -> None:
         self.assertEqual(
-            _validate_declared_output_schema("test", [1], "not-an-array"),
+            _validate_declared_output_schema("test", _array(_INTEGER), "not-an-array"),
             "output_schema.v1.test.output: expected array",
         )
         self.assertEqual(
-            _validate_declared_output_schema("test", [None], ["not-null"]),
+            _validate_declared_output_schema(
+                "test", _array(_SchemaNode("NoneType", (type(None),))), ["not-null"]
+            ),
             "output_schema.v1.test.output[0]: expected NoneType",
+        )
+        self.assertEqual(
+            _validate_declared_output_schema("test", _array(_INTEGER), ["wrong"]),
+            "output_schema.v1.test.output[0]: expected int",
+        )
+        self.assertEqual(
+            _validate_declared_output_schema("test", _INTEGER, True),
+            "output_schema.v1.test.output: expected int",
         )
 
 
