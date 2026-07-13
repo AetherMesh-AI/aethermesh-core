@@ -1,11 +1,17 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "references": {
+    "manifest_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "artifact_refs": [],
+    "validation_receipt_ids": ["local-validation-receipt-echo-002"],
+    "log_refs": ["logs/echo-002.log"]
+  },
   "created_at": "2026-07-12T12:10:00.000Z",
   "status": "failed",
   "exit_code": 2,
@@ -13,6 +19,7 @@
   "finished_at": "2026-07-12T12:10:01.050Z",
   "duration_ms": 50,
   "summary": "Echo could not read its declared local input artifact.",
+  "error_summary": "required output was not produced",
   "validation_status": "failed",
   "validation_receipt_id": "local-validation-receipt-echo-002",
   "validator_node_id": "node.local-validator",
@@ -30,7 +37,10 @@
     "artifact_ids": []
   },
   "contribution": {
-    "attribution_node_id": "node.local-worker",
+    "creator_node_id": "node.local-creator",
+    "executor_node_id": "node.local-worker",
+    "validator_node_id": "node.local-validator",
+    "upstream_lineage_sources": ["local-job-parent-001"],
     "local_operator_id": null
   }
 }

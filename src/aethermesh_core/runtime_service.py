@@ -31,7 +31,10 @@ from aethermesh_core.identity import (
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
-from aethermesh_core.job_result_schema import validate_job_result_document
+from aethermesh_core.job_result_schema import (
+    JOB_RESULT_SCHEMA_VERSION,
+    validate_job_result_document,
+)
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
@@ -1769,13 +1772,19 @@ class NodeRuntimeService:
             None if succeeded else f"validation failed: {validation.reason}"
         )
         result_document = {
-            "schema_version": 1,
+            "schema_version": JOB_RESULT_SCHEMA_VERSION,
             "result_id": f"local-result-{job_id}",
             "job_id": job_id,
             "task_id": job_id,
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,
             "manifest_id": manifest_id,
+            "references": {
+                "manifest_hash": manifest_id,
+                "artifact_refs": [output_manifest_id] if succeeded else [],
+                "validation_receipt_ids": [self._receipt_id_for_job(job_id)],
+                "log_refs": [],
+            },
             "created_at": executor_started_at,
             "status": "succeeded" if succeeded else "failed",
             "exit_code": 0 if succeeded else 1,
@@ -1783,6 +1792,7 @@ class NodeRuntimeService:
             "finished_at": executor_finished_at,
             "duration_ms": _duration_ms(executor_started_at, executor_finished_at),
             "summary": _result_summary(result.output if succeeded else error),
+            "error_summary": None if succeeded else _result_summary(error),
             "validation_status": "passed" if validation.valid else "failed",
             "validation_receipt_id": self._receipt_id_for_job(job_id),
             "validator_node_id": worker_node_id,
@@ -1800,7 +1810,10 @@ class NodeRuntimeService:
                 "artifact_ids": [output_manifest_id] if succeeded else [],
             },
             "contribution": {
-                "attribution_node_id": worker_node_id,
+                "creator_node_id": manifest["creator_node_id"],
+                "executor_node_id": worker_node_id,
+                "validator_node_id": worker_node_id,
+                "upstream_lineage_sources": manifest["lineage"]["parent_refs"],
                 "local_operator_id": None,
             },
         }

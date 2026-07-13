@@ -1354,7 +1354,20 @@ class RuntimeServiceTests(unittest.TestCase):
                         "passed" if execution["validation"]["passed"] else "failed",
                     )
                     self.assertEqual(
-                        document["contribution"]["attribution_node_id"], worker
+                        document["contribution"]["creator_node_id"], "creator-local-a"
+                    )
+                    self.assertEqual(
+                        document["contribution"]["executor_node_id"], worker
+                    )
+                    self.assertEqual(
+                        document["contribution"]["validator_node_id"], worker
+                    )
+                    self.assertEqual(
+                        document["references"]["manifest_hash"], document["manifest_id"]
+                    )
+                    self.assertEqual(
+                        document["references"]["validation_receipt_ids"],
+                        [document["validation_receipt_id"]],
                     )
                     self.assertEqual(
                         document["lineage"]["parent_job_ids"],

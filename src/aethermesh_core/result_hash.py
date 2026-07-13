@@ -72,10 +72,12 @@ def canonical_result_document_hash(document: object) -> str:
         "creator_node_id": result["creator_node_id"],
         "executor_node_id": result["executor_node_id"],
         "manifest_ref": result["manifest_id"],
+        "references": _portable_references(result["references"]),
         "result_content": {
             "status": result["status"],
             "exit_code": result["exit_code"],
             "summary": result["summary"],
+            "error_summary": result["error_summary"],
             "failure_reasons": result["failure_reasons"],
         },
         "validation": {
@@ -119,3 +121,22 @@ def _canonical_json_bytes(payload: dict[str, Any]) -> bytes:
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise ValueError("result hash fields must be JSON-compatible") from exc
+
+
+def _portable_references(references: dict[str, Any]) -> dict[str, Any]:
+    """Exclude machine-local paths while retaining portable evidence identities."""
+
+    return {
+        "manifest_hash": references["manifest_hash"],
+        "artifact_refs": [
+            reference
+            for reference in references["artifact_refs"]
+            if reference.startswith("sha256:")
+        ],
+        "validation_receipt_ids": references["validation_receipt_ids"],
+        "log_refs": [
+            reference
+            for reference in references["log_refs"]
+            if reference.startswith("sha256:")
+        ],
+    }
