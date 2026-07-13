@@ -171,7 +171,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             validate_validation_receipt_document(receipt)
 
     def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
-        for field, value in (("schema_version", 4.0), ("validation_status", [])):
+        for field, value in (("schema_version", 5.0), ("validation_status", [])):
             with self.subTest(field=field):
                 receipt = copy.deepcopy(self.passing)
                 receipt[field] = value
@@ -179,8 +179,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 3
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 4"):
+        old_version["schema_version"] = 4
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 5"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)
