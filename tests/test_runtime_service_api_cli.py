@@ -20,6 +20,7 @@ from aethermesh_core import app_cli
 from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.job_result_schema import validate_job_result_document
+from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
@@ -74,7 +75,87 @@ async def _fetch_api_payloads(api_app: FastAPI) -> dict[str, Any]:
         }
 
 
+def _valid_local_work_fixture() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return a stable, valid local work request and its deterministic output."""
+
+    return (
+        {
+            "schema_version": 1,
+            "job_id": "local-job-0123456789abcdef0123456789abcdef",
+            "job_type": "echo",
+            "requested_capability": {"identifier": "work.echo"},
+            "input_payload": {
+                "payload_type": "json",
+                "content": {"message": "valid local work"},
+            },
+            "creator_node_id": "creator-local-fixture",
+            "requested_validation_mode": "deterministic-local",
+            "lineage_parent_refs": ["data/lineage/fixture-parent.json"],
+            "attribution_metadata": {"fixture": "valid-local-work"},
+        },
+        {"output": "valid local work"},
+    )
+
+
 class RuntimeServiceTests(unittest.TestCase):
+    def test_valid_local_work_fixture_completes_with_receipted_provenance(self) -> None:
+        request, expected_output = _valid_local_work_fixture()
+        request_before_execution = json.loads(json.dumps(request))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            manifest_path = root / submission["manifest_ref"]
+            manifest_before_execution = manifest_path.read_bytes()
+
+            completed = service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            result = json.loads(
+                (root / completed["result"]["ref"]).read_text(encoding="utf-8")
+            )
+            receipt = service.get_local_validation_receipt(work_id=submission["job_id"])
+
+            self.assertEqual(completed["status"], "succeeded")
+            self.assertEqual(completed["result"]["summary"], expected_output["output"])
+            self.assertEqual(result["status"], "succeeded")
+            self.assertEqual(result["summary"], expected_output["output"])
+            self.assertTrue(completed["validation"]["passed"])
+            self.assertEqual(receipt["validation_status"], "passed")
+            self.assertTrue(receipt["validation"]["valid"])
+            self.assertEqual(result["job_id"], request["job_id"])
+            self.assertEqual(
+                result["manifest_id"],
+                canonical_json_hash(
+                    json.loads(manifest_before_execution), prefix="sha256:"
+                ),
+            )
+            self.assertEqual(result["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                result["lineage"]["parent_job_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                completed["contribution_attribution"],
+                {
+                    "job_id": request["job_id"],
+                    "creator_node_id": request["creator_node_id"],
+                    "metadata": request["attribution_metadata"],
+                    "worker_node_id": "worker-local-fixture",
+                    "validated_contribution_units": 1,
+                },
+            )
+            self.assertEqual(receipt["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                receipt["lineage_parent_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                receipt["contribution_attribution"],
+                completed["contribution_attribution"],
+            )
+            self.assertEqual(manifest_path.read_bytes(), manifest_before_execution)
+            self.assertEqual(request, request_before_execution)
+
     def test_local_job_submission_persists_provenance_without_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))
