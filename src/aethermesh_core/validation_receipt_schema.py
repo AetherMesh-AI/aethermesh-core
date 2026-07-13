@@ -15,6 +15,7 @@ _REQUIRED_FIELDS = frozenset(
         "schema_version",
         "receipt_id",
         "receipt_hash",
+        "result_hash",
         "created_at",
         "creator_node_id",
         "work_id",
@@ -100,6 +101,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     ):
         _identifier(receipt[field], f"validation receipt.{field}")
     _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
+    _sha256_digest(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
     if (
         not isinstance(receipt["validation_status"], str)
@@ -173,6 +175,13 @@ def _content_addressed_id(value: object, label: str) -> None:
         )
 
 
+def _sha256_digest(value: object, label: str) -> None:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise ValidationReceiptSchemaError(
+            f"{label} must be a lowercase SHA-256 digest"
+        )
+
+
 def _local_reference(value: object, label: str, *, nullable: bool = False) -> None:
     if value is None and nullable:
         return
@@ -200,10 +209,17 @@ def _nullable_string(value: object, label: str) -> None:
         )
 
 
+def _nullable_identifier(value: object, label: str) -> None:
+    if value is not None:
+        _identifier(value, label)
+
+
 def _lineage(value: object) -> None:
     lineage = _object(value, "validation receipt.lineage", _LINEAGE_FIELDS)
     for field in ("parent_work_ids", "prior_receipt_ids"):
         _string_list(lineage[field], f"validation receipt.lineage.{field}")
+        for identifier in lineage[field]:
+            _identifier(identifier, f"validation receipt.lineage.{field} entries")
     _string_list(
         lineage["source_manifest_refs"],
         "validation receipt.lineage.source_manifest_refs",
@@ -224,8 +240,8 @@ def _contribution(value: object) -> None:
     contribution = _object(
         value, "validation receipt.contribution", _CONTRIBUTION_FIELDS
     )
-    for field in _CONTRIBUTION_FIELDS:
-        _nullable_string(
+    for field in ("submitter_id", "local_node_id", "claimed_role"):
+        _nullable_identifier(
             contribution[field], f"validation receipt.contribution.{field}"
         )
     _local_reference(

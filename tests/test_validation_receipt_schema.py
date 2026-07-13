@@ -3,6 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
+from aethermesh_core.result_hash import validate_validation_receipt_result_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     canonical_validation_receipt_hash,
@@ -26,6 +27,9 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.assertIs(validate_validation_receipt_document(self.failing), self.failing)
         self.assertEqual(self.passing["validation_status"], "pass")
         self.assertEqual(self.failing["validation_status"], "fail")
+        validate_validation_receipt_result_hash(
+            self.passing, self.passing["result_hash"]
+        )
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
@@ -81,6 +85,11 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             validate_validation_receipt_document(receipt)
 
         receipt = copy.deepcopy(self.passing)
+        receipt["result_hash"] = "sha256:not-a-digest"
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "SHA-256 digest"):
+            validate_validation_receipt_document(receipt)
+
+        receipt = copy.deepcopy(self.passing)
         receipt["not_json"] = {float("nan")}
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "JSON-compatible"):
             canonical_validation_receipt_hash(receipt)
@@ -105,4 +114,23 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                 receipt = copy.deepcopy(self.passing)
                 receipt["evidence"]["reason"] = value
                 with self.assertRaisesRegex(ValidationReceiptSchemaError, "non-empty"):
+                    validate_validation_receipt_document(receipt)
+
+    def test_lineage_and_attribution_ids_reject_whitespace(self) -> None:
+        nullable = copy.deepcopy(self.passing)
+        nullable["contribution"]["submitter_id"] = None
+        nullable["receipt_hash"] = canonical_validation_receipt_hash(nullable)
+        self.assertIs(validate_validation_receipt_document(nullable), nullable)
+
+        cases = (
+            ("lineage", "parent_work_ids", ["not an id"]),
+            ("lineage", "prior_receipt_ids", ["receipt\nleak"]),
+            ("contribution", "submitter_id", "/Users/example/private id"),
+            ("contribution", "claimed_role", "validator\nsecret"),
+        )
+        for block, field, value in cases:
+            with self.subTest(block=block, field=field):
+                receipt = copy.deepcopy(self.passing)
+                receipt[block][field] = value
+                with self.assertRaisesRegex(ValidationReceiptSchemaError, "identifier"):
                     validate_validation_receipt_document(receipt)
