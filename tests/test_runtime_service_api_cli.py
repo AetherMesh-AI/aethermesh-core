@@ -476,7 +476,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 / f"{evidence['submission']['job_id']}.json"
             )
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-            receipt["version"] = 1
+            receipt["version"] = 2
             receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
 
             with self.assertRaisesRegex(RuntimeServiceError, "unsupported version"):
@@ -2197,6 +2197,7 @@ class RuntimeServiceTests(unittest.TestCase):
             ) = asyncio.run(fetch())
             self.assertEqual(by_receipt.status_code, 200)
             payload = by_receipt.json()
+            self.assertEqual(payload["schema_version"], 3)
             self.assertEqual(payload, by_work.json())
             self.assertEqual(payload, latest.json())
             self.assertEqual(

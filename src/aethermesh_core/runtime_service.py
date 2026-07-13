@@ -1457,7 +1457,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 2:
+        if receipt.get("version") != 3:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1599,7 +1599,7 @@ class NodeRuntimeService:
                 "validation receipt has missing or invalid validated_at timestamp"
             )
         return {
-            "schema_version": 2,
+            "schema_version": 3,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
@@ -1698,7 +1698,7 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 2:
+                    if receipt.get("version") != 3:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
@@ -2010,7 +2010,7 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 2,
+                "version": 3,
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
