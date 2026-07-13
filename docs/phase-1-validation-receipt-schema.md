@@ -23,6 +23,7 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | `validation_status` | One of `pass`, `fail`, `error`, or `skipped`. |
 | `validation_method` | Required machine-parseable, human-readable description of the concrete local check and its linked provenance. |
 | `validator_id` | Local validator or deterministic validator implementation identity. |
+| `validator_software` | Required machine-readable validator name/version/build, runtime, platform, and matching receipt schema version. Unavailable build identity is exactly `unknown`; paths are rejected. |
 | `lineage` | Required lineage block described below. |
 | `contribution` | Required local attribution block described below. |
 | `evidence` | Required local validation evidence block described below. |

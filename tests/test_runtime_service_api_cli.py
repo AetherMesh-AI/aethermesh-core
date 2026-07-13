@@ -285,6 +285,11 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
             self.assertEqual(
+                receipt["validator_software"]["validator_name"],
+                "deterministic_local_result_check",
+            )
+            self.assertEqual(receipt["validator_software"]["receipt_schema_version"], 4)
+            self.assertEqual(
                 receipt["validation_method"],
                 {
                     "kind": "deterministic_local_result_check",
