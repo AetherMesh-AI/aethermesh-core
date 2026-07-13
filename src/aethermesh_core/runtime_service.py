@@ -1587,6 +1587,7 @@ class NodeRuntimeService:
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
             "validation_receipt_id": expected_receipt_id,
+            "job_id": job_id,
             "work_id": job_id,
             "capability": capability,
             "creator_node_id": manifest["creator_node_id"],

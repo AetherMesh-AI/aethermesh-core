@@ -38,11 +38,16 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
-        missing.pop("validator_id")
-        with self.assertRaisesRegex(
-            ValidationReceiptSchemaError, "missing: validator_id"
-        ):
+        missing.pop("job_id")
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "missing: job_id"):
             validate_validation_receipt_document(missing)
+
+        blank = copy.deepcopy(self.passing)
+        blank["job_id"] = ""
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "job_id must be a non-empty identifier"
+        ):
+            validate_validation_receipt_document(blank)
 
         unknown = copy.deepcopy(self.passing)
         unknown["unreviewed_critical_field"] = "not silently accepted"
@@ -74,6 +79,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
     def test_receipt_id_must_be_derived_from_work_id(self) -> None:
         receipt = copy.deepcopy(self.passing)
         receipt["receipt_id"] = "local-validation-receipt-unrelated-work"
+        receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "match its work_id"):
+            validate_validation_receipt_document(receipt)
+
+    def test_job_id_must_match_work_id(self) -> None:
+        receipt = copy.deepcopy(self.passing)
+        receipt["job_id"] = "unrelated-job"
         receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "match its work_id"):
             validate_validation_receipt_document(receipt)
