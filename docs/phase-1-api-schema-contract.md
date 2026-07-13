@@ -32,7 +32,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 | `GET /health`, `/status`, `/api/status`, `/version`, `/node`, `/api/node`, `/peers`, `/api/peers`, `/api/jobs`, `/capabilities`, `/api/capabilities`, `/api/model-manifests`, `/api/package`, `/api/network`, `/logs`, `/api/logs`, `/api/events`, `/`, `/shutdown`, `/restart` | None, except local control signal posts | Current local status/control shape described in the API boundary; none writes provenance. |
 | `POST /api/jobs` | Local Job Submission v1 | Local Job Submission Acceptance v1 |
 | `GET /api/jobs/{job_id}` | Required path `job_id` | Local Job Status v1 artifact projection |
-| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v1 |
+| `GET /api/validation-receipts` | Exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt v2 |
 | `GET /api/contributions` | None | Local Contribution Lookup v1 |
 | `GET /api/audit-events` | Optional documented filters | Local Audit Page v1 |
 
