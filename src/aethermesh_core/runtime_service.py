@@ -2444,8 +2444,9 @@ def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool
         return False
     if not isinstance(epoch_seconds, int) or isinstance(epoch_seconds, bool):
         return False
-    assert isinstance(value, str)
-    parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    parsed = datetime.strptime(cast(str, value), "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+        tzinfo=UTC
+    )
     # Completion timestamps currently have whole-second precision, so their value
     # represents the full UTC second in which completion was recorded.
     return parsed.timestamp() < epoch_seconds + 1
