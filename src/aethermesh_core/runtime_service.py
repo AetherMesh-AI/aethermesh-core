@@ -994,6 +994,7 @@ class NodeRuntimeService:
             "timestamps": {"created_at": int(time.time())},
             "state_audit_refs": [],
             "worker_node_id": None,
+            "executor_node_id": None,
             "validation": None,
             "result": None,
             "error": None,
@@ -1101,6 +1102,7 @@ class NodeRuntimeService:
             "requested_capability": manifest["job"]["requested_capability"],
             "requester_identity": manifest.get("requester_identity"),
             "worker_node_id": status.get("worker_node_id"),
+            "executor_node_id": status.get("executor_node_id"),
             "lineage": manifest["lineage"],
             "contribution_attribution": status.get(
                 "contribution_attribution", manifest["contribution_attribution"]
@@ -1381,6 +1383,7 @@ class NodeRuntimeService:
         receipt = self._load_local_job_document(receipt_path, "validation receipt")
         result_ref = receipt.get("result_ref")
         validator_id = receipt.get("validator_id")
+        executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1391,6 +1394,8 @@ class NodeRuntimeService:
             )
         if not isinstance(validator_id, str) or not validator_id:
             raise RuntimeServiceError("validation receipt has no validator identity")
+        if not isinstance(executor_node_id, str) or not executor_node_id:
+            raise RuntimeServiceError("validation receipt has no executor identity")
         if not isinstance(validation, dict) or not isinstance(
             validation.get("valid"), bool
         ):
@@ -1463,7 +1468,9 @@ class NodeRuntimeService:
                 executor_finished_at, receipt_execution.get("executed_at")
             )
             or result.get("job_id") != job_id
-            or result.get("executor_node_id") != validator_id
+            or result.get("executor_node_id") != executor_node_id
+            or executor_node_id != validator_id
+            or executor_node_id != status.get("executor_node_id")
             or result.get("creator_node_id") != manifest.get("creator_node_id")
             or not isinstance(result_lineage, dict)
             or result_lineage.get("parent_job_ids") != lineage.get("parent_refs")
@@ -1488,6 +1495,7 @@ class NodeRuntimeService:
             "receipt_id": self._receipt_id_for_job(job_id),
             "work_id": job_id,
             "creator_node_id": manifest["creator_node_id"],
+            "executor_node_id": executor_node_id,
             "requester_identity": requester_identity,
             "manifest_ref": manifest_ref,
             "input_payload_hash": expected_payload_hash,
@@ -1696,7 +1704,12 @@ class NodeRuntimeService:
         if not isinstance(worker_node_id, str) or not worker_node_id.strip():
             raise RuntimeServiceError("worker_node_id must be a non-empty string")
         self._transition_local_job_state(
-            job_id, "running", updates={"worker_node_id": worker_node_id}
+            job_id,
+            "running",
+            updates={
+                "worker_node_id": worker_node_id,
+                "executor_node_id": worker_node_id,
+            },
         )
         manifest = self._load_local_job_document(
             self.paths.data_dir / "job-submissions" / f"{job_id}.json",
@@ -1765,6 +1778,7 @@ class NodeRuntimeService:
             "executor_finished_at": executor_finished_at,
             "executed_at": int(time.time()),
             "creator_node_id": manifest["creator_node_id"],
+            "executor_node_id": worker_node_id,
             "lineage_parent_refs": manifest["lineage"]["parent_refs"],
         }
         succeeded = result.status == "completed" and validation.valid
@@ -1832,6 +1846,7 @@ class NodeRuntimeService:
                 "output_hash": execution_metadata["output_digest"],
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
+                "executor_node_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),
                 "execution": execution_metadata,
                 "creator_node_id": manifest["creator_node_id"],
@@ -1848,6 +1863,7 @@ class NodeRuntimeService:
         contribution_attribution = {
             **manifest["contribution_attribution"],
             "worker_node_id": worker_node_id,
+            "executor_node_id": worker_node_id,
             "validated_contribution_units": result.contribution_units
             if succeeded
             else 0,
@@ -1875,6 +1891,7 @@ class NodeRuntimeService:
                     "work_id": job_id,
                     "status": "success" if succeeded else "failure",
                     "creator_node_id": manifest["creator_node_id"],
+                    "executor_node_id": worker_node_id,
                     "manifest_ref": f"data/job-submissions/{job_id}.json",
                     "input_lineage_ref": f"data/job-submissions/{job_id}.json#lineage",
                     "output_ref": result_ref,

@@ -127,6 +127,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 "creator_node_id": request["creator_node_id"],
                 "metadata": request["attribution_metadata"],
                 "worker_node_id": "worker-local-fixture",
+                "executor_node_id": "worker-local-fixture",
                 "validated_contribution_units": 1,
             },
         )
@@ -249,6 +250,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     "creator_node_id": request["creator_node_id"],
                     "metadata": request["attribution_metadata"],
                     "worker_node_id": "worker-local-fixture",
+                    "executor_node_id": "worker-local-fixture",
                     "validated_contribution_units": 1,
                 },
             )
@@ -1331,6 +1333,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertIsNone(queued["result"])
             self.assertEqual(succeeded["status"], "succeeded")
             self.assertEqual(succeeded["worker_node_id"], "worker-local-a")
+            self.assertEqual(succeeded["executor_node_id"], "worker-local-a")
             for submission, execution, worker, expected_status in (
                 (accepted, succeeded, "worker-local-a", "succeeded"),
                 (failed_accepted, failed, "worker-local-b", "failed"),
@@ -1667,6 +1670,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 payload["receipt_id"], f"local-validation-receipt-{accepted['job_id']}"
             )
             self.assertEqual(payload["creator_node_id"], "creator-local-a")
+            self.assertEqual(payload["executor_node_id"], "worker-local-a")
             self.assertEqual(payload["manifest_ref"], accepted["manifest_ref"])
             self.assertEqual(payload["lineage_parent_ids"], ["data/prior-job.json"])
             self.assertEqual(payload["validation_status"], "passed")
@@ -1689,6 +1693,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 / f"{accepted['job_id']}.json"
             )
             stored_receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            self.assertEqual(stored_receipt["executor_node_id"], "worker-local-a")
+            self.assertEqual(
+                stored_receipt["execution"]["executor_node_id"], "worker-local-a"
+            )
             stored_receipt.pop("validated_at")
             receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
 
@@ -1714,6 +1722,13 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             for response in (malformed, missing, bad_latest):
                 self.assertEqual(response.status_code, 400)
+
+            stored_receipt.pop("executor_node_id")
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "validation receipt has no executor identity"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
 
             stored_receipt["result_ref"] = (
                 "data/job-results/local-job-" + "0" * 32 + ".json"
