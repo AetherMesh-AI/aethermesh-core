@@ -113,8 +113,32 @@ class RuntimeServiceTests(unittest.TestCase):
 
         self.assertEqual(first["manifest"], second["manifest"])
         self.assertEqual(first["result"], second["result"])
-        self.assertEqual(first["receipt"], second["receipt"])
-        self.assertEqual(first["receipt_document"], second["receipt_document"])
+        self.assertRegex(first["receipt"]["validated_at"], r"Z$")
+        self.assertRegex(second["receipt"]["validated_at"], r"Z$")
+        self.assertEqual(
+            {
+                key: value
+                for key, value in first["receipt"].items()
+                if key != "validated_at"
+            },
+            {
+                key: value
+                for key, value in second["receipt"].items()
+                if key != "validated_at"
+            },
+        )
+        self.assertEqual(
+            {
+                key: value
+                for key, value in first["receipt_document"].items()
+                if key != "validated_at"
+            },
+            {
+                key: value
+                for key, value in second["receipt_document"].items()
+                if key != "validated_at"
+            },
+        )
         self.assertEqual(first["completed"], second["completed"])
         self.assertEqual(first["result"]["summary"], expected_output["output"])
         self.assertEqual(
@@ -2193,8 +2217,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 payload["evidence"]["receipt_ref"],
                 f"data/job-validation-receipts/{accepted['job_id']}.json",
             )
-            self.assertIsInstance(payload["validation_timestamp"], int)
-            self.assertEqual(payload["validation_timestamp_source"], "receipt_record")
+            self.assertRegex(
+                payload["validated_at"],
+                r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$",
+            )
             receipt_path = (
                 Path(temp_dir)
                 / "data"
@@ -2219,23 +2245,10 @@ class RuntimeServiceTests(unittest.TestCase):
             stored_receipt["execution"]["executor_node_id"] = "worker-local-a"
             stored_receipt.pop("validated_at")
             receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
-
-            async def fetch_legacy() -> httpx.Response:
-                transport = httpx.ASGITransport(app=api)
-                async with httpx.AsyncClient(
-                    transport=transport, base_url="http://testserver"
-                ) as client:
-                    return await client.get(
-                        "/api/validation-receipts",
-                        params={"work_id": accepted["job_id"]},
-                    )
-
-            legacy = asyncio.run(fetch_legacy())
-            self.assertEqual(legacy.status_code, 200)
-            self.assertEqual(
-                legacy.json()["validation_timestamp_source"],
-                "receipt_file_mtime_legacy",
-            )
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "missing or invalid validated_at timestamp"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
             self.assertEqual(pending_response.status_code, 404)
             self.assertEqual(
                 pending_response.json()["error"]["code"], "VALIDATION_FAILURE"

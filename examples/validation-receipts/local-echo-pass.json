@@ -1,9 +1,10 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "receipt_id": "local-validation-receipt-local-job-echo-001",
-  "receipt_hash": "sha256:4d55891f0c4da078e58dbea567d7e67fb85207549baa56285b24fd97dd968617",
+  "receipt_hash": "sha256:b8290eed0c796930f2f6ae89ea921bea648a2fb92e2ffc3821b3b0fff1b47a52",
   "result_hash": "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
   "created_at": "2026-07-13T12:00:00.000000Z",
+  "validated_at": "2026-07-13T12:00:01.000000Z",
   "creator_node_id": "node.local-creator",
   "job_id": "local-job-echo-001",
   "work_id": "local-job-echo-001",

@@ -1366,8 +1366,7 @@ class NodeRuntimeService:
         if (
             receipt.get("job_id") != job_id
             or receipt.get("receipt_id") != self._receipt_id_for_job(job_id)
-            or not isinstance(validated_at, int)
-            or isinstance(validated_at, bool)
+            or not _is_utc_timestamp(validated_at)
             or not isinstance(receipt_validation, dict)
             or not isinstance(receipt_validation.get("valid"), bool)
             or validation.get("passed") is not receipt_validation["valid"]
@@ -1595,10 +1594,10 @@ class NodeRuntimeService:
             )
 
         validated_at = receipt.get("validated_at")
-        timestamp_source = "receipt_record"
-        if not isinstance(validated_at, int) or isinstance(validated_at, bool):
-            validated_at = int(receipt_path.stat().st_mtime)
-            timestamp_source = "receipt_file_mtime_legacy"
+        if not _is_utc_timestamp(validated_at):
+            raise RuntimeServiceError(
+                "validation receipt has missing or invalid validated_at timestamp"
+            )
         return {
             "schema_version": 2,
             "network_mode": "local-only-no-p2p",
@@ -1617,8 +1616,7 @@ class NodeRuntimeService:
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_method": validation_method,
-            "validation_timestamp": validated_at,
-            "validation_timestamp_source": timestamp_source,
+            "validated_at": validated_at,
             "executor_started_at": receipt_execution["executor_started_at"],
             "executor_finished_at": receipt_execution["executor_finished_at"],
             "validator_identity": validator_id,
@@ -2048,7 +2046,9 @@ class NodeRuntimeService:
                     **validation.to_dict(),
                     "execution_outcome": result.status,
                 },
-                "validated_at": int(time.time()),
+                # Captured locally after validation completes. This is audit timing,
+                # not distributed or consensus time.
+                "validated_at": _validation_completed_at(),
             },
         )
         succeeded = result.status == "completed" and validation.valid
@@ -2817,6 +2817,12 @@ def _requester_identity(value: object) -> dict[str, str] | None:
 
 
 def _utc_timestamp() -> str:
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _validation_completed_at() -> str:
+    """Capture local receipt timing separately from deterministic report metadata."""
+
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
