@@ -76,6 +76,7 @@ _REQUIRED_FIELDS = frozenset(
         "result_hash",
     }
 )
+_OPTIONAL_FIELDS = frozenset({"model_ref"})
 
 
 class JobResultSchemaError(ValueError):
@@ -90,7 +91,12 @@ def validate_job_result_document(
     required_fields = (
         _REQUIRED_FIELDS if verify_result_hash else _REQUIRED_FIELDS - {"result_hash"}
     )
-    result = _object(document, "job result", required_fields, allowed=_REQUIRED_FIELDS)
+    result = _object(
+        document,
+        "job result",
+        required_fields,
+        allowed=_REQUIRED_FIELDS | _OPTIONAL_FIELDS,
+    )
     _exact_integer(
         result["schema_version"],
         "job result.schema_version",
@@ -108,6 +114,9 @@ def validate_job_result_document(
         "validator_node_id",
     ):
         _identifier(result[field], f"job result.{field}")
+    model_ref = result.get("model_ref")
+    if model_ref is not None:
+        _identifier(model_ref, "job result.model_ref")
     created_at = _timestamp(result["created_at"], "job result.created_at")
     started_at = _timestamp(result["started_at"], "job result.started_at")
     finished_at = _timestamp(result["finished_at"], "job result.finished_at")

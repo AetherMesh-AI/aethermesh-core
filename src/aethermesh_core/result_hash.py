@@ -90,6 +90,8 @@ def canonical_result_document_hash(document: object) -> str:
         "lineage": result["lineage"],
         "contribution": result["contribution"],
     }
+    if "model_ref" in result:
+        payload["model_ref"] = result["model_ref"]
     return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
 
 
