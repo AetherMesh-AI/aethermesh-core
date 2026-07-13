@@ -31,7 +31,10 @@ from aethermesh_core.identity import (
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
-from aethermesh_core.job_result_schema import validate_job_result_document
+from aethermesh_core.job_result_schema import (
+    JOB_RESULT_SCHEMA_VERSION,
+    validate_job_result_document,
+)
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
@@ -1769,7 +1772,7 @@ class NodeRuntimeService:
             None if succeeded else f"validation failed: {validation.reason}"
         )
         result_document = {
-            "schema_version": 1,
+            "schema_version": JOB_RESULT_SCHEMA_VERSION,
             "result_id": f"local-result-{job_id}",
             "job_id": job_id,
             "task_id": job_id,

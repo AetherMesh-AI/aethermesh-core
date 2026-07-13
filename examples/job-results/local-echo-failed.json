@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",

@@ -58,6 +58,17 @@ class ResultHashTests(unittest.TestCase):
                     changed["contribution"]["creator_node_id"] = value
                 self.assertNotEqual(original, canonical_result_document_hash(changed))
 
+    def test_durable_result_hash_excludes_machine_local_reference_paths(self) -> None:
+        original = canonical_result_document_hash(self.document)
+        relocated = deepcopy(self.document)
+        relocated["references"]["artifact_refs"][0] = "other/artifact.json"
+        relocated["references"]["log_refs"][0] = "other/result.log"
+        self.assertEqual(original, canonical_result_document_hash(relocated))
+
+        changed_content = deepcopy(self.document)
+        changed_content["references"]["artifact_refs"][1] = "sha256:" + "d" * 64
+        self.assertNotEqual(original, canonical_result_document_hash(changed_content))
+
     def test_durable_failed_and_error_results_are_hashable_after_validation(
         self,
     ) -> None:

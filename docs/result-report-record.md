@@ -4,7 +4,9 @@ A result report is the durable, local-first record for one completed, interrupte
 
 ## Required top-level fields
 
-Every version 1 record contains `schema_version`, `result_id`, `job_id`, `task_id`, `creator_node_id`, `executor_node_id`, `manifest_id`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
+Every version 2 record contains `schema_version`, `result_id`, `job_id`, `task_id`, `creator_node_id`, `executor_node_id`, `manifest_id`, `references`, `created_at`, `status`, `exit_code`, `started_at`, `finished_at`, `duration_ms`, `summary`, `error_summary`, `validation_status`, `validation_receipt_id`, `validator_node_id`, `failure_reasons`, `lineage`, and `contribution`.
+
+Version 2 replaces the earlier version 1 durable job-result shape because it adds required reference and error evidence and replaces executor-only contribution attribution with explicit creator, executor, validator, and upstream attribution. Version 1 records remain identifiable by their version but must be migrated before validation as version 2; they must never be silently reinterpreted as the new shape.
 
 `creator_node_id` is retained even for failures. `manifest_id` and `references.manifest_hash` are matching SHA-256 content-addressed IDs. Timestamps are UTC and duration is derived from the execution timestamps.
 
@@ -22,4 +24,4 @@ Validation status is one of `passed`, `failed`, `error`, or `not_run`. The recor
 
 ## Local validation expectations
 
-The schema rejects missing or unknown fields, mismatched manifest or receipt references, invalid reference locations, incomplete attribution, invalid timestamps, and unsupported statuses. The canonical result hash includes the stable report content and excludes runtime timestamps so local replay and signing layers can compare equivalent reports deterministically.
+The schema rejects missing or unknown fields, mismatched manifest or receipt references, invalid reference locations, incomplete attribution, invalid timestamps, and unsupported statuses. The canonical result hash includes stable report content and portable content-addressed evidence, but excludes runtime timestamps and machine-local artifact or log paths so relocated equivalent reports compare deterministically.

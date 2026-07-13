@@ -45,6 +45,11 @@ class JobResultSchemaTests(unittest.TestCase):
                     validate_job_result_document(document)
 
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
+        old_version = copy.deepcopy(self.success)
+        old_version["schema_version"] = 1
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 2"):
+            validate_job_result_document(old_version)
+
         invalid_status = copy.deepcopy(self.success)
         invalid_status["status"] = "complete"
         with self.assertRaisesRegex(JobResultSchemaError, "status is unsupported"):

@@ -6,7 +6,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 1
+JOB_RESULT_SCHEMA_VERSION = 2
 RESULT_STATUSES = frozenset(
     {
         "succeeded",
@@ -78,7 +78,11 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
     """Validate one local-only result report without reading or writing files."""
 
     result = _object(document, "job result", _REQUIRED_FIELDS)
-    _exact_integer(result["schema_version"], "job result.schema_version", 1)
+    _exact_integer(
+        result["schema_version"],
+        "job result.schema_version",
+        JOB_RESULT_SCHEMA_VERSION,
+    )
     for field in (
         "result_id",
         "job_id",
