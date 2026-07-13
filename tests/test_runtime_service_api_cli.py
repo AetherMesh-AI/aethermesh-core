@@ -34,6 +34,7 @@ from aethermesh_core.runtime_service import (
     _config_node_name,
     _default_home,
     _is_utc_timestamp,
+    _is_utc_timestamp_before_or_at,
     _memory_total_bytes,
     _merge_config,
     _package_version,
@@ -410,12 +411,31 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertNotEqual(*start_timestamps)
             self.assertFalse(_is_utc_timestamp(None))
             self.assertFalse(_is_utc_timestamp("not-a-timestamp"))
+            self.assertTrue(
+                _is_utc_timestamp_before_or_at(start_timestamps[0], 1783888603)
+            )
+            self.assertFalse(_is_utc_timestamp_before_or_at(start_timestamps[0], None))
+            self.assertFalse(_is_utc_timestamp_before_or_at(None, 1783888603))
             second_receipt_path = (
                 root / "data" / "job-validation-receipts" / f"{second['job_id']}.json"
             )
             second_receipt = json.loads(second_receipt_path.read_text(encoding="utf-8"))
             second_receipt["execution"]["executor_started_at"] = "not-a-timestamp"
             second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "invalid executor start timestamp evidence"
+            ):
+                service.get_local_validation_receipt(work_id=second["job_id"])
+
+            future_started_at = "2999-07-12T20:36:43.000002Z"
+            second_receipt["execution"]["executor_started_at"] = future_started_at
+            second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
+            second_result_path = (
+                root / "data" / "job-results" / f"{second['job_id']}.json"
+            )
+            second_result = json.loads(second_result_path.read_text(encoding="utf-8"))
+            second_result["execution"]["executor_started_at"] = future_started_at
+            second_result_path.write_text(json.dumps(second_result), encoding="utf-8")
             with self.assertRaisesRegex(
                 RuntimeServiceError, "invalid executor start timestamp evidence"
             ):

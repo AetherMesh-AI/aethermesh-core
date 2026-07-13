@@ -1434,12 +1434,18 @@ class NodeRuntimeService:
         lineage = cast(dict[str, Any], lineage)
         receipt_execution = receipt.get("execution")
         result_execution = result.get("execution")
+        executor_started_at = (
+            receipt_execution.get("executor_started_at")
+            if isinstance(receipt_execution, dict)
+            else None
+        )
         if (
             not isinstance(receipt_execution, dict)
             or not isinstance(result_execution, dict)
-            or receipt_execution.get("executor_started_at")
-            != result_execution.get("executor_started_at")
-            or not _is_utc_timestamp(receipt_execution.get("executor_started_at"))
+            or executor_started_at != result_execution.get("executor_started_at")
+            or not _is_utc_timestamp_before_or_at(
+                executor_started_at, result_execution.get("executed_at")
+            )
             or result.get("job_id") != job_id
             or result.get("worker_node_id") != validator_id
             or result_execution.get("creator_node_id")
@@ -2431,6 +2437,18 @@ def _is_utc_timestamp(value: object) -> bool:
     except ValueError:
         return False
     return parsed.tzinfo is None
+
+
+def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool:
+    if not _is_utc_timestamp(value):
+        return False
+    if not isinstance(epoch_seconds, int) or isinstance(epoch_seconds, bool):
+        return False
+    assert isinstance(value, str)
+    parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    # Completion timestamps currently have whole-second precision, so their value
+    # represents the full UTC second in which completion was recorded.
+    return parsed.timestamp() < epoch_seconds + 1
 
 
 def _package_version() -> str:
