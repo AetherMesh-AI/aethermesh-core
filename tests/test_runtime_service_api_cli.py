@@ -19,6 +19,7 @@ from typer.testing import CliRunner
 from aethermesh_core import app_cli
 from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
+from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.runner import LocalRunner
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
@@ -33,11 +34,13 @@ from aethermesh_core.runtime_service import (
     _config_node_id,
     _config_node_name,
     _default_home,
+    _duration_ms,
     _is_utc_timestamp,
     _is_utc_timestamp_before_or_at,
     _is_utc_timestamp_before_or_at_timestamp,
     _memory_total_bytes,
     _merge_config,
+    _result_summary,
     _package_version,
     _pid_is_alive,
 )
@@ -385,15 +388,11 @@ class RuntimeServiceTests(unittest.TestCase):
                     root / "data" / "job-validation-receipts" / f"{job_id}.json"
                 )
                 receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-                self.assertEqual(
-                    result["execution"]["executor_started_at"], expected_started_at
-                )
+                self.assertEqual(result["started_at"], expected_started_at)
                 self.assertEqual(
                     receipt["execution"]["executor_started_at"], expected_started_at
                 )
-                self.assertEqual(
-                    result["execution"]["executor_finished_at"], expected_finished_at
-                )
+                self.assertEqual(result["finished_at"], expected_finished_at)
                 self.assertEqual(
                     receipt["execution"]["executor_finished_at"], expected_finished_at
                 )
@@ -434,6 +433,11 @@ class RuntimeServiceTests(unittest.TestCase):
                 )
 
             self.assertNotEqual(*execution_timestamps[::2])
+            self.assertEqual(
+                _duration_ms(execution_timestamps[0], execution_timestamps[1]), 0
+            )
+            self.assertEqual(_result_summary({"output": "value"}), '{"output":"value"}')
+            self.assertEqual(_result_summary("x" * 513), "x" * 512)
             self.assertFalse(_is_utc_timestamp(None))
             self.assertFalse(_is_utc_timestamp("not-a-timestamp"))
             self.assertTrue(
@@ -477,10 +481,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 root / "data" / "job-results" / f"{second['job_id']}.json"
             )
             second_result = json.loads(second_result_path.read_text(encoding="utf-8"))
-            second_result["execution"]["executor_started_at"] = future_started_at
+            second_result["started_at"] = future_started_at
             second_result_path.write_text(json.dumps(second_result), encoding="utf-8")
             with self.assertRaisesRegex(
-                RuntimeServiceError, "invalid executor timing evidence"
+                RuntimeServiceError, "job result record violates its schema"
             ):
                 service.get_local_validation_receipt(work_id=second["job_id"])
 
@@ -1139,6 +1143,42 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertIsNone(queued["result"])
             self.assertEqual(succeeded["status"], "succeeded")
             self.assertEqual(succeeded["worker_node_id"], "worker-local-a")
+            for submission, execution, worker, expected_status in (
+                (accepted, succeeded, "worker-local-a", "succeeded"),
+                (failed_accepted, failed, "worker-local-b", "failed"),
+            ):
+                with self.subTest(result_status=expected_status):
+                    document = json.loads(
+                        (
+                            Path(temp_dir)
+                            / "data"
+                            / "job-results"
+                            / f"{submission['job_id']}.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                    self.assertIs(validate_job_result_document(document), document)
+                    self.assertEqual(document["job_id"], submission["job_id"])
+                    self.assertEqual(document["creator_node_id"], "creator-local-a")
+                    self.assertEqual(document["executor_node_id"], worker)
+                    self.assertEqual(document["status"], expected_status)
+                    self.assertEqual(
+                        document["validation_status"],
+                        "passed" if execution["validation"]["passed"] else "failed",
+                    )
+                    self.assertEqual(
+                        document["contribution"]["attribution_node_id"], worker
+                    )
+                    self.assertEqual(
+                        document["lineage"]["parent_job_ids"],
+                        ["data/prior-job.json"],
+                    )
+                    self.assertTrue(document["lineage"]["input_manifest_ids"])
+                    self.assertEqual(
+                        bool(document["lineage"]["output_manifest_ids"]),
+                        expected_status == "succeeded",
+                    )
+                    if expected_status == "failed":
+                        self.assertIsNotNone(document["failure_reasons"]["validation"])
             self.assertEqual(
                 succeeded["result"],
                 {

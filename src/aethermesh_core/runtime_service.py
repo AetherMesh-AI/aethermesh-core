@@ -31,6 +31,7 @@ from aethermesh_core.identity import (
     load_or_create_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
@@ -1433,7 +1434,6 @@ class NodeRuntimeService:
             )
         lineage = cast(dict[str, Any], lineage)
         receipt_execution = receipt.get("execution")
-        result_execution = result.get("execution")
         executor_started_at = (
             receipt_execution.get("executor_started_at")
             if isinstance(receipt_execution, dict)
@@ -1444,22 +1444,26 @@ class NodeRuntimeService:
             if isinstance(receipt_execution, dict)
             else None
         )
+        result_lineage = result.get("lineage")
+        try:
+            validate_job_result_document(result)
+        except ValueError as exc:
+            raise RuntimeServiceError("job result record violates its schema") from exc
         if (
             not isinstance(receipt_execution, dict)
-            or not isinstance(result_execution, dict)
-            or executor_started_at != result_execution.get("executor_started_at")
-            or executor_finished_at != result_execution.get("executor_finished_at")
+            or executor_started_at != result.get("started_at")
+            or executor_finished_at != result.get("finished_at")
             or not _is_utc_timestamp_before_or_at_timestamp(
                 executor_started_at, executor_finished_at
             )
             or not _is_utc_timestamp_before_or_at(
-                executor_finished_at, result_execution.get("executed_at")
+                executor_finished_at, receipt_execution.get("executed_at")
             )
             or result.get("job_id") != job_id
-            or result.get("worker_node_id") != validator_id
-            or result_execution.get("creator_node_id")
-            != manifest.get("creator_node_id")
-            or result_execution.get("lineage_parent_refs") != lineage.get("parent_refs")
+            or result.get("executor_node_id") != validator_id
+            or result.get("creator_node_id") != manifest.get("creator_node_id")
+            or not isinstance(result_lineage, dict)
+            or result_lineage.get("parent_job_ids") != lineage.get("parent_refs")
         ):
             raise RuntimeServiceError(
                 "validation receipt has invalid executor timing evidence"
@@ -1741,28 +1745,65 @@ class NodeRuntimeService:
         validation = validate_job_result(job, result)
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        manifest_id = canonical_json_hash(manifest, prefix="sha256:")
+        output_manifest_id = canonical_json_hash(
+            {"output": result.output}, prefix="sha256:"
+        )
         execution_metadata = {
             "executor_name": LocalRunner.EXECUTOR_NAME,
             "executor_version": LocalRunner.EXECUTOR_VERSION,
             "input_digest": payload_hash,
-            "output_digest": canonical_json_hash(
-                {"output": result.output}, prefix="sha256:"
-            ),
+            "output_digest": output_manifest_id,
             "executor_started_at": executor_started_at,
             "executor_finished_at": executor_finished_at,
             "executed_at": int(time.time()),
             "creator_node_id": manifest["creator_node_id"],
             "lineage_parent_refs": manifest["lineage"]["parent_refs"],
         }
-        atomic_create_json(
-            self.paths.data_dir / "job-results" / f"{job_id}.json",
-            {
-                "version": 1,
-                "job_id": job_id,
-                "worker_node_id": worker_node_id,
-                "result": result.to_dict(),
-                "execution": execution_metadata,
+        succeeded = result.status == "completed" and validation.valid
+        error = result.error or (
+            None if succeeded else f"validation failed: {validation.reason}"
+        )
+        result_document = {
+            "schema_version": 1,
+            "result_id": f"local-result-{job_id}",
+            "job_id": job_id,
+            "task_id": job_id,
+            "creator_node_id": manifest["creator_node_id"],
+            "executor_node_id": worker_node_id,
+            "manifest_id": manifest_id,
+            "created_at": executor_started_at,
+            "status": "succeeded" if succeeded else "failed",
+            "exit_code": 0 if succeeded else 1,
+            "started_at": executor_started_at,
+            "finished_at": executor_finished_at,
+            "duration_ms": _duration_ms(executor_started_at, executor_finished_at),
+            "summary": _result_summary(result.output if succeeded else error),
+            "validation_status": "passed" if validation.valid else "failed",
+            "validation_receipt_id": self._receipt_id_for_job(job_id),
+            "validator_node_id": worker_node_id,
+            "failure_reasons": {
+                "execution": result.error,
+                "validation": None if validation.valid else validation.reason,
+                "malformed_input": None,
+                "missing_artifact": None,
             },
+            "lineage": {
+                "input_manifest_ids": [manifest_id],
+                "output_manifest_ids": [output_manifest_id] if succeeded else [],
+                "parent_job_ids": manifest["lineage"]["parent_refs"],
+                "parent_task_ids": [],
+                "artifact_ids": [output_manifest_id] if succeeded else [],
+            },
+            "contribution": {
+                "attribution_node_id": worker_node_id,
+                "local_operator_id": None,
+            },
+        }
+        validate_job_result_document(result_document)
+        atomic_create_json(
+            self.paths.data_dir / "job-results" / f"{job_id}.json", result_document
         )
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
@@ -1770,7 +1811,7 @@ class NodeRuntimeService:
                 "version": 1,
                 "job_id": job_id,
                 "receipt_id": self._receipt_id_for_job(job_id),
-                "manifest_ref": f"data/job-submissions/{job_id}.json",
+                "manifest_ref": manifest_ref,
                 "input_payload_hash": payload_hash,
                 "output_hash": execution_metadata["output_digest"],
                 "result_ref": result_ref,
@@ -2467,6 +2508,28 @@ def _requester_identity(value: object) -> dict[str, str] | None:
 
 def _utc_timestamp() -> str:
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _duration_ms(started_at: str, finished_at: str) -> int:
+    """Return the exact millisecond duration required by the result schema."""
+
+    format_string = "%Y-%m-%dT%H:%M:%S.%fZ"
+    return int(
+        (
+            datetime.strptime(finished_at, format_string)
+            - datetime.strptime(started_at, format_string)
+        ).total_seconds()
+        * 1000
+    )
+
+
+def _result_summary(value: object) -> str:
+    """Serialize a bounded, non-empty local execution summary."""
+
+    if isinstance(value, str) and value:
+        return value[:512]
+    summary = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    return (summary or "local execution completed")[:512]
 
 
 def _is_utc_timestamp(value: object) -> bool:
