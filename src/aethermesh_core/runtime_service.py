@@ -1451,12 +1451,15 @@ class NodeRuntimeService:
         if not receipt_path.exists():
             raise ValidationReceiptNotFoundError("local validation receipt not found")
         receipt = self._load_local_job_document(receipt_path, "validation receipt")
+        expected_receipt_id = self._receipt_id_for_job(job_id)
         result_ref = receipt.get("result_ref")
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
+        if receipt.get("validation_receipt_id") != expected_receipt_id:
+            raise RuntimeServiceError("validation receipt has invalid receipt ID")
         expected_result_ref = f"data/job-results/{job_id}.json"
         if result_ref != expected_result_ref:
             raise RuntimeServiceError(
@@ -1582,7 +1585,8 @@ class NodeRuntimeService:
             "schema_version": 1,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
-            "receipt_id": self._receipt_id_for_job(job_id),
+            "receipt_id": expected_receipt_id,
+            "validation_receipt_id": expected_receipt_id,
             "work_id": job_id,
             "capability": capability,
             "creator_node_id": manifest["creator_node_id"],
@@ -1965,6 +1969,7 @@ class NodeRuntimeService:
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
+                "validation_receipt_id": self._receipt_id_for_job(job_id),
                 "manifest_ref": manifest_ref,
                 "input_payload_hash": payload_hash,
                 "output_hash": execution_metadata["output_digest"],

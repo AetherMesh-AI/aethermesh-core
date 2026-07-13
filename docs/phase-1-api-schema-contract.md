@@ -109,7 +109,7 @@ Example completed projection (dynamic IDs and timestamps omitted):
 
 ## Local Validation Receipt v1
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
@@ -119,6 +119,7 @@ Example response (dynamic timestamp omitted):
 {
   "schema_version": 1,
   "receipt_id": "local-validation-receipt-local-job-<generated>",
+  "validation_receipt_id": "local-validation-receipt-local-job-<generated>",
   "work_id": "local-job-<generated>",
   "creator_node_id": "creator-local-example",
   "requester_identity": {"local_requester_identity": "developer-cli"},

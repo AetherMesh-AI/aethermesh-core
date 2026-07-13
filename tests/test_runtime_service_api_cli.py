@@ -278,6 +278,13 @@ class RuntimeServiceTests(unittest.TestCase):
                 },
             )
             self.assertEqual(receipt["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                service.get_local_validation_receipt(work_id=submission["job_id"])[
+                    "validation_receipt_id"
+                ],
+                receipt["validation_receipt_id"],
+            )
+            self.assertEqual(receipt["validation_receipt_id"], receipt["receipt_id"])
             self.assertEqual(receipt["capability"], result["capability"])
             self.assertEqual(
                 receipt["lineage_parent_ids"], request["lineage_parent_refs"]
@@ -388,6 +395,67 @@ class RuntimeServiceTests(unittest.TestCase):
                 NodeRuntimeService.from_home(root).get_local_validation_receipt(
                     work_id=evidence["submission"]["job_id"]
                 )
+
+    def test_local_validation_receipt_rejects_missing_receipt_id(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("validation_receipt_id")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(RuntimeServiceError, "invalid receipt ID"):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
+
+    def test_validation_receipt_ids_are_stable_unique_and_traceable(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first = self._execute_fixed_deterministic_fixture(root, request)
+            service = NodeRuntimeService.from_home(root)
+            second_request = json.loads(json.dumps(request))
+            second_request["job_id"] = "local-job-11111111111111111111111111111111"
+            second_request["input_payload"]["content"]["message"] = "second receipt"
+            second = {"submission": service.submit_local_job(second_request)}
+            service.execute_submitted_local_job(
+                second["submission"]["job_id"], "worker-local-fixture"
+            )
+            first_receipt = service.get_local_validation_receipt(
+                work_id=first["submission"]["job_id"]
+            )
+            reread_first = service.get_local_validation_receipt(
+                receipt_id=first_receipt["validation_receipt_id"]
+            )
+            second_receipt = service.get_local_validation_receipt(
+                work_id=second["submission"]["job_id"]
+            )
+
+            self.assertEqual(
+                reread_first["validation_receipt_id"],
+                first_receipt["validation_receipt_id"],
+            )
+            self.assertNotEqual(
+                first_receipt["validation_receipt_id"],
+                second_receipt["validation_receipt_id"],
+            )
+            for receipt in (first_receipt, second_receipt):
+                self.assertEqual(
+                    receipt["validation_receipt_id"], receipt["receipt_id"]
+                )
+                self.assertTrue(receipt["creator_node_id"])
+                self.assertTrue(receipt["manifest_ref"])
+                self.assertIsInstance(receipt["lineage_parent_ids"], list)
+                self.assertIn(receipt["validation_status"], {"passed", "failed"})
+                self.assertIsInstance(receipt["contribution_attribution"], dict)
 
     def test_local_job_submission_persists_provenance_without_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
