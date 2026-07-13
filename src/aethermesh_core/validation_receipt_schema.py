@@ -10,6 +10,7 @@ from typing import Any
 
 VALIDATION_RECEIPT_SCHEMA_VERSION = 1
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
+VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 _REQUIRED_FIELDS = frozenset(
     {
         "schema_version",
@@ -53,6 +54,13 @@ _EVIDENCE_FIELDS = frozenset(
 
 class ValidationReceiptSchemaError(ValueError):
     """Raised when a local validation receipt violates its stable schema."""
+
+
+def validation_receipt_id(work_id: str) -> str:
+    """Return the stable local receipt identifier for one work item."""
+
+    _identifier(work_id, "validation receipt.work_id")
+    return f"{VALIDATION_RECEIPT_ID_PREFIX}{work_id}"
 
 
 def canonical_validation_receipt_hash(document: object) -> str:
@@ -100,6 +108,10 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         "validator_id",
     ):
         _identifier(receipt[field], f"validation receipt.{field}")
+    if receipt["receipt_id"] != validation_receipt_id(receipt["work_id"]):
+        raise ValidationReceiptSchemaError(
+            "validation receipt.receipt_id must match its work_id"
+        )
     _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
     _sha256_digest(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")

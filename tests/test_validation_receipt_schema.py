@@ -7,6 +7,7 @@ from aethermesh_core.result_hash import validate_validation_receipt_result_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     canonical_validation_receipt_hash,
+    validation_receipt_id,
     validate_validation_receipt_document,
 )
 
@@ -27,6 +28,10 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.assertIs(validate_validation_receipt_document(self.failing), self.failing)
         self.assertEqual(self.passing["validation_status"], "pass")
         self.assertEqual(self.failing["validation_status"], "fail")
+        self.assertEqual(
+            self.failing["lineage"]["prior_receipt_ids"],
+            [self.passing["receipt_id"]],
+        )
         validate_validation_receipt_result_hash(
             self.passing, self.passing["result_hash"]
         )
@@ -57,6 +62,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         second = copy.deepcopy(self.passing)
         second["created_at"] = "2026-07-13T12:01:00.000000Z"
         self.assertEqual(first["receipt_id"], second["receipt_id"])
+        self.assertEqual(first["receipt_id"], validation_receipt_id(first["work_id"]))
         self.assertEqual(
             canonical_validation_receipt_hash(first),
             canonical_validation_receipt_hash(second),
@@ -64,6 +70,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.assertEqual(
             first["receipt_hash"], canonical_validation_receipt_hash(first)
         )
+
+    def test_receipt_id_must_be_derived_from_work_id(self) -> None:
+        receipt = copy.deepcopy(self.passing)
+        receipt["receipt_id"] = "local-validation-receipt-unrelated-work"
+        receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "match its work_id"):
+            validate_validation_receipt_document(receipt)
 
     def test_hash_mismatch_is_rejected(self) -> None:
         receipt = copy.deepcopy(self.passing)

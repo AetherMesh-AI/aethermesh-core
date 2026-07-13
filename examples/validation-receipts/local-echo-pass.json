@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "receipt_id": "local-validation-receipt-echo-001",
-  "receipt_hash": "sha256:c1fcd70a41a38426cc3465cf47e567bee3a7b235f5cf6257e257d34b402676fe",
+  "receipt_id": "local-validation-receipt-local-job-echo-001",
+  "receipt_hash": "sha256:6287d403e53f3e0f6802cf15aa144626e5924674ba7b7f44dc52a3c98b20f320",
   "result_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "creator_node_id": "node.local-creator",
@@ -11,9 +11,15 @@
   "validator_id": "node.local-validator",
   "lineage": {
     "parent_work_ids": [],
-    "source_manifest_refs": ["data/job-submissions/local-job-echo-001.json"],
-    "input_hashes": ["sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
-    "output_hashes": ["sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+    "source_manifest_refs": [
+      "data/job-submissions/local-job-echo-001.json"
+    ],
+    "input_hashes": [
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    ],
+    "output_hashes": [
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
     "prior_receipt_ids": []
   },
   "contribution": {

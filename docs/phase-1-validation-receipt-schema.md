@@ -9,7 +9,7 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 | Field | Meaning |
 | --- | --- |
 | `schema_version` | Fixed integer `1`. |
-| `receipt_id` | Stable local receipt identifier. |
+| `receipt_id` | Stable local receipt identifier derived as `local-validation-receipt-{work_id}`. |
 | `receipt_hash` | SHA-256 hash of the canonical stable receipt content. |
 | `result_hash` | Exact lowercase SHA-256 digest of the durable job result being validated. |
 | `created_at` | UTC ISO 8601 creation timestamp; audit ordering only. |
@@ -34,7 +34,7 @@ All `evidence` fields are required. `test_command`, `environment_summary`, `log_
 
 ## Stable hash and replay expectation
 
-Receipts are plain JSON and use compact UTF-8 JSON with sorted keys for `receipt_hash`. The hash deliberately excludes `created_at` and `receipt_hash`, so repeated local validation of identical work, result content, lineage, attribution, and evidence produces the same receipt hash even when audit timestamps differ. `result_hash` preserves the existing durable job-result link and is compatible with `validate_validation_receipt_result_hash`. `receipt_id` is supplied by the stable local work identity and must likewise repeat for the same work. Future replay code should validate the schema and recompute `receipt_hash` before using the evidence.
+Receipts are plain JSON and use compact UTF-8 JSON with sorted keys for `receipt_hash`. The hash deliberately excludes `created_at` and `receipt_hash`, so repeated local validation of identical work, result content, lineage, attribution, and evidence produces the same receipt hash even when audit timestamps differ. `result_hash` preserves the existing durable job-result link and is compatible with `validate_validation_receipt_result_hash`. `validation_receipt_id(work_id)` deterministically derives the receipt ID using the existing local runtime convention, and validation rejects IDs that do not match their work item. Future replay code should validate the schema and recompute `receipt_hash` before using the evidence.
 
 ## Examples and verification
 
