@@ -44,6 +44,9 @@ where = ["src"]
 branch = true
 source = ["aethermesh_core"]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [tool.coverage.report]
 show_missing = true
 fail_under = 100
@@ -60,7 +63,7 @@ exclude_lines = [
 
 [tool.mutmut]
 source_paths = ["src/aethermesh_core"]
-also_copy = ["examples", "scripts", ".github", "wordlists"]
+also_copy = ["examples", "scripts", ".github", "wordlists", "docs"]
 pytest_add_cli_args = ["-q", "tests"]
 mutate_only_covered_lines = true
 do_not_mutate = ["src/aethermesh_core/aggregation.py"]

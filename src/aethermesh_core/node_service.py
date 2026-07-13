@@ -108,7 +108,9 @@ class LocalNodeService:
     def _process_assignment(self, message: MeshMessage) -> ProcessedAssignment:
         job = _job_from_assignment_payload(message)
         result = self.runner.run(job)
-        validation = validate_job_result(job, result)
+        validation = validate_job_result(
+            job, result, expected_node_id=self.identity.node_id
+        )
         credited_units = (
             score_validated_contribution(job, result) if validation.valid else 0
         )

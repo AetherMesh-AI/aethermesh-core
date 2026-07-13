@@ -2,7 +2,13 @@ import unittest
 
 from aethermesh_core.contribution import score_validated_contribution
 from aethermesh_core.models import Job, JobResult
-from aethermesh_core.validation import validate_job_result
+from aethermesh_core.validation import (
+    _INTEGER,
+    _SchemaNode,
+    _array,
+    _validate_declared_output_schema,
+    validate_job_result,
+)
 
 
 class ValidationTests(unittest.TestCase):
@@ -25,7 +31,7 @@ class ValidationTests(unittest.TestCase):
                 valid_job,
                 valid_result.__class__(**{**valid_result.to_dict(), "output": {}}),
             ).reason,
-            "output_mismatch",
+            "output_schema.v1.hash.output: missing required field algorithm",
         )
         malformed = Job(job_id="compute-1", job_type="basic_compute", payload={})
         malformed_result = JobResult(
@@ -81,6 +87,23 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "job_id_mismatch")
+
+    def test_mismatched_executor_node_id_is_invalid_when_declared(self) -> None:
+        validation = validate_job_result(
+            Job(job_id="echo-1", job_type="echo", payload={"message": "hello"}),
+            JobResult(
+                job_id="echo-1",
+                node_id="other-node",
+                status="completed",
+                output="hello",
+                error=None,
+                contribution_units=1,
+            ),
+            expected_node_id="node-a",
+        )
+
+        self.assertFalse(validation.valid)
+        self.assertEqual(validation.reason, "result_node_id_mismatch")
 
     def test_unsupported_job_type_is_invalid(self) -> None:
         validation = validate_job_result(
@@ -161,6 +184,62 @@ class ValidationTests(unittest.TestCase):
 
         self.assertFalse(validation.valid)
         self.assertEqual(validation.reason, "output_mismatch")
+
+    def test_declared_output_schema_rejects_partial_malformed_and_unknown_results(
+        self,
+    ) -> None:
+        job = Job(
+            job_id="text-stats-1", job_type="text_stats", payload={"text": "hello"}
+        )
+        cases = (
+            (
+                "missing required field",
+                {"character_count": 5, "word_count": 1, "line_count": 1},
+                "output_schema.v1.text_stats.output: missing required field normalized_preview",
+            ),
+            (
+                "wrong field type",
+                {
+                    "character_count": "5",
+                    "word_count": 1,
+                    "line_count": 1,
+                    "normalized_preview": "hello",
+                },
+                "output_schema.v1.text_stats.output.character_count: expected int",
+            ),
+            (
+                "unknown field",
+                {
+                    "character_count": 5,
+                    "word_count": 1,
+                    "line_count": 1,
+                    "normalized_preview": "hello",
+                    "unverified": True,
+                },
+                "output_schema.v1.text_stats.output: unknown field unverified",
+            ),
+            (
+                "malformed structured output",
+                "{not valid result JSON}",
+                "output_schema.v1.text_stats.output: expected object",
+            ),
+        )
+
+        for name, output, reason in cases:
+            with self.subTest(name=name):
+                validation = validate_job_result(
+                    job,
+                    JobResult(
+                        job_id="text-stats-1",
+                        node_id="node-a",
+                        status="completed",
+                        output=output,
+                        error=None,
+                        contribution_units=1,
+                    ),
+                )
+                self.assertFalse(validation.valid)
+                self.assertEqual(validation.reason, reason)
 
     def test_completed_result_with_unexpected_contribution_units_is_invalid(
         self,
@@ -370,7 +449,14 @@ class ValidationTests(unittest.TestCase):
                     ),
                 )
                 self.assertFalse(validation.valid)
-                self.assertEqual(validation.reason, "output_mismatch")
+                if name == "malformed_output":
+                    self.assertTrue(
+                        validation.reason.startswith(
+                            "output_schema.v1.keyword_extract.output:"
+                        )
+                    )
+                else:
+                    self.assertEqual(validation.reason, "output_mismatch")
 
     def test_keyword_extract_rejects_output_from_different_payload(self) -> None:
         validation = validate_job_result(
@@ -506,7 +592,14 @@ class ValidationTests(unittest.TestCase):
                     ),
                 )
                 self.assertFalse(validation.valid)
-                self.assertEqual(validation.reason, "output_mismatch")
+                if name == "malformed_output":
+                    self.assertTrue(
+                        validation.reason.startswith(
+                            "output_schema.v1.text_chunk.output:"
+                        )
+                    )
+                else:
+                    self.assertEqual(validation.reason, "output_mismatch")
 
     def test_text_chunk_malformed_payload_is_invalid(self) -> None:
         validation = validate_job_result(
@@ -606,7 +699,14 @@ class ValidationTests(unittest.TestCase):
                     ),
                 )
                 self.assertFalse(validation.valid)
-                self.assertEqual(validation.reason, "output_mismatch")
+                if name == "malformed_output":
+                    self.assertTrue(
+                        validation.reason.startswith(
+                            "output_schema.v1.text_embed.output:"
+                        )
+                    )
+                else:
+                    self.assertEqual(validation.reason, "output_mismatch")
 
     def test_text_embed_malformed_payload_is_invalid(self) -> None:
         cases = [
@@ -841,7 +941,14 @@ class ValidationTests(unittest.TestCase):
                     ),
                 )
                 self.assertFalse(validation.valid)
-                self.assertEqual(validation.reason, "output_mismatch")
+                if name == "malformed_output":
+                    self.assertTrue(
+                        validation.reason.startswith(
+                            "output_schema.v1.text_retrieve.output:"
+                        )
+                    )
+                else:
+                    self.assertEqual(validation.reason, "output_mismatch")
 
     def test_text_retrieve_malformed_payload_is_invalid(self) -> None:
         validation = validate_job_result(
@@ -918,6 +1025,26 @@ class ValidationTests(unittest.TestCase):
 
         self.assertEqual(wrong_job.reason, "job_id_mismatch")
         self.assertEqual(wrong_units.reason, "unexpected_contribution_units")
+
+    def test_declared_output_schema_covers_array_and_null_rules(self) -> None:
+        self.assertEqual(
+            _validate_declared_output_schema("test", _array(_INTEGER), "not-an-array"),
+            "output_schema.v1.test.output: expected array",
+        )
+        self.assertEqual(
+            _validate_declared_output_schema(
+                "test", _array(_SchemaNode("NoneType", (type(None),))), ["not-null"]
+            ),
+            "output_schema.v1.test.output[0]: expected NoneType",
+        )
+        self.assertEqual(
+            _validate_declared_output_schema("test", _array(_INTEGER), ["wrong"]),
+            "output_schema.v1.test.output[0]: expected int",
+        )
+        self.assertEqual(
+            _validate_declared_output_schema("test", _INTEGER, True),
+            "output_schema.v1.test.output: expected int",
+        )
 
 
 if __name__ == "__main__":
