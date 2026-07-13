@@ -1378,7 +1378,9 @@ class NodeRuntimeService:
         events.append(
             {
                 "event_id": f"local-audit-{job_id}-executed",
-                "timestamp": validated_at,
+                # Audit event v1 uses integer Unix seconds for sorting and filters;
+                # the receipt keeps the canonical ISO 8601 completion timestamp.
+                "timestamp": _utc_timestamp_to_unix_seconds(cast(str, validated_at)),
                 "event_type": "job_executed",
                 "actor_node_id": worker,
                 "creator_node_id": creator,
@@ -2867,6 +2869,16 @@ def _is_utc_timestamp(value: object) -> bool:
     except ValueError:
         return False
     return parsed.tzinfo is None
+
+
+def _utc_timestamp_to_unix_seconds(value: str) -> int:
+    """Convert a validated canonical UTC timestamp to audit-event Unix seconds."""
+
+    return int(
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+        .replace(tzinfo=UTC)
+        .timestamp()
+    )
 
 
 def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool:

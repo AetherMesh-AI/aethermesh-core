@@ -40,6 +40,9 @@ class AuditInspectionTests(unittest.TestCase):
                 manifest_id=accepted["job_id"], node_id="worker-local-a", limit=1
             )
             event = audit["events"][0]
+            all_events = service.inspect_local_audit_events(
+                manifest_id=accepted["job_id"]
+            )
             filtered = service.inspect_local_audit_events(
                 receipt_id=event["artifacts"]["receipt_id"],
                 lineage_id=f"local-lineage-{accepted['job_id']}",
@@ -52,6 +55,16 @@ class AuditInspectionTests(unittest.TestCase):
             }
 
             self.assertEqual(audit["total_matching"], 1)
+            self.assertEqual(all_events["total_matching"], 2)
+            self.assertTrue(
+                all(isinstance(item["timestamp"], int) for item in all_events["events"])
+            )
+            self.assertGreaterEqual(
+                service.inspect_local_audit_events(
+                    start_time=event["timestamp"], end_time=event["timestamp"]
+                )["total_matching"],
+                1,
+            )
             self.assertEqual(event["event_type"], "job_executed")
             self.assertEqual(event["creator_node_id"], "creator-local-a")
             self.assertEqual(
