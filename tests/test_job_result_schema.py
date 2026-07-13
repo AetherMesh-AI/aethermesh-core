@@ -106,10 +106,19 @@ class JobResultSchemaTests(unittest.TestCase):
                 )
                 self.assertIs(validate_job_result_document(document), document)
 
-        document = copy.deepcopy(self.success)
-        document["references"]["artifact_refs"] = ["https://dashboard.example/result"]
-        with self.assertRaisesRegex(JobResultSchemaError, "relative local paths"):
-            validate_job_result_document(document)
+        for reference in (
+            "https://dashboard.example/result",
+            "https:dashboard.example/result",
+            "file:/Users/example/private.log",
+            "C:/Users/example/private.log",
+        ):
+            with self.subTest(reference=reference):
+                document = copy.deepcopy(self.success)
+                document["references"]["artifact_refs"] = [reference]
+                with self.assertRaisesRegex(
+                    JobResultSchemaError, "relative local paths"
+                ):
+                    validate_job_result_document(document)
 
         document = copy.deepcopy(self.failed)
         document["error_summary"] = None

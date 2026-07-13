@@ -237,7 +237,7 @@ def _artifact_reference_list(value: object, context: str) -> None:
             _content_addressed_id(reference, f"{context} entries")
         elif (
             reference.startswith(("/", "~"))
-            or "://" in reference
+            or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", reference) is not None
             or "\\" in reference
             or any(part == ".." for part in reference.split("/"))
         ):
