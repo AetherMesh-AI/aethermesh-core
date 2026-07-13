@@ -23,7 +23,7 @@ from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.result_hash import canonical_result_document_hash
-from aethermesh_core.runner import LocalRunner
+from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.release_update import ReleaseUpdateError
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
@@ -1779,6 +1779,73 @@ class RuntimeServiceTests(unittest.TestCase):
                 report["contribution"]["creator_node_id"], request["creator_node_id"]
             )
             self.assertEqual(report_path.read_bytes(), report_before_read)
+
+    def test_execution_writes_a_provenanced_result_report_only_after_runner_finishes(
+        self,
+    ) -> None:
+        request, expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            job_id = submission["job_id"]
+            report_path = root / "data" / "job-results" / f"{job_id}.json"
+            manifest = json.loads(
+                (root / submission["manifest_ref"]).read_text(encoding="utf-8")
+            )
+
+            self.assertFalse(report_path.exists())
+
+            def run_after_asserting_report_is_absent(*args: Any, **kwargs: Any) -> Any:
+                self.assertFalse(report_path.exists())
+                return run_local_job(*args, **kwargs)
+
+            with patch(
+                "aethermesh_core.runtime_service.run_local_job",
+                side_effect=run_after_asserting_report_is_absent,
+            ):
+                completed = service.execute_submitted_local_job(
+                    job_id, "worker-local-fixture"
+                )
+
+            self.assertEqual(completed["status"], "succeeded")
+            self.assertTrue(report_path.exists())
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["job_id"], job_id)
+            self.assertEqual(
+                report["references"]["manifest_hash"],
+                canonical_json_hash(manifest, prefix="sha256:"),
+            )
+            self.assertEqual(report["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                report["validation_receipt_id"],
+                f"local-validation-receipt-{job_id}",
+            )
+            self.assertEqual(
+                report["references"]["validation_receipt_ids"],
+                [report["validation_receipt_id"]],
+            )
+            self.assertEqual(report["validation_status"], "passed")
+            self.assertEqual(
+                report["lineage"]["parent_job_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                report["contribution"],
+                {
+                    "creator_node_id": request["creator_node_id"],
+                    "executor_node_id": "worker-local-fixture",
+                    "validator_node_id": "worker-local-fixture",
+                    "upstream_lineage_sources": request["lineage_parent_refs"],
+                    "local_operator_id": None,
+                },
+            )
+            self.assertEqual(report["status"], "succeeded")
+            self.assertEqual(
+                report["output_payload"]["inline_payload"], expected_output["output"]
+            )
+            self.assertIsNone(report["output_payload"]["payload_ref"])
+            self.assertLessEqual(report["started_at"], report["finished_at"])
+            self.assertLessEqual(report["finished_at"], report["reported_at"])
 
     def test_local_job_result_read_path_rejects_missing_invalid_and_mismatched_reports(
         self,
