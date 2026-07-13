@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from aethermesh_core.runtime_service import (
     NodeRuntimeService,
+    ResultReportNotFoundError,
     RuntimeServiceError,
     ValidationReceiptNotFoundError,
 )
@@ -153,6 +154,23 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
             message="Local validation evidence was not found.",
         )
 
+    @app.exception_handler(ResultReportNotFoundError)
+    async def missing_result_report_handler(
+        request: Request, error: ResultReportNotFoundError
+    ) -> JSONResponse:
+        logger.warning(
+            "local API result report missing request_id=%s path=%s error=%s",
+            _request_id(request),
+            request.url.path,
+            error,
+        )
+        return _error_response(
+            request,
+            status_code=404,
+            code="RESULT_REPORT_NOT_FOUND",
+            message="Local result report was not found.",
+        )
+
     @app.exception_handler(RuntimeServiceError)
     async def runtime_error_handler(
         request: Request, error: RuntimeServiceError
@@ -225,6 +243,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         if not runtime_service._is_local_job_id(job_id):
             raise RuntimeServiceError("job_id must be a local job ID")
         return runtime_service.get_local_job_status(job_id)
+
+    @app.get("/api/jobs/{job_id}/result")
+    def job_result(job_id: str) -> dict[str, Any]:
+        """Read one persisted local result report without changing job state."""
+
+        return runtime_service.get_local_job_result(job_id)
 
     @app.get("/api/contributions")
     def contributions() -> dict[str, Any]:

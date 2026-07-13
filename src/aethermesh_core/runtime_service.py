@@ -180,6 +180,10 @@ class ValidationReceiptNotFoundError(RuntimeServiceError):
     """Raised when a requested local validation receipt is not stored."""
 
 
+class ResultReportNotFoundError(RuntimeServiceError):
+    """Raised when a requested local result report is not stored."""
+
+
 @dataclass(frozen=True)
 class RuntimePaths:
     """Filesystem paths used by one local AetherMesh runtime."""
@@ -1116,6 +1120,23 @@ class NodeRuntimeService:
             "error": status.get("error"),
             "network_mode": "local-only-no-p2p",
         }
+
+    def get_local_job_result(self, job_id: str) -> dict[str, Any]:
+        """Load one stored local result report by its immutable job ID."""
+
+        if not self._is_local_job_id(job_id):
+            raise RuntimeServiceError("job_id must be a local job ID")
+        result_path = self.paths.data_dir / "job-results" / f"{job_id}.json"
+        if not result_path.exists():
+            raise ResultReportNotFoundError("local result report not found")
+        result = self._load_local_job_document(result_path, "job result record")
+        try:
+            validate_job_result_document(result)
+        except ValueError as exc:
+            raise RuntimeServiceError("job result record violates its schema") from exc
+        if result["job_id"] != job_id:
+            raise RuntimeServiceError("job result record does not match its job ID")
+        return result
 
     def inspect_local_audit_events(
         self,

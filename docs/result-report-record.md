@@ -24,6 +24,10 @@ Final local validation statuses (`passed`, `failed`, and `error`) require a cano
 
 `lineage` preserves input and output manifest IDs, parent jobs and tasks, and artifact IDs. `contribution` repeats the creator, executor, and validator node IDs, and records `upstream_lineage_sources`; those sources must match `lineage.parent_job_ids`. This is attribution evidence only, not a reward calculation.
 
+## Local storage and read path
+
+The runtime creates each report once at `data/job-results/<job-id>.json` with an atomic, no-replace write. A repeated submission with the same job ID cannot replace an existing report. Local tooling can load and schema-check a report with `NodeRuntimeService.get_local_job_result(job_id)` or read it through `GET /api/jobs/{job_id}/result`; neither read path changes local state.
+
 ## Local validation expectations
 
 The schema rejects missing or unknown fields, mismatched manifest or receipt references, invalid reference locations, incomplete attribution, invalid timestamps, and unsupported statuses. The canonical result hash includes stable report content and portable content-addressed evidence, but excludes runtime timestamps and machine-local artifact or log paths so relocated equivalent reports compare deterministically.
