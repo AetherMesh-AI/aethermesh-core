@@ -71,6 +71,24 @@ class PreparedWorkAssignment:
 
 
 @dataclass(frozen=True)
+class ExecutionFailure:
+    """Stable, auditable failure details for one local execution attempt."""
+
+    code: str
+    message: str
+    cause_type: str
+
+    def to_dict(self) -> dict[str, str]:
+        """Serialize the stable failure shape without an exception traceback."""
+
+        return {
+            "code": self.code,
+            "message": self.message,
+            "cause_type": self.cause_type,
+        }
+
+
+@dataclass(frozen=True)
 class ExecutionReceipt:
     """Validation-gated, provenance-preserving outcome of one execution."""
 
@@ -81,6 +99,7 @@ class ExecutionReceipt:
     job_id: str
     result: JobResult
     validation: ValidationResult
+    failure: ExecutionFailure | None
     lineage: Mapping[str, object]
     attribution: Mapping[str, object]
 
@@ -103,6 +122,12 @@ class ExecutionReceipt:
         )
 
     @property
+    def status(self) -> str:
+        """Return whether this is a successful receipt or an execution failure."""
+
+        return "succeeded" if self.validation.valid else "failed"
+
+    @property
     def validation_status(self) -> str:
         """Return the stable validation state consumed by downstream accounting."""
 
@@ -117,9 +142,12 @@ class ExecutionReceipt:
             "creator_node_id": self.creator_node_id,
             "executor_node_id": self.executor_node_id,
             "job_id": self.job_id,
+            "status": self.status,
             "result": self.result.to_dict(),
+            "failure": None if self.failure is None else self.failure.to_dict(),
             "validation": {
                 "status": self.validation_status,
+                "accepted": self.validation.valid,
                 "reason": self.validation.reason,
             },
             "lineage": _thaw_metadata(self.lineage),
@@ -150,7 +178,23 @@ class LocalExecutor:
             job_type=assignment.work_item.job_type,
             payload=deepcopy(assignment.work_item.payload),
         )
-        result = self.runner.run(execution_job)
+        failure: ExecutionFailure | None = None
+        try:
+            result = self.runner.run(execution_job)
+        except Exception as exc:
+            failure = ExecutionFailure(
+                code="executor_exception",
+                message=f"work runner raised {type(exc).__name__}",
+                cause_type=type(exc).__name__,
+            )
+            result = JobResult(
+                job_id=assignment.work_item.job_id,
+                node_id=self.node_id,
+                status="failed",
+                output=None,
+                error=failure.message,
+                contribution_units=0,
+            )
         validation = validate_job_result(assignment.work_item, result)
         if result.node_id != self.node_id:
             validation = ValidationResult(
@@ -158,6 +202,14 @@ class LocalExecutor:
                 result_job_id=result.job_id,
                 valid=False,
                 reason="executor_node_id_mismatch",
+            )
+        if validation.valid:
+            failure = None
+        elif failure is None:
+            failure = ExecutionFailure(
+                code=validation.reason,
+                message=f"result rejected by validation: {validation.reason}",
+                cause_type="validation",
             )
         return ExecutionReceipt(
             assignment_id=assignment.assignment_id,
@@ -167,6 +219,7 @@ class LocalExecutor:
             job_id=assignment.work_item.job_id,
             result=result,
             validation=validation,
+            failure=failure,
             lineage=assignment.lineage,
             attribution=assignment.attribution,
         )

@@ -36,6 +36,11 @@ class MutatingRunner:
         )
 
 
+class RaisingRunner:
+    def run(self, job: Job) -> JobResult:
+        raise RuntimeError("runner unavailable")
+
+
 class ExecutorBoundaryTests(unittest.TestCase):
     def _assignment(self) -> PreparedWorkAssignment:
         return PreparedWorkAssignment(
@@ -88,7 +93,7 @@ class ExecutorBoundaryTests(unittest.TestCase):
         )
         self.assertEqual(
             receipt.to_dict()["validation"],
-            {"status": "valid", "reason": "ok"},
+            {"status": "valid", "accepted": True, "reason": "ok"},
         )
 
     def test_executor_returns_invalid_receipt_when_validation_fails(self) -> None:
@@ -111,6 +116,52 @@ class ExecutorBoundaryTests(unittest.TestCase):
         self.assertFalse(receipt.validation.valid)
         self.assertEqual(receipt.validation_status, "invalid")
         self.assertEqual(receipt.to_dict()["lineage"], dict(assignment.lineage))
+
+    def test_executor_failure_paths_return_auditable_structured_failures(self) -> None:
+        assignment = self._assignment()
+        rejected_runner = RecordingRunner(
+            JobResult(
+                job_id="echo-1",
+                node_id="node-executor",
+                status="completed",
+                output="not the assigned payload",
+                error=None,
+                contribution_units=1,
+            )
+        )
+
+        receipts = {
+            "executor_exception": LocalExecutor(
+                node_id="node-executor", runner=RaisingRunner()
+            ).execute(assignment),
+            "output_mismatch": LocalExecutor(
+                node_id="node-executor", runner=rejected_runner
+            ).execute(assignment),
+        }
+
+        for expected_code, receipt in receipts.items():
+            with self.subTest(code=expected_code):
+                payload = receipt.to_dict()
+                failure = cast(dict[str, str], payload["failure"])
+                validation = cast(dict[str, object], payload["validation"])
+                self.assertEqual(payload["status"], "failed")
+                self.assertEqual(set(failure), {"code", "message", "cause_type"})
+                self.assertEqual(failure["code"], expected_code)
+                self.assertIsInstance(failure["message"], str)
+                self.assertTrue(failure["message"])
+                self.assertFalse(validation["accepted"])
+                self.assertEqual(validation["status"], "invalid")
+                self.assertEqual(payload["job_id"], "echo-1")
+                self.assertEqual(payload["creator_node_id"], "node-creator")
+                self.assertEqual(payload["manifest_ref"], "manifests/batch-1.json")
+                self.assertEqual(
+                    payload["lineage"], {"parent_assignment_id": "assignment-0"}
+                )
+                self.assertEqual(
+                    payload["attribution"], {"requester_node_id": "node-requester"}
+                )
+                self.assertNotEqual(payload["status"], "succeeded")
+                self.assertIsNotNone(payload["failure"])
 
     def test_runner_cannot_mutate_the_assignment_used_for_validation(self) -> None:
         assignment = self._assignment()
