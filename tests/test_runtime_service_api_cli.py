@@ -4056,8 +4056,34 @@ class LocalSafetyMetadataTests(unittest.TestCase):
                             / f"{accepted['job_id']}.json"
                         ).read_text(encoding="utf-8")
                     )
+                    receipt_view = service.get_local_validation_receipt(
+                        work_id=accepted["job_id"]
+                    )
                     self.assertEqual(status["status"], "failed")
                     self.assertFalse(status["validation"]["passed"])
+                    self.assertEqual(receipt["status"], "rejected")
+                    self.assertEqual(
+                        receipt["rejection_reason"], "result_not_completed"
+                    )
+                    self.assertEqual(receipt_view["status"], "rejected")
+                    self.assertEqual(
+                        receipt_view["rejection_reason"], "result_not_completed"
+                    )
+                    self.assertEqual(
+                        receipt_view["creator_node_id"], request["creator_node_id"]
+                    )
+                    self.assertEqual(
+                        receipt_view["manifest_ref"], accepted["manifest_ref"]
+                    )
+                    self.assertEqual(
+                        receipt_view["lineage_parent_ids"],
+                        request["lineage_parent_refs"],
+                    )
+                    self.assertEqual(
+                        receipt_view["contribution_attribution"],
+                        status["contribution_attribution"],
+                    )
+                    self.assertFalse(receipt_view["validation"]["valid"])
                     self.assertEqual(
                         status["contribution_attribution"]["creator_node_id"],
                         "creator-local-a",
