@@ -1914,6 +1914,7 @@ class NodeRuntimeService:
         finally:
             executor_finished_at = _utc_timestamp()
         validation = validate_job_result(job, result)
+        validated_at = _validation_completed_at()
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         manifest_ref = f"data/job-submissions/{job_id}.json"
@@ -2046,9 +2047,9 @@ class NodeRuntimeService:
                     **validation.to_dict(),
                     "execution_outcome": result.status,
                 },
-                # Captured locally after validation completes. This is audit timing,
-                # not distributed or consensus time.
-                "validated_at": _validation_completed_at(),
+                # Captured locally immediately after validation completes. This is
+                # audit timing, not distributed or consensus time.
+                "validated_at": validated_at,
             },
         )
         succeeded = result.status == "completed" and validation.valid
