@@ -127,6 +127,13 @@ class JobResultSchemaTests(unittest.TestCase):
         ):
             validate_job_result_document(document)
 
+        document = copy.deepcopy(self.success)
+        document["error_summary"] = "contradictory failure detail"
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "must be null when the job succeeded"
+        ):
+            validate_job_result_document(document)
+
 
 if __name__ == "__main__":
     unittest.main()

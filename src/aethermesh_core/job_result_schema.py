@@ -118,6 +118,10 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
         raise JobResultSchemaError("job result.exit_code must be an integer")
     _summary(result["summary"], "job result.summary", nullable=False)
     _summary(result["error_summary"], "job result.error_summary", nullable=True)
+    if result["status"] == "succeeded" and result["error_summary"] is not None:
+        raise JobResultSchemaError(
+            "job result.error_summary must be null when the job succeeded"
+        )
     if result["status"] != "succeeded" and result["error_summary"] is None:
         raise JobResultSchemaError(
             "job result.error_summary is required when the job did not succeed"
