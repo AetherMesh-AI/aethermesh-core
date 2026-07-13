@@ -68,6 +68,7 @@ VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 LOCAL_JOB_SUBMISSION_SCHEMA_VERSION = 1
 RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION = 1
 MAX_REJECTED_RESULT_REPORT_BYTES = 16 * 1024
+MAX_REJECTED_RESULT_REPORT_REASON_CHARS = 512
 LOCAL_JOB_STATES = frozenset(
     {"created", "queued", "running", "succeeded", "failed", "canceled"}
 )
@@ -1244,12 +1245,13 @@ class NodeRuntimeService:
         """Persist bounded rejected input without changing accepted evidence."""
 
         attempt_id = f"local-rejected-result-report-{uuid4().hex}"
+        bounded_reason = reason[:MAX_REJECTED_RESULT_REPORT_REASON_CHARS]
         rejection = {
             "schema_version": RESULT_REPORT_PREFLIGHT_SCHEMA_VERSION,
             "attempt_id": attempt_id,
             "status": "rejected",
             "reason_code": reason_code,
-            "reason": reason,
+            "reason": bounded_reason,
             "processed_at": _utc_timestamp(),
             "report": _bounded_rejected_result_report(report),
             "network_mode": "local-only-no-p2p",
@@ -1263,7 +1265,7 @@ class NodeRuntimeService:
             "status": "rejected",
             "attempt_id": attempt_id,
             "reason_code": reason_code,
-            "reason": reason,
+            "reason": bounded_reason,
             "network_mode": "local-only-no-p2p",
         }
 

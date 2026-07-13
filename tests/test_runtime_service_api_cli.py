@@ -2151,6 +2151,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 mismatched_manifest,
                 missing_manifest,
                 {"unsupported": "x" * (17 * 1024)},
+                {f"unsupported-{'x' * 128}-{index}": None for index in range(32)},
                 {"unserializable": {"not-json"}},
             )
             evidence_before = evidence_snapshot()
@@ -2170,6 +2171,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 self.assertRegex(
                     rejection["attempt_id"], r"^local-rejected-result-report-"
                 )
+                self.assertLessEqual(len(rejection["reason"]), 512)
 
             self.assertEqual(evidence_snapshot(), evidence_before)
             self.assertEqual(service.contribution_summary(), contributions_before)
@@ -2189,6 +2191,7 @@ class RuntimeServiceTests(unittest.TestCase):
                     },
                 )
                 self.assertRegex(rejection_log["processed_at"], r"Z$")
+                self.assertLessEqual(len(rejection_log["reason"]), 512)
                 self.assertIn("report", rejection_log)
             self.assertTrue(
                 any(log["report"].get("truncated") is True for log in rejection_logs)
