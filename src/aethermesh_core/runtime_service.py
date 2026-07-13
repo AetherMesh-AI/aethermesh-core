@@ -1600,7 +1600,7 @@ class NodeRuntimeService:
             validated_at = int(receipt_path.stat().st_mtime)
             timestamp_source = "receipt_file_mtime_legacy"
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,

@@ -4,7 +4,7 @@ Schema contract version: `1`. This is the stable, local-only companion to [the A
 
 Compatibility rule: additive optional fields are allowed within schema version 1. Removing, renaming, or changing the meaning or type of a required field requires a new schema version, an updated example, and a migration note in this document.
 
-Migration note: before this baseline, `POST /api/jobs` accepted an unversioned request and defaulted omitted `lineage_parent_refs` and `attribution_metadata` to empty values. Version 1 deliberately replaces that prototype-only shape: callers must send `schema_version: 1` and must send both provenance fields explicitly. The server rejects the former unversioned shape rather than guessing a contract version. Responses from submission, job status, validation-receipt lookup, and contribution lookup now identify schema version 1.
+Migration note: before this baseline, `POST /api/jobs` accepted an unversioned request and defaulted omitted `lineage_parent_refs` and `attribution_metadata` to empty values. Version 1 deliberately replaces that prototype-only shape: callers must send `schema_version: 1` and must send both provenance fields explicitly. The server rejects the former unversioned shape rather than guessing a contract version. Submission, job-status, and contribution responses identify schema version 1. Validation-receipt responses identify schema version 2 because they now require `validation_method`; stored version 1 receipts are rejected rather than silently reinterpreted.
 
 ## Local API error envelope
 
@@ -107,9 +107,9 @@ Example completed projection (dynamic IDs and timestamps omitted):
 }
 ```
 
-## Local Validation Receipt v1
+## Local Validation Receipt v2
 
-`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`1`), `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
+`GET /api/validation-receipts` is read-only and returns persisted validation evidence. A successful receipt includes `schema_version` (`2`), `receipt_id`, `validation_receipt_id`, `work_id`, `creator_node_id`, `requester_identity`, `manifest_ref`, `input_payload_hash`, `lineage_parent_ids`, `validation_status`, `validation_method`, `validator_identity`, `contribution_attribution`, `validation_scope`, `validation` (including `job_id`), and `evidence`. `validation_method` identifies the concrete local check and repeats the receipt's manifest, creator, work, lineage, and contribution provenance so exports remain self-describing. `validation_receipt_id` is the stable, unique local receipt identifier and matches the legacy lookup-compatible `receipt_id`. The payload hash must match the referenced manifest's canonical input payload. A missing receipt is rejected with 404; malformed lookup combinations are rejected with 400.
 
 Example lookup: `GET /api/validation-receipts?work_id=local-job-<generated>`.
 
@@ -117,7 +117,7 @@ Example response (dynamic timestamp omitted):
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "receipt_id": "local-validation-receipt-local-job-<generated>",
   "validation_receipt_id": "local-validation-receipt-local-job-<generated>",
   "work_id": "local-job-<generated>",
@@ -126,6 +126,15 @@ Example response (dynamic timestamp omitted):
   "manifest_ref": "data/job-submissions/local-job-<generated>.json",
   "lineage_parent_ids": ["data/prior-job.json"],
   "validation_status": "passed",
+  "validation_method": {
+    "kind": "deterministic_local_result_check",
+    "description": "Recomputed the expected local echo result and compared it to the executor result.",
+    "manifest_ref": "data/job-submissions/local-job-<generated>.json",
+    "creator_node_id": "creator-local-example",
+    "work_id": "local-job-<generated>",
+    "lineage_parent_refs": ["data/prior-job.json"],
+    "contribution_attribution": {"validated_contribution_units": 1}
+  },
   "validator_identity": "worker-local-example",
   "contribution_attribution": {"validated_contribution_units": 1},
   "validation_scope": "local-only-not-consensus",
