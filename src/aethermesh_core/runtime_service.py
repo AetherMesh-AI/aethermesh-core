@@ -1704,6 +1704,10 @@ class NodeRuntimeService:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
+                    if not _is_utc_timestamp(receipt.get("validated_at")):
+                        evidence_errors.append(
+                            "validation receipt has missing or invalid validated_at timestamp"
+                        )
                     try:
                         validation_method = _validated_runtime_validation_method(
                             receipt.get("validation_method")

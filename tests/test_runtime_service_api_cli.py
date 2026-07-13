@@ -2410,6 +2410,32 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), summary)
 
+    def test_contribution_summary_flags_invalid_validation_timestamp(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt["validated_at"] = "not-a-timestamp"
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            summary = service.contribution_summary()
+
+            self.assertEqual(summary["accepted_work_count"], 0)
+            item = summary["items"][0]
+            self.assertEqual(item["acceptance_status"], "degraded")
+            self.assertIn(
+                "missing or invalid validated_at timestamp",
+                " ".join(item["evidence_errors"]),
+            )
+
     def test_contribution_summary_rejects_mismatched_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(Path(temp_dir))
