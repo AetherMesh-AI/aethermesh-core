@@ -106,6 +106,31 @@ class LocalValidationReplayTests(unittest.TestCase):
         self.assertEqual(report["validations"][0]["valid"], False)
         self.assertEqual(report["validations"][0]["reason"], "output_mismatch")
 
+    def test_result_from_node_other_than_assignee_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assignment_path = temp_path / "dispatch.json"
+            result_path = temp_path / "flow.json"
+            validation_path = temp_path / "validation.json"
+            write_message_log(
+                assignment_path,
+                _message_log([_assignment("msg-0001", "job-a", "expected", "node-a")]),
+            )
+            write_message_log(
+                result_path,
+                _message_log([_result("msg-0002", "job-a", "expected", "node-b")]),
+            )
+
+            report = validate_local_results(
+                assignment_log_path=assignment_path,
+                result_log_path=result_path,
+                validation_log_path=validation_path,
+            )
+
+        self.assertEqual(report["summary"]["valid_results"], 0)
+        self.assertEqual(report["summary"]["invalid_results"], 1)
+        self.assertEqual(report["validations"][0]["reason"], "result_node_id_mismatch")
+
     def test_valid_scored_result_units_do_not_make_replay_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

@@ -54,6 +54,7 @@ def validate_local_results(
 
     jobs_by_key: dict[AssignmentKey, Job] = {}
     assignment_message_ids_by_key: dict[AssignmentKey, str] = {}
+    assigned_node_ids_by_key: dict[AssignmentKey, str | None] = {}
     for assignment in assignments:
         job = _job_from_assignment(assignment)
         key = _assignment_key(assignment.correlation_id, job.job_id)
@@ -64,6 +65,7 @@ def validate_local_results(
             )
         jobs_by_key[key] = job
         assignment_message_ids_by_key[key] = assignment.message_id
+        assigned_node_ids_by_key[key] = assignment.recipient_node_id
 
     result_messages_by_key: dict[AssignmentKey, MeshMessage] = {}
     for result_message in results:
@@ -87,7 +89,9 @@ def validate_local_results(
             )
         result = _result_from_message(result_message)
         validation = validate_job_result(
-            assigned_job, _result_for_output_validation(result)
+            assigned_job,
+            _result_for_output_validation(result),
+            expected_node_id=assigned_node_ids_by_key[key],
         )
         validations.append(
             {
