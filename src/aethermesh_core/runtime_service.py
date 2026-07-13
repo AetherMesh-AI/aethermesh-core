@@ -32,7 +32,7 @@ from aethermesh_core.identity import (
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.local_json_helpers import canonical_json_hash
-from aethermesh_core.models import Job, NodeIdentity
+from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
 
@@ -1727,6 +1727,15 @@ class NodeRuntimeService:
                     else False
                 ),
             )
+        except Exception as exc:
+            result = JobResult(
+                job_id=job_id,
+                node_id=worker_node_id,
+                status="failed",
+                output=None,
+                error=f"local execution error: {type(exc).__name__}: {exc}",
+                contribution_units=0,
+            )
         finally:
             executor_finished_at = _utc_timestamp()
         validation = validate_job_result(job, result)
@@ -1779,6 +1788,16 @@ class NodeRuntimeService:
             },
         )
         succeeded = result.status == "completed" and validation.valid
+        contribution_attribution = {
+            **manifest["contribution_attribution"],
+            "worker_node_id": worker_node_id,
+            "validated_contribution_units": result.contribution_units
+            if succeeded
+            else 0,
+        }
+        error = result.error or (
+            None if succeeded else f"validation failed: {validation.reason}"
+        )
         self._transition_local_job_state(
             job_id,
             "succeeded" if succeeded else "failed",
@@ -1792,15 +1811,22 @@ class NodeRuntimeService:
                     "passed": validation.valid,
                     "reason": validation.reason,
                 },
-                "contribution_attribution": {
-                    **manifest["contribution_attribution"],
-                    "worker_node_id": worker_node_id,
-                    "validated_contribution_units": result.contribution_units
-                    if succeeded
-                    else 0,
+                "contribution_attribution": contribution_attribution,
+                "error": error,
+                "execution_status": {
+                    "schema_version": 1,
+                    "work_id": job_id,
+                    "status": "success" if succeeded else "failure",
+                    "creator_node_id": manifest["creator_node_id"],
+                    "manifest_ref": f"data/job-submissions/{job_id}.json",
+                    "input_lineage_ref": f"data/job-submissions/{job_id}.json#lineage",
+                    "output_ref": result_ref,
+                    "validation_receipt_ref": receipt_ref,
+                    "contribution_attribution": contribution_attribution,
+                    "failure_reason": None if succeeded else validation.reason,
+                    "error_summary": None if succeeded else error,
+                    "retry_eligible": False,
                 },
-                "error": result.error
-                or (None if succeeded else f"validation failed: {validation.reason}"),
             },
         )
         self._append_event(f"executed local job submission {job_id}")
