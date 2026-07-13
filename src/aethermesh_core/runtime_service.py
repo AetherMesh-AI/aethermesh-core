@@ -33,6 +33,7 @@ from aethermesh_core.identity import (
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
 from aethermesh_core.job_result_schema import (
     JOB_RESULT_SCHEMA_VERSION,
+    MAX_INLINE_OUTPUT_PAYLOAD_BYTES,
     validate_job_result_document,
 )
 from aethermesh_core.local_json_helpers import canonical_json_hash
@@ -1460,6 +1461,13 @@ class NodeRuntimeService:
             validate_job_result_document(result)
         except ValueError as exc:
             raise RuntimeServiceError("job result record violates its schema") from exc
+        _validate_stored_output_payload(
+            result["output_payload"],
+            root=self.paths.home,
+            job_id=job_id,
+            expected_output_hash=receipt.get("output_hash"),
+            require_payload=result.get("status") == "succeeded",
+        )
         if (
             not isinstance(manifest_capability, dict)
             or capability != manifest_capability.get("identifier")
@@ -1806,6 +1814,9 @@ class NodeRuntimeService:
             "lineage_parent_refs": manifest["lineage"]["parent_refs"],
         }
         succeeded = result.status == "completed" and validation.valid
+        output_payload = _output_payload_record(
+            result.output, job_id=job_id, root=self.paths.home, store=succeeded
+        )
         error = result.error or (
             None if succeeded else f"validation failed: {validation.reason}"
         )
@@ -1818,6 +1829,7 @@ class NodeRuntimeService:
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,
             "manifest_id": manifest_id,
+            "output_payload": output_payload,
             "references": {
                 "manifest_hash": manifest_id,
                 "artifact_refs": [output_manifest_id] if succeeded else [],
@@ -2362,6 +2374,87 @@ def _provenance_matches_job(
         and attribution.get("job_id") == job_id
         and attribution.get("creator_node_id") == creator_node_id
     )
+
+
+def _output_payload_record(
+    output: object, *, job_id: str, root: Path, store: bool
+) -> dict[str, object]:
+    """Choose a bounded inline output or a deterministic local payload artifact."""
+
+    if not store:
+        return {"inline_payload": None, "payload_ref": None, "payload_digest": None}
+    payload_document = {"payload": output}
+    try:
+        encoded = json.dumps(
+            output, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise RuntimeServiceError("local job output must be JSON-compatible") from exc
+    if len(encoded) <= MAX_INLINE_OUTPUT_PAYLOAD_BYTES:
+        return {
+            "inline_payload": output,
+            "payload_ref": None,
+            "payload_digest": None,
+        }
+    payload_ref = f"data/job-output-payloads/{job_id}.json"
+    atomic_create_json(root / payload_ref, payload_document)
+    return {
+        "inline_payload": None,
+        "payload_ref": payload_ref,
+        "payload_digest": canonical_json_hash(payload_document, prefix="sha256:"),
+    }
+
+
+def _validate_stored_output_payload(
+    output_payload: object,
+    *,
+    root: Path,
+    job_id: str,
+    expected_output_hash: object,
+    require_payload: bool,
+) -> None:
+    """Verify local output evidence before returning a validation receipt."""
+
+    if not isinstance(output_payload, dict):
+        raise RuntimeServiceError("job result has invalid output payload evidence")
+    inline_payload = output_payload.get("inline_payload")
+    payload_ref = output_payload.get("payload_ref")
+    payload_digest = output_payload.get("payload_digest")
+    if inline_payload is not None:
+        output = inline_payload
+    elif payload_ref is None:
+        if require_payload:
+            raise RuntimeServiceError(
+                "successful job result has no output payload evidence"
+            )
+        return
+    else:
+        expected_ref = f"data/job-output-payloads/{job_id}.json"
+        if payload_ref != expected_ref or not _safe_local_artifact_ref(payload_ref):
+            raise RuntimeServiceError(
+                "job result has an unsafe output payload reference"
+            )
+        try:
+            stored = NodeRuntimeService._load_local_job_document(
+                root / payload_ref, "job output payload artifact"
+            )
+        except RuntimeServiceError as exc:
+            raise RuntimeServiceError(
+                "job result output payload artifact is not locally retrievable"
+            ) from exc
+        if set(stored) != {"payload"}:
+            raise RuntimeServiceError("job result output payload artifact is malformed")
+        if payload_digest != canonical_json_hash(stored, prefix="sha256:"):
+            raise RuntimeServiceError(
+                "job result output payload digest does not match artifact"
+            )
+        output = stored["payload"]
+    if expected_output_hash != canonical_json_hash(
+        {"output": output}, prefix="sha256:"
+    ):
+        raise RuntimeServiceError(
+            "job result output payload does not match validation receipt"
+        )
 
 
 def _safe_local_artifact_ref(value: object) -> bool:

@@ -48,7 +48,7 @@ class JobResultSchemaTests(unittest.TestCase):
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         old_version = copy.deepcopy(self.success)
         old_version["schema_version"] = 1
-        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 3"):
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 4"):
             validate_job_result_document(old_version)
 
         invalid_status = copy.deepcopy(self.success)
@@ -64,6 +64,38 @@ class JobResultSchemaTests(unittest.TestCase):
                     JobResultSchemaError, "non-empty identifier"
                 ):
                     validate_job_result_document(document)
+
+    def test_output_payload_requires_one_safe_delivery_mode_for_success(self) -> None:
+        missing = copy.deepcopy(self.success)
+        missing.pop("output_payload")
+        with self.assertRaisesRegex(JobResultSchemaError, "missing: output_payload"):
+            validate_job_result_document(missing)
+
+        absent = copy.deepcopy(self.success)
+        absent["output_payload"] = {
+            "inline_payload": None,
+            "payload_ref": None,
+            "payload_digest": None,
+        }
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "must include an output payload"
+        ):
+            validate_job_result_document(absent)
+
+        referenced = copy.deepcopy(self.success)
+        referenced["output_payload"] = {
+            "inline_payload": None,
+            "payload_ref": "data/job-output-payloads/local-echo-001.json",
+            "payload_digest": "sha256:" + "e" * 64,
+        }
+        self.assertIs(validate_job_result_document(referenced), referenced)
+
+        unsafe_reference = copy.deepcopy(referenced)
+        unsafe_reference["output_payload"]["payload_ref"] = (
+            "https://example.test/output"
+        )
+        with self.assertRaisesRegex(JobResultSchemaError, "relative local paths"):
+            validate_job_result_document(unsafe_reference)
 
     def test_rejects_inconsistent_runtime_and_attribution_values(self) -> None:
         cases = (

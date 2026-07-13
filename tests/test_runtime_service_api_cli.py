@@ -43,7 +43,9 @@ from aethermesh_core.runtime_service import (
     _is_utc_timestamp_before_or_at_timestamp,
     _memory_total_bytes,
     _merge_config,
+    _output_payload_record,
     _result_summary,
+    _validate_stored_output_payload,
     _package_version,
     _pid_is_alive,
 )
@@ -229,6 +231,14 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(completed["result"]["summary"], expected_output["output"])
             self.assertEqual(result["status"], "succeeded")
             self.assertEqual(result["summary"], expected_output["output"])
+            self.assertEqual(
+                result["output_payload"],
+                {
+                    "inline_payload": expected_output["output"],
+                    "payload_ref": None,
+                    "payload_digest": None,
+                },
+            )
             self.assertTrue(completed["validation"]["passed"])
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
@@ -266,6 +276,83 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(manifest_path.read_bytes(), manifest_before_execution)
             self.assertEqual(request, request_before_execution)
+
+    def test_successful_output_payload_validation_rejects_missing_data(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_payload = {
+                "inline_payload": None,
+                "payload_ref": None,
+                "payload_digest": None,
+            }
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "no output payload evidence"
+            ):
+                _validate_stored_output_payload(
+                    missing_payload,
+                    root=Path(temp_dir),
+                    job_id="local-job-0123456789abcdef0123456789abcdef",
+                    expected_output_hash="sha256:" + "0" * 64,
+                    require_payload=True,
+                )
+            _validate_stored_output_payload(
+                missing_payload,
+                root=Path(temp_dir),
+                job_id="local-job-0123456789abcdef0123456789abcdef",
+                expected_output_hash="sha256:" + "0" * 64,
+                require_payload=False,
+            )
+
+    def test_output_payload_rejects_non_json_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(RuntimeServiceError, "JSON-compatible"):
+                _output_payload_record(
+                    {"unsupported": object()},
+                    job_id="local-job-0123456789abcdef0123456789abcdef",
+                    root=Path(temp_dir),
+                    store=True,
+                )
+
+    def test_large_local_output_uses_retrievable_digest_addressed_payload_artifact(
+        self,
+    ) -> None:
+        request, _ = _valid_local_work_fixture()
+        request["input_payload"]["content"]["message"] = "x" * 4097
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            completed = service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            result = json.loads(
+                (root / completed["result"]["ref"]).read_text(encoding="utf-8")
+            )
+            output_payload = result["output_payload"]
+            expected_ref = f"data/job-output-payloads/{submission['job_id']}.json"
+            self.assertIsNone(output_payload["inline_payload"])
+            self.assertEqual(output_payload["payload_ref"], expected_ref)
+            self.assertRegex(output_payload["payload_digest"], r"^sha256:[0-9a-f]{64}$")
+            payload_artifact_path = root / expected_ref
+            payload_artifact = json.loads(
+                payload_artifact_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(payload_artifact, {"payload": "x" * 4097})
+            self.assertEqual(
+                output_payload["payload_digest"],
+                canonical_json_hash(payload_artifact, prefix="sha256:"),
+            )
+            receipt = service.get_local_validation_receipt(work_id=submission["job_id"])
+            self.assertEqual(receipt["manifest_ref"], submission["manifest_ref"])
+            self.assertEqual(
+                receipt["lineage_parent_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                receipt["contribution_attribution"],
+                completed["contribution_attribution"],
+            )
+            payload_artifact_path.unlink()
+            with self.assertRaisesRegex(RuntimeServiceError, "not locally retrievable"):
+                service.get_local_validation_receipt(work_id=submission["job_id"])
 
     def test_local_validation_receipt_rejects_missing_capability(self) -> None:
         request, _ = _valid_local_work_fixture()
