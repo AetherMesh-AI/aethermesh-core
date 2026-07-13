@@ -40,6 +40,7 @@ class JobResultSchemaTests(unittest.TestCase):
             "lineage",
             "contribution",
             "result_hash",
+            "reported_at",
         ):
             with self.subTest(field=field):
                 document = copy.deepcopy(self.success)
@@ -61,7 +62,7 @@ class JobResultSchemaTests(unittest.TestCase):
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         old_version = copy.deepcopy(self.success)
         old_version["schema_version"] = 1
-        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 5"):
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 6"):
             validate_job_result_document(old_version)
 
         invalid_status = copy.deepcopy(self.success)

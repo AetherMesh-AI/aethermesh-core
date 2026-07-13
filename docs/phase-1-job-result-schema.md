@@ -1,27 +1,27 @@
 # Phase 1 Job Result Schema
 
-`aethermesh_core.job_result_schema.validate_job_result_document` defines the local-only version-5 record emitted after a job has executed. It is an audit record for the runnable prototype, not a peer protocol, consensus claim, dashboard model, or reward ledger. The existing in-memory `JobResult` runner value remains intentionally small; this record is its durable provenance contract.
+`aethermesh_core.job_result_schema.validate_job_result_document` defines the local-only version-6 record emitted after a job has executed. It is an audit record for the runnable prototype, not a peer protocol, consensus claim, dashboard model, or reward ledger. The existing in-memory `JobResult` runner value remains intentionally small; this record is its durable provenance contract.
 
-Version 5 supersedes version 4 by requiring the canonical result hash in the report itself and rejecting stale hashes. Existing version 4 records are not version 5 records and must not be silently reinterpreted; migrate them explicitly before passing them to the version 5 validator.
+Version 6 supersedes version 5 by requiring a local `reported_at` audit timestamp. Existing version 5 records are not version 6 records and must not be silently reinterpreted; migrate them explicitly before passing them to the version 6 validator.
 
 ## Required record fields
 
 | Field | Source | Purpose |
 | --- | --- | --- |
-| `schema_version` | locally generated | Fixed integer `5`. |
+| `schema_version` | locally generated | Fixed integer `6`. |
 | `result_hash` | canonical result payload | Required 64-character lowercase SHA-256 digest; schema validation recomputes it and rejects stale values. |
 | `result_id`, `job_id`, `task_id` | locally generated / referenced | Stable result, job, and task references. |
 | `capability` | accepted manifest | Required machine-readable capability identifier (for example, `work.echo`), copied from the accepted manifest rather than worker output. |
 | `creator_node_id`, `executor_node_id` | referenced | Job creator and node that executed local work. |
 | `manifest_id`, `references` | derived from manifest and evidence | The content-addressed manifest ID plus bounded local artifact, log, and validation-receipt references. |
-| `created_at`, `started_at`, `finished_at`, `duration_ms` | locally generated / derived | UTC timestamps with millisecond precision; duration must equal the timestamp interval. |
+| `created_at`, `started_at`, `finished_at`, `reported_at`, `duration_ms` | locally generated / derived | UTC ISO 8601 timestamps with microsecond precision. `created_at` is the local submission time, `started_at` and `finished_at` bound execution, and `reported_at` is generated immediately before the durable report is written. They must be ordered; duration must equal the execution interval. Local clock values support audit ordering only and are not trust proof. |
 | `status`, `exit_code`, `summary`, `error_summary` | locally generated | A supported terminal outcome, a process-style integer exit code, and bounded operator-safe outcome/error summaries. |
 | `validation_status`, `validation_receipt_id`, `validator_node_id` | referenced | `passed`, `failed`, `error`, or `not_run`, plus required local receipt and validator references. |
 | `failure_reasons` | locally generated | Separate nullable `execution`, `validation`, `malformed_input`, and `missing_artifact` reasons. |
 | `lineage` | derived from manifests | Required arrays for input/output manifest IDs, parent job/task IDs, and deterministic artifact IDs. Empty arrays express a root result or no output. |
 | `contribution` | locally generated | Repeats creator, executor, and validator IDs and preserves declared upstream lineage sources; `local_operator_id` is optional (`null` when unavailable). It records attribution only and has no reward, credit, or token meaning. |
 
-Every top-level field is required. Nested reference, lineage, contribution, and failure-reason fields are required too, even when their values are empty arrays or `null`; this makes absent evidence distinguishable from known-empty evidence. IDs are non-empty, whitespace-free local references. Timestamps use `YYYY-MM-DDTHH:MM:SS.mmmZ` form.
+Every top-level field is required. Nested reference, lineage, contribution, and failure-reason fields are required too, even when their values are empty arrays or `null`; this makes absent evidence distinguishable from known-empty evidence. IDs are non-empty, whitespace-free local references. Timestamps use `YYYY-MM-DDTHH:MM:SS.ffffffZ` UTC ISO 8601 form.
 
 ## Examples and validation
 
@@ -33,6 +33,6 @@ The schema deliberately records local provenance only. A validation receipt is l
 
 `aethermesh_core.result_hash.canonical_result_document_hash` creates the Phase 1 durable result hash only after execution and a local validation receipt have reached `passed`, `failed`, or `error`; `not_run` records are intentionally not hashable. The sole supported algorithm is `sha256`. Store `result_hash_manifest(document)` beside the task manifest, result record, validation receipt, lineage references, and contribution identity metadata. Its explicit format is `{ "algorithm": "sha256", "result_hash": "<64 lowercase hex characters>" }`.
 
-The UTF-8 hash payload uses compact JSON with lexicographically sorted object keys. It includes schema/result/job/task IDs and capability; creator and executor node IDs; the immutable `manifest_id` reference; inline output content or a referenced payload digest (never its machine-local storage path); portable content-addressed evidence and validation receipt IDs from `references`; result content (`status`, `exit_code`, `summary`, `error_summary`, and `failure_reasons`); validation status, receipt ID, and validator ID; full lineage (including parent task IDs); and contribution attribution. It intentionally excludes `result_hash` itself, `created_at`, `started_at`, `finished_at`, `duration_ms`, machine-local artifact and log paths, runtime state, and display formatting. Array order remains meaningful provenance order.
+The UTF-8 hash payload uses compact JSON with lexicographically sorted object keys. It includes schema/result/job/task IDs and capability; creator and executor node IDs; the immutable `manifest_id` reference; inline output content or a referenced payload digest (never its machine-local storage path); portable content-addressed evidence and validation receipt IDs from `references`; result content (`status`, `exit_code`, `summary`, `error_summary`, and `failure_reasons`); validation status, receipt ID, and validator ID; full lineage (including parent task IDs); and contribution attribution. It intentionally excludes `result_hash` itself, lifecycle timestamps (`created_at`, `started_at`, `finished_at`, `reported_at`), `duration_ms`, machine-local artifact and log paths, runtime state, and display formatting. Array order remains meaningful provenance order.
 
 Failed and errored artifacts remain hashable when they have this structured record and receipt. Re-running the same canonical inputs and result content yields the same hash. A validation receipt must store that exact value in `result_hash`; `validate_validation_receipt_result_hash` checks the link locally.

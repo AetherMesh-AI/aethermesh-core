@@ -28,6 +28,7 @@ class ResultHashTests(unittest.TestCase):
         reformatted["created_at"] = "2030-01-01T00:00:00.000Z"
         reformatted["started_at"] = "2030-01-01T00:00:01.000Z"
         reformatted["finished_at"] = "2030-01-01T00:00:01.125Z"
+        reformatted["reported_at"] = "2030-01-01T00:00:01.126Z"
 
         self.assertEqual(first, canonical_result_document_hash(reformatted))
         self.assertEqual(
