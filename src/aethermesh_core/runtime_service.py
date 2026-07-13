@@ -1433,6 +1433,7 @@ class NodeRuntimeService:
             or manifest.get("job", {}).get("input_payload_hash")
             != expected_payload_hash
             or receipt.get("input_payload_hash") != expected_payload_hash
+            or receipt.get("contribution_attribution") != attribution
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1835,6 +1836,14 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-results" / f"{job_id}.json", result_document
         )
+        contribution_attribution = {
+            **manifest["contribution_attribution"],
+            "worker_node_id": worker_node_id,
+            "executor_node_id": worker_node_id,
+            "validated_contribution_units": result.contribution_units
+            if succeeded
+            else 0,
+        }
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
@@ -1851,7 +1860,7 @@ class NodeRuntimeService:
                 "execution": execution_metadata,
                 "creator_node_id": manifest["creator_node_id"],
                 "lineage_parent_refs": manifest["lineage"]["parent_refs"],
-                "contribution_attribution": manifest["contribution_attribution"],
+                "contribution_attribution": contribution_attribution,
                 "validation": {
                     **validation.to_dict(),
                     "execution_outcome": result.status,
@@ -1860,14 +1869,6 @@ class NodeRuntimeService:
             },
         )
         succeeded = result.status == "completed" and validation.valid
-        contribution_attribution = {
-            **manifest["contribution_attribution"],
-            "worker_node_id": worker_node_id,
-            "executor_node_id": worker_node_id,
-            "validated_contribution_units": result.contribution_units
-            if succeeded
-            else 0,
-        }
         error = result.error or (
             None if succeeded else f"validation failed: {validation.reason}"
         )

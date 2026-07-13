@@ -601,7 +601,12 @@ class RuntimeServiceTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     receipt["contribution_attribution"],
-                    manifest["contribution_attribution"],
+                    {
+                        **manifest["contribution_attribution"],
+                        "worker_node_id": "worker-local-a",
+                        "executor_node_id": "worker-local-a",
+                        "validated_contribution_units": 1,
+                    },
                 )
                 self.assertEqual(
                     service.get_local_validation_receipt(work_id=job_id)[
@@ -1236,6 +1241,9 @@ class RuntimeServiceTests(unittest.TestCase):
                     "job_id": first["job_id"],
                     "creator_node_id": "creator-local-a",
                     "metadata": {"project": "prototype"},
+                    "worker_node_id": "worker-local-a",
+                    "executor_node_id": "worker-local-a",
+                    "validated_contribution_units": 1,
                 },
             )
             self.assertTrue(first_receipt["validation"]["valid"])
@@ -1696,6 +1704,10 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(stored_receipt["executor_node_id"], "worker-local-a")
             self.assertEqual(
                 stored_receipt["execution"]["executor_node_id"], "worker-local-a"
+            )
+            self.assertEqual(
+                stored_receipt["contribution_attribution"],
+                payload["contribution_attribution"],
             )
             stored_receipt.pop("validated_at")
             receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
