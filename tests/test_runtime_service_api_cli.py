@@ -1709,6 +1709,13 @@ class RuntimeServiceTests(unittest.TestCase):
                 stored_receipt["contribution_attribution"],
                 payload["contribution_attribution"],
             )
+            stored_receipt["execution"]["executor_node_id"] = "worker-local-other"
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "invalid executor timing evidence"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
+            stored_receipt["execution"]["executor_node_id"] = "worker-local-a"
             stored_receipt.pop("validated_at")
             receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
 

@@ -1460,6 +1460,7 @@ class NodeRuntimeService:
             raise RuntimeServiceError("job result record violates its schema") from exc
         if (
             not isinstance(receipt_execution, dict)
+            or receipt_execution.get("executor_node_id") != executor_node_id
             or executor_started_at != result.get("started_at")
             or executor_finished_at != result.get("finished_at")
             or not _is_utc_timestamp_before_or_at_timestamp(
