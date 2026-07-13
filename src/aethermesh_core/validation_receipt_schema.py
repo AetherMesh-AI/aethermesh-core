@@ -8,7 +8,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 3
+VALIDATION_RECEIPT_SCHEMA_VERSION = 4
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
 _REQUIRED_FIELDS = frozenset(
@@ -18,6 +18,7 @@ _REQUIRED_FIELDS = frozenset(
         "receipt_hash",
         "result_hash",
         "created_at",
+        "validated_at",
         "creator_node_id",
         "job_id",
         "work_id",
@@ -66,14 +67,14 @@ def validation_receipt_id(work_id: str) -> str:
 
 
 def canonical_validation_receipt_hash(document: object) -> str:
-    """Hash stable receipt evidence, excluding local creation time and hash itself."""
+    """Hash stable receipt evidence, excluding local audit times and hash itself."""
 
     if not isinstance(document, dict):
         raise ValidationReceiptSchemaError("validation receipt must be an object")
     payload = {
         key: value
         for key, value in document.items()
-        if key not in {"created_at", "receipt_hash"}
+        if key not in {"created_at", "validated_at", "receipt_hash"}
     }
     try:
         encoded = json.dumps(
@@ -100,7 +101,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 3"
+            "validation receipt.schema_version must be integer 4"
         )
     for field in (
         "receipt_id",
@@ -122,6 +123,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
     _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
     _sha256_content_id(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
+    _timestamp(receipt["validated_at"], "validation receipt.validated_at")
     if (
         not isinstance(receipt["validation_status"], str)
         or receipt["validation_status"] not in VALIDATION_STATUSES
@@ -168,10 +170,12 @@ def _identifier(value: object, label: str) -> None:
 
 
 def _timestamp(value: object, label: str) -> None:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z", value
+    ):
         raise ValidationReceiptSchemaError(f"{label} must be a UTC timestamp")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
     except ValueError as exc:
         raise ValidationReceiptSchemaError(f"{label} must be a UTC timestamp") from exc
     if parsed.tzinfo != UTC:

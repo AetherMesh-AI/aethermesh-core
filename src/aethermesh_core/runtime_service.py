@@ -1366,8 +1366,7 @@ class NodeRuntimeService:
         if (
             receipt.get("job_id") != job_id
             or receipt.get("receipt_id") != self._receipt_id_for_job(job_id)
-            or not isinstance(validated_at, int)
-            or isinstance(validated_at, bool)
+            or not _is_utc_timestamp(validated_at)
             or not isinstance(receipt_validation, dict)
             or not isinstance(receipt_validation.get("valid"), bool)
             or validation.get("passed") is not receipt_validation["valid"]
@@ -1379,7 +1378,9 @@ class NodeRuntimeService:
         events.append(
             {
                 "event_id": f"local-audit-{job_id}-executed",
-                "timestamp": validated_at,
+                # Audit event v1 uses integer Unix seconds for sorting and filters;
+                # the receipt keeps the canonical ISO 8601 completion timestamp.
+                "timestamp": _utc_timestamp_to_unix_seconds(cast(str, validated_at)),
                 "event_type": "job_executed",
                 "actor_node_id": worker,
                 "creator_node_id": creator,
@@ -1458,7 +1459,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 2:
+        if receipt.get("version") != 3:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1595,12 +1596,12 @@ class NodeRuntimeService:
             )
 
         validated_at = receipt.get("validated_at")
-        timestamp_source = "receipt_record"
-        if not isinstance(validated_at, int) or isinstance(validated_at, bool):
-            validated_at = int(receipt_path.stat().st_mtime)
-            timestamp_source = "receipt_file_mtime_legacy"
+        if not _is_utc_timestamp(validated_at):
+            raise RuntimeServiceError(
+                "validation receipt has missing or invalid validated_at timestamp"
+            )
         return {
-            "schema_version": 2,
+            "schema_version": 3,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
             "receipt_id": expected_receipt_id,
@@ -1617,8 +1618,7 @@ class NodeRuntimeService:
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_method": validation_method,
-            "validation_timestamp": validated_at,
-            "validation_timestamp_source": timestamp_source,
+            "validated_at": validated_at,
             "executor_started_at": receipt_execution["executor_started_at"],
             "executor_finished_at": receipt_execution["executor_finished_at"],
             "validator_identity": validator_id,
@@ -1700,9 +1700,13 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 2:
+                    if receipt.get("version") != 3:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
+                        )
+                    if not _is_utc_timestamp(receipt.get("validated_at")):
+                        evidence_errors.append(
+                            "validation receipt has missing or invalid validated_at timestamp"
                         )
                     try:
                         validation_method = _validated_runtime_validation_method(
@@ -1916,6 +1920,7 @@ class NodeRuntimeService:
         finally:
             executor_finished_at = _utc_timestamp()
         validation = validate_job_result(job, result)
+        validated_at = _validation_completed_at()
         result_ref = f"data/job-results/{job_id}.json"
         receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         manifest_ref = f"data/job-submissions/{job_id}.json"
@@ -2012,7 +2017,7 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 2,
+                "version": 3,
                 "job_id": job_id,
                 "capability": capability,
                 "receipt_id": self._receipt_id_for_job(job_id),
@@ -2048,7 +2053,9 @@ class NodeRuntimeService:
                     **validation.to_dict(),
                     "execution_outcome": result.status,
                 },
-                "validated_at": int(time.time()),
+                # Captured locally immediately after validation completes. This is
+                # audit timing, not distributed or consensus time.
+                "validated_at": validated_at,
             },
         )
         succeeded = result.status == "completed" and validation.valid
@@ -2820,6 +2827,12 @@ def _utc_timestamp() -> str:
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
+def _validation_completed_at() -> str:
+    """Capture local receipt timing separately from deterministic report metadata."""
+
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
 def _utc_timestamp_from_unix_seconds(timestamp: int) -> str:
     """Format a locally stored Unix-second lifecycle timestamp as UTC."""
 
@@ -2860,6 +2873,16 @@ def _is_utc_timestamp(value: object) -> bool:
     except ValueError:
         return False
     return parsed.tzinfo is None
+
+
+def _utc_timestamp_to_unix_seconds(value: str) -> int:
+    """Convert a validated canonical UTC timestamp to audit-event Unix seconds."""
+
+    return int(
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+        .replace(tzinfo=UTC)
+        .timestamp()
+    )
 
 
 def _is_utc_timestamp_before_or_at(value: object, epoch_seconds: object) -> bool:

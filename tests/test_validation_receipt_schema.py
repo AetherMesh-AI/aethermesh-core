@@ -62,6 +62,23 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         ):
             validate_validation_receipt_document(missing_method)
 
+        missing_timestamp = copy.deepcopy(self.passing)
+        missing_timestamp.pop("validated_at")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: validated_at"
+        ):
+            validate_validation_receipt_document(missing_timestamp)
+
+        malformed_timestamp = copy.deepcopy(self.passing)
+        malformed_timestamp["validated_at"] = "2026-07-13T12:00:00+00:00"
+        malformed_timestamp["receipt_hash"] = canonical_validation_receipt_hash(
+            malformed_timestamp
+        )
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "validated_at must be a UTC timestamp"
+        ):
+            validate_validation_receipt_document(malformed_timestamp)
+
         blank = copy.deepcopy(self.passing)
         blank["job_id"] = ""
         with self.assertRaisesRegex(
@@ -86,6 +103,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         first = copy.deepcopy(self.passing)
         second = copy.deepcopy(self.passing)
         second["created_at"] = "2026-07-13T12:01:00.000000Z"
+        second["validated_at"] = "2026-07-13T12:02:00.000000Z"
         self.assertEqual(first["receipt_id"], second["receipt_id"])
         self.assertEqual(first["receipt_id"], validation_receipt_id(first["work_id"]))
         self.assertEqual(
@@ -117,7 +135,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             validate_validation_receipt_document(receipt)
 
     def test_types_hashes_and_json_compatibility_are_strict(self) -> None:
-        for field, value in (("schema_version", 3.0), ("validation_status", [])):
+        for field, value in (("schema_version", 4.0), ("validation_status", [])):
             with self.subTest(field=field):
                 receipt = copy.deepcopy(self.passing)
                 receipt[field] = value
@@ -125,8 +143,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 2
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 3"):
+        old_version["schema_version"] = 3
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 4"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)
