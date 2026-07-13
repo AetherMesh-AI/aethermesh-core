@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 4
+JOB_RESULT_SCHEMA_VERSION = 5
 MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
@@ -71,6 +71,7 @@ _REQUIRED_FIELDS = frozenset(
         "failure_reasons",
         "lineage",
         "contribution",
+        "result_hash",
     }
 )
 
@@ -79,10 +80,15 @@ class JobResultSchemaError(ValueError):
     """Raised when a local result report violates its stable schema."""
 
 
-def validate_job_result_document(document: object) -> dict[str, Any]:
+def validate_job_result_document(
+    document: object, *, verify_result_hash: bool = True
+) -> dict[str, Any]:
     """Validate one local-only result report without reading or writing files."""
 
-    result = _object(document, "job result", _REQUIRED_FIELDS)
+    required_fields = (
+        _REQUIRED_FIELDS if verify_result_hash else _REQUIRED_FIELDS - {"result_hash"}
+    )
+    result = _object(document, "job result", required_fields, allowed=_REQUIRED_FIELDS)
     _exact_integer(
         result["schema_version"],
         "job result.schema_version",
@@ -151,14 +157,31 @@ def validate_job_result_document(document: object) -> dict[str, Any]:
         result["validator_node_id"],
         result["lineage"],
     )
+    if "result_hash" in result:
+        _content_hash(result["result_hash"], "job result.result_hash")
+    if verify_result_hash:
+        # Import lazily because result hashing first uses this validator to
+        # establish the canonical payload shape.
+        from aethermesh_core.result_hash import canonical_result_document_hash
+
+        if result["result_hash"] != canonical_result_document_hash(result):
+            raise JobResultSchemaError(
+                "job result.result_hash does not match the canonical result payload"
+            )
     return result
 
 
-def _object(value: object, context: str, required: frozenset[str]) -> dict[str, Any]:
+def _object(
+    value: object,
+    context: str,
+    required: frozenset[str],
+    *,
+    allowed: frozenset[str] | None = None,
+) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise JobResultSchemaError(f"{context} must be an object")
     missing = sorted(required - set(value))
-    unknown = sorted(set(value) - required)
+    unknown = sorted(set(value) - (allowed if allowed is not None else required))
     if missing or unknown:
         details = []
         if missing:
@@ -275,6 +298,11 @@ def _references(value: object, manifest_id: object, receipt_id: object) -> None:
         raise JobResultSchemaError(
             "job result.references.validation_receipt_ids must include validation_receipt_id"
         )
+
+
+def _content_hash(value: object, context: str) -> None:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise JobResultSchemaError(f"{context} must be a lowercase SHA-256 digest")
 
 
 def _content_addressed_id(value: object, context: str) -> None:

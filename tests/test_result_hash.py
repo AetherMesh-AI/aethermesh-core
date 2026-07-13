@@ -39,6 +39,7 @@ class ResultHashTests(unittest.TestCase):
         original = canonical_result_document_hash(self.document)
         changes = (
             ("summary", "different result content"),
+            ("output_payload.inline_payload", "different output payload"),
             ("capability", "work.text_stats"),
             ("manifest_id", "sha256:" + "d" * 64),
             ("creator_node_id", "node.another-creator"),
