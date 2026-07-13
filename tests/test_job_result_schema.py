@@ -28,6 +28,7 @@ class JobResultSchemaTests(unittest.TestCase):
     ) -> None:
         for field in (
             "creator_node_id",
+            "capability",
             "executor_node_id",
             "manifest_id",
             "references",
@@ -47,7 +48,7 @@ class JobResultSchemaTests(unittest.TestCase):
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         old_version = copy.deepcopy(self.success)
         old_version["schema_version"] = 1
-        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 2"):
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 3"):
             validate_job_result_document(old_version)
 
         invalid_status = copy.deepcopy(self.success)

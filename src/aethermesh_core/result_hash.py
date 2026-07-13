@@ -69,6 +69,7 @@ def canonical_result_document_hash(document: object) -> str:
         "result_id": result["result_id"],
         "job_id": result["job_id"],
         "task_id": result["task_id"],
+        "capability": result["capability"],
         "creator_node_id": result["creator_node_id"],
         "executor_node_id": result["executor_node_id"],
         "manifest_ref": result["manifest_id"],

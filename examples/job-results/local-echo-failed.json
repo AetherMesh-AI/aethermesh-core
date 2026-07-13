@@ -1,8 +1,9 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",
+  "capability": "work.echo",
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
