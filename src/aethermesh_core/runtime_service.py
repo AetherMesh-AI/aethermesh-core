@@ -1359,6 +1359,7 @@ class NodeRuntimeService:
         receipt = self._load_local_job_document(
             self.paths.home / expected_receipt_ref, "validation receipt"
         )
+        exported_receipt = self.get_local_validation_receipt(work_id=job_id)
         validated_at = receipt.get("validated_at")
         receipt_validation = receipt.get("validation")
         status_attribution = status.get("contribution_attribution")
@@ -1386,6 +1387,7 @@ class NodeRuntimeService:
                     **artifacts,
                     "receipt_id": receipt["receipt_id"],
                     "receipt_ref": receipt_ref,
+                    "validation_method": exported_receipt["validation_method"],
                     "contribution_attribution": status_attribution,
                 },
                 "validation_status": (
@@ -1477,16 +1479,9 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "validation receipt has invalid validation evidence"
             )
-        validation_method = receipt.get("validation_method")
-        if (
-            not isinstance(validation_method, dict)
-            or not isinstance(validation_method.get("kind"), str)
-            or not validation_method["kind"]
-            or not isinstance(validation_method.get("description"), str)
-            or not validation_method["description"].strip()
-        ):
-            raise RuntimeServiceError("validation receipt has no validation method")
-        validation_method = cast(dict[str, Any], validation_method)
+        validation_method = _validated_runtime_validation_method(
+            receipt.get("validation_method")
+        )
 
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
@@ -1691,7 +1686,8 @@ class NodeRuntimeService:
         status_validation = status.get("validation")
         validation = status_validation if isinstance(status_validation, dict) else {}
         receipt_ref = validation.get("receipt_ref")
-        receipt = {}
+        receipt: dict[str, Any] = {}
+        validation_method: object = None
         if isinstance(receipt_ref, str) and receipt_ref:
             if receipt_ref != expected_receipt_ref:
                 evidence_errors.append(
@@ -1703,6 +1699,17 @@ class NodeRuntimeService:
                     "validation receipt",
                     evidence_errors,
                 )
+                if receipt:
+                    if receipt.get("version") != 2:
+                        evidence_errors.append(
+                            "validation receipt has unsupported version"
+                        )
+                    try:
+                        validation_method = _validated_runtime_validation_method(
+                            receipt.get("validation_method")
+                        )
+                    except RuntimeServiceError as exc:
+                        evidence_errors.append(str(exc))
         elif status and status.get("status") in LOCAL_JOB_TERMINAL_STATES:
             evidence_errors.append(
                 "job status record has no validation receipt reference"
@@ -1778,6 +1785,21 @@ class NodeRuntimeService:
         if not isinstance(lineage_links, list):
             evidence_errors.append("job submission manifest has invalid lineage links")
             lineage_links = []
+        if (
+            receipt
+            and isinstance(validation_method, dict)
+            and (
+                validation_method.get("manifest_ref") != manifest_ref
+                or validation_method.get("creator_node_id")
+                != manifest.get("creator_node_id")
+                or validation_method.get("work_id") != job_id
+                or validation_method.get("lineage_parent_refs") != lineage_links
+                or validation_method.get("contribution_attribution") != attribution
+            )
+        ):
+            evidence_errors.append(
+                "validation method does not match receipt provenance"
+            )
         accepted = accepted and not evidence_errors
         return {
             "work_item_id": job_id,
@@ -2479,6 +2501,18 @@ def _pid_is_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+def _validated_runtime_validation_method(value: object) -> dict[str, Any]:
+    if (
+        not isinstance(value, dict)
+        or not isinstance(value.get("kind"), str)
+        or not value["kind"]
+        or not isinstance(value.get("description"), str)
+        or not value["description"].strip()
+    ):
+        raise RuntimeServiceError("validation receipt has no validation method")
+    return value
 
 
 def _provenance_matches_job(

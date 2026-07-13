@@ -2498,6 +2498,20 @@ class RuntimeServiceTests(unittest.TestCase):
                 ),
                 (
                     receipt_path,
+                    {**receipt, "version": 1},
+                    "validation receipt has unsupported version",
+                ),
+                (
+                    receipt_path,
+                    {
+                        key: value
+                        for key, value in receipt.items()
+                        if key != "validation_method"
+                    },
+                    "validation receipt has no validation method",
+                ),
+                (
+                    receipt_path,
                     {**receipt, "validator_id": "other"},
                     "validation receipt validator does not match worker",
                 ),
