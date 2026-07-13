@@ -104,8 +104,8 @@ class ExecutionReceipt:
                 "status": self.validation_status,
                 "reason": self.validation.reason,
             },
-            "lineage": deepcopy(dict(self.lineage)),
-            "attribution": deepcopy(dict(self.attribution)),
+            "lineage": _thaw_metadata(self.lineage),
+            "attribution": _thaw_metadata(self.attribution),
         }
 
 
@@ -156,4 +156,32 @@ def _snapshot_metadata(value: object, field_name: str) -> Mapping[str, object]:
         raise ExecutionAssignmentError(f"{field_name} must be a mapping")
     if not all(isinstance(key, str) and key.strip() for key in value):
         raise ExecutionAssignmentError(f"{field_name} keys must be non-empty strings")
-    return MappingProxyType(deepcopy(dict(value)))
+    return MappingProxyType(
+        {key: _freeze_metadata(item) for key, item in deepcopy(dict(value)).items()}
+    )
+
+
+def _freeze_metadata(value: object) -> object:
+    """Recursively freeze metadata so assignment and receipt state cannot drift."""
+
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {key: _freeze_metadata(item) for key, item in value.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_metadata(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return frozenset(_freeze_metadata(item) for item in value)
+    return value
+
+
+def _thaw_metadata(value: object) -> object:
+    """Return detached, serialization-friendly metadata containers."""
+
+    if isinstance(value, Mapping):
+        return {key: _thaw_metadata(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_metadata(item) for item in value]
+    if isinstance(value, frozenset):
+        return [_thaw_metadata(item) for item in value]
+    return deepcopy(value)

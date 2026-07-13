@@ -180,6 +180,9 @@ class ExecutorBoundaryTests(unittest.TestCase):
         self.assertEqual(dict(assignment.attribution), {"requester": {"id": "before"}})
         self.assertIsNone(assignment.creator_node_id)
 
+        with self.assertRaises(TypeError):
+            cast(dict[str, Any], assignment.lineage["parent"])["id"] = "direct mutation"
+
         receipt = LocalExecutor(
             node_id="node-executor",
             runner=RecordingRunner(
@@ -190,6 +193,27 @@ class ExecutorBoundaryTests(unittest.TestCase):
         serialized_lineage = cast(dict[str, Any], serialized["lineage"])
         serialized_lineage["parent"]["id"] = "serialized mutation"
         self.assertEqual(dict(receipt.lineage), {"parent": {"id": "before"}})
+
+    def test_metadata_sequences_and_sets_are_frozen_and_serialized(self) -> None:
+        assignment = replace(
+            self._assignment(),
+            lineage={"sequence": ["first", "second"]},
+            attribution={"tags": {"local"}},
+        )
+
+        self.assertEqual(assignment.lineage["sequence"], ("first", "second"))
+        self.assertEqual(assignment.attribution["tags"], frozenset({"local"}))
+
+        receipt = LocalExecutor(
+            node_id="node-executor",
+            runner=RecordingRunner(
+                LocalRunner(NodeIdentity("node-executor")).run(assignment.work_item)
+            ),
+        ).execute(assignment)
+        self.assertEqual(
+            receipt.to_dict()["lineage"], {"sequence": ["first", "second"]}
+        )
+        self.assertEqual(receipt.to_dict()["attribution"], {"tags": ["local"]})
 
 
 if __name__ == "__main__":
