@@ -59,7 +59,7 @@ def canonical_result_document_hash(document: object) -> str:
     flow receipt contract. It is the Phase 1 durable-result contract.
     """
 
-    result = validate_job_result_document(document)
+    result = validate_job_result_document(document, verify_result_hash=False)
     if result["validation_status"] not in {"passed", "failed", "error"}:
         raise ValueError(
             "a result hash requires a passed, failed, or error validation receipt"
@@ -73,6 +73,7 @@ def canonical_result_document_hash(document: object) -> str:
         "creator_node_id": result["creator_node_id"],
         "executor_node_id": result["executor_node_id"],
         "manifest_ref": result["manifest_id"],
+        "output_payload": _portable_output_payload(result["output_payload"]),
         "references": _portable_references(result["references"]),
         "result_content": {
             "status": result["status"],
@@ -122,6 +123,15 @@ def _canonical_json_bytes(payload: dict[str, Any]) -> bytes:
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise ValueError("result hash fields must be JSON-compatible") from exc
+
+
+def _portable_output_payload(output_payload: dict[str, Any]) -> dict[str, Any]:
+    """Cover result content while excluding a machine-local storage path."""
+
+    return {
+        "inline_payload": output_payload["inline_payload"],
+        "payload_digest": output_payload["payload_digest"],
+    }
 
 
 def _portable_references(references: dict[str, Any]) -> dict[str, Any]:

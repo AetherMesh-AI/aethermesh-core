@@ -1,5 +1,6 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
+  "result_hash": "187c56a65fd9c004b3c8f2d30c3fa2c8ce3dc450923a68418f7ce8ff7e8360f6",
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",

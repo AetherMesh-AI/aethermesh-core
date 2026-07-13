@@ -7,6 +7,7 @@ from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
     validate_job_result_document,
 )
+from aethermesh_core.result_hash import canonical_result_document_hash
 
 
 class JobResultSchemaTests(unittest.TestCase):
@@ -38,6 +39,7 @@ class JobResultSchemaTests(unittest.TestCase):
             "validator_node_id",
             "lineage",
             "contribution",
+            "result_hash",
         ):
             with self.subTest(field=field):
                 document = copy.deepcopy(self.success)
@@ -45,10 +47,21 @@ class JobResultSchemaTests(unittest.TestCase):
                 with self.assertRaisesRegex(JobResultSchemaError, f"missing: {field}"):
                     validate_job_result_document(document)
 
+    def test_missing_or_stale_result_hash_is_rejected(self) -> None:
+        missing = copy.deepcopy(self.success)
+        missing.pop("result_hash")
+        with self.assertRaisesRegex(JobResultSchemaError, "missing: result_hash"):
+            validate_job_result_document(missing)
+
+        stale = copy.deepcopy(self.success)
+        stale["summary"] = "mutated after hashing"
+        with self.assertRaisesRegex(JobResultSchemaError, "does not match"):
+            validate_job_result_document(stale)
+
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         old_version = copy.deepcopy(self.success)
         old_version["schema_version"] = 1
-        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 4"):
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 5"):
             validate_job_result_document(old_version)
 
         invalid_status = copy.deepcopy(self.success)
@@ -88,6 +101,7 @@ class JobResultSchemaTests(unittest.TestCase):
             "payload_ref": "data/job-output-payloads/local-echo-001.json",
             "payload_digest": "sha256:" + "e" * 64,
         }
+        referenced["result_hash"] = canonical_result_document_hash(referenced)
         self.assertIs(validate_job_result_document(referenced), referenced)
 
         unsafe_reference = copy.deepcopy(referenced)
@@ -142,6 +156,7 @@ class JobResultSchemaTests(unittest.TestCase):
                 document["error_summary"] = (
                     None if status == "succeeded" else "local outcome"
                 )
+                document["result_hash"] = canonical_result_document_hash(document)
                 self.assertIs(validate_job_result_document(document), document)
 
         for reference in (

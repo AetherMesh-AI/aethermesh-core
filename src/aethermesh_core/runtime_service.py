@@ -38,6 +38,7 @@ from aethermesh_core.job_result_schema import (
 )
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.models import Job, JobResult, NodeIdentity
+from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
 
@@ -1435,6 +1436,7 @@ class NodeRuntimeService:
             != expected_payload_hash
             or receipt.get("input_payload_hash") != expected_payload_hash
             or receipt.get("contribution_attribution") != attribution
+            or receipt.get("result_hash") != result.get("result_hash")
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1520,6 +1522,7 @@ class NodeRuntimeService:
             "requester_identity": requester_identity,
             "manifest_ref": manifest_ref,
             "input_payload_hash": expected_payload_hash,
+            "result_hash": result["result_hash"],
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_timestamp": validated_at,
@@ -1868,6 +1871,7 @@ class NodeRuntimeService:
                 "local_operator_id": None,
             },
         }
+        result_document["result_hash"] = canonical_result_document_hash(result_document)
         validate_job_result_document(result_document)
         atomic_create_json(
             self.paths.data_dir / "job-results" / f"{job_id}.json", result_document
@@ -1890,6 +1894,7 @@ class NodeRuntimeService:
                 "manifest_ref": manifest_ref,
                 "input_payload_hash": payload_hash,
                 "output_hash": execution_metadata["output_digest"],
+                "result_hash": result_document["result_hash"],
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "executor_node_id": worker_node_id,

@@ -121,6 +121,17 @@ class RuntimeServiceTests(unittest.TestCase):
             canonical_result_document_hash(first["result"]),
             canonical_result_document_hash(second["result"]),
         )
+        self.assertEqual(
+            first["result"]["result_hash"],
+            canonical_result_document_hash(first["result"]),
+        )
+        self.assertEqual(
+            first["receipt_document"]["result_hash"],
+            first["result"]["result_hash"],
+        )
+        self.assertEqual(
+            first["receipt"]["result_hash"], first["result"]["result_hash"]
+        )
         self.assertEqual(first["result"]["creator_node_id"], request["creator_node_id"])
         self.assertEqual(
             first["completed"]["contribution_attribution"],
