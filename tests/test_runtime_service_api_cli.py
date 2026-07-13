@@ -278,6 +278,10 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertTrue(completed["validation"]["passed"])
             self.assertEqual(receipt["status"], "accepted")
             self.assertIsNone(receipt["rejection_reason"])
+            self.assertEqual(
+                receipt["next_local_action"],
+                "retain this local receipt, manifest, and result artifact for replay",
+            )
             self.assertEqual(receipt["validation_status"], "passed")
             self.assertTrue(receipt["validation"]["valid"])
             self.assertEqual(
@@ -461,6 +465,28 @@ class RuntimeServiceTests(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 RuntimeServiceError, "has no validation method"
+            ):
+                NodeRuntimeService.from_home(root).get_local_validation_receipt(
+                    work_id=evidence["submission"]["job_id"]
+                )
+
+    def test_local_validation_receipt_rejects_missing_next_local_action(self) -> None:
+        request, _ = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            evidence = self._execute_fixed_deterministic_fixture(root, request)
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{evidence['submission']['job_id']}.json"
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            receipt.pop("next_local_action")
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "has no next local action"
             ):
                 NodeRuntimeService.from_home(root).get_local_validation_receipt(
                     work_id=evidence["submission"]["job_id"]
@@ -1824,6 +1850,11 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertFalse(failed_receipt["validation"]["valid"])
             self.assertEqual(
                 failed_receipt["validation"]["reason"], "result_not_completed"
+            )
+            self.assertEqual(
+                failed_receipt["next_local_action"],
+                "inspect the local result artifact and validation reason; correct "
+                "the work or input before submitting a new local job",
             )
             self.assertEqual(
                 failed_receipt["validation_method"]["description"],

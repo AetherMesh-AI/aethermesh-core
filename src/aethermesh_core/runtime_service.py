@@ -1615,6 +1615,9 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "accepted validation receipt has a rejection reason"
             )
+        next_local_action = receipt.get("next_local_action")
+        if not isinstance(next_local_action, str) or not next_local_action.strip():
+            raise RuntimeServiceError("validation receipt has no next local action")
         if status.get("validation", {}).get("receipt_ref") != receipt_ref:
             raise RuntimeServiceError(
                 "job status does not reference validation receipt"
@@ -1642,6 +1645,7 @@ class NodeRuntimeService:
             "result_hash": result["result_hash"],
             "status": receipt_status,
             "rejection_reason": rejection_reason,
+            "next_local_action": next_local_action,
             "validation_status": "passed" if validation["valid"] else "failed",
             "validation": validation,
             "validation_method": validation_method,
@@ -2055,6 +2059,12 @@ class NodeRuntimeService:
                 "result_hash": result_document["result_hash"],
                 "status": "accepted" if succeeded else "rejected",
                 "rejection_reason": None if succeeded else validation.reason,
+                "next_local_action": (
+                    "retain this local receipt, manifest, and result artifact for replay"
+                    if succeeded
+                    else "inspect the local result artifact and validation reason; correct "
+                    "the work or input before submitting a new local job"
+                ),
                 "result_ref": result_ref,
                 "validator_id": worker_node_id,
                 "executor_node_id": worker_node_id,

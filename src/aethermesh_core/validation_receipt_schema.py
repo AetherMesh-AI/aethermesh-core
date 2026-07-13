@@ -54,6 +54,7 @@ _EVIDENCE_FIELDS = frozenset(
         "log_path",
         "artifact_path",
         "reason",
+        "next_local_action",
     }
 )
 
@@ -360,6 +361,13 @@ def _evidence(value: object) -> None:
     if not isinstance(evidence["reason"], str) or not evidence["reason"].strip():
         raise ValidationReceiptSchemaError(
             "validation receipt.evidence.reason must be a non-empty string"
+        )
+    if (
+        not isinstance(evidence["next_local_action"], str)
+        or not evidence["next_local_action"].strip()
+    ):
+        raise ValidationReceiptSchemaError(
+            "validation receipt.evidence.next_local_action must be a non-empty string"
         )
     exit_code = evidence["exit_code"]
     if exit_code is not None and (

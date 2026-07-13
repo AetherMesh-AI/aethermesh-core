@@ -224,6 +224,17 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValidationReceiptSchemaError, "non-empty"):
                     validate_validation_receipt_document(receipt)
 
+    def test_next_local_action_is_required_validation_evidence(self) -> None:
+        for value in (None, ""):
+            with self.subTest(value=value):
+                receipt = copy.deepcopy(self.failing)
+                receipt["evidence"]["next_local_action"] = value
+                receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+                with self.assertRaisesRegex(
+                    ValidationReceiptSchemaError, "next_local_action"
+                ):
+                    validate_validation_receipt_document(receipt)
+
     def test_lineage_and_attribution_ids_reject_whitespace(self) -> None:
         nullable = copy.deepcopy(self.passing)
         nullable["contribution"]["submitter_id"] = None
