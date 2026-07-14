@@ -165,6 +165,7 @@ def _lineage(value: object) -> None:
         frozenset(
             {
                 "parent_contribution_ids",
+                "contributor_node_id",
                 "derived_artifact_ids",
                 "input_hashes",
                 "output_hashes",
@@ -173,6 +174,7 @@ def _lineage(value: object) -> None:
         ),
         "lineage",
     )
+    _require_identifier(lineage, "contributor_node_id")
     for field in ("parent_contribution_ids", "derived_artifact_ids"):
         _identifier_list(lineage, field)
     for field in ("input_hashes", "output_hashes"):

@@ -1,6 +1,7 @@
 {
   "contribution": {
     "creator_node_id": "node.local-01",
+    "contributor_node_id": "node.local-01",
     "executor_node_id": null,
     "produced_artifacts": []
   },
@@ -26,6 +27,7 @@
   "job_id": "local-echo-minimal-001",
   "job_type": "echo",
   "lineage": {
+    "contributor_node_id": "node.local-01",
     "parent_job_ids": [],
     "prior_validation_receipts": [],
     "source_manifests": []

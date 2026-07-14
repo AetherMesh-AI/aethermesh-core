@@ -1,6 +1,7 @@
 {
   "contribution": {
     "creator_node_id": "node.local-01",
+    "contributor_node_id": "node.local-02",
     "executor_node_id": "node.local-02",
     "produced_artifacts": ["examples/job-envelope-results/local-echo-result.json"]
   },
@@ -27,6 +28,7 @@
   "job_id": "local-echo-derived-001",
   "job_type": "echo",
   "lineage": {
+    "contributor_node_id": "node.local-02",
     "parent_job_ids": ["local-parent-001"],
     "prior_validation_receipts": ["examples/job-envelope-receipts/parent.json"],
     "source_manifests": ["examples/job-envelopes/local-echo.json"]

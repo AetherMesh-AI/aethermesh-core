@@ -58,6 +58,7 @@ class JobEnvelopeTests(unittest.TestCase):
         self.assertEqual(
             parsed["lineage"],
             {
+                "contributor_node_id": "node.local-02",
                 "parent_job_ids": ["local-parent-001"],
                 "prior_validation_receipts": [
                     "examples/job-envelope-receipts/parent.json"
@@ -69,6 +70,7 @@ class JobEnvelopeTests(unittest.TestCase):
             parsed["contribution"],
             {
                 "creator_node_id": "node.local-01",
+                "contributor_node_id": "node.local-02",
                 "executor_node_id": "node.local-02",
                 "produced_artifacts": [
                     "examples/job-envelope-results/local-echo-result.json"
@@ -174,11 +176,13 @@ class JobEnvelopeTests(unittest.TestCase):
     ) -> None:
         document = copy.deepcopy(self.envelope)
         document["lineage"] = {
+            "contributor_node_id": "node.local-01",
             "parent_job_ids": ["local-parent-001"],
             "source_manifests": ["examples/manifests/parent.json"],
             "prior_validation_receipts": ["examples/receipts/parent.json"],
         }
         document["contribution"]["executor_node_id"] = "node.local-02"
+        document["contribution"]["contributor_node_id"] = "node.local-01"
 
         self.assertIs(validate_job_envelope(document), document)
 

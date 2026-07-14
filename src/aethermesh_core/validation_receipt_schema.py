@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 6
+VALIDATION_RECEIPT_SCHEMA_VERSION = 7
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -24,6 +24,7 @@ _REQUIRED_FIELDS = frozenset(
         "created_at",
         "validated_at",
         "creator_node_id",
+        "contributor_node_id",
         "job_id",
         "work_id",
         "manifest_id",
@@ -45,6 +46,7 @@ _LINEAGE_FIELDS = frozenset(
         "input_hashes",
         "output_hashes",
         "prior_receipt_ids",
+        "contributor_node_id",
     }
 )
 _CONTRIBUTION_FIELDS = frozenset(
@@ -109,11 +111,12 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 6"
+            "validation receipt.schema_version must be integer 7"
         )
     for field in (
         "receipt_id",
         "creator_node_id",
+        "contributor_node_id",
         "job_id",
         "work_id",
         "manifest_id",
@@ -161,7 +164,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         raise ValidationReceiptSchemaError(
             "accepted validation receipt.rejection_reason must be null"
         )
-    _lineage(receipt["lineage"])
+    _lineage(receipt["lineage"], receipt["contributor_node_id"])
     _contribution(receipt["contribution"])
     validate_validator_software_metadata(
         receipt["validator_software"], receipt_schema_version=receipt["schema_version"]
@@ -404,8 +407,16 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
         )
 
 
-def _lineage(value: object) -> None:
+def _lineage(value: object, contributor_node_id: str) -> None:
     lineage = _object(value, "validation receipt.lineage", _LINEAGE_FIELDS)
+    if lineage["contributor_node_id"] != contributor_node_id:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.lineage.contributor_node_id must match receipt"
+        )
+    _identifier(
+        lineage["contributor_node_id"],
+        "validation receipt.lineage.contributor_node_id",
+    )
     for field in ("parent_work_ids", "prior_receipt_ids"):
         _string_list(lineage[field], f"validation receipt.lineage.{field}")
         for identifier in lineage[field]:

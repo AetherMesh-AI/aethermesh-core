@@ -9,6 +9,6 @@
   "source": {"local_source_path": "examples/job-results/local-echo-success.json", "artifact_ref": null},
   "manifest_links": {"node_manifest_ref": null, "work_manifest_ref": "examples/job-envelopes/minimal-local-echo.json", "input_manifest_ref": null, "output_manifest_ref": "examples/job-results/local-echo-success.json", "validation_manifest_ref": null},
   "validation": {"status": "unvalidated", "validator_node_id": null, "validation_receipt_ref": null, "validated_at": null, "failure_reason": null},
-  "lineage": {"parent_contribution_ids": [], "derived_artifact_ids": [], "input_hashes": [], "output_hashes": [], "deterministic_reproduction_notes": null},
+  "lineage": {"parent_contribution_ids": [], "contributor_node_id": "node.local-01", "derived_artifact_ids": [], "input_hashes": [], "output_hashes": [], "deterministic_reproduction_notes": null},
   "attribution": {"author_id": "node.local-01", "author_kind": "node", "role": "worker", "declared_tool_or_runtime": "aethermesh-core", "creation_mode": "automatic"}
 }

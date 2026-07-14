@@ -52,8 +52,10 @@ def validate_job_envelope(document: object) -> dict[str, Any]:
     _input_manifest(envelope["input_manifest"])
     output_paths = _expected_outputs(envelope["expected_outputs"])
     _validation_requirements(envelope["validation_requirements"])
-    _lineage(envelope["lineage"])
-    _contribution(envelope["contribution"], envelope["creator_node_id"], output_paths)
+    contributor_node_id = _contribution(
+        envelope["contribution"], envelope["creator_node_id"], output_paths
+    )
+    _lineage(envelope["lineage"], contributor_node_id)
     return envelope
 
 
@@ -193,12 +195,23 @@ def _validation_requirements(value: object) -> None:
             )
 
 
-def _lineage(value: object) -> None:
+def _lineage(value: object, contributor_node_id: str) -> None:
     lineage = _object(
         value,
         "lineage",
-        frozenset({"parent_job_ids", "source_manifests", "prior_validation_receipts"}),
+        frozenset(
+            {
+                "parent_job_ids",
+                "source_manifests",
+                "prior_validation_receipts",
+                "contributor_node_id",
+            }
+        ),
     )
+    if _text(lineage, "contributor_node_id", "lineage") != contributor_node_id:
+        raise JobEnvelopeError(
+            "lineage.contributor_node_id must match contribution.contributor_node_id"
+        )
     for field in ("parent_job_ids", "source_manifests", "prior_validation_receipts"):
         references = lineage[field]
         if not isinstance(references, list):
@@ -209,16 +222,24 @@ def _lineage(value: object) -> None:
             )
 
 
-def _contribution(value: object, creator_node_id: str, output_paths: set[str]) -> None:
+def _contribution(value: object, creator_node_id: str, output_paths: set[str]) -> str:
     contribution = _object(
         value,
         "contribution",
-        frozenset({"creator_node_id", "executor_node_id", "produced_artifacts"}),
+        frozenset(
+            {
+                "creator_node_id",
+                "contributor_node_id",
+                "executor_node_id",
+                "produced_artifacts",
+            }
+        ),
     )
     if _text(contribution, "creator_node_id", "contribution") != creator_node_id:
         raise JobEnvelopeError(
             "contribution.creator_node_id must match job envelope.creator_node_id"
         )
+    contributor_node_id = _text(contribution, "contributor_node_id", "contribution")
     executor = contribution["executor_node_id"]
     if executor is not None and (not isinstance(executor, str) or not executor.strip()):
         raise JobEnvelopeError(
@@ -233,6 +254,7 @@ def _contribution(value: object, creator_node_id: str, output_paths: set[str]) -
             raise JobEnvelopeError(
                 "contribution.produced_artifacts must be declared in expected_outputs"
             )
+    return contributor_node_id
 
 
 def _non_empty_text(value: object, context: str) -> str:
