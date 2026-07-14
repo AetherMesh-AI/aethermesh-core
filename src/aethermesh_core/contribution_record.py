@@ -209,25 +209,25 @@ def _optional_identifier(document: dict[str, Any], field: str) -> None:
 
 
 def _identifier_list(document: dict[str, Any], field: str) -> None:
-    values = document.get(field)
-    if not isinstance(values, list):
-        raise ContributionRecordError(f"{field} must be a list")
-    for index, value in enumerate(values):
-        if not isinstance(value, str) or not _IDENTIFIER.fullmatch(value):
-            raise ContributionRecordError(
-                f"{field}[{index}] must be a stable local identifier"
-            )
+    _matching_string_list(document, field, _IDENTIFIER, "a stable local identifier")
 
 
 def _sha256_list(document: dict[str, Any], field: str) -> None:
+    _matching_string_list(document, field, _SHA256, "a lowercase SHA-256 digest")
+
+
+def _matching_string_list(
+    document: dict[str, Any],
+    field: str,
+    pattern: re.Pattern[str],
+    description: str,
+) -> None:
     values = document.get(field)
     if not isinstance(values, list):
         raise ContributionRecordError(f"{field} must be a list")
     for index, value in enumerate(values):
-        if not isinstance(value, str) or not _SHA256.fullmatch(value):
-            raise ContributionRecordError(
-                f"{field}[{index}] must be a lowercase SHA-256 digest"
-            )
+        if not isinstance(value, str) or not pattern.fullmatch(value):
+            raise ContributionRecordError(f"{field}[{index}] must be {description}")
 
 
 def _optional_ref(document: dict[str, Any], field: str) -> None:
