@@ -20,6 +20,9 @@ class ContributionRecordTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
+        self.assertEqual(
+            self.minimal["job_id"], "local-job-0123456789abcdef0123456789abcdef"
+        )
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
 
@@ -33,6 +36,14 @@ class ContributionRecordTests(unittest.TestCase):
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
         self.assertEqual(self.failed["validation"]["status"], "failed")
+        receipt = self._load_receipt("local-echo-fail.json")
+        work_manifest = self._load_job_envelope("complete-local-echo.json")
+        self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
+        self.assertEqual(self.failed["job_id"], receipt["job_id"])
+        self.assertEqual(receipt["work_id"], receipt["job_id"])
+        self.assertEqual(
+            receipt["lineage"]["parent_work_ids"], [self.minimal["job_id"]]
+        )
         self.assertEqual(
             self.failed["validation"]["validation_receipt_ref"],
             "examples/validation-receipts/local-echo-fail.json",
@@ -82,6 +93,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_missing_required_record_identity_and_timestamp_fields_fail(self) -> None:
         for field in (
             "record_id",
+            "job_id",
             "creator_node_id",
             "contributor_node_id",
             "created_at",
@@ -111,6 +123,8 @@ class ContributionRecordTests(unittest.TestCase):
         cases = (
             (lambda record: record.update(schema_version=True), "schema_version"),
             (lambda record: record.update(record_id="bad id"), "record_id"),
+            (lambda record: record.update(job_id=""), "job_id"),
+            (lambda record: record.update(job_id="local-job-not-hex"), "job_id"),
             (
                 lambda record: record.update(created_at="2026-99-13T12:00:00Z"),
                 "created_at",
@@ -205,6 +219,18 @@ class ContributionRecordTests(unittest.TestCase):
     def _load(self, name: str) -> dict[str, Any]:
         return json.loads(
             (self.root / "examples/contributions" / name).read_text(encoding="utf-8")
+        )
+
+    def _load_receipt(self, name: str) -> dict[str, Any]:
+        return json.loads(
+            (self.root / "examples/validation-receipts" / name).read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def _load_job_envelope(self, name: str) -> dict[str, Any]:
+        return json.loads(
+            (self.root / "examples/job-envelopes" / name).read_text(encoding="utf-8")
         )
 
 

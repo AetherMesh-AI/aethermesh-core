@@ -14,6 +14,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "record_id",
+        "job_id",
         "creator_node_id",
         "contributor_node_id",
         "created_at",
@@ -27,6 +28,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     }
 )
 _IDENTIFIER = re.compile(r"[a-z0-9][a-z0-9_.-]{2,127}\Z")
+_LOCAL_JOB_ID = re.compile(r"local-job-[0-9a-f]{32}\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _SHA256 = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
@@ -44,6 +46,7 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _require_int(document, "schema_version", CONTRIBUTION_RECORD_SCHEMA_VERSION)
     for field in ("record_id", "creator_node_id", "contributor_node_id"):
         _require_identifier(document, field)
+    _require_local_job_id(document, "job_id")
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
     _require_string(document, "contribution_summary")
@@ -78,6 +81,15 @@ def _require_identifier(document: dict[str, Any], field: str) -> str:
     value = document.get(field)
     if not isinstance(value, str) or not _IDENTIFIER.fullmatch(value):
         raise ContributionRecordError(f"{field} must be a stable local identifier")
+    return value
+
+
+def _require_local_job_id(document: dict[str, Any], field: str) -> str:
+    value = document.get(field)
+    if not isinstance(value, str) or not _LOCAL_JOB_ID.fullmatch(value):
+        raise ContributionRecordError(
+            f"{field} must be a local-job- followed by 32 lowercase hex characters"
+        )
     return value
 
 

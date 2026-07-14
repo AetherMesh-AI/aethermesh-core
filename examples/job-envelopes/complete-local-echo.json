@@ -24,7 +24,7 @@
       }
     ]
   },
-  "job_id": "local-echo-derived-001",
+  "job_id": "local-job-fedcba9876543210fedcba9876543210",
   "job_type": "echo",
   "lineage": {
     "parent_job_ids": ["local-parent-001"],

@@ -5,10 +5,11 @@
   "description": "Local-first attribution and audit record. It does not claim consensus, peer agreement, rewards, or decentralization.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "record_id", "creator_node_id", "contributor_node_id", "created_at", "work_type", "contribution_summary", "source", "manifest_links", "validation", "lineage", "attribution"],
+  "required": ["schema_version", "record_id", "job_id", "creator_node_id", "contributor_node_id", "created_at", "work_type", "contribution_summary", "source", "manifest_links", "validation", "lineage", "attribution"],
   "properties": {
     "schema_version": {"const": 1},
     "record_id": {"$ref": "#/$defs/identifier"},
+    "job_id": {"$ref": "#/$defs/localJobId"},
     "creator_node_id": {"$ref": "#/$defs/identifier"},
     "contributor_node_id": {"$ref": "#/$defs/identifier"},
     "created_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
@@ -44,6 +45,7 @@
   },
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"},
+    "localJobId": {"type": "string", "pattern": "^local-job-[0-9a-f]{32}$"},
     "identifierList": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
     "hashList": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
     "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]}
