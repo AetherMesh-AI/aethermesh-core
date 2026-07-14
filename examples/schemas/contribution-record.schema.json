@@ -381,11 +381,20 @@
                   }
                 ]
               }
-            }
+            },
+            "allOf": [
+              {
+                "$ref": "#/$defs/validationStatusEvidence"
+              }
+            ]
           }
         }
       },
-      "allOf": []
+      "allOf": [
+        {
+          "$ref": "#/$defs/validationStatusEvidence"
+        }
+      ]
     },
     "lineage": {
       "type": "object",
@@ -472,6 +481,92 @@
     }
   },
   "$defs": {
+    "validationStatusEvidence": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unvalidated"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validator_node_id": {
+                "type": "null"
+              },
+              "validation_receipt_ref": {
+                "type": "null"
+              },
+              "validated_at": {
+                "type": "null"
+              },
+              "failure_reason": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "pending",
+                  "valid"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validator_node_id": {
+                "type": "string"
+              },
+              "validation_receipt_ref": {
+                "type": "string"
+              },
+              "validated_at": {
+                "type": "string"
+              },
+              "failure_reason": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "invalid",
+                  "superseded"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "validator_node_id": {
+                "type": "string"
+              },
+              "validation_receipt_ref": {
+                "type": "string"
+              },
+              "validated_at": {
+                "type": "string"
+              },
+              "failure_reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
     "identifier": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"

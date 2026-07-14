@@ -285,6 +285,27 @@ class ContributionRecordTests(unittest.TestCase):
             },
         )
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
+        validation_schema = schema["properties"]["validation"]
+        evidence_rule = {"$ref": "#/$defs/validationStatusEvidence"}
+        self.assertEqual(validation_schema["allOf"], [evidence_rule])
+        self.assertEqual(
+            validation_schema["properties"]["status_history"]["items"]["allOf"],
+            [evidence_rule],
+        )
+        evidence_conditions = schema["$defs"]["validationStatusEvidence"]["allOf"]
+        condition_statuses = {
+            status
+            for condition in evidence_conditions
+            for status in (
+                [condition["if"]["properties"]["status"]["const"]]
+                if "const" in condition["if"]["properties"]["status"]
+                else condition["if"]["properties"]["status"]["enum"]
+            )
+        }
+        self.assertEqual(
+            condition_statuses,
+            {"unvalidated", "pending", "valid", "invalid", "superseded"},
+        )
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
         )
