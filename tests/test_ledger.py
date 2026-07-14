@@ -281,7 +281,11 @@ class ContributionLedgerTests(unittest.TestCase):
         record = ContributionRecord(
             "node-a", "job-1", "completed", 1, created_at="2026-07-14T14:08:07Z"
         ).to_dict()
-        for timestamp in ("2026-07-14T14:08:07+00:00", "not-a-time"):
+        for timestamp in (
+            "2026-07-14T14:08:07+00:00",
+            "2026-7-14T14:08:07Z",
+            "not-a-time",
+        ):
             with self.subTest(timestamp=timestamp):
                 with self.assertRaisesRegex(LedgerPersistenceError, "created_at"):
                     ContributionRecord.from_dict({**record, "created_at": timestamp})

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -12,6 +13,9 @@ from typing import Any, Callable
 
 from aethermesh_core.models import JobResult
 from aethermesh_core.result_hash import result_hash as canonical_result_hash
+
+
+_UTC_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 
 
 @dataclass(frozen=True)
@@ -356,7 +360,7 @@ def _utc_timestamp(value: datetime) -> str:
 
 
 def _require_utc_timestamp(field_name: str, value: object) -> None:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or not _UTC_TIMESTAMP.fullmatch(value):
         raise LedgerPersistenceError(
             f"ledger record field '{field_name}' must be an RFC 3339 UTC timestamp"
         )
