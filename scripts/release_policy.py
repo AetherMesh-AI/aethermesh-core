@@ -11,6 +11,29 @@ from pathlib import Path
 
 TAG_PATTERN = re.compile(r"^v0\.2\.0-alpha\.(\d+)$")
 FIRST_BUILD = 116
+REQUIRED_RELEASE_CHECKS = (
+    "Python tests with 100% coverage",
+    "Duplicate code with 0% threshold",
+    "Test",
+    "Line Coverage",
+    "Branch Coverage",
+    "Ruff Check",
+    "Ruff Format",
+    "Strict Type Check",
+    "Duplicate Code",
+    "Complexity",
+    "Dead Code",
+    "Bandit",
+    "Pip Audit",
+    "Secret Scan",
+    "Test Integrity",
+    "Dependency Review",
+    "Build Install",
+    "Python - Workflow Security Check",
+    "Python - PR Size Check",
+    "Python - Flaky Test Check",
+    "Python - Artifact Provenance Check",
+)
 
 
 def numeric_build(tag: str) -> int | None:
@@ -30,6 +53,12 @@ def latest_numbered_tag(tags: list[str]) -> str | None:
 
 def _object_list(value: object) -> list[object]:
     return value if isinstance(value, list) else []
+
+
+def required_checks_document() -> dict[str, list[str]]:
+    """Return the versioned checks required before release promotion."""
+
+    return {"contexts": list(REQUIRED_RELEASE_CHECKS)}
 
 
 def verify_required_checks(
@@ -78,6 +107,11 @@ def command_latest_tag(_: argparse.Namespace) -> int:
     return 0
 
 
+def command_required_checks(_: argparse.Namespace) -> int:
+    print(json.dumps(required_checks_document(), sort_keys=True))
+    return 0
+
+
 def command_verify_checks(args: argparse.Namespace) -> int:
     required = json.loads(Path(args.required).read_text(encoding="utf-8"))
     check_runs = json.loads(Path(args.check_runs).read_text(encoding="utf-8"))
@@ -97,6 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("next-build").set_defaults(func=command_next_build)
     subparsers.add_parser("latest-tag").set_defaults(func=command_latest_tag)
+    subparsers.add_parser("required-checks").set_defaults(func=command_required_checks)
     verify = subparsers.add_parser("verify-checks")
     verify.add_argument("--required", required=True)
     verify.add_argument("--check-runs", required=True)

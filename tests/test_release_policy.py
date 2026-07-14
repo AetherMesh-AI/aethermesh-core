@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from scripts import release_policy
 
@@ -44,6 +45,42 @@ class ReleasePolicyTests(unittest.TestCase):
         self.assertEqual(
             release_policy.verify_required_checks(required, checks, statuses), []
         )
+
+    def test_release_check_policy_matches_live_required_contexts(self) -> None:
+        self.assertEqual(
+            set(release_policy.required_checks_document()["contexts"]),
+            {
+                "Python tests with 100% coverage",
+                "Duplicate code with 0% threshold",
+                "Test",
+                "Line Coverage",
+                "Branch Coverage",
+                "Ruff Check",
+                "Ruff Format",
+                "Strict Type Check",
+                "Duplicate Code",
+                "Complexity",
+                "Dead Code",
+                "Bandit",
+                "Pip Audit",
+                "Secret Scan",
+                "Test Integrity",
+                "Dependency Review",
+                "Build Install",
+                "Python - Workflow Security Check",
+                "Python - PR Size Check",
+                "Python - Flaky Test Check",
+                "Python - Artifact Provenance Check",
+            },
+        )
+
+    def test_desktop_release_uses_versioned_policy_not_admin_api(self) -> None:
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github/workflows/desktop-release.yml"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("branches/main/protection", workflow)
+        self.assertIn("required-checks > required.json", workflow)
 
 
 if __name__ == "__main__":

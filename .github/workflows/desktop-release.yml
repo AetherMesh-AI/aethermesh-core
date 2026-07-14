@@ -69,7 +69,7 @@ jobs:
             }
             if [ "$REQUESTED_PUBLISH" = true ]; then
               publish=true
-              gh api "repos/${GITHUB_REPOSITORY}/branches/main/protection/required_status_checks" > required.json
+              python scripts/release_policy.py required-checks > required.json
               gh api "repos/${GITHUB_REPOSITORY}/commits/${target_sha}/check-runs?per_page=100" > check-runs.json
               gh api "repos/${GITHUB_REPOSITORY}/commits/${target_sha}/status" > statuses.json
               python scripts/release_policy.py verify-checks --required required.json \
