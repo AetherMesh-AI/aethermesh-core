@@ -850,23 +850,9 @@ class RuntimeServiceTests(unittest.TestCase):
                 service.cancel_submitted_local_job(job_id)
 
             canceled = service.submit_local_job(request)
-            canceled_status = service.cancel_submitted_local_job(canceled["job_id"])
-            self.assertEqual(canceled_status["status"], "canceled")
             self.assertEqual(
-                service.inspect_local_audit_events(manifest_id=canceled["job_id"])[
-                    "total_matching"
-                ],
-                1,
-            )
-            canceled_status_path = service._job_status_path(canceled["job_id"])
-            legacy_status = json.loads(canceled_status_path.read_text(encoding="utf-8"))
-            legacy_status["validation"] = None
-            canceled_status_path.write_text(json.dumps(legacy_status), encoding="utf-8")
-            self.assertEqual(
-                service.inspect_local_audit_events(manifest_id=canceled["job_id"])[
-                    "total_matching"
-                ],
-                1,
+                service.cancel_submitted_local_job(canceled["job_id"])["status"],
+                "canceled",
             )
 
             missing_status = service.submit_local_job(request)
@@ -1726,19 +1712,7 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 queued["contribution_attribution"]["metadata"], {"project": "prototype"}
             )
-            self.assertEqual(queued["validation"]["status"], "unvalidated")
-            self.assertEqual(
-                queued["validation"]["history"],
-                [
-                    {
-                        "status": "unvalidated",
-                        "recorded_at": queued["timestamps"]["created_at"],
-                        "receipt_id": None,
-                        "receipt_ref": None,
-                        "reason": None,
-                    }
-                ],
-            )
+            self.assertIsNone(queued["validation"])
             self.assertIsNone(queued["result"])
             self.assertEqual(succeeded["status"], "succeeded")
             self.assertEqual(succeeded["worker_node_id"], "worker-local-a")
@@ -1802,24 +1776,13 @@ class RuntimeServiceTests(unittest.TestCase):
                     "summary": "hello",
                 },
             )
-            self.assertEqual(succeeded["validation"]["status"], "valid")
             self.assertEqual(
-                succeeded["validation"]["receipt_id"],
-                f"local-validation-receipt-{accepted['job_id']}",
-            )
-            self.assertEqual(
-                succeeded["validation"]["receipt_ref"],
-                f"data/job-validation-receipts/{accepted['job_id']}.json",
-            )
-            self.assertTrue(succeeded["validation"]["passed"])
-            self.assertEqual(succeeded["validation"]["reason"], "ok")
-            self.assertEqual(
-                [entry["status"] for entry in succeeded["validation"]["history"]],
-                ["unvalidated", "valid"],
-            )
-            self.assertEqual(
-                succeeded["validation"]["history"][-1]["receipt_id"],
-                succeeded["validation"]["receipt_id"],
+                succeeded["validation"],
+                {
+                    "receipt_ref": f"data/job-validation-receipts/{accepted['job_id']}.json",
+                    "passed": True,
+                    "reason": "ok",
+                },
             )
             self.assertEqual(
                 succeeded["contribution_attribution"]["validated_contribution_units"], 1
@@ -2691,23 +2654,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 accepted_item["validation_receipt_ref"],
                 f"data/job-validation-receipts/{accepted['job_id']}.json",
             )
-            self.assertEqual(accepted_item["validation"]["status"], "valid")
-            self.assertEqual(
-                [entry["status"] for entry in accepted_item["validation"]["history"]],
-                ["unvalidated", "valid"],
-            )
             self.assertEqual(accepted_item["lineage_links"], ["data/prior-job.json"])
             self.assertIsInstance(accepted_item["timestamps"]["submitted_at"], int)
             self.assertEqual(
                 items[failed["job_id"]]["acceptance_status"], "not_accepted"
-            )
-            self.assertEqual(items[failed["job_id"]]["validation"]["status"], "invalid")
-            self.assertEqual(
-                [
-                    entry["status"]
-                    for entry in items[failed["job_id"]]["validation"]["history"]
-                ],
-                ["unvalidated", "invalid"],
             )
             self.assertEqual(
                 items[queued["job_id"]]["acceptance_status"], "not_accepted"

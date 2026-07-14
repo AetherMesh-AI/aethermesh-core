@@ -90,7 +90,8 @@ class LocalContributionStore:
 
     def _receipt(self, contribution: dict[str, Any]) -> dict[str, Any]:
         reference = contribution["validation"]["validation_receipt_ref"]
-        assert isinstance(reference, str)
+        if not isinstance(reference, str):
+            raise ContributionStoreError("validation receipt reference is malformed")
         try:
             receipt = json.loads(
                 (self.local_root / reference).read_text(encoding="utf-8")
