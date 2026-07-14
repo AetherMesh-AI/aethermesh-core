@@ -21,6 +21,7 @@ from aethermesh_core.scheduler import (
     ScheduledNode,
 )
 from aethermesh_core.validation import ValidationResult
+from aethermesh_core.version_metadata import capture_version_metadata
 
 
 SimulationJobAssignment = JobAssignment
@@ -98,12 +99,17 @@ def run_local_simulation(
             payload=heartbeat_payload,
             correlation_id=None,
         )
+    # Simulations are deterministic synthetic runs, not observed node executions.
+    simulation_version_metadata = capture_version_metadata(
+        captured_at="1970-01-01T00:00:00+00:00"
+    )
     services = {
         node.node_id: LocalNodeService(
             identity=NodeIdentity(node_id=node.node_id),
             message_bus=message_bus,
             runner=LocalRunner(NodeIdentity(node_id=node.node_id)),
             ledger=ledger,
+            version_metadata=simulation_version_metadata,
         )
         for node in nodes
         if node.status == NodeStatus.AVAILABLE
