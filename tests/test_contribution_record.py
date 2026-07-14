@@ -26,6 +26,11 @@ class ContributionRecordTests(unittest.TestCase):
     def test_linked_failed_record_retains_manifest_lineage_and_attribution(
         self,
     ) -> None:
+        receipt = json.loads(
+            (self.root / self.failed["validation"]["validation_receipt_ref"]).read_text(
+                encoding="utf-8"
+            )
+        )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
         self.assertEqual(self.failed["validation"]["status"], "failed")
         self.assertEqual(
@@ -36,6 +41,13 @@ class ContributionRecordTests(unittest.TestCase):
             self.failed["lineage"]["parent_contribution_ids"],
             ["contribution.echo-0001"],
         )
+        self.assertEqual(
+            self.failed["validation"]["validator_node_id"], receipt["validator_id"]
+        )
+        self.assertEqual(
+            self.failed["validation"]["failure_reason"], receipt["rejection_reason"]
+        )
+        self.assertIn(receipt["result_hash"], self.failed["lineage"]["output_hashes"])
         self.assertEqual(self.failed["attribution"]["author_id"], "node.local-worker")
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
