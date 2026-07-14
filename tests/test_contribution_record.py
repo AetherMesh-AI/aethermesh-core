@@ -38,7 +38,11 @@ class ContributionRecordTests(unittest.TestCase):
             self.minimal["result_hash"],
             "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
         )
-        self.assertEqual(self.minimal["validation"]["status"], "passed")
+        self.assertEqual(self.minimal["validation"]["status"], "valid")
+        self.assertEqual(
+            self.minimal["validation"]["status_history"][-1]["validation_receipt_id"],
+            self.minimal["validation_receipt_id"],
+        )
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
         self.assertIs(
             validate_local_contribution_record(self.minimal, self.root), self.minimal
@@ -53,7 +57,7 @@ class ContributionRecordTests(unittest.TestCase):
             )
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
-        self.assertEqual(self.failed["validation"]["status"], "failed")
+        self.assertEqual(self.failed["validation"]["status"], "invalid")
         work_manifest = self._load_job_envelope("complete-local-echo.json")
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
@@ -94,6 +98,9 @@ class ContributionRecordTests(unittest.TestCase):
         record["validation"]["validation_receipt_ref"] = (
             "examples/validation-receipts/missing.json"
         )
+        record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+            "examples/validation-receipts/missing.json"
+        )
         record["manifest_links"]["validation_manifest_ref"] = (
             "examples/validation-receipts/missing.json"
         )
@@ -112,6 +119,9 @@ class ContributionRecordTests(unittest.TestCase):
             )
             record = copy.deepcopy(self.failed)
             record["validation"]["validation_receipt_ref"] = "receipt.json"
+            record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+                "receipt.json"
+            )
             record["manifest_links"]["validation_manifest_ref"] = "receipt.json"
             with self.assertRaisesRegex(ContributionRecordError, "escapes local root"):
                 validate_local_contribution_record(record, local_root)
@@ -125,20 +135,18 @@ class ContributionRecordTests(unittest.TestCase):
                 "validation manifest reference",
             ),
             (
-                lambda record: record["validation"].update(
-                    status="failed", failure_reason="synthetic failure"
-                ),
-                "status does not match",
+                lambda record: record["validation"].update(status="failed"),
+                "validation.status is not allowed",
             ),
             (
                 lambda record: record["validation"].update(
                     validated_at="2026-07-13T12:00:02Z"
                 ),
-                "validated_at does not match",
+                "latest history event",
             ),
             (
                 lambda record: record["validation"].update(validated_at=None),
-                "validated_at is required",
+                "requires local validation evidence",
             ),
             (
                 lambda record: record["manifest_links"].update(work_manifest_ref=None),
@@ -183,7 +191,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"
-        with self.assertRaisesRegex(ContributionRecordError, "rejection_reason"):
+        with self.assertRaisesRegex(ContributionRecordError, "latest history event"):
             validate_local_contribution_record(record, self.root)
 
     def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
@@ -194,12 +202,86 @@ class ContributionRecordTests(unittest.TestCase):
             "validation_receipt_ref": None,
             "validated_at": None,
             "failure_reason": None,
+            "status_history": [
+                {
+                    "status": "unvalidated",
+                    "changed_at": record["created_at"],
+                    "validator_node_id": None,
+                    "validation_receipt_id": None,
+                    "validation_receipt_ref": None,
+                    "failure_reason": None,
+                }
+            ],
         }
         self.assertIs(validate_contribution_record(record), record)
         with self.assertRaisesRegex(
             ContributionRecordError, "required for local evidence"
         ):
             validate_local_contribution_record(record, self.root)
+
+    def test_validation_status_history_preserves_receipt_backed_transitions(
+        self,
+    ) -> None:
+        for status, reason in (
+            ("pending", None),
+            ("superseded", "replaced by a newer local validation run"),
+        ):
+            with self.subTest(status=status):
+                record = copy.deepcopy(self.minimal)
+                event = {
+                    "status": status,
+                    "changed_at": "2026-07-13T12:00:02Z",
+                    "validator_node_id": "node.local-validator",
+                    "validation_receipt_id": record["validation_receipt_id"],
+                    "validation_receipt_ref": record["validation"][
+                        "validation_receipt_ref"
+                    ],
+                    "failure_reason": reason,
+                }
+                record["validation"].update(
+                    status=status,
+                    validator_node_id=event["validator_node_id"],
+                    validation_receipt_ref=event["validation_receipt_ref"],
+                    validated_at=event["changed_at"],
+                    failure_reason=reason,
+                )
+                record["validation"]["status_history"].append(event)
+                self.assertIs(validate_contribution_record(record), record)
+                self.assertEqual(
+                    record["validation"]["status_history"][-1]["validation_receipt_id"],
+                    record["validation_receipt_id"],
+                )
+
+        cases = (
+            (
+                lambda record: record["validation"].update(status_history=[]),
+                "non-empty",
+            ),
+            (
+                lambda record: record["validation"].update(
+                    status_history=record["validation"]["status_history"][-1:]
+                ),
+                "start unvalidated",
+            ),
+            (
+                lambda record: record["validation"]["status_history"].append(
+                    copy.deepcopy(record["validation"]["status_history"][-1])
+                ),
+                "repeat a status",
+            ),
+            (
+                lambda record: record["validation"]["status_history"][-1].update(
+                    validation_receipt_id="local-validation-receipt-other"
+                ),
+                "receipt ID must match",
+            ),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                record = copy.deepcopy(self.minimal)
+                mutate(record)
+                with self.assertRaisesRegex(ContributionRecordError, expected):
+                    validate_contribution_record(record)
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
         schema = json.loads(
@@ -210,7 +292,12 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 4})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 5})
+        self.assertEqual(
+            schema["properties"]["validation"]["properties"]["status"]["enum"],
+            ["unvalidated", "pending", "valid", "invalid", "superseded"],
+        )
+        self.assertIn("status_history", schema["properties"]["validation"]["required"])
         self.assertEqual(
             schema["properties"]["result_hash_algorithm"], {"const": "sha256"}
         )
@@ -291,7 +378,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_version_three_record_is_not_silently_reinterpreted(self) -> None:
         record = copy.deepcopy(self.minimal)
         record["schema_version"] = 3
-        with self.assertRaisesRegex(ContributionRecordError, "must be integer 4"):
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 5"):
             validate_contribution_record(record)
 
     def test_each_phase_one_job_type_records_its_manifest_capability(self) -> None:
@@ -344,7 +431,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.minimal)
         record["validation"]["failure_reason"] = "not applicable"
-        with self.assertRaisesRegex(ContributionRecordError, "only failed"):
+        with self.assertRaisesRegex(ContributionRecordError, "only invalid"):
             validate_contribution_record(record)
 
     def test_rejects_unknown_or_malformed_core_values(self) -> None:
