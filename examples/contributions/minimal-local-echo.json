@@ -1,8 +1,10 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "record_id": "contribution.echo-0001",
   "job_id": "local-job-echo-001",
   "validation_receipt_id": "local-validation-receipt-local-job-echo-001",
+  "result_hash_algorithm": "sha256",
+  "result_hash": "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
   "creator_node_id": "node.local-creator",
   "contributor_node_id": "node.local-worker",
   "created_at": "2026-07-13T12:00:00Z",

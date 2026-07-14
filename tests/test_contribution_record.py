@@ -32,6 +32,11 @@ class ContributionRecordTests(unittest.TestCase):
             self.minimal["validation_receipt_id"],
             "local-validation-receipt-local-job-echo-001",
         )
+        self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
+        self.assertEqual(
+            self.minimal["result_hash"],
+            "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
+        )
         self.assertEqual(self.minimal["validation"]["status"], "passed")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
         self.assertIs(
@@ -204,7 +209,14 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 3})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 4})
+        self.assertEqual(
+            schema["properties"]["result_hash_algorithm"], {"const": "sha256"}
+        )
+        self.assertEqual(
+            schema["properties"]["result_hash"],
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        )
         self.assertEqual(
             schema["properties"]["job_type"]["enum"],
             sorted(PHASE_1_JOB_CAPABILITIES),
@@ -259,6 +271,8 @@ class ContributionRecordTests(unittest.TestCase):
             "record_id",
             "job_id",
             "validation_receipt_id",
+            "result_hash_algorithm",
+            "result_hash",
             "creator_node_id",
             "contributor_node_id",
             "created_at",
@@ -273,10 +287,10 @@ class ContributionRecordTests(unittest.TestCase):
                 ):
                     validate_contribution_record(record)
 
-    def test_version_two_record_is_not_silently_reinterpreted(self) -> None:
+    def test_version_three_record_is_not_silently_reinterpreted(self) -> None:
         record = copy.deepcopy(self.minimal)
-        record["schema_version"] = 2
-        with self.assertRaisesRegex(ContributionRecordError, "must be integer 3"):
+        record["schema_version"] = 3
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 4"):
             validate_contribution_record(record)
 
     def test_each_phase_one_job_type_records_its_manifest_capability(self) -> None:
@@ -428,6 +442,44 @@ class ContributionRecordTests(unittest.TestCase):
             ContributionRecordError, "attribution contains unsupported"
         ):
             validate_contribution_record(record)
+
+    def test_local_validation_rejects_result_hash_mismatches(self) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["result_hash"] = "sha256:" + "f" * 64
+        with self.assertRaisesRegex(
+            ContributionRecordError, "validation receipt result_hash does not match"
+        ):
+            validate_local_contribution_record(record, self.root)
+
+        record = copy.deepcopy(self.minimal)
+        record["result_hash_algorithm"] = "sha512"
+        with self.assertRaisesRegex(ContributionRecordError, "must be sha256"):
+            validate_contribution_record(record)
+
+        with TemporaryDirectory() as directory:
+            local_root = Path(directory)
+            record = copy.deepcopy(self.minimal)
+            references = (
+                record["source"]["local_source_path"],
+                record["validation"]["validation_receipt_ref"],
+                record["manifest_links"]["work_manifest_ref"],
+            )
+            for reference in references:
+                assert isinstance(reference, str)
+                target = local_root / reference
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((self.root / reference).read_bytes())
+            result_ref = record["source"]["local_source_path"]
+            assert isinstance(result_ref, str)
+            result_path = local_root / result_ref
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            result["output_payload"]["inline_payload"] = "hello tampered mesh"
+            result_path.write_text(json.dumps(result), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ContributionRecordError,
+                "hash does not match its canonical payload",
+            ):
+                validate_local_contribution_record(record, local_root)
 
     def _load(self, name: str) -> dict[str, Any]:
         return json.loads(
