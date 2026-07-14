@@ -42,7 +42,7 @@ class JobEnvelopeTests(unittest.TestCase):
         parsed = validate_job_envelope(self.complete_envelope)
 
         self.assertIs(parsed, self.complete_envelope)
-        self.assertEqual(parsed["creator_node_id"], "node.local-01")
+        self.assertEqual(parsed["creator_node_id"], "node.local-creator")
         self.assertEqual(
             parsed["input_manifest"]["files"][0]["sha256"],
             "sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f",
@@ -68,7 +68,7 @@ class JobEnvelopeTests(unittest.TestCase):
         self.assertEqual(
             parsed["contribution"],
             {
-                "creator_node_id": "node.local-01",
+                "creator_node_id": "node.local-creator",
                 "executor_node_id": "node.local-02",
                 "produced_artifacts": [
                     "examples/job-envelope-results/local-echo-result.json"

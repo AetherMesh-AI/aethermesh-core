@@ -1,11 +1,11 @@
 {
   "contribution": {
-    "creator_node_id": "node.local-01",
+    "creator_node_id": "node.local-creator",
     "executor_node_id": "node.local-02",
     "produced_artifacts": ["examples/job-envelope-results/local-echo-result.json"]
   },
   "created_at": "2026-07-12T12:00:00Z",
-  "creator_node_id": "node.local-01",
+  "creator_node_id": "node.local-creator",
   "expected_outputs": {
     "artifacts": [
       {
