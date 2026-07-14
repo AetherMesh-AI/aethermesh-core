@@ -6,20 +6,13 @@ import re
 from datetime import datetime
 from typing import Any
 
+from aethermesh_core.scheduler import SUPPORTED_LOCAL_JOB_TYPES
+
 CONTRIBUTION_RECORD_SCHEMA_VERSION = 1
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
-PHASE1_JOB_CAPABILITIES = {
-    "echo": "work.echo",
-    "hash": "work.hash",
-    "basic_compute": "work.basic_compute",
-    "schema_transform": "work.schema_transform",
-    "keyword_extract": "work.keyword_extract",
-    "text_chunk": "work.text_chunk",
-    "text_embed": "work.text_embed",
-    "text_stats": "work.text_stats",
-}
+PHASE1_JOB_CAPABILITIES = {job_type: job_type for job_type in SUPPORTED_LOCAL_JOB_TYPES}
 _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",

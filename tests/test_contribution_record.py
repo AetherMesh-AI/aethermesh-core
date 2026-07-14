@@ -26,7 +26,7 @@ class ContributionRecordTests(unittest.TestCase):
         )
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["job_type"], "echo")
-        self.assertEqual(self.minimal["capability"], "work.echo")
+        self.assertEqual(self.minimal["capability"], "echo")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
 
     def test_every_phase_1_job_type_records_its_manifest_capability(self) -> None:
@@ -132,7 +132,7 @@ class ContributionRecordTests(unittest.TestCase):
             ),
             (lambda record: record.update(work_type=""), "work_type"),
             (lambda record: record.update(job_type="routing"), "job_type"),
-            (lambda record: record.update(capability="work.hash"), "capability"),
+            (lambda record: record.update(capability="text_stats"), "capability"),
             (
                 lambda record: record.update(unreviewed_network_claim=True),
                 "unsupported fields",
