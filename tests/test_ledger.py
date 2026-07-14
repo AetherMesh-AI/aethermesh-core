@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from unittest import mock
@@ -19,7 +20,9 @@ from aethermesh_core.result_hash import result_hash
 
 class ContributionLedgerTests(unittest.TestCase):
     def test_completed_result_adds_positive_contribution_units(self) -> None:
-        ledger = ContributionLedger()
+        ledger = ContributionLedger(
+            clock=lambda: datetime(2026, 7, 14, 14, 8, 7, tzinfo=UTC)
+        )
         result = JobResult(
             job_id="job-1",
             node_id="node-a",
@@ -41,6 +44,12 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertIsNone(record.validation_reason)
         self.assertIsNone(record.job_type)
         self.assertEqual(record.result_hash, result_hash(result))
+        self.assertEqual(record.created_at, "2026-07-14T14:08:07Z")
+        assert record.created_at is not None
+        self.assertEqual(
+            datetime.strptime(record.created_at, "%Y-%m-%dT%H:%M:%SZ"),
+            datetime(2026, 7, 14, 14, 8, 7),
+        )
         self.assertEqual(summary.node_id, "node-a")
         self.assertEqual(summary.completed_job_count, 1)
         self.assertEqual(summary.failed_job_count, 0)
@@ -210,7 +219,9 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertIsNone(record.result_hash)
 
     def test_record_persists_validation_metadata_when_supplied(self) -> None:
-        ledger = ContributionLedger()
+        ledger = ContributionLedger(
+            clock=lambda: datetime(2026, 7, 14, 14, 8, 7, tzinfo=UTC)
+        )
 
         ledger.record(
             JobResult(
@@ -242,8 +253,38 @@ class ContributionLedgerTests(unittest.TestCase):
                 "validation_valid": False,
                 "validation_reason": "output_mismatch",
                 "job_type": "echo",
+                "created_at": "2026-07-14T14:08:07Z",
             },
         )
+
+    def test_timestamp_preserves_existing_audit_references(self) -> None:
+        ledger = ContributionLedger(
+            clock=lambda: datetime(2026, 7, 14, 14, 8, 7, tzinfo=UTC)
+        )
+
+        record = ledger.record(
+            JobResult("job-1", "node-a", "completed", "hello mesh", None, 1),
+            validation_valid=True,
+            validation_reason="ok",
+            job_type="echo",
+            version_metadata_ref="version-metadata.json",
+        )
+
+        self.assertEqual(record.node_id, "node-a")
+        self.assertEqual(record.job_id, "job-1")
+        self.assertEqual(record.validation_valid, True)
+        self.assertEqual(record.validation_reason, "ok")
+        self.assertEqual(record.version_metadata_ref, "version-metadata.json")
+        self.assertEqual(record.created_at, "2026-07-14T14:08:07Z")
+
+    def test_timestamp_rejects_non_utc_or_malformed_persisted_values(self) -> None:
+        record = ContributionRecord(
+            "node-a", "job-1", "completed", 1, created_at="2026-07-14T14:08:07Z"
+        ).to_dict()
+        for timestamp in ("2026-07-14T14:08:07+00:00", "not-a-time"):
+            with self.subTest(timestamp=timestamp):
+                with self.assertRaisesRegex(LedgerPersistenceError, "created_at"):
+                    ContributionRecord.from_dict({**record, "created_at": timestamp})
 
     def test_missing_json_ledger_loads_as_empty(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -352,7 +393,9 @@ class ContributionLedgerTests(unittest.TestCase):
     def test_save_ledger_document_uses_stable_json_and_cleans_temp_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             ledger_path = Path(temp_dir) / "deep" / "nested" / "ledger.json"
-            ledger = ContributionLedger()
+            ledger = ContributionLedger(
+                clock=lambda: datetime(2026, 7, 14, 14, 8, 7, tzinfo=UTC)
+            )
             ledger.record(
                 JobResult(
                     job_id="job-1",
@@ -374,7 +417,7 @@ class ContributionLedgerTests(unittest.TestCase):
             )
             self.assertEqual(
                 raw,
-                '{\n  "a_note": "kept",\n  "records": [\n    {\n      "contribution_units": 1,\n      "job_id": "job-1",\n      "job_type": null,\n      "message": "hello mesh",\n      "node_id": "node-a",\n      "result_hash": "'
+                '{\n  "a_note": "kept",\n  "records": [\n    {\n      "contribution_units": 1,\n      "created_at": "2026-07-14T14:08:07Z",\n      "job_id": "job-1",\n      "job_type": null,\n      "message": "hello mesh",\n      "node_id": "node-a",\n      "result_hash": "'
                 + expected_hash
                 + '",\n      "status": "completed",\n      "validation_reason": null,\n      "validation_valid": null\n    }\n  ],\n  "version": 1,\n  "z_future": true\n}\n',
             )
