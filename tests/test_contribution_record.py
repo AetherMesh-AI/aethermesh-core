@@ -46,6 +46,17 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["work_id"])
         self.assertEqual(
+            self.failed["contributor_node_id"], receipt["contributor_node_id"]
+        )
+        self.assertEqual(
+            self.failed["lineage"]["contributor_node_id"],
+            receipt["lineage"]["contributor_node_id"],
+        )
+        self.assertEqual(self.failed["creator_node_id"], receipt["creator_node_id"])
+        self.assertNotEqual(
+            self.failed["creator_node_id"], self.failed["contributor_node_id"]
+        )
+        self.assertEqual(
             self.failed["lineage"]["parent_contribution_ids"],
             ["contribution.echo-0001"],
         )
@@ -85,6 +96,12 @@ class ContributionRecordTests(unittest.TestCase):
                     ContributionRecordError, f"missing: {field}"
                 ):
                     validate_contribution_record(record)
+
+    def test_empty_contributor_node_id_is_rejected(self) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["contributor_node_id"] = ""
+        with self.assertRaisesRegex(ContributionRecordError, "contributor_node_id"):
+            validate_contribution_record(record)
 
     def test_empty_or_invalid_job_id_fails_without_changing_attribution(self) -> None:
         for job_id in ("", "invalid job id"):
