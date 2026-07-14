@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build deterministic GitHub release metadata for main-branch package builds."""
+"""Build deterministic metadata for numbered alpha prereleases."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_SOURCE_PATHS = ("README.md", "pyproject.toml", "src")
-ALPHA_RELEASE_TAG_PATTERN = "v*-alpha-*"
+ALPHA_RELEASE_TAG_PATTERN = "v0.2.0-alpha.[0-9]*"
 
 
 @dataclass(frozen=True)
@@ -147,13 +147,14 @@ def build_release_metadata(
     head_sha: str,
     previous_tag: str | None,
     commits: list[Commit],
+    build_number: int,
 ) -> ReleaseMetadata:
-    short_source_sha = source_sha256[:12]
+    version = f"{release_version}.{build_number}"
     return ReleaseMetadata(
-        tag=f"v{release_version}-{short_source_sha}",
-        name=f"{release_version} - (...{source_sha256[-5:]})",
+        tag=f"v{version}",
+        name=version,
         notes=format_release_notes(
-            release_version=release_version,
+            release_version=version,
             source_sha256=source_sha256,
             head_sha=head_sha,
             previous_tag=previous_tag,
@@ -169,6 +170,8 @@ def prepare_release(
     *,
     release_version: str,
     notes_path: Path,
+    build_number: int,
+    previous_tag: str | None,
     root: Path = ROOT,
     source_archive: Path | None = None,
 ) -> ReleaseMetadata:
@@ -178,14 +181,13 @@ def prepare_release(
         else source_files_sha256(root, package_source_files(root))
     )
     current_head = head_sha(root)
-    current_tag = f"v{release_version}-{source_sha256[:12]}"
-    previous_tag = previous_alpha_release_tag(root, exclude_tag=current_tag)
     metadata = build_release_metadata(
         release_version=release_version,
         source_sha256=source_sha256,
         head_sha=current_head,
         previous_tag=previous_tag,
         commits=commits_since(previous_tag, root=root),
+        build_number=build_number,
     )
     notes_path.write_text(metadata.notes, encoding="utf-8")
     return metadata
@@ -208,6 +210,9 @@ def command_prepare(args: argparse.Namespace) -> int:
         release_version=args.release_version,
         notes_path=Path(args.notes_path),
         source_archive=Path(args.source_archive) if args.source_archive else None,
+        build_number=args.build_number,
+        previous_tag=args.previous_tag,
+        root=Path(args.root).resolve(),
     )
     write_github_outputs(metadata)
     print(
@@ -230,8 +235,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     prepare = subparsers.add_parser("prepare")
     prepare.add_argument("--release-version", default="0.2.0-alpha")
+    prepare.add_argument("--build-number", type=int, required=True)
+    prepare.add_argument("--previous-tag")
     prepare.add_argument("--notes-path", default="release-notes.md")
     prepare.add_argument("--source-archive")
+    prepare.add_argument("--root", default=str(ROOT))
     prepare.set_defaults(func=command_prepare)
     return parser
 

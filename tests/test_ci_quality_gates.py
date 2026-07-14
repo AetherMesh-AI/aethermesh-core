@@ -103,6 +103,18 @@ class DesktopReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('cp "$artifact" "$release_asset"', workflow)
         self.assertNotIn('cp "$artifact" dist/release-upload/', workflow)
 
+    def test_numbered_release_policy_is_encoded_in_workflow(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "desktop-release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("retention-days: 14", workflow)
+        self.assertIn("publish_release:", workflow)
+        self.assertIn("environment: release", workflow)
+        self.assertIn("group: desktop-numbered-prerelease", workflow)
+        self.assertIn("TZ=America/New_York", workflow)
+        self.assertNotIn("gh release create", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

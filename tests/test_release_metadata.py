@@ -42,14 +42,14 @@ class ReleaseMetadataTests(unittest.TestCase):
             hashlib.sha256(b"actual release source archive").hexdigest(),
         )
 
-    def test_release_tag_and_name_use_alpha_version_and_source_hash_suffix(
+    def test_release_tag_and_name_use_numbered_alpha_version(
         self,
     ) -> None:
         metadata = release_metadata.build_release_metadata(
             release_version="0.2.0-alpha",
             source_sha256="abcdef1234567890",
             head_sha="feedfacecafebeef",
-            previous_tag="v0.2.0-alpha-oldhash",
+            previous_tag="v0.2.0-alpha.115",
             commits=[
                 release_metadata.Commit(
                     sha="feedfacecafebeef",
@@ -57,11 +57,12 @@ class ReleaseMetadataTests(unittest.TestCase):
                     author="Miyu",
                 )
             ],
+            build_number=116,
         )
 
-        self.assertEqual(metadata.tag, "v0.2.0-alpha-abcdef123456")
-        self.assertEqual(metadata.name, "0.2.0-alpha - (...67890)")
-        self.assertIn("Previous release tag: `v0.2.0-alpha-oldhash`", metadata.notes)
+        self.assertEqual(metadata.tag, "v0.2.0-alpha.116")
+        self.assertEqual(metadata.name, "0.2.0-alpha.116")
+        self.assertIn("Previous release tag: `v0.2.0-alpha.115`", metadata.notes)
         self.assertIn("- `feedfac` feat: add release automation (Miyu)", metadata.notes)
         self.assertNotIn("early", metadata.name.lower())
         self.assertNotIn("early", metadata.notes.lower())
@@ -80,6 +81,7 @@ class ReleaseMetadataTests(unittest.TestCase):
                     "2222222222222222", "feat: package core", "Trevor"
                 ),
             ],
+            build_number=116,
         )
 
         self.assertIn("Commit range: full history", metadata.notes)
