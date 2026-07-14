@@ -18,8 +18,10 @@ from aethermesh_core.validation_receipt_schema import (
     validation_receipt_id,
 )
 
-CONTRIBUTION_RECORD_SCHEMA_VERSION = 4
-VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
+CONTRIBUTION_RECORD_SCHEMA_VERSION = 5
+VALIDATION_STATUSES = frozenset(
+    {"unvalidated", "pending", "valid", "invalid", "superseded"}
+)
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
 PHASE_1_JOB_CAPABILITIES = {
@@ -74,7 +76,10 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     for field in ("record_id", "creator_node_id", "contributor_node_id"):
         _require_identifier(document, field)
     _require_local_job_id(document, "job_id")
-    if document["validation_receipt_id"] != validation_receipt_id(document["job_id"]):
+    receipt_id = document["validation_receipt_id"]
+    if receipt_id is not None and receipt_id != validation_receipt_id(
+        document["job_id"]
+    ):
         raise ContributionRecordError(
             "validation_receipt_id must match the local validation receipt for job_id"
         )
@@ -87,7 +92,16 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _require_string(document, "contribution_summary")
     _source(document["source"])
     _manifest_links(document["manifest_links"])
-    _validation(document["validation"])
+    validation = document["validation"]
+    _validation(validation)
+    if validation["status"] == "unvalidated" and receipt_id is not None:
+        raise ContributionRecordError(
+            "unvalidated contribution must not have validation_receipt_id"
+        )
+    if validation["status"] in {"valid", "invalid"} and receipt_id is None:
+        raise ContributionRecordError(
+            "validated contribution requires validation_receipt_id"
+        )
     _lineage(document["lineage"], document["contributor_node_id"])
     _attribution(document["attribution"])
     return document
@@ -133,7 +147,7 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "validation receipt result_hash does not match contribution record"
         )
-    expected_status = "passed" if receipt["validation_status"] == "pass" else "failed"
+    expected_status = "valid" if receipt["validation_status"] == "pass" else "invalid"
     if contribution["validation"]["status"] != expected_status:
         raise ContributionRecordError(
             "validation receipt status does not match contribution record"
@@ -320,8 +334,10 @@ def _validation(value: object) -> None:
                 "status",
                 "validator_node_id",
                 "validation_receipt_ref",
+                "validation_run_id",
                 "validated_at",
                 "failure_reason",
+                "status_history",
             }
         ),
         "validation",
@@ -331,14 +347,114 @@ def _validation(value: object) -> None:
         raise ContributionRecordError("validation.status is not allowed")
     _optional_identifier(validation, "validator_node_id")
     _optional_ref(validation, "validation_receipt_ref")
+    _optional_identifier(validation, "validation_run_id")
     _optional_timestamp(validation, "validated_at")
     _optional_string(validation, "failure_reason")
-    if status == "failed" and validation["failure_reason"] is None:
-        raise ContributionRecordError("failed validation requires failure_reason")
-    if status != "failed" and validation["failure_reason"] is not None:
+    if status in {"invalid", "superseded"} and validation["failure_reason"] is None:
+        raise ContributionRecordError(f"{status} validation requires failure_reason")
+    if (
+        status not in {"invalid", "superseded"}
+        and validation["failure_reason"] is not None
+    ):
         raise ContributionRecordError(
-            "only failed validation may include failure_reason"
+            "only invalid or superseded validation may include failure_reason"
         )
+    if status == "unvalidated" and any(
+        validation[field] is not None
+        for field in (
+            "validator_node_id",
+            "validation_receipt_ref",
+            "validation_run_id",
+            "validated_at",
+        )
+    ):
+        raise ContributionRecordError(
+            "unvalidated contribution has validation evidence"
+        )
+    if status == "pending" and validation["validation_run_id"] is None:
+        raise ContributionRecordError("pending validation requires validation_run_id")
+    if status in {"valid", "invalid"} and any(
+        validation[field] is None
+        for field in (
+            "validator_node_id",
+            "validation_receipt_ref",
+            "validated_at",
+        )
+    ):
+        raise ContributionRecordError(f"{status} validation requires receipt evidence")
+    if status == "superseded" and (
+        validation["validation_receipt_ref"] is None
+        and validation["validation_run_id"] is None
+    ):
+        raise ContributionRecordError(
+            "superseded validation requires receipt or validation run evidence"
+        )
+    _validation_history(validation["status_history"], validation)
+
+
+def _validation_history(value: object, current: dict[str, Any]) -> None:
+    if not isinstance(value, list) or not value:
+        raise ContributionRecordError(
+            "validation.status_history must be a non-empty list"
+        )
+    fields = frozenset(
+        {
+            "status",
+            "changed_at",
+            "validation_receipt_ref",
+            "validation_run_id",
+            "failure_reason",
+        }
+    )
+    entries: list[dict[str, Any]] = []
+    for index, entry in enumerate(value):
+        entry = _exact_fields(entry, fields, f"validation.status_history[{index}]")
+        status = _require_string(entry, "status")
+        if status not in VALIDATION_STATUSES:
+            raise ContributionRecordError(
+                "validation.status_history status is not allowed"
+            )
+        _require_timestamp(entry, "changed_at")
+        _optional_ref(entry, "validation_receipt_ref")
+        _optional_identifier(entry, "validation_run_id")
+        _optional_string(entry, "failure_reason")
+        if status == "unvalidated" and any(
+            entry[field] is not None
+            for field in (
+                "validation_receipt_ref",
+                "validation_run_id",
+                "failure_reason",
+            )
+        ):
+            raise ContributionRecordError(
+                "unvalidated history entry has validation evidence"
+            )
+        if status == "pending" and entry["validation_run_id"] is None:
+            raise ContributionRecordError(
+                "pending history entry requires validation_run_id"
+            )
+        if status in {"valid", "invalid"} and entry["validation_receipt_ref"] is None:
+            raise ContributionRecordError(
+                f"{status} history entry requires receipt evidence"
+            )
+        if status in {"invalid", "superseded"} and entry["failure_reason"] is None:
+            raise ContributionRecordError(
+                f"{status} history entry requires failure_reason"
+            )
+        entries.append(entry)
+    if entries[0]["status"] != "unvalidated":
+        raise ContributionRecordError("validation history must begin unvalidated")
+    latest = entries[-1]
+    for field in (
+        "status",
+        "validation_receipt_ref",
+        "validation_run_id",
+        "failure_reason",
+    ):
+        if latest[field] != current[field]:
+            raise ContributionRecordError(
+                "validation history latest entry must match current validation"
+            )
 
 
 def _lineage(value: object, document_contributor_node_id: str) -> None:

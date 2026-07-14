@@ -17,10 +17,10 @@
     {"properties": {"work_type": {"const": "text_stats"}, "job_type": {"const": "text_stats"}, "capability": {"const": "work.text_stats"}}}
   ],
   "properties": {
-    "schema_version": {"const": 4},
+    "schema_version": {"const": 5},
     "record_id": {"$ref": "#/$defs/identifier"},
     "job_id": {"$ref": "#/$defs/localJobId"},
-    "validation_receipt_id": {"anyOf": [{"type": "string", "pattern": "^local-validation-receipt-[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^local-validation-receipt-sha256:[0-9a-f]{64}$"}]},
+    "validation_receipt_id": {"anyOf": [{"type": "string", "pattern": "^local-validation-receipt-[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^local-validation-receipt-sha256:[0-9a-f]{64}$"}, {"type": "null"}]},
     "result_hash_algorithm": {"const": "sha256"},
     "result_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "creator_node_id": {"$ref": "#/$defs/identifier"},
@@ -43,9 +43,8 @@
     },
     "validation": {
       "type": "object", "additionalProperties": false,
-      "required": ["status", "validator_node_id", "validation_receipt_ref", "validated_at", "failure_reason"],
-      "properties": {"status": {"enum": ["unvalidated", "passed", "failed"]}, "validator_node_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]}, "validation_receipt_ref": {"$ref": "#/$defs/localRefOrNull"}, "validated_at": {"anyOf": [{"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}, {"type": "null"}]}, "failure_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}},
-      "allOf": [{"if": {"properties": {"status": {"const": "failed"}}}, "then": {"properties": {"failure_reason": {"type": "string", "minLength": 1}}}}, {"if": {"properties": {"status": {"enum": ["unvalidated", "passed"]}}}, "then": {"properties": {"failure_reason": {"type": "null"}}}}]
+      "required": ["status", "validator_node_id", "validation_receipt_ref", "validation_run_id", "validated_at", "failure_reason", "status_history"],
+      "properties": {"status": {"enum": ["unvalidated", "pending", "valid", "invalid", "superseded"]}, "validator_node_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]}, "validation_receipt_ref": {"$ref": "#/$defs/localRefOrNull"}, "validation_run_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]}, "validated_at": {"anyOf": [{"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}, {"type": "null"}]}, "failure_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}, "status_history": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/validationHistoryEntry"}}}
     },
     "lineage": {
       "type": "object", "additionalProperties": false,
@@ -63,7 +62,8 @@
     "localJobId": {"anyOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
     "identifierList": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
     "hashList": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
-    "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]}
+    "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]},
+    "validationHistoryEntry": {"type": "object", "additionalProperties": false, "required": ["status", "changed_at", "validation_receipt_ref", "validation_run_id", "failure_reason"], "properties": {"status": {"enum": ["unvalidated", "pending", "valid", "invalid", "superseded"]}, "changed_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}, "validation_receipt_ref": {"$ref": "#/$defs/localRefOrNull"}, "validation_run_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]}, "failure_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}}}
   },
-  "x-aethermesh-schema-version": "4.0.0"
+  "x-aethermesh-schema-version": "5.0.0"
 }

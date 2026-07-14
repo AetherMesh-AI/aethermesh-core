@@ -38,7 +38,7 @@ class ContributionRecordTests(unittest.TestCase):
             self.minimal["result_hash"],
             "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
         )
-        self.assertEqual(self.minimal["validation"]["status"], "passed")
+        self.assertEqual(self.minimal["validation"]["status"], "valid")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
         self.assertIs(
             validate_local_contribution_record(self.minimal, self.root), self.minimal
@@ -53,7 +53,7 @@ class ContributionRecordTests(unittest.TestCase):
             )
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
-        self.assertEqual(self.failed["validation"]["status"], "failed")
+        self.assertEqual(self.failed["validation"]["status"], "invalid")
         work_manifest = self._load_job_envelope("complete-local-echo.json")
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
@@ -94,6 +94,9 @@ class ContributionRecordTests(unittest.TestCase):
         record["validation"]["validation_receipt_ref"] = (
             "examples/validation-receipts/missing.json"
         )
+        record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+            "examples/validation-receipts/missing.json"
+        )
         record["manifest_links"]["validation_manifest_ref"] = (
             "examples/validation-receipts/missing.json"
         )
@@ -112,6 +115,9 @@ class ContributionRecordTests(unittest.TestCase):
             )
             record = copy.deepcopy(self.failed)
             record["validation"]["validation_receipt_ref"] = "receipt.json"
+            record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+                "receipt.json"
+            )
             record["manifest_links"]["validation_manifest_ref"] = "receipt.json"
             with self.assertRaisesRegex(ContributionRecordError, "escapes local root"):
                 validate_local_contribution_record(record, local_root)
@@ -126,9 +132,9 @@ class ContributionRecordTests(unittest.TestCase):
             ),
             (
                 lambda record: record["validation"].update(
-                    status="failed", failure_reason="synthetic failure"
+                    status="invalid", failure_reason="synthetic failure"
                 ),
-                "status does not match",
+                "history latest entry",
             ),
             (
                 lambda record: record["validation"].update(
@@ -138,7 +144,7 @@ class ContributionRecordTests(unittest.TestCase):
             ),
             (
                 lambda record: record["validation"].update(validated_at=None),
-                "validated_at is required",
+                "requires receipt evidence",
             ),
             (
                 lambda record: record["manifest_links"].update(work_manifest_ref=None),
@@ -183,7 +189,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"
-        with self.assertRaisesRegex(ContributionRecordError, "rejection_reason"):
+        with self.assertRaisesRegex(ContributionRecordError, "history latest entry"):
             validate_local_contribution_record(record, self.root)
 
     def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
@@ -192,14 +198,64 @@ class ContributionRecordTests(unittest.TestCase):
             "status": "unvalidated",
             "validator_node_id": None,
             "validation_receipt_ref": None,
+            "validation_run_id": None,
             "validated_at": None,
             "failure_reason": None,
+            "status_history": [
+                {
+                    "status": "unvalidated",
+                    "changed_at": record["created_at"],
+                    "validation_receipt_ref": None,
+                    "validation_run_id": None,
+                    "failure_reason": None,
+                }
+            ],
         }
+        record["validation_receipt_id"] = None
         self.assertIs(validate_contribution_record(record), record)
         with self.assertRaisesRegex(
             ContributionRecordError, "required for local evidence"
         ):
             validate_local_contribution_record(record, self.root)
+
+    def test_validation_history_preserves_auditable_status_changes(self) -> None:
+        record = copy.deepcopy(self.failed)
+        immutable_evidence = {
+            field: copy.deepcopy(record[field])
+            for field in (
+                "creator_node_id",
+                "manifest_links",
+                "lineage",
+                "attribution",
+            )
+        }
+        record["validation"].update(
+            status="superseded",
+            validator_node_id=None,
+            validation_receipt_ref=None,
+            validation_run_id="validation-run-002",
+            validated_at=None,
+            failure_reason="replaced by a newer local validation run",
+        )
+        record["validation"]["status_history"].append(
+            {
+                "status": "superseded",
+                "changed_at": "2026-07-13T12:06:00Z",
+                "validation_receipt_ref": None,
+                "validation_run_id": "validation-run-002",
+                "failure_reason": "replaced by a newer local validation run",
+            }
+        )
+
+        self.assertIs(validate_contribution_record(record), record)
+        self.assertEqual(record["validation"]["status"], "superseded")
+        self.assertEqual(
+            [entry["status"] for entry in record["validation"]["status_history"]],
+            ["unvalidated", "invalid", "superseded"],
+        )
+        self.assertEqual(
+            {field: record[field] for field in immutable_evidence}, immutable_evidence
+        )
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
         schema = json.loads(
@@ -210,7 +266,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 4})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 5})
         self.assertEqual(
             schema["properties"]["result_hash_algorithm"], {"const": "sha256"}
         )
@@ -242,6 +298,10 @@ class ContributionRecordTests(unittest.TestCase):
             },
         )
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
+        self.assertIn(
+            "validation_run_id", schema["properties"]["validation"]["required"]
+        )
+        self.assertIn("status_history", schema["properties"]["validation"]["required"])
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
         )
@@ -291,7 +351,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_version_three_record_is_not_silently_reinterpreted(self) -> None:
         record = copy.deepcopy(self.minimal)
         record["schema_version"] = 3
-        with self.assertRaisesRegex(ContributionRecordError, "must be integer 4"):
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 5"):
             validate_contribution_record(record)
 
     def test_each_phase_one_job_type_records_its_manifest_capability(self) -> None:
@@ -344,7 +404,9 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.minimal)
         record["validation"]["failure_reason"] = "not applicable"
-        with self.assertRaisesRegex(ContributionRecordError, "only failed"):
+        with self.assertRaisesRegex(
+            ContributionRecordError, "only invalid or superseded"
+        ):
             validate_contribution_record(record)
 
     def test_rejects_unknown_or_malformed_core_values(self) -> None:
