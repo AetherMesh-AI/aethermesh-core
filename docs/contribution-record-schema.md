@@ -6,7 +6,7 @@ This record is evidence metadata only. It does not award credits, calculate rewa
 
 ## Required top-level fields
 
-`schema_version`, `record_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, and `contribution_summary` identify what was recorded and who created or performed the work. `source` requires either a safe local source path or artifact reference.
+`schema_version`, `record_id`, `job_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, and `contribution_summary` identify what was recorded and who created or performed the work. `job_id` uses the existing local job-envelope identifier format. `source` requires either a safe local source path or artifact reference.
 
 `manifest_links`, `validation`, `lineage`, and `attribution` are always present so their empty or unavailable state is explicit. References that are not applicable use `null`; lineage lists use `[]`. This lets a minimal local prototype emit an honest `unvalidated` record without inventing manifests or validation.
 

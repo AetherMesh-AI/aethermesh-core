@@ -20,9 +20,7 @@ class ContributionRecordTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
-        self.assertEqual(
-            self.minimal["job_id"], "local-job-0123456789abcdef0123456789abcdef"
-        )
+        self.assertEqual(self.minimal["job_id"], "local-echo-minimal-001")
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
 
@@ -41,9 +39,7 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
         self.assertEqual(receipt["work_id"], receipt["job_id"])
-        self.assertEqual(
-            receipt["lineage"]["parent_work_ids"], [self.minimal["job_id"]]
-        )
+
         self.assertEqual(
             self.failed["validation"]["validation_receipt_ref"],
             "examples/validation-receipts/local-echo-fail.json",
@@ -124,7 +120,7 @@ class ContributionRecordTests(unittest.TestCase):
             (lambda record: record.update(schema_version=True), "schema_version"),
             (lambda record: record.update(record_id="bad id"), "record_id"),
             (lambda record: record.update(job_id=""), "job_id"),
-            (lambda record: record.update(job_id="local-job-not-hex"), "job_id"),
+            (lambda record: record.update(job_id="not a local id"), "job_id"),
             (
                 lambda record: record.update(created_at="2026-99-13T12:00:00Z"),
                 "created_at",

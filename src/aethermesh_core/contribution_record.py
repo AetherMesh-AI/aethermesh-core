@@ -28,7 +28,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     }
 )
 _IDENTIFIER = re.compile(r"[a-z0-9][a-z0-9_.-]{2,127}\Z")
-_LOCAL_JOB_ID = re.compile(r"local-job-[0-9a-f]{32}\Z")
+_LOCAL_JOB_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,127}\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _SHA256 = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _URI_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
@@ -86,9 +86,11 @@ def _require_identifier(document: dict[str, Any], field: str) -> str:
 
 def _require_local_job_id(document: dict[str, Any], field: str) -> str:
     value = document.get(field)
-    if not isinstance(value, str) or not _LOCAL_JOB_ID.fullmatch(value):
+    if not isinstance(value, str) or not (
+        _LOCAL_JOB_ID.fullmatch(value) or _SHA256.fullmatch(value)
+    ):
         raise ContributionRecordError(
-            f"{field} must be a local-job- followed by 32 lowercase hex characters"
+            f"{field} must be a local ID or sha256 content ID"
         )
     return value
 

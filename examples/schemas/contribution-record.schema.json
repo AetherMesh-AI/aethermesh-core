@@ -45,7 +45,7 @@
   },
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"},
-    "localJobId": {"type": "string", "pattern": "^local-job-[0-9a-f]{32}$"},
+    "localJobId": {"anyOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
     "identifierList": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
     "hashList": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
     "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]}
