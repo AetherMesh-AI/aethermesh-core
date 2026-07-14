@@ -1717,6 +1717,11 @@ class NodeRuntimeService:
             if isinstance(receipt_execution, dict)
             else None
         )
+        duration_ms = (
+            receipt_execution.get("duration_ms")
+            if isinstance(receipt_execution, dict)
+            else None
+        )
         result_lineage = result.get("lineage")
         manifest_capability = manifest.get("job", {}).get("requested_capability")
         capability = receipt.get("capability")
@@ -1757,6 +1762,18 @@ class NodeRuntimeService:
             or result.get("creator_node_id") != manifest.get("creator_node_id")
             or not isinstance(result_lineage, dict)
             or result_lineage.get("parent_job_ids") != lineage.get("parent_refs")
+            or (
+                duration_ms is not None
+                and (
+                    not isinstance(duration_ms, int)
+                    or isinstance(duration_ms, bool)
+                    or duration_ms
+                    != _duration_ms(
+                        cast(str, executor_started_at), cast(str, executor_finished_at)
+                    )
+                    or duration_ms != result.get("duration_ms")
+                )
+            )
         ):
             raise RuntimeServiceError(
                 "validation receipt has invalid executor timing evidence"
@@ -1793,7 +1810,7 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "validation receipt has missing or invalid validated_at timestamp"
             )
-        return {
+        exported_receipt = {
             "schema_version": 5,
             "network_mode": "local-only-no-p2p",
             "validation_scope": "local-only-not-consensus",
@@ -1827,6 +1844,11 @@ class NodeRuntimeService:
                 "status_ref": status_ref,
             },
         }
+        # Older local receipts did not record a duration. Preserve them without
+        # inventing one; newly captured receipts include the observed value.
+        if duration_ms is not None:
+            exported_receipt["duration_ms"] = duration_ms
+        return exported_receipt
 
     def list_local_validation_receipts(self) -> dict[str, Any]:
         """List shaped local receipt evidence without creating or changing it.
@@ -2175,6 +2197,7 @@ class NodeRuntimeService:
             "output_digest": output_manifest_id,
             "executor_started_at": executor_started_at,
             "executor_finished_at": executor_finished_at,
+            "duration_ms": _duration_ms(executor_started_at, executor_finished_at),
             "executed_at": int(time.time()),
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,

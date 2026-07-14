@@ -937,6 +937,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 self.assertEqual(
                     receipt["execution"]["executor_finished_at"], expected_finished_at
                 )
+                self.assertEqual(
+                    receipt["execution"]["duration_ms"],
+                    _duration_ms(expected_started_at, expected_finished_at),
+                )
                 self.assertLessEqual(expected_started_at, expected_finished_at)
                 self.assertEqual(result["reported_at"], expected_reported_at)
                 self.assertLessEqual(expected_finished_at, expected_reported_at)
@@ -972,6 +976,10 @@ class RuntimeServiceTests(unittest.TestCase):
                         "executor_finished_at"
                     ],
                     expected_finished_at,
+                )
+                self.assertEqual(
+                    service.get_local_validation_receipt(work_id=job_id)["duration_ms"],
+                    _duration_ms(expected_started_at, expected_finished_at),
                 )
                 self.assertEqual(
                     json.loads(receipt_path.read_text(encoding="utf-8"))["execution"][
@@ -1015,6 +1023,20 @@ class RuntimeServiceTests(unittest.TestCase):
                 root / "data" / "job-validation-receipts" / f"{second['job_id']}.json"
             )
             second_receipt = json.loads(second_receipt_path.read_text(encoding="utf-8"))
+            second_receipt["execution"]["duration_ms"] = 1
+            second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "invalid executor timing evidence"
+            ):
+                service.get_local_validation_receipt(work_id=second["job_id"])
+
+            second_receipt["execution"].pop("duration_ms")
+            second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
+            legacy_receipt_view = service.get_local_validation_receipt(
+                work_id=second["job_id"]
+            )
+            self.assertNotIn("duration_ms", legacy_receipt_view)
+
             second_receipt["execution"]["executor_started_at"] = "not-a-timestamp"
             second_receipt_path.write_text(json.dumps(second_receipt), encoding="utf-8")
             with self.assertRaisesRegex(
