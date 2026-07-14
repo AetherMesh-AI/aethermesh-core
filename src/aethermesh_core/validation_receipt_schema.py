@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 6
+VALIDATION_RECEIPT_SCHEMA_VERSION = 7
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -24,6 +24,7 @@ _REQUIRED_FIELDS = frozenset(
         "created_at",
         "validated_at",
         "creator_node_id",
+        "contributor_node_id",
         "job_id",
         "work_id",
         "manifest_id",
@@ -40,6 +41,7 @@ _REQUIRED_FIELDS = frozenset(
 )
 _LINEAGE_FIELDS = frozenset(
     {
+        "contributor_node_id",
         "parent_work_ids",
         "source_manifest_refs",
         "input_hashes",
@@ -48,7 +50,13 @@ _LINEAGE_FIELDS = frozenset(
     }
 )
 _CONTRIBUTION_FIELDS = frozenset(
-    {"submitter_id", "local_node_id", "claimed_role", "contribution_manifest_ref"}
+    {
+        "contributor_node_id",
+        "submitter_id",
+        "local_node_id",
+        "claimed_role",
+        "contribution_manifest_ref",
+    }
 )
 _EVIDENCE_FIELDS = frozenset(
     {
@@ -109,11 +117,12 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 6"
+            "validation receipt.schema_version must be integer 7"
         )
     for field in (
         "receipt_id",
         "creator_node_id",
+        "contributor_node_id",
         "job_id",
         "work_id",
         "manifest_id",
@@ -161,8 +170,8 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         raise ValidationReceiptSchemaError(
             "accepted validation receipt.rejection_reason must be null"
         )
-    _lineage(receipt["lineage"])
-    _contribution(receipt["contribution"])
+    _lineage(receipt["lineage"], receipt["contributor_node_id"])
+    _contribution(receipt["contribution"], receipt["contributor_node_id"])
     validate_validator_software_metadata(
         receipt["validator_software"], receipt_schema_version=receipt["schema_version"]
     )
@@ -368,6 +377,7 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
                 "description",
                 "manifest_id",
                 "creator_node_id",
+                "contributor_node_id",
                 "work_id",
                 "lineage_parent_work_ids",
                 "contribution_manifest_ref",
@@ -382,7 +392,7 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
         raise ValidationReceiptSchemaError(
             "validation receipt.validation_method.description must be a non-empty string"
         )
-    for field in ("manifest_id", "creator_node_id", "work_id"):
+    for field in ("manifest_id", "creator_node_id", "contributor_node_id", "work_id"):
         if method[field] != receipt[field]:
             raise ValidationReceiptSchemaError(
                 f"validation receipt.validation_method.{field} must match receipt"
@@ -404,8 +414,16 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
         )
 
 
-def _lineage(value: object) -> None:
+def _lineage(value: object, contributor_node_id: str) -> None:
     lineage = _object(value, "validation receipt.lineage", _LINEAGE_FIELDS)
+    _identifier(
+        lineage["contributor_node_id"],
+        "validation receipt.lineage.contributor_node_id",
+    )
+    if lineage["contributor_node_id"] != contributor_node_id:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.lineage.contributor_node_id must match receipt"
+        )
     for field in ("parent_work_ids", "prior_receipt_ids"):
         _string_list(lineage[field], f"validation receipt.lineage.{field}")
         for identifier in lineage[field]:
@@ -426,10 +444,18 @@ def _lineage(value: object) -> None:
             )
 
 
-def _contribution(value: object) -> None:
+def _contribution(value: object, contributor_node_id: str) -> None:
     contribution = _object(
         value, "validation receipt.contribution", _CONTRIBUTION_FIELDS
     )
+    _identifier(
+        contribution["contributor_node_id"],
+        "validation receipt.contribution.contributor_node_id",
+    )
+    if contribution["contributor_node_id"] != contributor_node_id:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.contribution.contributor_node_id must match receipt"
+        )
     for field in ("submitter_id", "local_node_id", "claimed_role"):
         _nullable_identifier(
             contribution[field], f"validation receipt.contribution.{field}"

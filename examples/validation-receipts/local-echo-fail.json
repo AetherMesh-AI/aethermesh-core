@@ -1,11 +1,12 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "receipt_id": "local-validation-receipt-local-job-echo-002",
-  "receipt_hash": "sha256:ddc58f03ae35813bee788e343dd4279f3eed88dad3c297da8dbe2c55a270fb65",
+  "receipt_hash": "sha256:65e67de6422284eb931fe1877afcc10ac912acc7035b64bdf08fe1431d1d4b18",
   "result_hash": "sha256:3b0d225f1447065d935a498778b499a59c7fe30283b0d5830eb983322effe35a",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
   "creator_node_id": "node.local-creator",
+  "contributor_node_id": "node.local-worker",
   "job_id": "local-job-echo-002",
   "work_id": "local-job-echo-002",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
@@ -17,6 +18,7 @@
     "description": "Replayed the deterministic local echo fixture and found that its output differs from the result artifact.",
     "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "creator_node_id": "node.local-creator",
+    "contributor_node_id": "node.local-worker",
     "work_id": "local-job-echo-002",
     "lineage_parent_work_ids": [
       "local-job-echo-001"
@@ -31,9 +33,10 @@
     "runtime_name": "CPython",
     "runtime_version": "3.14.2",
     "platform": "Darwin/arm64",
-    "receipt_schema_version": 6
+    "receipt_schema_version": 7
   },
   "lineage": {
+    "contributor_node_id": "node.local-worker",
     "parent_work_ids": [
       "local-job-echo-001"
     ],
@@ -51,6 +54,7 @@
     ]
   },
   "contribution": {
+    "contributor_node_id": "node.local-worker",
     "submitter_id": "node.local-creator",
     "local_node_id": "node.local-validator",
     "claimed_role": "local-validator",
