@@ -1,6 +1,6 @@
 {
   "schema_version": 8,
-  "result_hash": "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
+  "result_hash": "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
   "result_id": "local-result-echo-001",
   "job_id": "local-job-echo-001",
   "task_id": "local-task-echo-001",
@@ -17,7 +17,7 @@
   "references": {
     "manifest_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "artifact_refs": ["artifacts/echo-001.json", "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
-    "validation_receipt_ids": ["local-validation-receipt-echo-001"],
+    "validation_receipt_ids": ["local-validation-receipt-local-job-echo-001"],
     "log_refs": ["logs/echo-001.log"]
   },
   "created_at": "2026-07-12T12:00:00.000Z",
@@ -30,7 +30,7 @@
   "summary": "Echo completed with one local output artifact.",
   "error_summary": null,
   "validation_status": "passed",
-  "validation_receipt_id": "local-validation-receipt-echo-001",
+  "validation_receipt_id": "local-validation-receipt-local-job-echo-001",
   "validator_node_id": "node.local-validator",
   "failure_reasons": {
     "execution": null,

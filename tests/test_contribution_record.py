@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+from unittest.mock import patch
 
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
@@ -35,7 +36,7 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
         self.assertEqual(
             self.minimal["result_hash"],
-            "sha256:5aa39b95866cca58fa9a07f10b5b01810af9a3ddeae832be77a97740fe662336",
+            "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
         )
         self.assertEqual(self.minimal["validation"]["status"], "passed")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
@@ -455,6 +456,23 @@ class ContributionRecordTests(unittest.TestCase):
         record["result_hash_algorithm"] = "sha512"
         with self.assertRaisesRegex(ContributionRecordError, "must be sha256"):
             validate_contribution_record(record)
+
+        result = json.loads(
+            (self.root / self.minimal["source"]["local_source_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        result["validation_receipt_id"] = "local-validation-receipt-other"
+        with (
+            patch(
+                "aethermesh_core.contribution_record.validate_job_result_document",
+                return_value=result,
+            ),
+            self.assertRaisesRegex(
+                ContributionRecordError, "validation_receipt_id does not match"
+            ),
+        ):
+            validate_local_contribution_record(self.minimal, self.root)
 
         with TemporaryDirectory() as directory:
             local_root = Path(directory)

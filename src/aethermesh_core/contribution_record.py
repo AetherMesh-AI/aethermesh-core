@@ -192,6 +192,7 @@ def validate_local_contribution_record(
         "creator_node_id": contribution["creator_node_id"],
         "executor_node_id": contribution["contributor_node_id"],
         "manifest_id": receipt["manifest_id"],
+        "validation_receipt_id": contribution["validation_receipt_id"],
     }
     for field, expected in result_evidence.items():
         if result[field] != expected:
