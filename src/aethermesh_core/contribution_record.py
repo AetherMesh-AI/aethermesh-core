@@ -50,7 +50,7 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _source(document["source"])
     _manifest_links(document["manifest_links"])
     _validation(document["validation"])
-    _lineage(document["lineage"])
+    _lineage(document["lineage"], document["contributor_node_id"])
     _attribution(document["attribution"])
     return document
 
@@ -159,11 +159,12 @@ def _validation(value: object) -> None:
         )
 
 
-def _lineage(value: object) -> None:
+def _lineage(value: object, document_contributor_node_id: str) -> None:
     lineage = _exact_fields(
         value,
         frozenset(
             {
+                "contributor_node_id",
                 "parent_contribution_ids",
                 "derived_artifact_ids",
                 "input_hashes",
@@ -175,9 +176,14 @@ def _lineage(value: object) -> None:
     )
     for field in ("parent_contribution_ids", "derived_artifact_ids"):
         _identifier_list(lineage, field)
+    _require_identifier(lineage, "contributor_node_id")
     for field in ("input_hashes", "output_hashes"):
         _sha256_list(lineage, field)
     _optional_string(lineage, "deterministic_reproduction_notes")
+    if lineage["contributor_node_id"] != document_contributor_node_id:
+        raise ContributionRecordError(
+            "lineage.contributor_node_id must match contributor_node_id"
+        )
 
 
 def _attribution(value: object) -> None:
