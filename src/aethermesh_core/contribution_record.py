@@ -10,6 +10,9 @@ CONTRIBUTION_RECORD_SCHEMA_VERSION = 1
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
+PHASE_1_CONTRIBUTION_JOB_TYPES = frozenset(
+    {"validation", "routing", "inference", "manifest-check", "receipt-check"}
+)
 _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
@@ -19,6 +22,8 @@ _TOP_LEVEL_FIELDS = frozenset(
         "contributor_node_id",
         "created_at",
         "work_type",
+        "job_type",
+        "capability",
         "contribution_summary",
         "source",
         "manifest_links",
@@ -47,6 +52,9 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
         _require_identifier(document, field)
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
+    if _require_string(document, "job_type") not in PHASE_1_CONTRIBUTION_JOB_TYPES:
+        raise ContributionRecordError("job_type is not an allowed Phase 1 job type")
+    _require_capability(document, "capability")
     _require_string(document, "contribution_summary")
     _source(document["source"])
     _manifest_links(document["manifest_links"])
@@ -86,6 +94,16 @@ def _require_string(document: dict[str, Any], field: str) -> str:
     value = document.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ContributionRecordError(f"{field} must be a non-empty string")
+    return value
+
+
+def _require_capability(document: dict[str, Any], field: str) -> str:
+    """Require a canonical local manifest capability identifier."""
+    value = _require_string(document, field)
+    if not re.fullmatch(r"(?:work|provenance)\.[a-z][a-z0-9_]*", value):
+        raise ContributionRecordError(
+            f"{field} must be a canonical local manifest capability identifier"
+        )
     return value
 
 

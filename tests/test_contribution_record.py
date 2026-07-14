@@ -6,6 +6,7 @@ from typing import Any
 
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
+    PHASE_1_CONTRIBUTION_JOB_TYPES,
     validate_contribution_record,
 )
 
@@ -28,6 +29,21 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["job_id"], job["job_id"])
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
+
+    def test_each_phase_1_job_type_is_written_with_its_capability(self) -> None:
+        records = [
+            self._load(f"phase-1-{job_type}.json")
+            for job_type in sorted(PHASE_1_CONTRIBUTION_JOB_TYPES)
+        ]
+
+        self.assertEqual(
+            {record["job_type"] for record in records},
+            PHASE_1_CONTRIBUTION_JOB_TYPES,
+        )
+        for record in records:
+            with self.subTest(job_type=record["job_type"]):
+                self.assertIs(validate_contribution_record(record), record)
+                self.assertRegex(record["capability"], r"^(?:work|provenance)\.")
 
     def test_linked_failed_record_retains_manifest_lineage_and_attribution(
         self,
@@ -115,6 +131,35 @@ class ContributionRecordTests(unittest.TestCase):
                 self.assertEqual(record["creator_node_id"], creator_node_id)
                 self.assertEqual(record["attribution"], attribution)
 
+    def test_missing_job_type_or_capability_is_rejected_without_losing_evidence(
+        self,
+    ) -> None:
+        for field in ("job_type", "capability"):
+            with self.subTest(field=field):
+                record = copy.deepcopy(self.failed)
+                evidence = {
+                    "creator_node_id": record["creator_node_id"],
+                    "manifest_links": copy.deepcopy(record["manifest_links"]),
+                    "validation_receipt_ref": record["validation"][
+                        "validation_receipt_ref"
+                    ],
+                    "lineage": copy.deepcopy(record["lineage"]),
+                    "attribution": copy.deepcopy(record["attribution"]),
+                }
+                record.pop(field)
+                with self.assertRaisesRegex(
+                    ContributionRecordError, f"missing: {field}"
+                ):
+                    validate_contribution_record(record)
+                self.assertEqual(record["creator_node_id"], evidence["creator_node_id"])
+                self.assertEqual(record["manifest_links"], evidence["manifest_links"])
+                self.assertEqual(
+                    record["validation"]["validation_receipt_ref"],
+                    evidence["validation_receipt_ref"],
+                )
+                self.assertEqual(record["lineage"], evidence["lineage"])
+                self.assertEqual(record["attribution"], evidence["attribution"])
+
     def test_failed_validation_requires_reason_without_losing_other_evidence(
         self,
     ) -> None:
@@ -137,6 +182,8 @@ class ContributionRecordTests(unittest.TestCase):
                 "created_at",
             ),
             (lambda record: record.update(work_type=""), "work_type"),
+            (lambda record: record.update(job_type="unknown"), "job_type"),
+            (lambda record: record.update(capability="echo"), "capability"),
             (
                 lambda record: record.update(unreviewed_network_claim=True),
                 "unsupported fields",
