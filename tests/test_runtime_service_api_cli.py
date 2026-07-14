@@ -22,6 +22,7 @@ from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.local_json_helpers import canonical_json_hash
+from aethermesh_core.models import JobResult
 from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.release_update import ReleaseUpdateError
@@ -4282,6 +4283,85 @@ class AppCliTests(unittest.TestCase):
 
 
 class LocalSafetyMetadataTests(unittest.TestCase):
+    def test_invalid_outputs_emit_rejected_receipts_with_preserved_provenance(
+        self,
+    ) -> None:
+        request = {
+            "schema_version": 1,
+            "job_type": "echo",
+            "requested_capability": {"identifier": "work.echo"},
+            "input_payload": {
+                "payload_type": "json",
+                "content": {"message": "expected"},
+            },
+            "creator_node_id": "creator-local-a",
+            "requested_validation_mode": "deterministic-local",
+            "lineage_parent_refs": ["data/prior-job.json"],
+            "attribution_metadata": {"source": "test"},
+        }
+        invalid_outputs = (
+            ("incomplete output", None, "output_schema.v1.echo.output: expected str"),
+            ("manifest expectation mismatch", "unexpected", "output_mismatch"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = NodeRuntimeService.from_home(temp_dir)
+            for name, output, expected_reason in invalid_outputs:
+                with self.subTest(name=name):
+                    submission = service.submit_local_job(request)
+                    with patch(
+                        "aethermesh_core.runtime_service.run_local_job",
+                        return_value=JobResult(
+                            job_id=submission["job_id"],
+                            node_id="worker-local-a",
+                            status="completed",
+                            output=output,
+                            error=None,
+                            contribution_units=1,
+                        ),
+                    ):
+                        status = service.execute_submitted_local_job(
+                            submission["job_id"], "worker-local-a"
+                        )
+
+                    receipt = service.get_local_validation_receipt(
+                        work_id=submission["job_id"]
+                    )
+                    self.assertEqual(status["status"], "failed")
+                    self.assertFalse(status["validation"]["passed"])
+                    self.assertEqual(receipt["status"], "rejected")
+                    self.assertNotIn(receipt["status"], {"accepted", "pending"})
+                    self.assertEqual(receipt["rejection_reason"], expected_reason)
+                    self.assertEqual(
+                        receipt["rejection_reason"], status["validation"]["reason"]
+                    )
+                    self.assertEqual(
+                        receipt["creator_node_id"], request["creator_node_id"]
+                    )
+                    self.assertEqual(
+                        receipt["manifest_ref"], submission["manifest_ref"]
+                    )
+                    self.assertEqual(
+                        receipt["lineage_parent_ids"], request["lineage_parent_refs"]
+                    )
+                    self.assertEqual(
+                        receipt["contribution_attribution"],
+                        status["contribution_attribution"],
+                    )
+                    self.assertEqual(
+                        receipt["contribution_attribution"],
+                        {
+                            "job_id": submission["job_id"],
+                            "creator_node_id": request["creator_node_id"],
+                            "metadata": request["attribution_metadata"],
+                            "worker_node_id": "worker-local-a",
+                            "executor_node_id": "worker-local-a",
+                            "validated_contribution_units": 0,
+                        },
+                    )
+            contribution_summary = service.contribution_summary()
+            self.assertEqual(contribution_summary["accepted_work_count"], 0)
+            self.assertEqual(contribution_summary["non_accepted_work_count"], 2)
+
     def test_timeout_and_cancellation_record_failed_local_evidence(self) -> None:
         request = {
             "schema_version": 1,
