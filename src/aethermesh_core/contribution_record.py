@@ -1,4 +1,4 @@
-"""Validation for the local-only version 5 contribution record contract."""
+"""Validation for the local-only version 4 contribution record contract."""
 
 from __future__ import annotations
 
@@ -18,10 +18,8 @@ from aethermesh_core.validation_receipt_schema import (
     validation_receipt_id,
 )
 
-CONTRIBUTION_RECORD_SCHEMA_VERSION = 5
-VALIDATION_STATUSES = frozenset(
-    {"unvalidated", "pending", "valid", "invalid", "superseded"}
-)
+CONTRIBUTION_RECORD_SCHEMA_VERSION = 4
+VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
 PHASE_1_JOB_CAPABILITIES = {
@@ -135,7 +133,7 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "validation receipt result_hash does not match contribution record"
         )
-    expected_status = "valid" if receipt["validation_status"] == "pass" else "invalid"
+    expected_status = "passed" if receipt["validation_status"] == "pass" else "failed"
     if contribution["validation"]["status"] != expected_status:
         raise ContributionRecordError(
             "validation receipt status does not match contribution record"
@@ -324,91 +322,22 @@ def _validation(value: object) -> None:
                 "validation_receipt_ref",
                 "validated_at",
                 "failure_reason",
-                "status_history",
             }
         ),
         "validation",
     )
-    _validation_status_fields(validation, "validation")
-    history = validation["status_history"]
-    if not isinstance(history, list) or not history:
-        raise ContributionRecordError(
-            "validation.status_history must be a non-empty list"
-        )
-    for index, event in enumerate(history):
-        if not isinstance(event, dict):
-            raise ContributionRecordError(
-                "validation.status_history entries must be objects"
-            )
-        _exact_fields(
-            event,
-            frozenset(
-                {
-                    "status",
-                    "validator_node_id",
-                    "validation_receipt_ref",
-                    "validated_at",
-                    "failure_reason",
-                }
-            ),
-            "validation.status_history entry",
-        )
-        _validation_status_fields(event, "validation.status_history entry")
-        if index and event["status"] == history[index - 1]["status"]:
-            raise ContributionRecordError(
-                "validation.status_history must record status changes"
-            )
-    if history[-1] != {
-        field: validation[field]
-        for field in (
-            "status",
-            "validator_node_id",
-            "validation_receipt_ref",
-            "validated_at",
-            "failure_reason",
-        )
-    }:
-        raise ContributionRecordError(
-            "validation.status_history must preserve the current validation status"
-        )
-
-
-def _validation_status_fields(validation: dict[str, Any], label: str) -> None:
     status = _require_string(validation, "status")
     if status not in VALIDATION_STATUSES:
-        raise ContributionRecordError(f"{label}.status is not allowed")
+        raise ContributionRecordError("validation.status is not allowed")
     _optional_identifier(validation, "validator_node_id")
     _optional_ref(validation, "validation_receipt_ref")
     _optional_timestamp(validation, "validated_at")
     _optional_string(validation, "failure_reason")
-    if status == "unvalidated":
-        if any(
-            validation[field] is not None
-            for field in (
-                "validator_node_id",
-                "validation_receipt_ref",
-                "validated_at",
-                "failure_reason",
-            )
-        ):
-            raise ContributionRecordError(
-                f"{label}.unvalidated status cannot include validation evidence"
-            )
-        return
-    if any(
-        validation[field] is None
-        for field in ("validator_node_id", "validation_receipt_ref", "validated_at")
-    ):
+    if status == "failed" and validation["failure_reason"] is None:
+        raise ContributionRecordError("failed validation requires failure_reason")
+    if status != "failed" and validation["failure_reason"] is not None:
         raise ContributionRecordError(
-            f"{label}.{status} status requires local validation evidence"
-        )
-    if status in {"invalid", "superseded"} and validation["failure_reason"] is None:
-        raise ContributionRecordError(
-            f"{label}.{status} status requires failure_reason"
-        )
-    if status in {"pending", "valid"} and validation["failure_reason"] is not None:
-        raise ContributionRecordError(
-            f"{label}.{status} status cannot include failure_reason"
+            "only failed validation may include failure_reason"
         )
 
 

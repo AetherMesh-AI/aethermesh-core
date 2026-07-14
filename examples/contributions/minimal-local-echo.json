@@ -1,5 +1,5 @@
 {
-  "schema_version": 5,
+  "schema_version": 4,
   "record_id": "contribution.echo-0001",
   "job_id": "local-job-echo-001",
   "validation_receipt_id": "local-validation-receipt-local-job-echo-001",
@@ -12,57 +12,9 @@
   "job_type": "echo",
   "capability": "work.echo",
   "contribution_summary": "Completed one local echo job.",
-  "source": {
-    "local_source_path": "examples/job-results/local-echo-success.json",
-    "artifact_ref": null
-  },
-  "manifest_links": {
-    "node_manifest_ref": null,
-    "work_manifest_ref": "examples/job-envelopes/minimal-local-echo.json",
-    "input_manifest_ref": null,
-    "output_manifest_ref": "examples/job-results/local-echo-success.json",
-    "validation_manifest_ref": "examples/validation-receipts/local-echo-pass.json"
-  },
-  "validation": {
-    "status": "valid",
-    "validator_node_id": "node.local-validator",
-    "validation_receipt_ref": "examples/validation-receipts/local-echo-pass.json",
-    "validated_at": "2026-07-13T12:00:01Z",
-    "failure_reason": null,
-    "status_history": [
-      {
-        "status": "unvalidated",
-        "validator_node_id": null,
-        "validation_receipt_ref": null,
-        "validated_at": null,
-        "failure_reason": null
-      },
-      {
-        "status": "valid",
-        "validator_node_id": "node.local-validator",
-        "validation_receipt_ref": "examples/validation-receipts/local-echo-pass.json",
-        "validated_at": "2026-07-13T12:00:01Z",
-        "failure_reason": null
-      }
-    ]
-  },
-  "lineage": {
-    "contributor_node_id": "node.local-worker",
-    "parent_contribution_ids": [],
-    "derived_artifact_ids": [],
-    "input_hashes": [
-      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    ],
-    "output_hashes": [
-      "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6"
-    ],
-    "deterministic_reproduction_notes": "Replay the linked local validation receipt and result artifact."
-  },
-  "attribution": {
-    "author_id": "node.local-worker",
-    "author_kind": "node",
-    "role": "worker",
-    "declared_tool_or_runtime": "aethermesh-core",
-    "creation_mode": "automatic"
-  }
+  "source": {"local_source_path": "examples/job-results/local-echo-success.json", "artifact_ref": null},
+  "manifest_links": {"node_manifest_ref": null, "work_manifest_ref": "examples/job-envelopes/minimal-local-echo.json", "input_manifest_ref": null, "output_manifest_ref": "examples/job-results/local-echo-success.json", "validation_manifest_ref": "examples/validation-receipts/local-echo-pass.json"},
+  "validation": {"status": "passed", "validator_node_id": "node.local-validator", "validation_receipt_ref": "examples/validation-receipts/local-echo-pass.json", "validated_at": "2026-07-13T12:00:01Z", "failure_reason": null},
+  "lineage": {"contributor_node_id": "node.local-worker", "parent_contribution_ids": [], "derived_artifact_ids": [], "input_hashes": ["sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"], "output_hashes": ["sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6"], "deterministic_reproduction_notes": "Replay the linked local validation receipt and result artifact."},
+  "attribution": {"author_id": "node.local-worker", "author_kind": "node", "role": "worker", "declared_tool_or_runtime": "aethermesh-core", "creation_mode": "automatic"}
 }

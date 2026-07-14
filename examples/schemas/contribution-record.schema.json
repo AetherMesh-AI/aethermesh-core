@@ -5,513 +5,65 @@
   "description": "Local-first attribution and audit record. It does not claim consensus, peer agreement, rewards, or decentralization.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "record_id",
-    "job_id",
-    "validation_receipt_id",
-    "result_hash_algorithm",
-    "result_hash",
-    "creator_node_id",
-    "contributor_node_id",
-    "created_at",
-    "work_type",
-    "job_type",
-    "capability",
-    "contribution_summary",
-    "source",
-    "manifest_links",
-    "validation",
-    "lineage",
-    "attribution"
-  ],
+  "required": ["schema_version", "record_id", "job_id", "validation_receipt_id", "result_hash_algorithm", "result_hash", "creator_node_id", "contributor_node_id", "created_at", "work_type", "job_type", "capability", "contribution_summary", "source", "manifest_links", "validation", "lineage", "attribution"],
   "oneOf": [
-    {
-      "properties": {
-        "work_type": {
-          "const": "basic_compute"
-        },
-        "job_type": {
-          "const": "basic_compute"
-        },
-        "capability": {
-          "const": "work.basic_compute"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "echo"
-        },
-        "job_type": {
-          "const": "echo"
-        },
-        "capability": {
-          "const": "work.echo"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "hash"
-        },
-        "job_type": {
-          "const": "hash"
-        },
-        "capability": {
-          "const": "work.hash"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "keyword_extract"
-        },
-        "job_type": {
-          "const": "keyword_extract"
-        },
-        "capability": {
-          "const": "work.keyword_extract"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "schema_transform"
-        },
-        "job_type": {
-          "const": "schema_transform"
-        },
-        "capability": {
-          "const": "work.schema_transform"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "text_chunk"
-        },
-        "job_type": {
-          "const": "text_chunk"
-        },
-        "capability": {
-          "const": "work.text_chunk"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "text_embed"
-        },
-        "job_type": {
-          "const": "text_embed"
-        },
-        "capability": {
-          "const": "work.text_embed"
-        }
-      }
-    },
-    {
-      "properties": {
-        "work_type": {
-          "const": "text_stats"
-        },
-        "job_type": {
-          "const": "text_stats"
-        },
-        "capability": {
-          "const": "work.text_stats"
-        }
-      }
-    }
+    {"properties": {"work_type": {"const": "basic_compute"}, "job_type": {"const": "basic_compute"}, "capability": {"const": "work.basic_compute"}}},
+    {"properties": {"work_type": {"const": "echo"}, "job_type": {"const": "echo"}, "capability": {"const": "work.echo"}}},
+    {"properties": {"work_type": {"const": "hash"}, "job_type": {"const": "hash"}, "capability": {"const": "work.hash"}}},
+    {"properties": {"work_type": {"const": "keyword_extract"}, "job_type": {"const": "keyword_extract"}, "capability": {"const": "work.keyword_extract"}}},
+    {"properties": {"work_type": {"const": "schema_transform"}, "job_type": {"const": "schema_transform"}, "capability": {"const": "work.schema_transform"}}},
+    {"properties": {"work_type": {"const": "text_chunk"}, "job_type": {"const": "text_chunk"}, "capability": {"const": "work.text_chunk"}}},
+    {"properties": {"work_type": {"const": "text_embed"}, "job_type": {"const": "text_embed"}, "capability": {"const": "work.text_embed"}}},
+    {"properties": {"work_type": {"const": "text_stats"}, "job_type": {"const": "text_stats"}, "capability": {"const": "work.text_stats"}}}
   ],
   "properties": {
-    "schema_version": {
-      "const": 5
-    },
-    "record_id": {
-      "$ref": "#/$defs/identifier"
-    },
-    "job_id": {
-      "$ref": "#/$defs/localJobId"
-    },
-    "validation_receipt_id": {
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "^local-validation-receipt-[a-z0-9][a-z0-9-]{0,127}$"
-        },
-        {
-          "type": "string",
-          "pattern": "^local-validation-receipt-sha256:[0-9a-f]{64}$"
-        }
-      ]
-    },
-    "result_hash_algorithm": {
-      "const": "sha256"
-    },
-    "result_hash": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
-    },
-    "creator_node_id": {
-      "$ref": "#/$defs/identifier"
-    },
-    "contributor_node_id": {
-      "$ref": "#/$defs/identifier"
-    },
-    "created_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-    },
-    "work_type": {
-      "type": "string",
-      "minLength": 1
-    },
-    "job_type": {
-      "type": "string",
-      "enum": [
-        "basic_compute",
-        "echo",
-        "hash",
-        "keyword_extract",
-        "schema_transform",
-        "text_chunk",
-        "text_embed",
-        "text_stats"
-      ]
-    },
-    "capability": {
-      "type": "string",
-      "enum": [
-        "work.basic_compute",
-        "work.echo",
-        "work.hash",
-        "work.keyword_extract",
-        "work.schema_transform",
-        "work.text_chunk",
-        "work.text_embed",
-        "work.text_stats"
-      ]
-    },
-    "contribution_summary": {
-      "type": "string",
-      "minLength": 1
-    },
+    "schema_version": {"const": 4},
+    "record_id": {"$ref": "#/$defs/identifier"},
+    "job_id": {"$ref": "#/$defs/localJobId"},
+    "validation_receipt_id": {"anyOf": [{"type": "string", "pattern": "^local-validation-receipt-[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^local-validation-receipt-sha256:[0-9a-f]{64}$"}]},
+    "result_hash_algorithm": {"const": "sha256"},
+    "result_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "creator_node_id": {"$ref": "#/$defs/identifier"},
+    "contributor_node_id": {"$ref": "#/$defs/identifier"},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "work_type": {"type": "string", "minLength": 1},
+    "job_type": {"type": "string", "enum": ["basic_compute", "echo", "hash", "keyword_extract", "schema_transform", "text_chunk", "text_embed", "text_stats"]},
+    "capability": {"type": "string", "enum": ["work.basic_compute", "work.echo", "work.hash", "work.keyword_extract", "work.schema_transform", "work.text_chunk", "work.text_embed", "work.text_stats"]},
+    "contribution_summary": {"type": "string", "minLength": 1},
     "source": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "local_source_path",
-        "artifact_ref"
-      ],
-      "properties": {
-        "local_source_path": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "artifact_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        }
-      },
-      "anyOf": [
-        {
-          "properties": {
-            "local_source_path": {
-              "type": "string"
-            }
-          }
-        },
-        {
-          "properties": {
-            "artifact_ref": {
-              "type": "string"
-            }
-          }
-        }
-      ]
+      "type": "object", "additionalProperties": false,
+      "required": ["local_source_path", "artifact_ref"],
+      "properties": {"local_source_path": {"$ref": "#/$defs/localRefOrNull"}, "artifact_ref": {"$ref": "#/$defs/localRefOrNull"}},
+      "anyOf": [{"properties": {"local_source_path": {"type": "string"}}}, {"properties": {"artifact_ref": {"type": "string"}}}]
     },
     "manifest_links": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "node_manifest_ref",
-        "work_manifest_ref",
-        "input_manifest_ref",
-        "output_manifest_ref",
-        "validation_manifest_ref"
-      ],
-      "properties": {
-        "node_manifest_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "work_manifest_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "input_manifest_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "output_manifest_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "validation_manifest_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        }
-      }
+      "type": "object", "additionalProperties": false,
+      "required": ["node_manifest_ref", "work_manifest_ref", "input_manifest_ref", "output_manifest_ref", "validation_manifest_ref"],
+      "properties": {"node_manifest_ref": {"$ref": "#/$defs/localRefOrNull"}, "work_manifest_ref": {"$ref": "#/$defs/localRefOrNull"}, "input_manifest_ref": {"$ref": "#/$defs/localRefOrNull"}, "output_manifest_ref": {"$ref": "#/$defs/localRefOrNull"}, "validation_manifest_ref": {"$ref": "#/$defs/localRefOrNull"}}
     },
     "validation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status",
-        "validator_node_id",
-        "validation_receipt_ref",
-        "validated_at",
-        "failure_reason",
-        "status_history"
-      ],
-      "properties": {
-        "status": {
-          "enum": [
-            "unvalidated",
-            "pending",
-            "valid",
-            "invalid",
-            "superseded"
-          ]
-        },
-        "validator_node_id": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/identifier"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "validation_receipt_ref": {
-          "$ref": "#/$defs/localRefOrNull"
-        },
-        "validated_at": {
-          "anyOf": [
-            {
-              "type": "string",
-              "format": "date-time",
-              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "failure_reason": {
-          "anyOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "status_history": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "status",
-              "validator_node_id",
-              "validation_receipt_ref",
-              "validated_at",
-              "failure_reason"
-            ],
-            "properties": {
-              "status": {
-                "enum": [
-                  "unvalidated",
-                  "pending",
-                  "valid",
-                  "invalid",
-                  "superseded"
-                ]
-              },
-              "validator_node_id": {
-                "anyOf": [
-                  {
-                    "$ref": "#/$defs/identifier"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "validation_receipt_ref": {
-                "$ref": "#/$defs/localRefOrNull"
-              },
-              "validated_at": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "format": "date-time",
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "failure_reason": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "allOf": []
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "validator_node_id", "validation_receipt_ref", "validated_at", "failure_reason"],
+      "properties": {"status": {"enum": ["unvalidated", "passed", "failed"]}, "validator_node_id": {"anyOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]}, "validation_receipt_ref": {"$ref": "#/$defs/localRefOrNull"}, "validated_at": {"anyOf": [{"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}, {"type": "null"}]}, "failure_reason": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}},
+      "allOf": [{"if": {"properties": {"status": {"const": "failed"}}}, "then": {"properties": {"failure_reason": {"type": "string", "minLength": 1}}}}, {"if": {"properties": {"status": {"enum": ["unvalidated", "passed"]}}}, "then": {"properties": {"failure_reason": {"type": "null"}}}}]
     },
     "lineage": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "contributor_node_id",
-        "parent_contribution_ids",
-        "derived_artifact_ids",
-        "input_hashes",
-        "output_hashes",
-        "deterministic_reproduction_notes"
-      ],
-      "properties": {
-        "contributor_node_id": {
-          "$ref": "#/$defs/identifier"
-        },
-        "parent_contribution_ids": {
-          "$ref": "#/$defs/identifierList"
-        },
-        "derived_artifact_ids": {
-          "$ref": "#/$defs/identifierList"
-        },
-        "input_hashes": {
-          "$ref": "#/$defs/hashList"
-        },
-        "output_hashes": {
-          "$ref": "#/$defs/hashList"
-        },
-        "deterministic_reproduction_notes": {
-          "anyOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      }
+      "type": "object", "additionalProperties": false,
+      "required": ["contributor_node_id", "parent_contribution_ids", "derived_artifact_ids", "input_hashes", "output_hashes", "deterministic_reproduction_notes"],
+      "properties": {"contributor_node_id": {"$ref": "#/$defs/identifier"}, "parent_contribution_ids": {"$ref": "#/$defs/identifierList"}, "derived_artifact_ids": {"$ref": "#/$defs/identifierList"}, "input_hashes": {"$ref": "#/$defs/hashList"}, "output_hashes": {"$ref": "#/$defs/hashList"}, "deterministic_reproduction_notes": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}}
     },
     "attribution": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "author_id",
-        "author_kind",
-        "role",
-        "declared_tool_or_runtime",
-        "creation_mode"
-      ],
-      "properties": {
-        "author_id": {
-          "$ref": "#/$defs/identifier"
-        },
-        "author_kind": {
-          "enum": [
-            "human",
-            "node"
-          ]
-        },
-        "role": {
-          "type": "string",
-          "minLength": 1
-        },
-        "declared_tool_or_runtime": {
-          "anyOf": [
-            {
-              "type": "string",
-              "minLength": 1
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "creation_mode": {
-          "enum": [
-            "manual",
-            "automatic"
-          ]
-        }
-      }
+      "type": "object", "additionalProperties": false,
+      "required": ["author_id", "author_kind", "role", "declared_tool_or_runtime", "creation_mode"],
+      "properties": {"author_id": {"$ref": "#/$defs/identifier"}, "author_kind": {"enum": ["human", "node"]}, "role": {"type": "string", "minLength": 1}, "declared_tool_or_runtime": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}, "creation_mode": {"enum": ["manual", "automatic"]}}
     }
   },
   "$defs": {
-    "identifier": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"
-    },
-    "localJobId": {
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9-]{0,127}$"
-        },
-        {
-          "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
-        }
-      ]
-    },
-    "identifierList": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/identifier"
-      }
-    },
-    "hashList": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "pattern": "^sha256:[0-9a-f]{64}$"
-      }
-    },
-    "localRefOrNull": {
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    }
+    "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"},
+    "localJobId": {"anyOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,127}$"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
+    "identifierList": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
+    "hashList": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+    "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]}
   },
-  "x-aethermesh-schema-version": "5.0.0"
+  "x-aethermesh-schema-version": "4.0.0"
 }
