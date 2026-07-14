@@ -5,7 +5,7 @@
   "description": "Local-first attribution and audit record. It does not claim consensus, peer agreement, rewards, or decentralization.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "record_id", "job_id", "creator_node_id", "contributor_node_id", "created_at", "work_type", "job_type", "capability", "contribution_summary", "source", "manifest_links", "validation", "lineage", "attribution"],
+  "required": ["schema_version", "record_id", "job_id", "creator_node_id", "contributor_node_id", "created_at", "work_type", "job_type", "capability", "contribution_summary", "result_hash_algorithm", "result_hash", "source", "manifest_links", "validation", "lineage", "attribution"],
   "properties": {
     "schema_version": {"const": 1},
     "record_id": {"$ref": "#/$defs/identifier"},
@@ -17,6 +17,8 @@
     "job_type": {"enum": ["echo", "hash", "basic_compute", "schema_transform", "keyword_extract", "text_chunk", "text_embed", "text_stats"]},
     "capability": {"enum": ["work.echo", "work.hash", "work.basic_compute", "work.schema_transform", "work.keyword_extract", "work.text_chunk", "work.text_embed", "work.text_stats"]},
     "contribution_summary": {"type": "string", "minLength": 1},
+    "result_hash_algorithm": {"const": "sha256"},
+    "result_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "source": {
       "type": "object", "additionalProperties": false,
       "required": ["local_source_path", "artifact_ref"],

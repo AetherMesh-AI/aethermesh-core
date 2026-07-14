@@ -8,7 +8,9 @@ from aethermesh_core.contribution_record import (
     ContributionRecordError,
     PHASE1_JOB_CAPABILITIES,
     validate_contribution_record,
+    validate_contribution_result_hash,
 )
+from aethermesh_core.result_hash import canonical_result_document_hash
 
 
 class ContributionRecordTests(unittest.TestCase):
@@ -27,7 +29,28 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["job_type"], "echo")
         self.assertEqual(self.minimal["capability"], "work.echo")
+        self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
+        self.assertRegex(self.minimal["result_hash"], r"^sha256:[0-9a-f]{64}$")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
+
+    def test_result_hash_keeps_required_evidence_without_replacing_it(self) -> None:
+        record = copy.deepcopy(self.failed)
+        result = self._load_result("local-echo-failed.json")
+        record["result_hash"] = canonical_result_document_hash(result)
+
+        self.assertIs(validate_contribution_result_hash(record, result), record)
+        self.assertEqual(record["creator_node_id"], "node.local-creator")
+        self.assertIsNotNone(record["manifest_links"]["work_manifest_ref"])
+        self.assertIsNotNone(record["validation"]["validation_receipt_ref"])
+        self.assertIn("parent_contribution_ids", record["lineage"])
+
+    def test_mismatched_result_hash_fails_contribution_validation_clearly(self) -> None:
+        record = copy.deepcopy(self.failed)
+        result = self._load_result("local-echo-failed.json")
+        record["result_hash"] = "sha256:" + "0" * 64
+
+        with self.assertRaisesRegex(ContributionRecordError, "does not match"):
+            validate_contribution_result_hash(record, result)
 
     def test_every_phase_1_job_type_records_its_manifest_capability(self) -> None:
         for job_type, capability in PHASE1_JOB_CAPABILITIES.items():
@@ -133,6 +156,8 @@ class ContributionRecordTests(unittest.TestCase):
             (lambda record: record.update(work_type=""), "work_type"),
             (lambda record: record.update(job_type="routing"), "job_type"),
             (lambda record: record.update(capability="work.hash"), "capability"),
+            (lambda record: record.update(result_hash_algorithm="sha512"), "algorithm"),
+            (lambda record: record.update(result_hash="sha256:bad"), "result_hash"),
             (
                 lambda record: record.update(unreviewed_network_claim=True),
                 "unsupported fields",
@@ -229,6 +254,11 @@ class ContributionRecordTests(unittest.TestCase):
             (self.root / "examples/validation-receipts" / name).read_text(
                 encoding="utf-8"
             )
+        )
+
+    def _load_result(self, name: str) -> dict[str, Any]:
+        return json.loads(
+            (self.root / "examples/job-results" / name).read_text(encoding="utf-8")
         )
 
     def _load_job_envelope(self, name: str) -> dict[str, Any]:

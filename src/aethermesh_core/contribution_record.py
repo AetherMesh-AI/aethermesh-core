@@ -6,6 +6,11 @@ import re
 from datetime import datetime
 from typing import Any
 
+from aethermesh_core.result_hash import (
+    RESULT_HASH_ALGORITHM,
+    canonical_result_document_hash,
+)
+
 CONTRIBUTION_RECORD_SCHEMA_VERSION = 1
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
@@ -32,6 +37,8 @@ _TOP_LEVEL_FIELDS = frozenset(
         "job_type",
         "capability",
         "contribution_summary",
+        "result_hash_algorithm",
+        "result_hash",
         "source",
         "manifest_links",
         "validation",
@@ -63,12 +70,27 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _require_string(document, "work_type")
     _job_metadata(document)
     _require_string(document, "contribution_summary")
+    _result_hash(document)
     _source(document["source"])
     _manifest_links(document["manifest_links"])
     _validation(document["validation"])
     _lineage(document["lineage"], document["contributor_node_id"])
     _attribution(document["attribution"])
     return document
+
+
+def validate_contribution_result_hash(
+    document: object, result_document: object
+) -> dict[str, Any]:
+    """Reject a contribution when its stored hash differs from its result payload."""
+
+    contribution = validate_contribution_record(document)
+    expected_hash = canonical_result_document_hash(result_document)
+    if contribution["result_hash"] != expected_hash:
+        raise ContributionRecordError(
+            "contribution record.result_hash does not match the canonical result payload"
+        )
+    return contribution
 
 
 def _job_metadata(document: dict[str, Any]) -> None:
@@ -81,6 +103,16 @@ def _job_metadata(document: dict[str, Any]) -> None:
         raise ContributionRecordError(
             "capability must match the local manifest capability for job_type"
         )
+
+
+def _result_hash(document: dict[str, Any]) -> None:
+    if document.get("result_hash_algorithm") != RESULT_HASH_ALGORITHM:
+        raise ContributionRecordError(
+            f"result_hash_algorithm must be {RESULT_HASH_ALGORITHM}"
+        )
+    value = document.get("result_hash")
+    if not isinstance(value, str) or not _SHA256.fullmatch(value):
+        raise ContributionRecordError("result_hash must be a lowercase SHA-256 digest")
 
 
 def _exact_fields(value: object, fields: frozenset[str], label: str) -> dict[str, Any]:

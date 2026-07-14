@@ -9,6 +9,8 @@
   "job_type": "echo",
   "capability": "work.echo",
   "contribution_summary": "Recorded a local echo attempt whose deterministic validation failed.",
+  "result_hash_algorithm": "sha256",
+  "result_hash": "sha256:3b0d225f1447065d935a498778b499a59c7fe30283b0d5830eb983322effe35a",
   "source": {"local_source_path": null, "artifact_ref": "examples/job-results/local-echo-failed.json"},
   "manifest_links": {"node_manifest_ref": "examples/local-node-identity.json", "work_manifest_ref": "examples/job-envelopes/complete-local-echo.json", "input_manifest_ref": "examples/job-envelope-inputs/local-echo-input.json", "output_manifest_ref": "examples/job-results/local-echo-failed.json", "validation_manifest_ref": "examples/validation-receipts/local-echo-fail.json"},
   "validation": {"status": "failed", "validator_node_id": "node.local-validator", "validation_receipt_ref": "examples/validation-receipts/local-echo-fail.json", "validated_at": "2026-07-13T12:06:00Z", "failure_reason": "output did not match deterministic echo expectation"},
