@@ -6,7 +6,7 @@ This record is evidence metadata only. It does not award credits, calculate rewa
 
 ## Required top-level fields
 
-`schema_version`, `record_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, and `contribution_summary` identify what was recorded and who created or performed the work. `source` requires either a safe local source path or artifact reference.
+`schema_version`, `record_id`, `job_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, and `contribution_summary` identify what was recorded, the local job that produced or requested it, and who created or performed the work. `job_id` uses the existing stable local job identifier format and is required for every record. `source` requires either a safe local source path or artifact reference.
 
 `manifest_links`, `validation`, `lineage`, and `attribution` are always present so their empty or unavailable state is explicit. References that are not applicable use `null`; lineage lists use `[]`. This lets a minimal local prototype emit an honest `unvalidated` record without inventing manifests or validation.
 
@@ -14,7 +14,7 @@ This record is evidence metadata only. It does not award credits, calculate rewa
 
 `validation.status` is `unvalidated`, `passed`, or `failed`. Validator identity, receipt reference, and timestamp are optional when unavailable. A failed validation requires `failure_reason`; it preserves all contribution attribution and lineage rather than deleting the record.
 
-`lineage` records parent contribution IDs, derived artifact IDs, input/output SHA-256 hashes, and optional deterministic reproduction notes. `manifest_links` can associate node, work, input, output, and validation manifests when they exist.
+`lineage` records parent contribution IDs, derived artifact IDs, input/output SHA-256 hashes, and optional deterministic reproduction notes. Together with the required `job_id`, `manifest_links` can associate node, work, input, output, and validation manifests and receipts with the exact local runnable unit when they exist.
 
 ## Attribution
 

@@ -14,6 +14,7 @@ _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "record_id",
+        "job_id",
         "creator_node_id",
         "contributor_node_id",
         "created_at",
@@ -42,7 +43,7 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
         raise ContributionRecordError("contribution record must be an object")
     _exact_fields(document, _TOP_LEVEL_FIELDS, "contribution record")
     _require_int(document, "schema_version", CONTRIBUTION_RECORD_SCHEMA_VERSION)
-    for field in ("record_id", "creator_node_id", "contributor_node_id"):
+    for field in ("record_id", "job_id", "creator_node_id", "contributor_node_id"):
         _require_identifier(document, field)
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")

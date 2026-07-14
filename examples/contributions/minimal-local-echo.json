@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "record_id": "contribution.echo-0001",
+  "job_id": "local-echo-minimal-001",
   "creator_node_id": "node.local-01",
   "contributor_node_id": "node.local-01",
   "created_at": "2026-07-13T12:00:00Z",

@@ -20,6 +20,12 @@ class ContributionRecordTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
+        job = json.loads(
+            (self.root / "examples/job-envelopes/minimal-local-echo.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(self.minimal["job_id"], job["job_id"])
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
 
@@ -32,6 +38,13 @@ class ContributionRecordTests(unittest.TestCase):
             self.failed["validation"]["validation_receipt_ref"],
             "examples/validation-receipts/local-echo-fail.json",
         )
+        receipt = json.loads(
+            (self.root / self.failed["validation"]["validation_receipt_ref"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(self.failed["job_id"], receipt["job_id"])
+        self.assertEqual(self.failed["job_id"], receipt["work_id"])
         self.assertEqual(
             self.failed["lineage"]["parent_contribution_ids"],
             ["contribution.echo-0001"],
@@ -60,6 +73,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_missing_required_record_identity_and_timestamp_fields_fail(self) -> None:
         for field in (
             "record_id",
+            "job_id",
             "creator_node_id",
             "contributor_node_id",
             "created_at",
@@ -71,6 +85,18 @@ class ContributionRecordTests(unittest.TestCase):
                     ContributionRecordError, f"missing: {field}"
                 ):
                     validate_contribution_record(record)
+
+    def test_empty_or_invalid_job_id_fails_without_changing_attribution(self) -> None:
+        for job_id in ("", "invalid job id"):
+            with self.subTest(job_id=job_id):
+                record = copy.deepcopy(self.failed)
+                creator_node_id = record["creator_node_id"]
+                attribution = copy.deepcopy(record["attribution"])
+                record["job_id"] = job_id
+                with self.assertRaisesRegex(ContributionRecordError, "job_id"):
+                    validate_contribution_record(record)
+                self.assertEqual(record["creator_node_id"], creator_node_id)
+                self.assertEqual(record["attribution"], attribution)
 
     def test_failed_validation_requires_reason_without_losing_other_evidence(
         self,
