@@ -1,14 +1,14 @@
 # Local Contribution Record Schema
 
-Version 2 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
+Version 3 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
 
-Version 2 supersedes version 1 by requiring `job_id`. Version 1 records remain identifiable as version 1 and must be migrated explicitly rather than silently reinterpreted.
+Version 3 supersedes version 2 by requiring `job_type` and `capability`. Earlier records remain identifiable by version and must be migrated explicitly rather than silently reinterpreted.
 
 This record is evidence metadata only. It does not award credits, calculate rewards, assert peer agreement, or claim consensus or decentralization.
 
 ## Required top-level fields
 
-`schema_version`, `record_id`, `job_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, and `contribution_summary` identify what was recorded and who created or performed the work. `job_id` uses the existing local job-envelope identifier format. `source` requires either a safe local source path or artifact reference.
+`schema_version`, `record_id`, `job_id`, `validation_receipt_id`, `creator_node_id`, `contributor_node_id`, `created_at`, `work_type`, `job_type`, `capability`, and `contribution_summary` identify what was recorded and who created or performed the work. `job_type` must match `work_type`, and `capability` must be the corresponding registered Phase 1 runtime capability. `job_id` uses the existing local job-envelope identifier format. `source` requires either a safe local source path or artifact reference.
 
 `manifest_links`, `validation`, `lineage`, and `attribution` are always present so their empty or unavailable state is explicit. References that are not applicable use `null`; lineage lists use `[]`. This lets a minimal local prototype emit an honest `unvalidated` record without inventing manifests or validation.
 

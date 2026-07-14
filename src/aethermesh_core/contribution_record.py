@@ -1,4 +1,4 @@
-"""Validation for the local-only version 2 contribution record contract."""
+"""Validation for the local-only version 3 contribution record contract."""
 
 from __future__ import annotations
 
@@ -14,10 +14,20 @@ from aethermesh_core.validation_receipt_schema import (
     validation_receipt_id,
 )
 
-CONTRIBUTION_RECORD_SCHEMA_VERSION = 2
+CONTRIBUTION_RECORD_SCHEMA_VERSION = 3
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
+PHASE_1_JOB_CAPABILITIES = {
+    "echo": "work.echo",
+    "hash": "work.hash",
+    "basic_compute": "work.basic_compute",
+    "schema_transform": "work.schema_transform",
+    "keyword_extract": "work.keyword_extract",
+    "text_chunk": "work.text_chunk",
+    "text_embed": "work.text_embed",
+    "text_stats": "work.text_stats",
+}
 _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
@@ -28,6 +38,8 @@ _TOP_LEVEL_FIELDS = frozenset(
         "contributor_node_id",
         "created_at",
         "work_type",
+        "job_type",
+        "capability",
         "contribution_summary",
         "source",
         "manifest_links",
@@ -62,6 +74,7 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
         )
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
+    _require_phase_1_job_capability(document)
     _require_string(document, "contribution_summary")
     _source(document["source"])
     _manifest_links(document["manifest_links"])
@@ -146,6 +159,10 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "work manifest creator_node_id does not match contribution record"
         )
+    if work_manifest.get("job_type") != contribution["job_type"]:
+        raise ContributionRecordError(
+            "work manifest job_type does not match contribution record"
+        )
     return contribution
 
 
@@ -191,6 +208,23 @@ def _require_string(document: dict[str, Any], field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ContributionRecordError(f"{field} must be a non-empty string")
     return value
+
+
+def _require_phase_1_job_capability(document: dict[str, Any]) -> None:
+    job_type = _require_string(document, "job_type")
+    expected_capability = PHASE_1_JOB_CAPABILITIES.get(job_type)
+    if expected_capability is None:
+        supported = ", ".join(sorted(PHASE_1_JOB_CAPABILITIES))
+        raise ContributionRecordError(
+            f"job_type must be one of the supported Phase 1 types: {supported}"
+        )
+    if document["work_type"] != job_type:
+        raise ContributionRecordError("work_type must match job_type")
+    capability = _require_string(document, "capability")
+    if capability != expected_capability:
+        raise ContributionRecordError(
+            "capability must match the local manifest capability for job_type"
+        )
 
 
 def _require_timestamp(document: dict[str, Any], field: str) -> None:
