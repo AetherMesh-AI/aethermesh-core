@@ -10,6 +10,16 @@ CONTRIBUTION_RECORD_SCHEMA_VERSION = 1
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
+PHASE1_JOB_CAPABILITIES = {
+    "echo": "work.echo",
+    "hash": "work.hash",
+    "basic_compute": "work.basic_compute",
+    "schema_transform": "work.schema_transform",
+    "keyword_extract": "work.keyword_extract",
+    "text_chunk": "work.text_chunk",
+    "text_embed": "work.text_embed",
+    "text_stats": "work.text_stats",
+}
 _TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
@@ -19,6 +29,8 @@ _TOP_LEVEL_FIELDS = frozenset(
         "contributor_node_id",
         "created_at",
         "work_type",
+        "job_type",
+        "capability",
         "contribution_summary",
         "source",
         "manifest_links",
@@ -49,6 +61,7 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _require_local_job_id(document, "job_id")
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
+    _job_metadata(document)
     _require_string(document, "contribution_summary")
     _source(document["source"])
     _manifest_links(document["manifest_links"])
@@ -56,6 +69,18 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _lineage(document["lineage"], document["contributor_node_id"])
     _attribution(document["attribution"])
     return document
+
+
+def _job_metadata(document: dict[str, Any]) -> None:
+    job_type = _require_string(document, "job_type")
+    capability = _require_string(document, "capability")
+    expected_capability = PHASE1_JOB_CAPABILITIES.get(job_type)
+    if expected_capability is None:
+        raise ContributionRecordError("job_type is not an allowed Phase 1 work type")
+    if capability != expected_capability:
+        raise ContributionRecordError(
+            "capability must match the local manifest capability for job_type"
+        )
 
 
 def _exact_fields(value: object, fields: frozenset[str], label: str) -> dict[str, Any]:

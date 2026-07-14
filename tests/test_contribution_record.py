@@ -6,6 +6,7 @@ from typing import Any
 
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
+    PHASE1_JOB_CAPABILITIES,
     validate_contribution_record,
 )
 
@@ -24,7 +25,17 @@ class ContributionRecordTests(unittest.TestCase):
             self.minimal["job_id"], "local-job-0123456789abcdef0123456789abcdef"
         )
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
+        self.assertEqual(self.minimal["job_type"], "echo")
+        self.assertEqual(self.minimal["capability"], "work.echo")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
+
+    def test_every_phase_1_job_type_records_its_manifest_capability(self) -> None:
+        for job_type, capability in PHASE1_JOB_CAPABILITIES.items():
+            with self.subTest(job_type=job_type):
+                record = copy.deepcopy(self.minimal)
+                record["job_type"] = job_type
+                record["capability"] = capability
+                self.assertIs(validate_contribution_record(record), record)
 
     def test_linked_failed_record_retains_manifest_lineage_and_attribution(
         self,
@@ -85,6 +96,8 @@ class ContributionRecordTests(unittest.TestCase):
             "creator_node_id",
             "contributor_node_id",
             "created_at",
+            "job_type",
+            "capability",
         ):
             with self.subTest(field=field):
                 record = copy.deepcopy(self.minimal)
@@ -118,6 +131,8 @@ class ContributionRecordTests(unittest.TestCase):
                 "created_at",
             ),
             (lambda record: record.update(work_type=""), "work_type"),
+            (lambda record: record.update(job_type="routing"), "job_type"),
+            (lambda record: record.update(capability="work.hash"), "capability"),
             (
                 lambda record: record.update(unreviewed_network_claim=True),
                 "unsupported fields",
