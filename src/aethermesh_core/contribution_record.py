@@ -1,4 +1,4 @@
-"""Validation for the local-only version 3 contribution record contract."""
+"""Validation for the local-only version 4 contribution record contract."""
 
 from __future__ import annotations
 
@@ -8,13 +8,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from aethermesh_core.job_result_schema import (
+    JobResultSchemaError,
+    validate_job_result_document,
+)
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     validate_validation_receipt_document,
     validation_receipt_id,
 )
 
-CONTRIBUTION_RECORD_SCHEMA_VERSION = 3
+CONTRIBUTION_RECORD_SCHEMA_VERSION = 4
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
@@ -34,6 +38,8 @@ _TOP_LEVEL_FIELDS = frozenset(
         "record_id",
         "job_id",
         "validation_receipt_id",
+        "result_hash_algorithm",
+        "result_hash",
         "creator_node_id",
         "contributor_node_id",
         "created_at",
@@ -72,6 +78,9 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
         raise ContributionRecordError(
             "validation_receipt_id must match the local validation receipt for job_id"
         )
+    if document["result_hash_algorithm"] != "sha256":
+        raise ContributionRecordError("result_hash_algorithm must be sha256")
+    _require_sha256(document, "result_hash")
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
     _require_phase_1_job_capability(document)
@@ -120,6 +129,10 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "validation receipt result_hash is not preserved in contribution lineage"
         )
+    if receipt["result_hash"] != contribution["result_hash"]:
+        raise ContributionRecordError(
+            "validation receipt result_hash does not match contribution record"
+        )
     expected_status = "passed" if receipt["validation_status"] == "pass" else "failed"
     if contribution["validation"]["status"] != expected_status:
         raise ContributionRecordError(
@@ -163,6 +176,29 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "work manifest job_type does not match contribution record"
         )
+    result_ref = contribution["source"]["local_source_path"]
+    if result_ref is None:
+        result_ref = contribution["source"]["artifact_ref"]
+    result_document = _read_local_json(local_root, result_ref, "result payload")
+    try:
+        result = validate_job_result_document(result_document)
+    except JobResultSchemaError as exc:
+        raise ContributionRecordError(
+            "result payload is invalid or its hash does not match its canonical payload"
+        ) from exc
+    result_evidence = {
+        "result_hash": contribution["result_hash"],
+        "job_id": contribution["job_id"],
+        "creator_node_id": contribution["creator_node_id"],
+        "executor_node_id": contribution["contributor_node_id"],
+        "manifest_id": receipt["manifest_id"],
+        "validation_receipt_id": contribution["validation_receipt_id"],
+    }
+    for field, expected in result_evidence.items():
+        if result[field] != expected:
+            raise ContributionRecordError(
+                f"result payload {field} does not match contribution evidence"
+            )
     return contribution
 
 
@@ -207,6 +243,13 @@ def _require_string(document: dict[str, Any], field: str) -> str:
     value = document.get(field)
     if not isinstance(value, str) or not value.strip():
         raise ContributionRecordError(f"{field} must be a non-empty string")
+    return value
+
+
+def _require_sha256(document: dict[str, Any], field: str) -> str:
+    value = document.get(field)
+    if not isinstance(value, str) or _SHA256.fullmatch(value) is None:
+        raise ContributionRecordError(f"{field} must be a sha256 hash")
     return value
 
 
