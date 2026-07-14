@@ -34,7 +34,6 @@ class ContributionRecordTests(unittest.TestCase):
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
         self.assertEqual(self.failed["validation"]["status"], "failed")
-        receipt = self._load_receipt("local-echo-fail.json")
         work_manifest = self._load_job_envelope("complete-local-echo.json")
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
@@ -221,13 +220,6 @@ class ContributionRecordTests(unittest.TestCase):
     def _load(self, name: str) -> dict[str, Any]:
         return json.loads(
             (self.root / "examples/contributions" / name).read_text(encoding="utf-8")
-        )
-
-    def _load_receipt(self, name: str) -> dict[str, Any]:
-        return json.loads(
-            (self.root / "examples/validation-receipts" / name).read_text(
-                encoding="utf-8"
-            )
         )
 
     def _load_job_envelope(self, name: str) -> dict[str, Any]:

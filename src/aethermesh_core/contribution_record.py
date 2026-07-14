@@ -1,4 +1,4 @@
-"""Validation for the local-only version 1 contribution record contract."""
+"""Validation for the local-only version 2 contribution record contract."""
 
 from __future__ import annotations
 
