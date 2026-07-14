@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -83,6 +84,9 @@ class ContributionRecordTests(unittest.TestCase):
         record["validation"]["validation_receipt_ref"] = (
             "examples/validation-receipts/missing.json"
         )
+        record["manifest_links"]["validation_manifest_ref"] = (
+            "examples/validation-receipts/missing.json"
+        )
         with self.assertRaisesRegex(ContributionRecordError, "does not exist"):
             validate_local_contribution_record(record, self.root)
 
@@ -98,8 +102,56 @@ class ContributionRecordTests(unittest.TestCase):
             )
             record = copy.deepcopy(self.failed)
             record["validation"]["validation_receipt_ref"] = "receipt.json"
+            record["manifest_links"]["validation_manifest_ref"] = "receipt.json"
             with self.assertRaisesRegex(ContributionRecordError, "escapes local root"):
                 validate_local_contribution_record(record, local_root)
+
+    def test_local_receipt_evidence_must_match_validation_and_manifest(self) -> None:
+        cases = (
+            (
+                lambda record: record["manifest_links"].update(
+                    validation_manifest_ref="examples/validation-receipts/local-echo-fail.json"
+                ),
+                "validation manifest reference",
+            ),
+            (
+                lambda record: record["validation"].update(
+                    status="failed", failure_reason="synthetic failure"
+                ),
+                "status does not match",
+            ),
+            (
+                lambda record: record["validation"].update(
+                    validated_at="2026-07-13T12:00:02Z"
+                ),
+                "validated_at does not match",
+            ),
+            (
+                lambda record: record["validation"].update(validated_at=None),
+                "validated_at is required",
+            ),
+            (
+                lambda record: record["manifest_links"].update(work_manifest_ref=None),
+                "work_manifest_ref is required",
+            ),
+            (
+                lambda record: record["manifest_links"].update(
+                    work_manifest_ref="examples/job-envelopes/complete-local-echo.json"
+                ),
+                "work manifest job_id does not match",
+            ),
+        )
+        for mutate, expected in cases:
+            with self.subTest(expected=expected):
+                record = copy.deepcopy(self.minimal)
+                mutate(record)
+                with self.assertRaisesRegex(ContributionRecordError, expected):
+                    validate_local_contribution_record(record, self.root)
+
+        record = copy.deepcopy(self.failed)
+        record["validation"]["failure_reason"] = "synthetic failure"
+        with self.assertRaisesRegex(ContributionRecordError, "rejection_reason"):
+            validate_local_contribution_record(record, self.root)
 
     def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
         record = copy.deepcopy(self.minimal)
@@ -134,6 +186,20 @@ class ContributionRecordTests(unittest.TestCase):
             "contributor_node_id", schema["properties"]["lineage"]["required"]
         )
         self.assertIn("creation_mode", schema["properties"]["attribution"]["required"])
+        receipt_id_schema = schema["properties"]["validation_receipt_id"]
+        self.assertTrue(
+            any(
+                re.fullmatch(option["pattern"], self.minimal["validation_receipt_id"])
+                for option in receipt_id_schema["anyOf"]
+            )
+        )
+        sha_receipt_id = "local-validation-receipt-sha256:" + "a" * 64
+        self.assertTrue(
+            any(
+                re.fullmatch(option["pattern"], sha_receipt_id)
+                for option in receipt_id_schema["anyOf"]
+            )
+        )
         schema_text = json.dumps(schema).lower()
         self.assertNotIn("reward_amount", schema_text)
         self.assertNotIn("consensus_status", schema_text)

@@ -82,15 +82,13 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "validation_receipt_ref is required for local evidence"
         )
-    receipt_path = _local_reference_path(local_root, receipt_ref)
+    if contribution["manifest_links"]["validation_manifest_ref"] != receipt_ref:
+        raise ContributionRecordError(
+            "validation manifest reference must match validation_receipt_ref"
+        )
+    receipt_document = _read_local_json(local_root, receipt_ref, "validation receipt")
     try:
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise ContributionRecordError("validation receipt file does not exist") from exc
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ContributionRecordError("validation receipt file is unreadable") from exc
-    try:
-        validate_validation_receipt_document(receipt)
+        receipt = validate_validation_receipt_document(receipt_document)
     except ValidationReceiptSchemaError as exc:
         raise ContributionRecordError("validation receipt file is invalid") from exc
     expected_values = {
@@ -108,6 +106,41 @@ def validate_local_contribution_record(
     if receipt["result_hash"] not in contribution["lineage"]["output_hashes"]:
         raise ContributionRecordError(
             "validation receipt result_hash is not preserved in contribution lineage"
+        )
+    expected_status = "passed" if receipt["validation_status"] == "pass" else "failed"
+    if contribution["validation"]["status"] != expected_status:
+        raise ContributionRecordError(
+            "validation receipt status does not match contribution record"
+        )
+    if contribution["validation"]["failure_reason"] != receipt["rejection_reason"]:
+        raise ContributionRecordError(
+            "validation receipt rejection_reason does not match contribution record"
+        )
+    validated_at = contribution["validation"]["validated_at"]
+    if validated_at is None:
+        raise ContributionRecordError(
+            "validated_at is required for local validation evidence"
+        )
+    contribution_time = datetime.fromisoformat(validated_at.replace("Z", "+00:00"))
+    receipt_time = datetime.fromisoformat(
+        receipt["validated_at"].replace("Z", "+00:00")
+    )
+    if contribution_time != receipt_time:
+        raise ContributionRecordError(
+            "validation receipt validated_at does not match contribution record"
+        )
+    work_manifest_ref = contribution["manifest_links"]["work_manifest_ref"]
+    if work_manifest_ref is None:
+        raise ContributionRecordError(
+            "work_manifest_ref is required for local evidence"
+        )
+    work_manifest = _read_local_json(local_root, work_manifest_ref, "work manifest")
+    if (
+        not isinstance(work_manifest, dict)
+        or work_manifest.get("job_id") != contribution["job_id"]
+    ):
+        raise ContributionRecordError(
+            "work manifest job_id does not match contribution record"
         )
     return contribution
 
@@ -332,6 +365,16 @@ def _local_reference_path(local_root: Path, reference: str) -> Path:
     if root != path and root not in path.parents:
         raise ContributionRecordError("validation_receipt_ref escapes local root")
     return path
+
+
+def _read_local_json(local_root: Path, reference: str, label: str) -> object:
+    path = _local_reference_path(local_root, reference)
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ContributionRecordError(f"{label} file does not exist") from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ContributionRecordError(f"{label} file is unreadable") from exc
 
 
 def _optional_string(document: dict[str, Any], field: str) -> None:

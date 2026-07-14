@@ -23,7 +23,7 @@
       }
     ]
   },
-  "job_id": "local-echo-minimal-001",
+  "job_id": "local-job-echo-001",
   "job_type": "echo",
   "lineage": {
     "parent_job_ids": [],
