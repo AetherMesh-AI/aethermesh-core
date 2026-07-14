@@ -84,6 +84,9 @@ LOCAL_JOB_STATE_TRANSITIONS = frozenset(
     }
 )
 LOCAL_JOB_TERMINAL_STATES = frozenset({"succeeded", "failed", "canceled"})
+LOCAL_CONTRIBUTION_VALIDATION_STATUSES = frozenset(
+    {"unvalidated", "pending", "valid", "invalid", "superseded"}
+)
 MAX_LOCAL_INPUT_PAYLOAD_BYTES = 64 * 1024
 MAX_LOCAL_ATTRIBUTION_METADATA_BYTES = 4 * 1024
 _ATTRIBUTION_METADATA_RESERVED_FIELDS = frozenset(
@@ -999,6 +1002,7 @@ class NodeRuntimeService:
             return self._existing_local_submission(
                 manifest_path, job_id, submission_fingerprint
             )
+        created_at = int(time.time())
         record: dict[str, Any] = {
             "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
@@ -1012,11 +1016,26 @@ class NodeRuntimeService:
                 "creator_node_id": creator_node_id,
                 "metadata": attribution_metadata,
             },
-            "timestamps": {"created_at": int(time.time())},
+            "timestamps": {"created_at": created_at},
             "state_audit_refs": [],
             "worker_node_id": None,
             "executor_node_id": None,
-            "validation": None,
+            "validation": {
+                "status": "unvalidated",
+                "receipt_id": None,
+                "receipt_ref": None,
+                "passed": None,
+                "reason": None,
+                "history": [
+                    {
+                        "status": "unvalidated",
+                        "recorded_at": created_at,
+                        "receipt_id": None,
+                        "receipt_ref": None,
+                        "reason": None,
+                    }
+                ],
+            },
             "result": None,
             "error": None,
         }
@@ -1502,6 +1521,8 @@ class NodeRuntimeService:
         if not isinstance(validation, dict):
             return events
         receipt_ref = validation.get("receipt_ref")
+        if validation.get("status") == "unvalidated" and receipt_ref is None:
+            return events
         expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
         worker = status.get("worker_node_id")
         if (
@@ -1985,6 +2006,18 @@ class NodeRuntimeService:
             isinstance(receipt.get("validation"), dict)
             and receipt["validation"].get("valid") is True
         )
+        contribution_validation_status = validation.get("status")
+        if contribution_validation_status not in LOCAL_CONTRIBUTION_VALIDATION_STATUSES:
+            contribution_validation_status = (
+                "valid"
+                if validation.get("passed") is True
+                else "invalid"
+                if validation.get("passed") is False
+                else "unvalidated"
+            )
+        validation_history = validation.get("history")
+        if not isinstance(validation_history, list):
+            validation_history = []
         manifest_job = manifest.get("job")
         if manifest:
             if not isinstance(manifest_job, dict):
@@ -2082,6 +2115,12 @@ class NodeRuntimeService:
             "validation_receipt_ref": receipt_ref
             if isinstance(receipt_ref, str)
             else None,
+            "validation": {
+                "status": contribution_validation_status,
+                "receipt_id": validation.get("receipt_id"),
+                "receipt_ref": receipt_ref if isinstance(receipt_ref, str) else None,
+                "history": validation_history,
+            },
             "lineage_links": lineage_links,
             "timestamps": {"submitted_at": manifest.get("submitted_at")},
             "evidence_errors": evidence_errors,
@@ -2277,6 +2316,25 @@ class NodeRuntimeService:
             if succeeded
             else 0,
         }
+        prior_validation = before.get("validation")
+        prior_history = (
+            prior_validation.get("history", [])
+            if isinstance(prior_validation, dict)
+            else []
+        )
+        if not isinstance(prior_history, list):
+            raise RuntimeServiceError("job status validation history is invalid")
+        contribution_validation_status = "valid" if succeeded else "invalid"
+        validation_history = [
+            *prior_history,
+            {
+                "status": contribution_validation_status,
+                "recorded_at": int(time.time()),
+                "receipt_id": self._receipt_id_for_job(job_id),
+                "receipt_ref": receipt_ref,
+                "reason": None if succeeded else validation.reason,
+            },
+        ]
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
@@ -2346,9 +2404,12 @@ class NodeRuntimeService:
                     "summary": result.output if succeeded else None,
                 },
                 "validation": {
+                    "status": contribution_validation_status,
+                    "receipt_id": self._receipt_id_for_job(job_id),
                     "receipt_ref": receipt_ref,
                     "passed": validation.valid,
                     "reason": validation.reason,
+                    "history": validation_history,
                 },
                 "contribution_attribution": contribution_attribution,
                 "error": error,

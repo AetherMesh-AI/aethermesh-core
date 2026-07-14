@@ -73,7 +73,7 @@ A known submission response includes `schema_version` (`1`), `job_id`, `status`,
 
 The only local job states are: `created` (a submission manifest and initial local record exist), `queued` (the created record is ready for one local execution attempt), `running` (a worker is executing the queued job), `succeeded` (execution and local validation completed successfully), `failed` (execution or local validation completed unsuccessfully), and `canceled` (the job was stopped locally before a terminal result). Valid transitions are only `created -> queued`, `queued -> running`, `running -> succeeded`, `running -> failed`, and `created`, `queued`, or `running -> canceled`. Terminal `succeeded`, `failed`, and `canceled` jobs cannot be executed or restarted in place; a replacement must be a new job with explicit lineage back to the prior job. Each transition appends a local audit entry before the current status record is updated; manifests and inherited attribution are never overwritten by a transition.
 
-Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
+Queued jobs retain an explicit `unvalidated` contribution-validation state with no receipt. Completed jobs preserve `valid` or `invalid` status, a validation receipt ID and reference, and append-only local validation history; a receipt is local evidence, not consensus. `pending` and `superseded` are reserved explicit local statuses for a future validation run or a replacement contribution, and do not imply trust without receipt-backed history. Invalid and superseded records remain attributable and auditable. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 
@@ -95,9 +95,15 @@ Example completed projection (dynamic IDs and timestamps omitted):
     "validated_contribution_units": 1
   },
   "validation": {
+    "status": "valid",
+    "receipt_id": "local-validation-receipt-local-job-<generated>",
     "passed": true,
     "reason": "ok",
-    "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json"
+    "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json",
+    "history": [
+      {"status": "unvalidated", "recorded_at": 0, "receipt_id": null, "receipt_ref": null, "reason": null},
+      {"status": "valid", "recorded_at": 0, "receipt_id": "local-validation-receipt-local-job-<generated>", "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json", "reason": null}
+    ]
   },
   "result": {
     "ref": "data/job-results/local-job-<generated>.json",
@@ -185,6 +191,15 @@ Example lookup: `GET /api/contributions` after the completed job example above.
     "manifest_ref": "data/job-submissions/local-job-<generated>.json",
     "status_ref": "data/job-status/local-job-<generated>.json",
     "validation_receipt_ref": "data/job-validation-receipts/local-job-<generated>.json",
+    "validation": {
+      "status": "valid",
+      "receipt_id": "local-validation-receipt-local-job-<generated>",
+      "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json",
+      "history": [
+        {"status": "unvalidated", "recorded_at": 0, "receipt_id": null, "receipt_ref": null, "reason": null},
+        {"status": "valid", "recorded_at": 0, "receipt_id": "local-validation-receipt-local-job-<generated>", "receipt_ref": "data/job-validation-receipts/local-job-<generated>.json", "reason": null}
+      ]
+    },
     "lineage_links": ["data/prior-job.json"],
     "timestamps": {"submitted_at": 0},
     "evidence_errors": []
