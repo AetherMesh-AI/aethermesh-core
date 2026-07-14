@@ -8,9 +8,11 @@ from typing import Any
 
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
+    PHASE_1_JOB_CAPABILITIES,
     validate_local_contribution_record,
     validate_contribution_record,
 )
+from aethermesh_core.runtime_service import LOCAL_CAPABILITY_DEFINITIONS
 
 
 class ContributionRecordTests(unittest.TestCase):
@@ -24,6 +26,8 @@ class ContributionRecordTests(unittest.TestCase):
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
         self.assertEqual(self.minimal["job_id"], "local-job-echo-001")
+        self.assertEqual(self.minimal["job_type"], "echo")
+        self.assertEqual(self.minimal["capability"], "work.echo")
         self.assertEqual(
             self.minimal["validation_receipt_id"],
             "local-validation-receipt-local-job-echo-001",
@@ -140,6 +144,12 @@ class ContributionRecordTests(unittest.TestCase):
                 ),
                 "work manifest job_id does not match",
             ),
+            (
+                lambda record: record.update(
+                    work_type="hash", job_type="hash", capability="work.hash"
+                ),
+                "work manifest job_type does not match",
+            ),
         )
         for mutate, expected in cases:
             with self.subTest(expected=expected):
@@ -194,7 +204,30 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 2})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 3})
+        self.assertEqual(
+            schema["properties"]["job_type"]["enum"],
+            sorted(PHASE_1_JOB_CAPABILITIES),
+        )
+        self.assertEqual(
+            schema["properties"]["capability"]["enum"],
+            sorted(PHASE_1_JOB_CAPABILITIES.values()),
+        )
+        schema_triples = {
+            (
+                option["properties"]["work_type"]["const"],
+                option["properties"]["job_type"]["const"],
+                option["properties"]["capability"]["const"],
+            )
+            for option in schema["oneOf"]
+        }
+        self.assertEqual(
+            schema_triples,
+            {
+                (job_type, job_type, capability)
+                for job_type, capability in PHASE_1_JOB_CAPABILITIES.items()
+            },
+        )
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
@@ -229,6 +262,8 @@ class ContributionRecordTests(unittest.TestCase):
             "creator_node_id",
             "contributor_node_id",
             "created_at",
+            "job_type",
+            "capability",
         ):
             with self.subTest(field=field):
                 record = copy.deepcopy(self.minimal)
@@ -238,10 +273,50 @@ class ContributionRecordTests(unittest.TestCase):
                 ):
                     validate_contribution_record(record)
 
-    def test_version_one_record_is_not_silently_reinterpreted(self) -> None:
+    def test_version_two_record_is_not_silently_reinterpreted(self) -> None:
         record = copy.deepcopy(self.minimal)
-        record["schema_version"] = 1
-        with self.assertRaisesRegex(ContributionRecordError, "must be integer 2"):
+        record["schema_version"] = 2
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 3"):
+            validate_contribution_record(record)
+
+    def test_each_phase_one_job_type_records_its_manifest_capability(self) -> None:
+        runtime_capabilities = {
+            work_type: identifier
+            for identifier, _, work_type in LOCAL_CAPABILITY_DEFINITIONS
+        }
+        self.assertEqual(PHASE_1_JOB_CAPABILITIES, runtime_capabilities)
+
+        for job_type, capability in PHASE_1_JOB_CAPABILITIES.items():
+            with self.subTest(job_type=job_type):
+                record = copy.deepcopy(self.minimal)
+                record["work_type"] = job_type
+                record["job_type"] = job_type
+                record["capability"] = capability
+                self.assertIs(validate_contribution_record(record), record)
+
+    def test_missing_or_mismatched_job_type_and_capability_fail(self) -> None:
+        for field in ("job_type", "capability"):
+            with self.subTest(field=field):
+                record = copy.deepcopy(self.minimal)
+                record.pop(field)
+                with self.assertRaisesRegex(
+                    ContributionRecordError, f"missing: {field}"
+                ):
+                    validate_contribution_record(record)
+
+        record = copy.deepcopy(self.minimal)
+        record["job_type"] = "unsupported"
+        with self.assertRaisesRegex(ContributionRecordError, "supported Phase 1"):
+            validate_contribution_record(record)
+
+        record = copy.deepcopy(self.minimal)
+        record["capability"] = "work.hash"
+        with self.assertRaisesRegex(ContributionRecordError, "must match"):
+            validate_contribution_record(record)
+
+        record = copy.deepcopy(self.minimal)
+        record["work_type"] = "hash"
+        with self.assertRaisesRegex(ContributionRecordError, "work_type must match"):
             validate_contribution_record(record)
 
     def test_failed_validation_requires_reason_without_losing_other_evidence(
