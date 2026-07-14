@@ -212,6 +212,7 @@ class ApiSchemaContractTests(unittest.TestCase):
                 ("/api/jobs", "post"),
                 ("/api/jobs/{job_id}", "get"),
                 ("/api/validation-receipts", "get"),
+                ("/api/validation-receipts/{receipt_id}", "get"),
                 ("/api/contributions", "get"),
                 ("/api/audit-events", "get"),
             }

@@ -2379,7 +2379,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 latest,
                 pending_response,
                 malformed,
-                missing,
+                receipt_list,
                 bad_latest,
             ) = asyncio.run(fetch())
             self.assertEqual(by_receipt.status_code, 200)
@@ -2441,7 +2441,9 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(
                 pending_response.json()["error"]["code"], "VALIDATION_FAILURE"
             )
-            for response in (malformed, missing, bad_latest):
+            self.assertEqual(receipt_list.status_code, 200)
+            self.assertEqual(receipt_list.json()["total"], 1)
+            for response in (malformed, bad_latest):
                 self.assertEqual(response.status_code, 400)
 
             stored_receipt.pop("executor_node_id")
@@ -2459,6 +2461,81 @@ class RuntimeServiceTests(unittest.TestCase):
                 RuntimeServiceError, "validation receipt does not match its work result"
             ):
                 service.get_local_validation_receipt(work_id=accepted["job_id"])
+
+    def test_validation_receipt_list_and_detail_are_read_only(self) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            receipt_id = f"local-validation-receipt-{submission['job_id']}"
+            evidence_paths = sorted((root / "data").rglob("*.json"))
+            evidence_before = {path: path.read_bytes() for path in evidence_paths}
+            api = create_app(service)
+
+            async def fetch() -> tuple[httpx.Response, httpx.Response, httpx.Response]:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return (
+                        await client.get("/api/validation-receipts"),
+                        await client.get(f"/api/validation-receipts/{receipt_id}"),
+                        await client.get(
+                            "/api/validation-receipts/"
+                            "local-validation-receipt-local-job-" + "0" * 32
+                        ),
+                    )
+
+            receipt_list, detail, unknown = asyncio.run(fetch())
+            self.assertEqual(receipt_list.status_code, 200)
+            self.assertEqual(detail.status_code, 200)
+            self.assertEqual(unknown.status_code, 404)
+            self.assertEqual(unknown.json()["error"]["code"], "VALIDATION_FAILURE")
+            detail_payload = detail.json()
+            self.assertEqual(detail_payload["receipt_id"], receipt_id)
+            self.assertEqual(detail_payload["manifest_ref"], submission["manifest_ref"])
+            self.assertEqual(
+                detail_payload["lineage_parent_ids"], request["lineage_parent_refs"]
+            )
+            self.assertEqual(
+                detail_payload["creator_node_id"], request["creator_node_id"]
+            )
+            self.assertEqual(
+                detail_payload["contribution_attribution"]["metadata"],
+                request["attribution_metadata"],
+            )
+            self.assertEqual(
+                receipt_list.json(),
+                {
+                    "schema_version": 1,
+                    "network_mode": "local-only-no-p2p",
+                    "total": 1,
+                    "validation_receipts": [
+                        {
+                            "receipt_id": receipt_id,
+                            "validation_receipt_id": receipt_id,
+                            "work_id": submission["job_id"],
+                            "creator_node_id": request["creator_node_id"],
+                            "manifest_ref": submission["manifest_ref"],
+                            "lineage_parent_ids": request["lineage_parent_refs"],
+                            "contribution_attribution": detail_payload[
+                                "contribution_attribution"
+                            ],
+                            "status": "accepted",
+                            "validation_status": "passed",
+                            "validated_at": detail_payload["validated_at"],
+                            "validation_summary": detail_payload["validation"],
+                        }
+                    ],
+                },
+            )
+            self.assertEqual(
+                {path: path.read_bytes() for path in evidence_paths}, evidence_before
+            )
 
     def test_contribution_summary_is_deterministic_and_honest_about_evidence(
         self,

@@ -1828,6 +1828,49 @@ class NodeRuntimeService:
             },
         }
 
+    def list_local_validation_receipts(self) -> dict[str, Any]:
+        """List shaped local receipt evidence without creating or changing it.
+
+        Each item uses the same persisted-evidence checks as the detail lookup.
+        The list retains auditable provenance while omitting timing and result
+        detail; callers can use its stable receipt_id for the full receipt.
+        """
+
+        directory = self.paths.data_dir / "job-validation-receipts"
+        job_ids = (
+            sorted(
+                path.stem
+                for path in directory.glob("*.json")
+                if self._is_local_job_id(path.stem)
+            )
+            if directory.exists()
+            else []
+        )
+        receipts = [
+            self.get_local_validation_receipt(work_id=job_id) for job_id in job_ids
+        ]
+        return {
+            "schema_version": 1,
+            "network_mode": "local-only-no-p2p",
+            "total": len(receipts),
+            "validation_receipts": [
+                {
+                    "receipt_id": receipt["receipt_id"],
+                    "validation_receipt_id": receipt["validation_receipt_id"],
+                    "work_id": receipt["work_id"],
+                    "creator_node_id": receipt["creator_node_id"],
+                    "manifest_ref": receipt["manifest_ref"],
+                    "lineage_parent_ids": receipt["lineage_parent_ids"],
+                    "contribution_attribution": receipt["contribution_attribution"],
+                    "status": receipt["status"],
+                    "validation_status": receipt["validation_status"],
+                    "validated_at": receipt["validated_at"],
+                    "validation_summary": receipt["validation"],
+                }
+                for receipt in receipts
+            ],
+        }
+
     @staticmethod
     def _receipt_id_for_job(job_id: str) -> str:
         return f"{VALIDATION_RECEIPT_ID_PREFIX}{job_id}"
