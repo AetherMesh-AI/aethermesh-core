@@ -36,6 +36,13 @@ class ContributionRecordTests(unittest.TestCase):
             self.failed["lineage"]["parent_contribution_ids"],
             ["contribution.echo-0001"],
         )
+        self.assertEqual(
+            self.failed["lineage"]["contributor_node_id"],
+            self.failed["contributor_node_id"],
+        )
+        self.assertNotEqual(
+            self.failed["creator_node_id"], self.failed["contributor_node_id"]
+        )
         self.assertEqual(self.failed["attribution"]["author_id"], "node.local-worker")
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
@@ -51,6 +58,9 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
+        )
+        self.assertIn(
+            "contributor_node_id", schema["properties"]["lineage"]["required"]
         )
         self.assertIn("creation_mode", schema["properties"]["attribution"]["required"])
         schema_text = json.dumps(schema).lower()
@@ -142,6 +152,12 @@ class ContributionRecordTests(unittest.TestCase):
             (
                 lambda record: record["lineage"].update(input_hashes=["sha256:bad"]),
                 "input_hashes",
+            ),
+            (
+                lambda record: record["lineage"].update(
+                    contributor_node_id="node.other"
+                ),
+                "must match contributor_node_id",
             ),
             (
                 lambda record: record["attribution"].update(author_kind="account"),

@@ -33,8 +33,8 @@
     },
     "lineage": {
       "type": "object", "additionalProperties": false,
-      "required": ["parent_contribution_ids", "derived_artifact_ids", "input_hashes", "output_hashes", "deterministic_reproduction_notes"],
-      "properties": {"parent_contribution_ids": {"$ref": "#/$defs/identifierList"}, "derived_artifact_ids": {"$ref": "#/$defs/identifierList"}, "input_hashes": {"$ref": "#/$defs/hashList"}, "output_hashes": {"$ref": "#/$defs/hashList"}, "deterministic_reproduction_notes": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}}
+      "required": ["contributor_node_id", "parent_contribution_ids", "derived_artifact_ids", "input_hashes", "output_hashes", "deterministic_reproduction_notes"],
+      "properties": {"contributor_node_id": {"$ref": "#/$defs/identifier"}, "parent_contribution_ids": {"$ref": "#/$defs/identifierList"}, "derived_artifact_ids": {"$ref": "#/$defs/identifierList"}, "input_hashes": {"$ref": "#/$defs/hashList"}, "output_hashes": {"$ref": "#/$defs/hashList"}, "deterministic_reproduction_notes": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}}
     },
     "attribution": {
       "type": "object", "additionalProperties": false,

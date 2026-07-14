@@ -52,6 +52,14 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             self.failing["lineage"]["prior_receipt_ids"],
             [self.passing["receipt_id"]],
         )
+        self.assertEqual(self.failing["contributor_node_id"], "node.local-worker")
+        self.assertEqual(self.failing["creator_node_id"], "node.local-creator")
+        for block in ("validation_method", "lineage", "contribution"):
+            with self.subTest(block=block):
+                self.assertEqual(
+                    self.failing[block]["contributor_node_id"],
+                    self.failing["contributor_node_id"],
+                )
         validate_validation_receipt_result_hash(
             self.passing, canonical_result_document_hash(self.success_result)
         )
@@ -70,11 +78,11 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             patch.dict(os.environ, {"AETHERMESH_BUILD_ID": "/private/build"}),
         ):
             captured = capture_validator_software_metadata(
-                validator_name="deterministic_fixture_replay", receipt_schema_version=6
+                validator_name="deterministic_fixture_replay", receipt_schema_version=7
             )
 
         self.assertEqual(captured["validator_build_identifier"], "unknown")
-        self.assertEqual(captured["receipt_schema_version"], 6)
+        self.assertEqual(captured["receipt_schema_version"], 7)
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
@@ -102,6 +110,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             ValidationReceiptSchemaError, "missing: validated_at"
         ):
             validate_validation_receipt_document(missing_timestamp)
+
+        missing_contributor = copy.deepcopy(self.passing)
+        missing_contributor.pop("contributor_node_id")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: contributor_node_id"
+        ):
+            validate_validation_receipt_document(missing_contributor)
 
         malformed_timestamp = copy.deepcopy(self.passing)
         malformed_timestamp["validated_at"] = "2026-07-13T12:00:00+00:00"
@@ -213,8 +228,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 5
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 6"):
+        old_version["schema_version"] = 6
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 7"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)
@@ -280,6 +295,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             ("lineage", "prior_receipt_ids", ["receipt\nleak"]),
             ("contribution", "submitter_id", "/Users/example/private id"),
             ("contribution", "claimed_role", "validator\nsecret"),
+            ("contribution", "contributor_node_id", ""),
         )
         for block, field, value in cases:
             with self.subTest(block=block, field=field):
