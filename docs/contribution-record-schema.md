@@ -1,6 +1,8 @@
 # Local Contribution Record Schema
 
-Version 1 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
+Version 2 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
+
+Version 2 supersedes version 1 by requiring `job_id`. Version 1 records remain identifiable as version 1 and must be migrated explicitly rather than silently reinterpreted.
 
 This record is evidence metadata only. It does not award credits, calculate rewards, assert peer agreement, or claim consensus or decentralization.
 

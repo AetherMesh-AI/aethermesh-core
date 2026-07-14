@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "record_id": "contribution.echo-0002",
   "job_id": "local-job-echo-002",
   "creator_node_id": "node.local-creator",

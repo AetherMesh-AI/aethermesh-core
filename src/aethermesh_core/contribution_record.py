@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-CONTRIBUTION_RECORD_SCHEMA_VERSION = 1
+CONTRIBUTION_RECORD_SCHEMA_VERSION = 2
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})

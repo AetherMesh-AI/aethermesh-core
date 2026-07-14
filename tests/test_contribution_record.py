@@ -73,7 +73,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 1})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 2})
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
@@ -101,6 +101,12 @@ class ContributionRecordTests(unittest.TestCase):
                     ContributionRecordError, f"missing: {field}"
                 ):
                     validate_contribution_record(record)
+
+    def test_version_one_record_is_not_silently_reinterpreted(self) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["schema_version"] = 1
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 2"):
+            validate_contribution_record(record)
 
     def test_failed_validation_requires_reason_without_losing_other_evidence(
         self,
