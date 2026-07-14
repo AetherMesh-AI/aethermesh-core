@@ -4300,12 +4300,12 @@ class LocalSafetyMetadataTests(unittest.TestCase):
             "attribution_metadata": {"source": "test"},
         }
         invalid_outputs = (
-            ("incomplete output", None),
-            ("manifest expectation mismatch", "unexpected"),
+            ("incomplete output", None, "output_schema.v1.echo.output: expected str"),
+            ("manifest expectation mismatch", "unexpected", "output_mismatch"),
         )
         with tempfile.TemporaryDirectory() as temp_dir:
             service = NodeRuntimeService.from_home(temp_dir)
-            for name, output in invalid_outputs:
+            for name, output, expected_reason in invalid_outputs:
                 with self.subTest(name=name):
                     submission = service.submit_local_job(request)
                     with patch(
@@ -4330,8 +4330,7 @@ class LocalSafetyMetadataTests(unittest.TestCase):
                     self.assertFalse(status["validation"]["passed"])
                     self.assertEqual(receipt["status"], "rejected")
                     self.assertNotIn(receipt["status"], {"accepted", "pending"})
-                    self.assertIsInstance(receipt["rejection_reason"], str)
-                    self.assertTrue(receipt["rejection_reason"])
+                    self.assertEqual(receipt["rejection_reason"], expected_reason)
                     self.assertEqual(
                         receipt["rejection_reason"], status["validation"]["reason"]
                     )
@@ -4349,15 +4348,19 @@ class LocalSafetyMetadataTests(unittest.TestCase):
                         status["contribution_attribution"],
                     )
                     self.assertEqual(
-                        receipt["contribution_attribution"]["creator_node_id"],
-                        request["creator_node_id"],
+                        receipt["contribution_attribution"],
+                        {
+                            "job_id": submission["job_id"],
+                            "creator_node_id": request["creator_node_id"],
+                            "metadata": request["attribution_metadata"],
+                            "worker_node_id": "worker-local-a",
+                            "executor_node_id": "worker-local-a",
+                            "validated_contribution_units": 0,
+                        },
                     )
-                    self.assertEqual(
-                        receipt["contribution_attribution"][
-                            "validated_contribution_units"
-                        ],
-                        0,
-                    )
+            contribution_summary = service.contribution_summary()
+            self.assertEqual(contribution_summary["accepted_work_count"], 0)
+            self.assertEqual(contribution_summary["non_accepted_work_count"], 2)
 
     def test_timeout_and_cancellation_record_failed_local_evidence(self) -> None:
         request = {

@@ -87,7 +87,7 @@ class ContributionRecordTests(unittest.TestCase):
                     validate_contribution_record(record)
 
     def test_empty_or_invalid_job_id_fails_without_changing_attribution(self) -> None:
-        for job_id in ("", "invalid job id"):
+        for job_id in ("", "invalid job id", "invalid_job_id"):
             with self.subTest(job_id=job_id):
                 record = copy.deepcopy(self.failed)
                 creator_node_id = record["creator_node_id"]
@@ -97,6 +97,19 @@ class ContributionRecordTests(unittest.TestCase):
                     validate_contribution_record(record)
                 self.assertEqual(record["creator_node_id"], creator_node_id)
                 self.assertEqual(record["attribution"], attribution)
+
+    def test_job_id_uses_the_existing_local_job_identifier_format(self) -> None:
+        for job_id in ("a", "local-job-001", "sha256:" + "a" * 64):
+            with self.subTest(job_id=job_id):
+                record = copy.deepcopy(self.minimal)
+                record["job_id"] = job_id
+                self.assertIs(validate_contribution_record(record), record)
+
+    def test_lineage_contributor_must_match_the_record_contributor(self) -> None:
+        record = copy.deepcopy(self.failed)
+        record["lineage"]["contributor_node_id"] = "node.other-worker"
+        with self.assertRaisesRegex(ContributionRecordError, "must match"):
+            validate_contribution_record(record)
 
     def test_failed_validation_requires_reason_without_losing_other_evidence(
         self,

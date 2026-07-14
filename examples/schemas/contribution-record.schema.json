@@ -9,7 +9,7 @@
   "properties": {
     "schema_version": {"const": 1},
     "record_id": {"$ref": "#/$defs/identifier"},
-    "job_id": {"$ref": "#/$defs/identifier"},
+    "job_id": {"$ref": "#/$defs/jobId"},
     "creator_node_id": {"$ref": "#/$defs/identifier"},
     "contributor_node_id": {"$ref": "#/$defs/identifier"},
     "created_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
@@ -45,6 +45,7 @@
   },
   "$defs": {
     "identifier": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{2,127}$"},
+    "jobId": {"type": "string", "pattern": "^(?:[a-z0-9][a-z0-9-]{0,127}|sha256:[0-9a-f]{64})$"},
     "identifierList": {"type": "array", "items": {"$ref": "#/$defs/identifier"}},
     "hashList": {"type": "array", "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
     "localRefOrNull": {"anyOf": [{"type": "string", "pattern": "^(?!/)(?!~)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"}, {"type": "null"}]}
