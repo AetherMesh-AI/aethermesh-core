@@ -269,18 +269,32 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         return runtime_service.contribution_summary()
 
     @app.get("/api/validation-receipts")
-    def validation_receipt(
+    def validation_receipts(
         receipt_id: str | None = None,
         work_id: str | None = None,
         latest: str | None = None,
     ) -> dict[str, Any]:
-        """Read one persisted local validation receipt; never create one."""
+        """List receipts, or retain the legacy query detail lookup.
+
+        List response v1 contains stable receipt ID, validation status/timestamp,
+        work and provenance references, creator, attribution, and summary. Detail
+        responses are read-only persisted-evidence projections; neither creates,
+        recomputes, or changes validation outcomes.
+        """
 
         if latest not in (None, "true"):
             raise RuntimeServiceError("latest must be true when provided")
+        if receipt_id is None and work_id is None and latest is None:
+            return runtime_service.list_local_validation_receipts()
         return runtime_service.get_local_validation_receipt(
             receipt_id=receipt_id, work_id=work_id, latest=latest == "true"
         )
+
+    @app.get("/api/validation-receipts/{receipt_id}")
+    def validation_receipt_detail(receipt_id: str) -> dict[str, Any]:
+        """Read the full persisted local receipt for one stable receipt ID only."""
+
+        return runtime_service.get_local_validation_receipt(receipt_id=receipt_id)
 
     @app.get("/api/audit-events")
     def audit_events(
