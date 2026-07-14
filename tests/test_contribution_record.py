@@ -103,6 +103,12 @@ class ContributionRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(ContributionRecordError, "contributor_node_id"):
             validate_contribution_record(record)
 
+    def test_lineage_contributor_node_id_must_match_record(self) -> None:
+        record = copy.deepcopy(self.failed)
+        record["lineage"]["contributor_node_id"] = "node.different-worker"
+        with self.assertRaisesRegex(ContributionRecordError, "must match"):
+            validate_contribution_record(record)
+
     def test_empty_or_invalid_job_id_fails_without_changing_attribution(self) -> None:
         for job_id in ("", "invalid job id"):
             with self.subTest(job_id=job_id):
