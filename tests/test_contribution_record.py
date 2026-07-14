@@ -2,10 +2,12 @@ import copy
 import json
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
+    validate_local_contribution_record,
     validate_contribution_record,
 )
 
@@ -20,9 +22,16 @@ class ContributionRecordTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
-        self.assertEqual(self.minimal["job_id"], "local-echo-minimal-001")
-        self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
+        self.assertEqual(self.minimal["job_id"], "local-job-echo-001")
+        self.assertEqual(
+            self.minimal["validation_receipt_id"],
+            "local-validation-receipt-local-job-echo-001",
+        )
+        self.assertEqual(self.minimal["validation"]["status"], "passed")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
+        self.assertIs(
+            validate_local_contribution_record(self.minimal, self.root), self.minimal
+        )
 
     def test_linked_failed_record_retains_manifest_lineage_and_attribution(
         self,
@@ -37,6 +46,7 @@ class ContributionRecordTests(unittest.TestCase):
         work_manifest = self._load_job_envelope("complete-local-echo.json")
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
+        self.assertEqual(self.failed["validation_receipt_id"], receipt["receipt_id"])
         self.assertEqual(receipt["work_id"], receipt["job_id"])
 
         self.assertEqual(
@@ -62,6 +72,49 @@ class ContributionRecordTests(unittest.TestCase):
             self.failed["creator_node_id"], self.failed["contributor_node_id"]
         )
         self.assertEqual(self.failed["attribution"]["author_id"], "node.local-worker")
+        self.assertIs(
+            validate_local_contribution_record(self.failed, self.root), self.failed
+        )
+
+    def test_local_receipt_reference_rejects_missing_or_synthetic_receipts(
+        self,
+    ) -> None:
+        record = copy.deepcopy(self.failed)
+        record["validation"]["validation_receipt_ref"] = (
+            "examples/validation-receipts/missing.json"
+        )
+        with self.assertRaisesRegex(ContributionRecordError, "does not exist"):
+            validate_local_contribution_record(record, self.root)
+
+        record = copy.deepcopy(self.failed)
+        record["validation_receipt_id"] = "local-validation-receipt-local-job-fake"
+        with self.assertRaisesRegex(ContributionRecordError, "must match"):
+            validate_contribution_record(record)
+
+        with TemporaryDirectory() as directory:
+            local_root = Path(directory)
+            (local_root / "receipt.json").symlink_to(
+                self.root / "examples/validation-receipts/local-echo-fail.json"
+            )
+            record = copy.deepcopy(self.failed)
+            record["validation"]["validation_receipt_ref"] = "receipt.json"
+            with self.assertRaisesRegex(ContributionRecordError, "escapes local root"):
+                validate_local_contribution_record(record, local_root)
+
+    def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["validation"] = {
+            "status": "unvalidated",
+            "validator_node_id": None,
+            "validation_receipt_ref": None,
+            "validated_at": None,
+            "failure_reason": None,
+        }
+        self.assertIs(validate_contribution_record(record), record)
+        with self.assertRaisesRegex(
+            ContributionRecordError, "required for local evidence"
+        ):
+            validate_local_contribution_record(record, self.root)
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
         schema = json.loads(
@@ -89,6 +142,7 @@ class ContributionRecordTests(unittest.TestCase):
         for field in (
             "record_id",
             "job_id",
+            "validation_receipt_id",
             "creator_node_id",
             "contributor_node_id",
             "created_at",

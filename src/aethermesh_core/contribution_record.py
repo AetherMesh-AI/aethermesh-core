@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Any
+
+from aethermesh_core.validation_receipt_schema import (
+    ValidationReceiptSchemaError,
+    validate_validation_receipt_document,
+    validation_receipt_id,
+)
 
 CONTRIBUTION_RECORD_SCHEMA_VERSION = 2
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
@@ -15,6 +23,7 @@ _TOP_LEVEL_FIELDS = frozenset(
         "schema_version",
         "record_id",
         "job_id",
+        "validation_receipt_id",
         "creator_node_id",
         "contributor_node_id",
         "created_at",
@@ -47,6 +56,10 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     for field in ("record_id", "creator_node_id", "contributor_node_id"):
         _require_identifier(document, field)
     _require_local_job_id(document, "job_id")
+    if document["validation_receipt_id"] != validation_receipt_id(document["job_id"]):
+        raise ContributionRecordError(
+            "validation_receipt_id must match the local validation receipt for job_id"
+        )
     _require_timestamp(document, "created_at")
     _require_string(document, "work_type")
     _require_string(document, "contribution_summary")
@@ -56,6 +69,47 @@ def validate_contribution_record(document: object) -> dict[str, Any]:
     _lineage(document["lineage"], document["contributor_node_id"])
     _attribution(document["attribution"])
     return document
+
+
+def validate_local_contribution_record(
+    document: object, local_root: Path
+) -> dict[str, Any]:
+    """Validate one contribution and its referenced receipt under a local root."""
+
+    contribution = validate_contribution_record(document)
+    receipt_ref = contribution["validation"]["validation_receipt_ref"]
+    if receipt_ref is None:
+        raise ContributionRecordError(
+            "validation_receipt_ref is required for local evidence"
+        )
+    receipt_path = _local_reference_path(local_root, receipt_ref)
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ContributionRecordError("validation receipt file does not exist") from exc
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ContributionRecordError("validation receipt file is unreadable") from exc
+    try:
+        validate_validation_receipt_document(receipt)
+    except ValidationReceiptSchemaError as exc:
+        raise ContributionRecordError("validation receipt file is invalid") from exc
+    expected_values = {
+        "receipt_id": contribution["validation_receipt_id"],
+        "job_id": contribution["job_id"],
+        "creator_node_id": contribution["creator_node_id"],
+        "contributor_node_id": contribution["contributor_node_id"],
+        "validator_id": contribution["validation"]["validator_node_id"],
+    }
+    for field, expected in expected_values.items():
+        if receipt[field] != expected:
+            raise ContributionRecordError(
+                f"validation receipt {field} does not match contribution record"
+            )
+    if receipt["result_hash"] not in contribution["lineage"]["output_hashes"]:
+        raise ContributionRecordError(
+            "validation receipt result_hash is not preserved in contribution lineage"
+        )
+    return contribution
 
 
 def _exact_fields(value: object, fields: frozenset[str], label: str) -> dict[str, Any]:
@@ -270,6 +324,14 @@ def _optional_ref(document: dict[str, Any], field: str) -> None:
 def _optional_timestamp(document: dict[str, Any], field: str) -> None:
     if document.get(field) is not None:
         _require_timestamp(document, field)
+
+
+def _local_reference_path(local_root: Path, reference: str) -> Path:
+    root = local_root.resolve()
+    path = (root / reference).resolve()
+    if root != path and root not in path.parents:
+        raise ContributionRecordError("validation_receipt_ref escapes local root")
+    return path
 
 
 def _optional_string(document: dict[str, Any], field: str) -> None:
