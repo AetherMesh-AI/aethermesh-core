@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from aethermesh_core.models import JobResult
 from aethermesh_core.result_hash import result_hash as canonical_result_hash
+
+
+_UTC_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 
 
 @dataclass(frozen=True)
@@ -27,6 +32,7 @@ class ContributionRecord:
     job_type: str | None = None
     result_hash: str | None = None
     version_metadata_ref: str | None = None
+    created_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the record into a JSON-compatible dictionary."""
@@ -34,6 +40,8 @@ class ContributionRecord:
         document = asdict(self)
         if self.version_metadata_ref is None:
             document.pop("version_metadata_ref")
+        if self.created_at is None:
+            document.pop("created_at")
         return document
 
     @classmethod
@@ -72,6 +80,9 @@ class ContributionRecord:
             raise LedgerPersistenceError(
                 "ledger record field 'version_metadata_ref' must be a string or null"
             )
+        created_at = payload.get("created_at")
+        if created_at is not None:
+            _require_utc_timestamp("created_at", created_at)
         return cls(
             node_id=payload["node_id"],
             job_id=payload["job_id"],
@@ -83,6 +94,7 @@ class ContributionRecord:
             job_type=job_type,
             result_hash=result_hash,
             version_metadata_ref=version_ref,
+            created_at=created_at,
         )
 
 
@@ -105,8 +117,14 @@ class ContributionSummary:
 class ContributionLedger:
     """Small in-memory ledger for prototype contribution accounting."""
 
-    def __init__(self, records: list[ContributionRecord] | None = None) -> None:
+    def __init__(
+        self,
+        records: list[ContributionRecord] | None = None,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
         self._records = list(records) if records is not None else []
+        self._clock = clock
 
     def record(
         self,
@@ -139,6 +157,7 @@ class ContributionLedger:
             job_type=job_type,
             result_hash=canonical_result_hash(result),
             version_metadata_ref=version_metadata_ref,
+            created_at=_utc_timestamp(self._clock()),
         )
         self._records.append(record)
         return record
@@ -330,6 +349,27 @@ def _require_result_hash(field_name: str, value: object) -> None:
         raise LedgerPersistenceError(
             f"ledger record field '{field_name}' must be a lowercase SHA-256 hex digest"
         )
+
+
+def _utc_timestamp(value: datetime) -> str:
+    if value.tzinfo is None:
+        raise ValueError("ledger clock must return a timezone-aware datetime")
+    return (
+        value.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
+
+
+def _require_utc_timestamp(field_name: str, value: object) -> None:
+    if not isinstance(value, str) or not _UTC_TIMESTAMP.fullmatch(value):
+        raise LedgerPersistenceError(
+            f"ledger record field '{field_name}' must be an RFC 3339 UTC timestamp"
+        )
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise LedgerPersistenceError(
+            f"ledger record field '{field_name}' must be an RFC 3339 UTC timestamp"
+        ) from exc
 
 
 def _record_from_json_value(value: Any) -> ContributionRecord:
