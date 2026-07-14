@@ -148,6 +148,23 @@ class ContributionRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(ContributionRecordError, expected):
                     validate_local_contribution_record(record, self.root)
 
+        with TemporaryDirectory() as directory:
+            local_root = Path(directory)
+            receipt_ref = self.minimal["validation"]["validation_receipt_ref"]
+            manifest_ref = self.minimal["manifest_links"]["work_manifest_ref"]
+            for reference in (receipt_ref, manifest_ref):
+                assert isinstance(reference, str)
+                target = local_root / reference
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((self.root / reference).read_bytes())
+            assert isinstance(manifest_ref, str)
+            manifest_path = local_root / manifest_ref
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["creator_node_id"] = "node.other-creator"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(ContributionRecordError, "creator_node_id"):
+                validate_local_contribution_record(self.minimal, local_root)
+
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"
         with self.assertRaisesRegex(ContributionRecordError, "rejection_reason"):

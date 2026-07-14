@@ -142,6 +142,10 @@ def validate_local_contribution_record(
         raise ContributionRecordError(
             "work manifest job_id does not match contribution record"
         )
+    if work_manifest.get("creator_node_id") != contribution["creator_node_id"]:
+        raise ContributionRecordError(
+            "work manifest creator_node_id does not match contribution record"
+        )
     return contribution
 
 
