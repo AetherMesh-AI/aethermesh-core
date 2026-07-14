@@ -20,6 +20,7 @@ class ContributionRecordTests(unittest.TestCase):
         self,
     ) -> None:
         self.assertIs(validate_contribution_record(self.minimal), self.minimal)
+        self.assertEqual(self.minimal["job_id"], "local-echo-minimal-001")
         self.assertEqual(self.minimal["validation"]["status"], "unvalidated")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
 
@@ -33,6 +34,11 @@ class ContributionRecordTests(unittest.TestCase):
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
         self.assertEqual(self.failed["validation"]["status"], "failed")
+        work_manifest = self._load_job_envelope("complete-local-echo.json")
+        self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
+        self.assertEqual(self.failed["job_id"], receipt["job_id"])
+        self.assertEqual(receipt["work_id"], receipt["job_id"])
+
         self.assertEqual(
             self.failed["validation"]["validation_receipt_ref"],
             "examples/validation-receipts/local-echo-fail.json",
@@ -66,7 +72,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 1})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 2})
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
@@ -82,6 +88,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_missing_required_record_identity_and_timestamp_fields_fail(self) -> None:
         for field in (
             "record_id",
+            "job_id",
             "creator_node_id",
             "contributor_node_id",
             "created_at",
@@ -93,6 +100,12 @@ class ContributionRecordTests(unittest.TestCase):
                     ContributionRecordError, f"missing: {field}"
                 ):
                     validate_contribution_record(record)
+
+    def test_version_one_record_is_not_silently_reinterpreted(self) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["schema_version"] = 1
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 2"):
+            validate_contribution_record(record)
 
     def test_failed_validation_requires_reason_without_losing_other_evidence(
         self,
@@ -111,6 +124,8 @@ class ContributionRecordTests(unittest.TestCase):
         cases = (
             (lambda record: record.update(schema_version=True), "schema_version"),
             (lambda record: record.update(record_id="bad id"), "record_id"),
+            (lambda record: record.update(job_id=""), "job_id"),
+            (lambda record: record.update(job_id="not a local id"), "job_id"),
             (
                 lambda record: record.update(created_at="2026-99-13T12:00:00Z"),
                 "created_at",
@@ -205,6 +220,11 @@ class ContributionRecordTests(unittest.TestCase):
     def _load(self, name: str) -> dict[str, Any]:
         return json.loads(
             (self.root / "examples/contributions" / name).read_text(encoding="utf-8")
+        )
+
+    def _load_job_envelope(self, name: str) -> dict[str, Any]:
+        return json.loads(
+            (self.root / "examples/job-envelopes" / name).read_text(encoding="utf-8")
         )
 
 
