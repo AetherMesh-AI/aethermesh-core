@@ -234,17 +234,6 @@ def _shutdown_local_node(
     progress["artifact"] = _relative_ref(root, state_path)
     atomic_write_json(state_path, final_state)
     progress["contribution_records_finalized"] = True
-    _append_shutdown_audit_event(
-        root,
-        timestamp=started_at,
-        node_id=node_id,
-        creator_node_id=creator_node_id,
-        manifest_ref=_relative_ref(root, manifest_path),
-        validation_receipt_refs=receipt_refs,
-        lineage_refs=lineage_refs,
-        contribution_refs=contribution_refs,
-        exit_mode=shutdown_outcome,
-    )
     _append_log(
         log_path,
         event="shutdown_persistence_complete",
@@ -258,6 +247,17 @@ def _shutdown_local_node(
     progress["component"] = "worker_termination"
     progress["artifact"] = _relative_ref(root, pid_path)
     released = _release_runtime_resources(pid_path, lock_path)
+    _append_shutdown_audit_event(
+        root,
+        timestamp=started_at,
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        manifest_ref=_relative_ref(root, manifest_path),
+        validation_receipt_refs=receipt_refs,
+        lineage_refs=lineage_refs,
+        contribution_refs=contribution_refs,
+        exit_mode=shutdown_outcome,
+    )
     _append_log(
         log_path,
         event="shutdown_resources_released",

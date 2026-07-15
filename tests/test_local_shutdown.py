@@ -331,6 +331,16 @@ class LocalShutdownTests(unittest.TestCase):
             identity_after = identity_path.read_text(encoding="utf-8")
             manifest_after = manifest_path.read_text(encoding="utf-8")
             receipts_after = sorted((root / "receipts").glob("*.json"))
+            audit_path = root / "logs" / "local-audit-events.jsonl"
+            shutdown_events = (
+                [
+                    json.loads(line)
+                    for line in audit_path.read_text(encoding="utf-8").splitlines()
+                    if json.loads(line).get("event_type") == "node.shutdown"
+                ]
+                if audit_path.exists()
+                else []
+            )
 
         self.assertEqual(report["error_code"], "SHUTDOWN_WORKER_TERMINATION_FAILED")
         self.assertEqual(report["failing_component"], "worker_termination")
@@ -342,6 +352,7 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(identity_after, identity_before)
         self.assertEqual(manifest_after, manifest_before)
         self.assertEqual(receipts_after, receipts_before)
+        self.assertEqual(shutdown_events, [])
 
     def test_shutdown_reports_state_write_failure_and_preserves_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
