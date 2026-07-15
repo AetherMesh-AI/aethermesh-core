@@ -1,6 +1,7 @@
 import copy
 import json
 import re
+import threading
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
@@ -167,6 +168,43 @@ class ContributionRecordTests(unittest.TestCase):
             self.assertEqual(appended["prior_entry_hash"], prior["entry_hash"])
             self.assertEqual(
                 len(journal_path.read_text(encoding="utf-8").splitlines()), 2
+            )
+
+    def test_concurrent_duplicate_submission_is_recorded_once(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            barrier = threading.Barrier(2)
+            original_validate = validate_local_contribution_record
+            errors: list[Exception] = []
+
+            def synchronized_validate(
+                document: object, local_root: Path
+            ) -> dict[str, Any]:
+                contribution = original_validate(document, local_root)
+                barrier.wait()
+                return contribution
+
+            def record() -> None:
+                try:
+                    record_validated_contribution(self.minimal, self.root, journal_path)
+                except (
+                    Exception
+                ) as exc:  # pragma: no cover - justification: failure capture
+                    errors.append(exc)
+
+            with patch(
+                "aethermesh_core.contribution_record.validate_local_contribution_record",
+                side_effect=synchronized_validate,
+            ):
+                threads = [threading.Thread(target=record) for _ in range(2)]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
+
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                len(journal_path.read_text(encoding="utf-8").splitlines()), 1
             )
 
     def test_rejects_tampered_or_malformed_journal_before_appending(self) -> None:

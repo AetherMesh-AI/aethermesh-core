@@ -16,7 +16,7 @@ This record is evidence metadata only. It does not award credits, calculate rewa
 
 `record_validated_contribution()` is the local recording boundary. It requires linked evidence that passes the version 4 contribution contract and a schema-valid receipt with `status: accepted` and `validation_status: pass`. Missing, malformed, mismatched, rejected, or otherwise non-passing receipts cannot create a journal entry. This does not prevent rejected work from being represented and inspected as validation history; it prevents that work from being recorded as a contribution.
 
-The local append-only JSONL journal hash-chains entries and deduplicates them by the receipt's content-addressed work `manifest_id`. Each entry preserves the manifest identity, creator node ID, contributor node ID, accepting validator node ID, validation receipt ID, lineage parent contribution IDs, the validated contribution document, and a local recording timestamp. This is factual audit metadata only, not a reward or reputation mechanism.
+The local append-only JSONL journal hash-chains entries and deduplicates them by the receipt's content-addressed work `manifest_id`. Journal validation, duplicate checking, and append are serialized with a local file lock so concurrent submissions cannot double-record one manifest. Each entry preserves the manifest identity, creator node ID, contributor node ID, accepting validator node ID, validation receipt ID, lineage parent contribution IDs, the validated contribution document, and a local recording timestamp. This is factual audit metadata only, not a reward or reputation mechanism.
 
 ## Ledger records
 

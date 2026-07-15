@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, Iterator, cast
+
+if os.name == "nt":  # pragma: no cover - justification: Windows-only import
+    import msvcrt
+else:  # pragma: no cover - justification: mutually exclusive platform import
+    import fcntl
 
 from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
@@ -223,35 +230,76 @@ def record_validated_contribution(
             "contribution recording requires an accepted passed validation receipt"
         )
 
-    entries = _load_contribution_journal(journal_path)
-    manifest_id = receipt["manifest_id"]
-    for existing_entry in entries:
-        if existing_entry["manifest_id"] == manifest_id:
-            return existing_entry
+    with _contribution_journal_lock(journal_path):
+        entries = _load_contribution_journal(journal_path)
+        manifest_id = receipt["manifest_id"]
+        for existing_entry in entries:
+            if existing_entry["manifest_id"] == manifest_id:
+                return existing_entry
 
-    entry: dict[str, Any] = {
-        "entry_version": LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION,
-        "recorded_at": _utc_timestamp(clock()),
-        "manifest_id": manifest_id,
-        "creator_node_id": contribution["creator_node_id"],
-        "contributor_node_id": contribution["contributor_node_id"],
-        "validator_node_id": receipt["validator_id"],
-        "validation_receipt_id": contribution["validation_receipt_id"],
-        "lineage_parent_contribution_ids": contribution["lineage"][
-            "parent_contribution_ids"
-        ],
-        "contribution": contribution,
-        "prior_entry_hash": entries[-1]["entry_hash"] if entries else None,
-    }
-    entry["entry_hash"] = _journal_entry_hash(entry)
+        entry: dict[str, Any] = {
+            "entry_version": LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION,
+            "recorded_at": _utc_timestamp(clock()),
+            "manifest_id": manifest_id,
+            "creator_node_id": contribution["creator_node_id"],
+            "contributor_node_id": contribution["contributor_node_id"],
+            "validator_node_id": receipt["validator_id"],
+            "validation_receipt_id": contribution["validation_receipt_id"],
+            "lineage_parent_contribution_ids": contribution["lineage"][
+                "parent_contribution_ids"
+            ],
+            "contribution": contribution,
+            "prior_entry_hash": entries[-1]["entry_hash"] if entries else None,
+        }
+        entry["entry_hash"] = _journal_entry_hash(entry)
+        try:
+            with journal_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, sort_keys=True))
+                handle.write("\n")
+        except OSError as exc:
+            raise ContributionRecordError("contribution journal is unwritable") from exc
+        return entry
+
+
+@contextmanager
+def _contribution_journal_lock(journal_path: Path) -> Iterator[None]:
+    """Serialize journal validation, deduplication, and append across processes."""
+
     journal_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = journal_path.with_name(f".{journal_path.name}.lock")
     try:
-        with journal_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, sort_keys=True))
-            handle.write("\n")
+        with lock_path.open("a+b") as lock_handle:
+            if os.name == "nt":  # pragma: no cover - justification: Windows-only lock
+                lock_handle.seek(0)
+                if lock_handle.read(1) == b"":
+                    lock_handle.write(b"\0")
+                    lock_handle.flush()
+                lock_handle.seek(0)
+                getattr(msvcrt, "locking")(
+                    lock_handle.fileno(),
+                    getattr(msvcrt, "LK_LOCK"),
+                    1,
+                )
+            else:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                if (
+                    os.name == "nt"
+                ):  # pragma: no cover - justification: Windows-only unlock
+                    lock_handle.seek(0)
+                    getattr(msvcrt, "locking")(
+                        lock_handle.fileno(),
+                        getattr(msvcrt, "LK_UNLCK"),
+                        1,
+                    )
+                else:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
     except OSError as exc:
-        raise ContributionRecordError("contribution journal is unwritable") from exc
-    return entry
+        raise ContributionRecordError(
+            "contribution journal lock is unavailable"
+        ) from exc
 
 
 def _load_contribution_journal(journal_path: Path) -> list[dict[str, Any]]:
