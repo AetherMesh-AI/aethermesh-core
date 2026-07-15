@@ -6,7 +6,7 @@ import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
@@ -214,8 +214,7 @@ def record_validated_contribution(
     """Append passed receipt-backed attribution once per work manifest."""
 
     contribution = validate_local_contribution_record(document, local_root)
-    receipt_ref = contribution["validation"]["validation_receipt_ref"]
-    assert isinstance(receipt_ref, str)
+    receipt_ref = cast(str, contribution["validation"]["validation_receipt_ref"])
     receipt = validate_validation_receipt_document(
         _read_local_json(local_root, receipt_ref, "validation receipt")
     )
