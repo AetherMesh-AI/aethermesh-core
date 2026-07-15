@@ -1389,7 +1389,6 @@ class RuntimeServiceTests(unittest.TestCase):
                     "summary_status": "empty",
                     "current_node_identity": {
                         "node_id": None,
-                        "creator_node_id": None,
                     },
                     "contribution_count": 0,
                     "accepted_work_count": 0,
@@ -2584,7 +2583,6 @@ class RuntimeServiceTests(unittest.TestCase):
                     "summary_status": "empty",
                     "current_node_identity": {
                         "node_id": None,
-                        "creator_node_id": None,
                     },
                     "contribution_count": 0,
                     "accepted_work_count": 0,
@@ -2669,7 +2667,6 @@ class RuntimeServiceTests(unittest.TestCase):
                 summary["current_node_identity"],
                 {
                     "node_id": initialized["node_id"],
-                    "creator_node_id": initialized["node_id"],
                 },
             )
             self.assertEqual(summary["contribution_count"], 6)

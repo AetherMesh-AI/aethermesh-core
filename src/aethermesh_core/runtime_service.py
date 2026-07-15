@@ -1587,7 +1587,6 @@ class NodeRuntimeService:
             "summary_status": "empty" if not items else "recorded",
             "current_node_identity": {
                 "node_id": current_node_id,
-                "creator_node_id": current_node_id,
             },
             "contribution_count": len(items),
             "accepted_work_count": accepted_work_count,
