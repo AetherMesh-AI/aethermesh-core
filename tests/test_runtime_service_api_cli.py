@@ -2824,6 +2824,36 @@ class RuntimeServiceTests(unittest.TestCase):
                 item["evidence_errors"],
             )
 
+    def test_contribution_summary_reports_missing_status_as_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(
+                {
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "hello"},
+                    },
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "schema_version": 1,
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
+                }
+            )
+            status_path = root / "data" / "job-status" / f"{submission['job_id']}.json"
+            status_path.unlink()
+
+            item = service.contribution_summary()["items"][0]
+
+            self.assertEqual(item["validation_status"], "unavailable")
+            self.assertIn(
+                f"missing job status record: {submission['job_id']}.json",
+                item["evidence_errors"],
+            )
+
     def test_contribution_summary_marks_inconsistent_receipt_evidence_invalid(
         self,
     ) -> None:

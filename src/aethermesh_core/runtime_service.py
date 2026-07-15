@@ -1963,12 +1963,8 @@ class NodeRuntimeService:
         manifest = self._load_summary_document(
             manifest_path, "job submission manifest", evidence_errors
         )
-        status = (
-            self._load_summary_document(
-                status_path, "job status record", evidence_errors
-            )
-            if status_path.exists()
-            else {}
+        status = self._load_summary_document(
+            status_path, "job status record", evidence_errors
         )
         status_validation = status.get("validation")
         validation = status_validation if isinstance(status_validation, dict) else {}
@@ -2127,6 +2123,7 @@ class NodeRuntimeService:
             validation_status = (
                 "unavailable"
                 if not manifest
+                or not status_path.exists()
                 or (
                     not receipt
                     and receipt_ref == expected_receipt_ref
