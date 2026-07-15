@@ -12,7 +12,7 @@ Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under th
 | --- | --- | --- |
 | `schema_version` | integer `1` | Event-format version. |
 | `event_id` | non-empty string | Locally unique event identifier chosen by the caller. |
-| `timestamp` | non-empty string | Human-readable UTC timestamp recorded by the caller. |
+| `timestamp` | UTC timestamp (`YYYY-MM-DDTHH:MM:SSZ`) | Human-readable timestamp recorded by the caller. |
 | `event_type` | enum | Prototype action listed below. |
 | `actor_node_id` | non-empty string | Node performing or recording the action. |
 | `creator_node_id` | non-empty string or `null` | Original creator node when known; `null` explicitly records that it is not known. |

@@ -48,9 +48,13 @@ class LocalAuditEventTests(unittest.TestCase):
                 "missing required",
             ),
             ({**_minimal_event(), "schema_version": 2}, "schema_version"),
+            ({**_minimal_event(), "schema_version": True}, "schema_version"),
+            ({**_minimal_event(), "timestamp": "not-utc"}, "timestamp"),
             ({**_minimal_event(), "event_type": "unknown"}, "event_type"),
+            ({**_minimal_event(), "event_type": []}, "event_type"),
             ({**_minimal_event(), "creator_node_id": ""}, "creator_node_id"),
             ({**_minimal_event(), "unexpected": True}, "unsupported fields"),
+            ({**_minimal_event(), 1: "invalid"}, "field names must be strings"),
         ]
         for event, message in cases:
             with self.subTest(message=message):
@@ -63,6 +67,8 @@ class LocalAuditEventTests(unittest.TestCase):
             ({"lineage_parent_ids": [""]}, "lineage_parent_ids"),
             ({"contribution_attribution_ids": "bad"}, "contribution_attribution_ids"),
             ({"related_file_paths": ["../outside.json"]}, "safe relative"),
+            ({"related_file_paths": ["C:\\outside.json"]}, "safe relative"),
+            ({"related_file_paths": ["https://example.test/a"]}, "safe relative"),
             ({"hashes": {"": "sha256:value"}}, "hashes"),
             ({"signatures": {"receipt": ""}}, "signatures"),
         ]

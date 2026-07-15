@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from pathlib import Path
+from datetime import datetime
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 AUDIT_EVENT_SCHEMA_VERSION = 1
@@ -52,6 +53,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
     """Validate and return one canonical local audit event without writing it."""
 
     document = dict(event)
+    if any(not isinstance(field, str) for field in document):
+        raise LocalAuditEventError("local audit event field names must be strings")
     unknown_fields = set(document) - _REQUIRED_FIELDS - _OPTIONAL_FIELDS
     if unknown_fields:
         raise LocalAuditEventError(
@@ -62,14 +65,22 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         raise LocalAuditEventError(
             f"local audit event is missing required fields: {', '.join(sorted(missing_fields))}"
         )
-    if document["schema_version"] != AUDIT_EVENT_SCHEMA_VERSION:
+    if (
+        not isinstance(document["schema_version"], int)
+        or isinstance(document["schema_version"], bool)
+        or document["schema_version"] != AUDIT_EVENT_SCHEMA_VERSION
+    ):
         raise LocalAuditEventError("local audit event.schema_version must be integer 1")
-    for field in ("event_id", "timestamp", "actor_node_id", "local_run_id"):
+    for field in ("event_id", "actor_node_id", "local_run_id"):
         _require_text(document[field], f"local audit event.{field}")
+    _require_timestamp(document["timestamp"])
     creator_node_id = document["creator_node_id"]
     if creator_node_id is not None:
         _require_text(creator_node_id, "local audit event.creator_node_id")
-    if document["event_type"] not in AUDIT_EVENT_TYPES:
+    if (
+        not isinstance(document["event_type"], str)
+        or document["event_type"] not in AUDIT_EVENT_TYPES
+    ):
         raise LocalAuditEventError("local audit event.event_type is unsupported")
     for field in ("manifest_id", "work_id", "validation_receipt_id"):
         if field in document:
@@ -103,6 +114,19 @@ def _require_text(value: object, label: str) -> None:
         raise LocalAuditEventError(f"{label} must be a non-empty string")
 
 
+def _require_timestamp(value: object) -> None:
+    if not isinstance(value, str):
+        raise LocalAuditEventError(
+            "local audit event.timestamp must be a UTC timestamp"
+        )
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise LocalAuditEventError(
+            "local audit event.timestamp must be a UTC timestamp"
+        ) from exc
+
+
 def _require_text_list(value: object, label: str) -> None:
     if not isinstance(value, list) or any(
         not isinstance(item, str) or not item.strip() for item in value
@@ -118,7 +142,16 @@ def _require_local_paths(value: object) -> None:
     _require_text_list(value, "local audit event.related_file_paths")
     for item in value:
         path = Path(item)
-        if path.is_absolute() or ".." in path.parts:
+        windows_path = PureWindowsPath(item)
+        if (
+            path.is_absolute()
+            or windows_path.is_absolute()
+            or item.startswith("~")
+            or "://" in item
+            or "\\" in item
+            or ".." in path.parts
+            or ".." in windows_path.parts
+        ):
             raise LocalAuditEventError(
                 "local audit event.related_file_paths must be safe relative paths"
             )
