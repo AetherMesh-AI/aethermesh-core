@@ -141,16 +141,15 @@ def _require_local_paths(value: object) -> None:
         )
     _require_text_list(value, "local audit event.related_file_paths")
     for item in value:
-        path = Path(item)
-        windows_path = PureWindowsPath(item)
+        path_variants = (Path(item), PureWindowsPath(item))
+        has_parent_reference = any(".." in path.parts for path in path_variants)
+        is_absolute = any(path.is_absolute() for path in path_variants)
         if (
-            path.is_absolute()
-            or windows_path.is_absolute()
+            is_absolute
+            or has_parent_reference
             or item.startswith("~")
             or "://" in item
             or "\\" in item
-            or ".." in path.parts
-            or ".." in windows_path.parts
         ):
             raise LocalAuditEventError(
                 "local audit event.related_file_paths must be safe relative paths"
