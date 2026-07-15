@@ -2697,6 +2697,82 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), summary)
 
+    def test_rejected_work_is_auditable_but_a_corrected_submission_gets_credit(
+        self,
+    ) -> None:
+        """A correction is new lineage evidence, never a rewrite of a rejection."""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            rejected_request = {
+                "job_type": "text_stats",
+                "requested_capability": {"identifier": "work.text_stats"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "schema_version": 1,
+                "lineage_parent_refs": [],
+                "attribution_metadata": {"source": "correction-test"},
+            }
+            rejected = service.submit_local_job(rejected_request)
+            service.execute_submitted_local_job(rejected["job_id"], "worker-local-a")
+
+            corrected = service.submit_local_job(
+                {
+                    **rejected_request,
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "hello"},
+                    },
+                    "lineage_parent_refs": [rejected["manifest_ref"]],
+                }
+            )
+            service.execute_submitted_local_job(corrected["job_id"], "worker-local-a")
+
+            summary = service.contribution_summary()
+            items = {item["work_item_id"]: item for item in summary["items"]}
+            self.assertEqual(summary["accepted_work_count"], 1)
+            self.assertEqual(summary["non_accepted_work_count"], 1)
+            self.assertEqual(
+                items[rejected["job_id"]]["acceptance_status"], "not_accepted"
+            )
+            self.assertEqual(
+                items[corrected["job_id"]]["acceptance_status"], "accepted"
+            )
+            self.assertEqual(
+                items[corrected["job_id"]]["lineage_links"], [rejected["manifest_ref"]]
+            )
+
+            rejected_receipt = service.get_local_validation_receipt(
+                work_id=rejected["job_id"]
+            )
+            corrected_receipt = service.get_local_validation_receipt(
+                work_id=corrected["job_id"]
+            )
+            self.assertEqual(rejected_receipt["status"], "rejected")
+            self.assertEqual(rejected_receipt["creator_node_id"], "creator-local-a")
+            self.assertEqual(rejected_receipt["manifest_ref"], rejected["manifest_ref"])
+            self.assertEqual(rejected_receipt["lineage_parent_ids"], [])
+            self.assertEqual(
+                rejected_receipt["contribution_attribution"]["metadata"],
+                {"source": "correction-test"},
+            )
+            self.assertEqual(corrected_receipt["status"], "accepted")
+            self.assertNotEqual(
+                rejected_receipt["validation_receipt_id"],
+                corrected_receipt["validation_receipt_id"],
+            )
+            self.assertTrue(
+                (root / rejected_receipt["manifest_ref"]).exists(),
+                "the rejected work manifest remains available for audit",
+            )
+
     def test_contribution_summary_flags_invalid_validation_timestamp(self) -> None:
         request, _ = _valid_local_work_fixture()
         with tempfile.TemporaryDirectory() as temp_dir:
