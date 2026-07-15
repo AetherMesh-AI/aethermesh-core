@@ -1387,8 +1387,19 @@ class RuntimeServiceTests(unittest.TestCase):
                     "schema_version": 1,
                     "network_mode": "local-only-no-p2p",
                     "summary_status": "empty",
+                    "current_node_identity": {
+                        "node_id": None,
+                        "creator_node_id": None,
+                    },
+                    "contribution_count": 0,
                     "accepted_work_count": 0,
                     "non_accepted_work_count": 0,
+                    "accepted_count": 0,
+                    "rejected_count": 0,
+                    "pending_count": 0,
+                    "unavailable_count": 0,
+                    "invalid_count": 0,
+                    "latest_receipt_time": None,
                     "items": [],
                 },
             )
@@ -2571,11 +2582,23 @@ class RuntimeServiceTests(unittest.TestCase):
                     "schema_version": 1,
                     "network_mode": "local-only-no-p2p",
                     "summary_status": "empty",
+                    "current_node_identity": {
+                        "node_id": None,
+                        "creator_node_id": None,
+                    },
+                    "contribution_count": 0,
                     "accepted_work_count": 0,
                     "non_accepted_work_count": 0,
+                    "accepted_count": 0,
+                    "rejected_count": 0,
+                    "pending_count": 0,
+                    "unavailable_count": 0,
+                    "invalid_count": 0,
+                    "latest_receipt_time": None,
                     "items": [],
                 },
             )
+            initialized = service.initialize_local_node_data()
             request = {
                 "job_type": "echo",
                 "requested_capability": {"identifier": "work.echo"},
@@ -2642,11 +2665,26 @@ class RuntimeServiceTests(unittest.TestCase):
 
             summary = service.contribution_summary()
             self.assertEqual(summary, service.contribution_summary())
+            self.assertEqual(
+                summary["current_node_identity"],
+                {
+                    "node_id": initialized["node_id"],
+                    "creator_node_id": initialized["node_id"],
+                },
+            )
+            self.assertEqual(summary["contribution_count"], 6)
             self.assertEqual(summary["accepted_work_count"], 1)
             self.assertEqual(summary["non_accepted_work_count"], 5)
+            self.assertEqual(summary["accepted_count"], 1)
+            self.assertEqual(summary["rejected_count"], 1)
+            self.assertEqual(summary["pending_count"], 1)
+            self.assertEqual(summary["unavailable_count"], 2)
+            self.assertEqual(summary["invalid_count"], 1)
+            self.assertIsNotNone(summary["latest_receipt_time"])
             items = {item["work_item_id"]: item for item in summary["items"]}
             accepted_item = items[accepted["job_id"]]
             self.assertEqual(accepted_item["acceptance_status"], "accepted")
+            self.assertEqual(accepted_item["validation_status"], "accepted")
             self.assertEqual(accepted_item["creator_node_id"], "creator-local-a")
             self.assertEqual(accepted_item["contributing_node_id"], "worker-local-a")
             self.assertEqual(accepted_item["manifest_ref"], accepted["manifest_ref"])
@@ -2655,13 +2693,31 @@ class RuntimeServiceTests(unittest.TestCase):
                 f"data/job-validation-receipts/{accepted['job_id']}.json",
             )
             self.assertEqual(accepted_item["lineage_links"], ["data/prior-job.json"])
+            self.assertEqual(
+                accepted_item["lineage_parent_ids"], ["data/prior-job.json"]
+            )
+            self.assertEqual(
+                accepted_item["validation_receipt_id"],
+                f"local-validation-receipt-{accepted['job_id']}",
+            )
+            self.assertEqual(
+                accepted_item["attribution_id"],
+                f"local-contribution-{accepted['job_id']}",
+            )
+            self.assertEqual(
+                accepted_item["contribution_attribution"]["creator_node_id"],
+                "creator-local-a",
+            )
+            self.assertIsNotNone(accepted_item["manifest_id"])
             self.assertIsInstance(accepted_item["timestamps"]["submitted_at"], int)
             self.assertEqual(
                 items[failed["job_id"]]["acceptance_status"], "not_accepted"
             )
+            self.assertEqual(items[failed["job_id"]]["validation_status"], "rejected")
             self.assertEqual(
                 items[queued["job_id"]]["acceptance_status"], "not_accepted"
             )
+            self.assertEqual(items[queued["job_id"]]["validation_status"], "pending")
             self.assertEqual(
                 items[missing_reference["job_id"]]["acceptance_status"], "degraded"
             )
