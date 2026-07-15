@@ -38,6 +38,39 @@ class LocalNodeStartupTests(unittest.TestCase):
             self.assertEqual(first["node_id"], second["node_id"])
             self.assertEqual(first["creator_node_id"], second["creator_node_id"])
             self.assertEqual(first["network_mode"], "local-only-no-p2p")
+            audit_events = [
+                json.loads(line)
+                for line in (runtime / "logs" / "startup.log")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(audit_events), 2)
+            for event, startup in zip(audit_events, (first, second), strict=True):
+                self.assertEqual(event["event"], "local_node_startup")
+                self.assertEqual(event["event_type"], "node_startup")
+                self.assertRegex(event["timestamp"], r"^\d{4}-\d{2}-\d{2}T")
+                self.assertEqual(event["node_id"], startup["node_id"])
+                self.assertEqual(event["creator_node_id"], startup["creator_node_id"])
+                self.assertEqual(event["manifest_ref"], startup["manifest_path"])
+                self.assertEqual(event["manifest_hash"], startup["manifest_hash"])
+                self.assertEqual(event["lineage_ref"], startup["lineage_path"])
+                self.assertEqual(event["validation_status"], "passed")
+                self.assertEqual(
+                    event["contribution_attribution"],
+                    {
+                        "creator_node_id": startup["creator_node_id"],
+                        "attribution_node_id": startup["node_id"],
+                        "event": "local_node_startup",
+                        "scoring_applied": False,
+                    },
+                )
+                self.assertNotIn("token", json.dumps(event).lower())
+                self.assertNotIn("reward", json.dumps(event).lower())
+                self.assertNotIn("peer", json.dumps(event).lower())
+                self.assertNotIn("consensus", json.dumps(event).lower())
+            self.assertNotEqual(
+                audit_events[0]["local_run_id"], audit_events[1]["local_run_id"]
+            )
             for relative_path in (
                 "identity/creator-node.json",
                 "manifests/local-node-manifest.json",
