@@ -246,6 +246,9 @@ class ContributionRecordTests(unittest.TestCase):
         record["validation"]["validation_receipt_ref"] = (
             "examples/validation-receipts/missing.json"
         )
+        record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+            "examples/validation-receipts/missing.json"
+        )
         record["manifest_links"]["validation_manifest_ref"] = (
             "examples/validation-receipts/missing.json"
         )
@@ -264,6 +267,9 @@ class ContributionRecordTests(unittest.TestCase):
             )
             record = copy.deepcopy(self.failed)
             record["validation"]["validation_receipt_ref"] = "receipt.json"
+            record["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+                "receipt.json"
+            )
             record["manifest_links"]["validation_manifest_ref"] = "receipt.json"
             with self.assertRaisesRegex(ContributionRecordError, "escapes local root"):
                 validate_local_contribution_record(record, local_root)
@@ -280,16 +286,24 @@ class ContributionRecordTests(unittest.TestCase):
                 lambda record: record["validation"].update(
                     status="invalid", failure_reason="synthetic failure"
                 ),
-                "latest history entry",
+                "state must match its latest history entry",
             ),
             (
-                lambda record: record["validation"].update(
-                    validated_at="2026-07-13T12:00:02Z"
+                lambda record: (
+                    record["validation"].update(validated_at="2026-07-13T12:00:02Z"),
+                    record["validation"]["status_history"][-1].update(
+                        validated_at="2026-07-13T12:00:02Z"
+                    ),
                 ),
                 "validated_at does not match",
             ),
             (
-                lambda record: record["validation"].update(validated_at=None),
+                lambda record: (
+                    record["validation"].update(validated_at=None),
+                    record["validation"]["status_history"][-1].update(
+                        validated_at=None
+                    ),
+                ),
                 "validated_at is required",
             ),
             (
@@ -344,8 +358,16 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"
+        record["validation"]["status_history"][-1]["failure_reason"] = (
+            "synthetic failure"
+        )
         with self.assertRaisesRegex(ContributionRecordError, "rejection_reason"):
             validate_local_contribution_record(record, self.root)
+
+        record = copy.deepcopy(self.minimal)
+        record["validation"]["validator_node_id"] = "node.other-validator"
+        with self.assertRaisesRegex(ContributionRecordError, "latest history entry"):
+            validate_contribution_record(record)
 
     def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
         record = copy.deepcopy(self.minimal)

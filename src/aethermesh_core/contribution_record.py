@@ -558,9 +558,9 @@ def _validation(value: object) -> None:
         raise ContributionRecordError(
             "validation.status_history must begin unvalidated"
         )
-    if states[-1]["status"] != state["status"]:
+    if states[-1] != state:
         raise ContributionRecordError(
-            "validation status must match its latest history entry"
+            "validation state must match its latest history entry"
         )
 
 
