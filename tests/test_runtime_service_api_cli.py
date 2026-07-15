@@ -2763,6 +2763,98 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), summary)
 
+    def test_contribution_summary_inspection_is_repeatable_ordered_and_preserves_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submissions = []
+            for creator_node_id, worker_node_id, lineage_parent_ref in (
+                ("creator-node-z", "worker-node-z", "data/lineage/z-parent.json"),
+                ("creator-node-a", "worker-node-a", "data/lineage/a-parent.json"),
+            ):
+                submission = service.submit_local_job(
+                    {
+                        "job_type": "echo",
+                        "requested_capability": {"identifier": "work.echo"},
+                        "input_payload": {
+                            "payload_type": "json",
+                            "content": {"message": creator_node_id},
+                        },
+                        "creator_node_id": creator_node_id,
+                        "requested_validation_mode": "deterministic-local",
+                        "schema_version": 1,
+                        "lineage_parent_refs": [lineage_parent_ref],
+                        "attribution_metadata": {},
+                    }
+                )
+                service.execute_submitted_local_job(
+                    submission["job_id"], worker_node_id
+                )
+                submissions.append(
+                    (submission, creator_node_id, worker_node_id, lineage_parent_ref)
+                )
+
+            first = service.contribution_summary()
+            second = service.contribution_summary()
+
+            self.assertEqual(
+                json.dumps(first, sort_keys=True, separators=(",", ":")),
+                json.dumps(second, sort_keys=True, separators=(",", ":")),
+            )
+            items = first["items"]
+            self.assertEqual(
+                [item["work_item_id"] for item in items],
+                sorted(submission["job_id"] for submission, *_ in submissions),
+            )
+            for (
+                submission,
+                creator_node_id,
+                worker_node_id,
+                lineage_parent_ref,
+            ) in submissions:
+                item = next(
+                    item
+                    for item in items
+                    if item["work_item_id"] == submission["job_id"]
+                )
+                self.assertEqual(item["creator_node_id"], creator_node_id)
+                self.assertEqual(item["contributing_node_id"], worker_node_id)
+                self.assertEqual(
+                    item["contribution_attribution"]["creator_node_id"], creator_node_id
+                )
+                self.assertEqual(item["manifest_ref"], submission["manifest_ref"])
+                self.assertIsNotNone(item["manifest_id"])
+                self.assertEqual(
+                    item["validation_receipt_id"],
+                    f"local-validation-receipt-{submission['job_id']}",
+                )
+                self.assertEqual(item["lineage_links"], [lineage_parent_ref])
+                self.assertEqual(item["lineage_parent_ids"], [lineage_parent_ref])
+                self.assertEqual(item["acceptance_status"], "accepted")
+
+            malformed_job_id = "local-job-malformed-entry"
+            malformed_status = root / "data" / "job-status" / f"{malformed_job_id}.json"
+            malformed_status.write_text("{not json", encoding="utf-8")
+            after_malformed = service.contribution_summary()
+            inspected_valid_items = [
+                item
+                for item in after_malformed["items"]
+                if item["work_item_id"] != malformed_job_id
+            ]
+            self.assertEqual(inspected_valid_items, items)
+            malformed_item = next(
+                item
+                for item in after_malformed["items"]
+                if item["work_item_id"] == malformed_job_id
+            )
+            self.assertEqual(malformed_item["validation_status"], "unavailable")
+            self.assertIn(
+                "job status record JSON is malformed",
+                " ".join(malformed_item["evidence_errors"]),
+            )
+
     def test_contribution_summary_reports_orphaned_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
