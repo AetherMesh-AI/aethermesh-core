@@ -1954,6 +1954,7 @@ class NodeRuntimeService:
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
         expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        expected_receipt_path = self.paths.home / expected_receipt_ref
         manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
         status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
         evidence_errors: list[str] = []
@@ -1979,7 +1980,7 @@ class NodeRuntimeService:
                 )
             else:
                 receipt = self._load_summary_document(
-                    self.paths.home / receipt_ref,
+                    expected_receipt_path,
                     "validation receipt",
                     evidence_errors,
                 )
@@ -2021,6 +2022,10 @@ class NodeRuntimeService:
             evidence_errors.append("job status record does not match work item")
         if receipt and receipt.get("job_id") != job_id:
             evidence_errors.append("validation receipt does not match work item")
+        if receipt and receipt.get("validation_receipt_id") != self._receipt_id_for_job(
+            job_id
+        ):
+            evidence_errors.append("validation receipt has invalid receipt ID")
         expected_result_ref = f"data/job-results/{job_id}.json"
         if receipt and receipt.get("result_ref") != expected_result_ref:
             evidence_errors.append("validation receipt does not match work result")
@@ -2088,12 +2093,29 @@ class NodeRuntimeService:
             evidence_errors.append(
                 "validation method does not match receipt provenance"
             )
-        accepted = accepted and not evidence_errors
         receipt_validation = receipt.get("validation")
+        receipt_valid = (
+            receipt_validation.get("valid")
+            if isinstance(receipt_validation, dict)
+            else None
+        )
+        if receipt and not isinstance(receipt_valid, bool):
+            evidence_errors.append("validation receipt has invalid validation evidence")
+        if receipt and validation.get("passed") is not receipt_valid:
+            evidence_errors.append("job status validation does not match receipt")
+        expected_receipt_status = "accepted" if receipt_valid is True else "rejected"
+        if receipt and receipt.get("status") != expected_receipt_status:
+            evidence_errors.append("validation receipt status is inconsistent")
+        accepted = accepted and not evidence_errors
         if evidence_errors:
             validation_status = (
                 "unavailable"
-                if not manifest or (not receipt and receipt_ref == expected_receipt_ref)
+                if not manifest
+                or (
+                    not receipt
+                    and receipt_ref == expected_receipt_ref
+                    and not expected_receipt_path.exists()
+                )
                 else "invalid"
             )
         elif receipt_passed:
@@ -2117,7 +2139,7 @@ class NodeRuntimeService:
             "creator_node_id": creator_node_id,
             "contributing_node_id": contributing_node_id,
             "contribution_attribution": attribution,
-            "attribution_id": f"local-contribution-{job_id}",
+            "attribution_id": None,
             "manifest_ref": manifest_ref,
             "manifest_id": (
                 canonical_json_hash(manifest, prefix="sha256:") if manifest else None
