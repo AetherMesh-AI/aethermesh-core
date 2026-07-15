@@ -7,7 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from aethermesh_core.cli import main
-from aethermesh_core.local_shutdown import LocalShutdownError, shutdown_local_node
+from aethermesh_core.local_shutdown import (
+    LocalShutdownError,
+    _latest_validation_context,
+    shutdown_local_node,
+)
 from aethermesh_core.local_startup import start_local_node
 
 
@@ -146,6 +150,7 @@ class LocalShutdownTests(unittest.TestCase):
         )
         self.assertEqual(events[0]["final_lifecycle_state"], "stopped")
         self.assertEqual(events[0]["shutdown_reason"], "normal local shutdown")
+        self.assertEqual(events[0]["validation_status"], "passed")
         self.assertNotEqual(
             events[0]["node_instance_id"], events[1]["node_instance_id"]
         )
@@ -167,6 +172,79 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(event["validation_status"], "unavailable")
         self.assertEqual(event["lineage_refs"], [start["lineage_path"]])
         self.assertEqual(event["contribution_attribution_refs"], [])
+
+    def test_shutdown_uses_latest_receipt_without_changing_startup_instance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            start = start_local_node(root).to_dict()
+            later_receipt = root / "receipts" / "zzz-work-validation.json"
+            later_receipt.write_text(
+                json.dumps({"validation_status": "pass"}), encoding="utf-8"
+            )
+            shutdown_local_node(root)
+            event = json.loads(
+                (root / "logs" / "local-audit-events.jsonl").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(
+            event["validation_receipt_ref"], "receipts/zzz-work-validation.json"
+        )
+        self.assertEqual(event["validation_status"], "pass")
+        self.assertEqual(
+            event["node_instance_id"],
+            f"local-startup-lineage:{start['lineage_path']}",
+        )
+
+    def test_missing_receipts_still_produce_distinct_shutdown_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first = start_local_node(root).to_dict()
+            (root / str(first["validation_receipt_path"])).unlink()
+            shutdown_local_node(root)
+            second = start_local_node(root).to_dict()
+            (root / str(second["validation_receipt_path"])).unlink()
+            shutdown_local_node(root)
+            events = [
+                json.loads(line)
+                for line in (root / "logs" / "local-audit-events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+
+        self.assertEqual(len(events), 2)
+        self.assertNotEqual(
+            events[0]["node_instance_id"], events[1]["node_instance_id"]
+        )
+
+    def test_latest_validation_context_handles_unreadable_or_malformed_receipts(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            receipts = root / "receipts"
+            receipts.mkdir()
+            malformed = receipts / "malformed.json"
+            malformed.write_text("not-json", encoding="utf-8")
+            non_object = receipts / "non-object.json"
+            non_object.write_text("[]", encoding="utf-8")
+
+            missing_context = _latest_validation_context(
+                root, ["receipts/missing.json"]
+            )
+            malformed_context = _latest_validation_context(
+                root, ["receipts/malformed.json"]
+            )
+            non_object_context = _latest_validation_context(
+                root, ["receipts/non-object.json"]
+            )
+
+        self.assertEqual(missing_context, (None, "unavailable"))
+        self.assertEqual(malformed_context, ("receipts/malformed.json", "unavailable"))
+        self.assertEqual(
+            non_object_context, ("receipts/non-object.json", "unavailable")
+        )
 
     def test_shutdown_keeps_a_malformed_prior_audit_log_intact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

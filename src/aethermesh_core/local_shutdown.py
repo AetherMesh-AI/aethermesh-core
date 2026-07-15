@@ -356,9 +356,13 @@ def _append_shutdown_audit_event(
 ) -> None:
     """Append durable local shutdown evidence without making teardown fragile."""
 
-    receipt_ref = validation_receipt_refs[-1] if validation_receipt_refs else None
+    receipt_ref, validation_status = _latest_validation_context(
+        root, validation_receipt_refs
+    )
     node_instance_id = (
-        f"local-startup:{receipt_ref}" if receipt_ref else f"unavailable:{node_id}"
+        f"local-startup-lineage:{lineage_refs[-1]}"
+        if lineage_refs
+        else f"unavailable:{node_id}"
     )
     event_id = f"node-shutdown:{node_instance_id}"
     path = root / LOCAL_AUDIT_LOG_PATH
@@ -379,7 +383,7 @@ def _append_shutdown_audit_event(
                 "shutdown_reason": "normal local shutdown",
                 "exit_mode": exit_mode,
                 "final_lifecycle_state": "stopped",
-                "validation_status": "available" if receipt_ref else "unavailable",
+                "validation_status": validation_status,
                 "manifest_ref": manifest_ref,
                 "validation_receipt_ref": receipt_ref,
                 "lineage_refs": lineage_refs,
@@ -401,11 +405,44 @@ def _append_shutdown_audit_event(
 def _audit_event_exists(path: Path, event_id: str) -> bool:
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip() and json.loads(line).get("event_id") == event_id:
+            try:
+                event = json.loads(line)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(event, dict) and event.get("event_id") == event_id:
                 return True
-    except (OSError, ValueError):
+    except OSError:
         return False
     return False
+
+
+def _latest_validation_context(
+    root: Path, receipt_refs: list[str]
+) -> tuple[str | None, str]:
+    """Return the newest local receipt reference and its reported status."""
+
+    candidates: list[tuple[int, str]] = []
+    for ref in receipt_refs:
+        try:
+            candidates.append(((root / ref).stat().st_mtime_ns, ref))
+        except OSError:
+            continue
+    if not candidates:
+        return None, "unavailable"
+    receipt_ref = max(candidates)[1]
+    try:
+        receipt = json.loads((root / receipt_ref).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return receipt_ref, "unavailable"
+    if not isinstance(receipt, dict):
+        return receipt_ref, "unavailable"
+    status = receipt.get("validation_status")
+    if not isinstance(status, str):
+        result = receipt.get("validation_result")
+        status = result.get("status") if isinstance(result, dict) else None
+    return receipt_ref, status if isinstance(
+        status, str
+    ) and status.strip() else "unavailable"
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
