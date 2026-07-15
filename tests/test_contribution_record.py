@@ -379,6 +379,23 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(updated["lineage"], record["lineage"])
         self.assertEqual(updated["attribution"], record["attribution"])
 
+    def test_failed_local_receipt_retains_invalid_contribution_and_reason(self) -> None:
+        record = copy.deepcopy(self.failed)
+        record["validation"] = new_unvalidated_validation()
+        record["manifest_links"]["validation_manifest_ref"] = None
+
+        updated = apply_local_validation_receipt(
+            record, self.root, "examples/validation-receipts/local-echo-fail.json"
+        )
+
+        self.assertEqual(updated["validation"]["status"], "invalid")
+        self.assertEqual(
+            updated["validation"]["failure_reason"],
+            "output did not match deterministic echo expectation",
+        )
+        self.assertEqual(updated["record_id"], record["record_id"])
+        self.assertEqual(updated["attribution"], record["attribution"])
+
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
         schema = json.loads(
             (self.root / "examples/schemas/contribution-record.schema.json").read_text(
@@ -420,6 +437,19 @@ class ContributionRecordTests(unittest.TestCase):
             },
         )
         self.assertIn("failure_reason", schema["properties"]["validation"]["required"])
+        validation_history = schema["properties"]["validation"]["properties"][
+            "status_history"
+        ]
+        self.assertEqual(
+            validation_history["prefixItems"],
+            [{"$ref": "#/$defs/unvalidatedState"}],
+        )
+        self.assertEqual(
+            validation_history["items"], {"$ref": "#/$defs/validationState"}
+        )
+        validation_state_text = json.dumps(schema["$defs"]["validationState"])
+        self.assertNotIn('"passed"', validation_state_text)
+        self.assertNotIn('"failed"', validation_state_text)
         self.assertIn(
             "parent_contribution_ids", schema["properties"]["lineage"]["required"]
         )
