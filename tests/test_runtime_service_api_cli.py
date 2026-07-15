@@ -2793,6 +2793,7 @@ class RuntimeServiceTests(unittest.TestCase):
 
             self.assertEqual(item["acceptance_status"], "degraded")
             self.assertEqual(item["validation_status"], "invalid")
+            self.assertIsNone(service.contribution_summary()["latest_receipt_time"])
             self.assertIn(
                 "validation receipt has invalid receipt ID", item["evidence_errors"]
             )

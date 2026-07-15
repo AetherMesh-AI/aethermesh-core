@@ -1578,7 +1578,8 @@ class NodeRuntimeService:
         validated_at_values = sorted(
             item["validated_at"]
             for item in items
-            if _is_utc_timestamp(item["validated_at"])
+            if item["validation_status"] in {"accepted", "rejected"}
+            and _is_utc_timestamp(item["validated_at"])
         )
         current_node_id = _config_node_id(self.load_config())
         return {
