@@ -18,6 +18,12 @@ This record is evidence metadata only. It does not award credits, calculate rewa
 
 The local append-only JSONL journal hash-chains entries and deduplicates them by the receipt's content-addressed work `manifest_id`. Journal validation, duplicate checking, and append are serialized with a local file lock so concurrent submissions cannot double-record one manifest. Each entry preserves the manifest identity, creator node ID, contributor node ID, accepting validator node ID, validation receipt ID, lineage parent contribution IDs, the validated contribution document, and a local recording timestamp. This is factual audit metadata only, not a reward or reputation mechanism.
 
+## Local credit states and corrections
+
+Local work is auditable in four contribution states: `pending`, `accepted`, `rejected`, and `superseded`. Only `accepted` is credit-bearing. A pending item has no final receipt; an accepted item has a linked `accepted` receipt whose deterministic validation passed; a rejected item has a rejected, missing, malformed, duplicate, or lineage-invalid evidence path; and a superseded record remains retained in validation history after later evidence replaces it. `contribution_summary()` is the local read-only export: its `accepted_work_count` filters strictly to accepted receipt-backed work, while its items retain non-accepted manifests, receipt references, creator and contributing node IDs, lineage links, and evidence errors for audit.
+
+A correction never overwrites rejected evidence. It is a new submitted work item with a new validation receipt and an explicit lineage parent reference to the rejected manifest. The original rejection and receipt remain inspectable; only the separately accepted correction can appear in the accepted count. This keeps a correction from earning credit twice or silently turning a rejected record into accepted work.
+
 ## Ledger records
 
 The local JSON `ContributionLedger` also writes `created_at` when `record()` creates a new record. Its clock is injectable for stable local tests. Existing timestamp-less ledger entries remain readable as historical records and are not assigned a timestamp during a read or rewrite.
