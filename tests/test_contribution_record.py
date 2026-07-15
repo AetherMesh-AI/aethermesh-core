@@ -12,6 +12,8 @@ from unittest.mock import patch
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
     PHASE_1_JOB_CAPABILITIES,
+    apply_local_validation_receipt,
+    new_unvalidated_validation,
     record_validated_contribution,
     validate_local_contribution_record,
     validate_contribution_record,
@@ -42,7 +44,7 @@ class ContributionRecordTests(unittest.TestCase):
             self.minimal["result_hash"],
             "sha256:d38453ef5f09ed11c37d19c129e6980366aa7bb43e11a17950ae3d8017a8eda0",
         )
-        self.assertEqual(self.minimal["validation"]["status"], "passed")
+        self.assertEqual(self.minimal["validation"]["status"], "valid")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
         self.assertIs(
             validate_local_contribution_record(self.minimal, self.root), self.minimal
@@ -57,7 +59,7 @@ class ContributionRecordTests(unittest.TestCase):
             )
         )
         self.assertIs(validate_contribution_record(self.failed), self.failed)
-        self.assertEqual(self.failed["validation"]["status"], "failed")
+        self.assertEqual(self.failed["validation"]["status"], "invalid")
         work_manifest = self._load_job_envelope("complete-local-echo.json")
         self.assertEqual(self.failed["job_id"], work_manifest["job_id"])
         self.assertEqual(self.failed["job_id"], receipt["job_id"])
@@ -141,7 +143,7 @@ class ContributionRecordTests(unittest.TestCase):
             missing = copy.deepcopy(self.minimal)
             missing["validation"]["validation_receipt_ref"] = None
             missing["manifest_links"]["validation_manifest_ref"] = None
-            with self.assertRaisesRegex(ContributionRecordError, "required"):
+            with self.assertRaisesRegex(ContributionRecordError, "receipt reference"):
                 record_validated_contribution(missing, self.root, journal_path)
             self.assertFalse(journal_path.exists())
 
@@ -276,9 +278,9 @@ class ContributionRecordTests(unittest.TestCase):
             ),
             (
                 lambda record: record["validation"].update(
-                    status="failed", failure_reason="synthetic failure"
+                    status="invalid", failure_reason="synthetic failure"
                 ),
-                "status does not match",
+                "latest history entry",
             ),
             (
                 lambda record: record["validation"].update(
@@ -347,18 +349,35 @@ class ContributionRecordTests(unittest.TestCase):
 
     def test_unvalidated_shape_keeps_optional_validation_fields_nullable(self) -> None:
         record = copy.deepcopy(self.minimal)
-        record["validation"] = {
-            "status": "unvalidated",
-            "validator_node_id": None,
-            "validation_receipt_ref": None,
-            "validated_at": None,
-            "failure_reason": None,
-        }
+        record["validation"] = new_unvalidated_validation()
         self.assertIs(validate_contribution_record(record), record)
         with self.assertRaisesRegex(
             ContributionRecordError, "required for local evidence"
         ):
             validate_local_contribution_record(record, self.root)
+
+    def test_local_receipt_updates_unvalidated_record_without_overwriting_evidence(
+        self,
+    ) -> None:
+        record = copy.deepcopy(self.minimal)
+        record["validation"] = new_unvalidated_validation()
+        record["manifest_links"]["validation_manifest_ref"] = None
+        updated = apply_local_validation_receipt(
+            record, self.root, "examples/validation-receipts/local-echo-pass.json"
+        )
+        self.assertEqual(updated["validation"]["status"], "valid")
+        self.assertEqual(
+            updated["validation"]["validation_receipt_ref"],
+            "examples/validation-receipts/local-echo-pass.json",
+        )
+        self.assertEqual(len(updated["validation"]["status_history"]), 2)
+        self.assertEqual(updated["creator_node_id"], record["creator_node_id"])
+        self.assertEqual(
+            updated["manifest_links"]["work_manifest_ref"],
+            record["manifest_links"]["work_manifest_ref"],
+        )
+        self.assertEqual(updated["lineage"], record["lineage"])
+        self.assertEqual(updated["attribution"], record["attribution"])
 
     def test_plain_schema_declares_the_same_required_shape(self) -> None:
         schema = json.loads(
@@ -369,7 +388,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         self.assertEqual(set(schema["required"]), set(self.minimal))
         self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(schema["properties"]["schema_version"], {"const": 4})
+        self.assertEqual(schema["properties"]["schema_version"], {"const": 5})
         self.assertEqual(
             schema["properties"]["result_hash_algorithm"], {"const": "sha256"}
         )
@@ -450,7 +469,7 @@ class ContributionRecordTests(unittest.TestCase):
     def test_version_three_record_is_not_silently_reinterpreted(self) -> None:
         record = copy.deepcopy(self.minimal)
         record["schema_version"] = 3
-        with self.assertRaisesRegex(ContributionRecordError, "must be integer 4"):
+        with self.assertRaisesRegex(ContributionRecordError, "must be integer 5"):
             validate_contribution_record(record)
 
     def test_each_phase_one_job_type_records_its_manifest_capability(self) -> None:
@@ -503,7 +522,7 @@ class ContributionRecordTests(unittest.TestCase):
 
         record = copy.deepcopy(self.minimal)
         record["validation"]["failure_reason"] = "not applicable"
-        with self.assertRaisesRegex(ContributionRecordError, "only failed"):
+        with self.assertRaisesRegex(ContributionRecordError, "only invalid"):
             validate_contribution_record(record)
 
     def test_rejects_unknown_or_malformed_core_values(self) -> None:
