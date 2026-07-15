@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.local_audit_event import append_local_audit_event
 from aethermesh_core.local_json_helpers import (
     append_json_line,
     canonical_json_hash,
@@ -22,6 +24,7 @@ from aethermesh_core.local_runtime_config import (
 )
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
+LOCAL_AUDIT_LOG_PATH = "logs/local-audit-events.jsonl"
 
 
 class LocalShutdownError(ValueError):
@@ -231,6 +234,17 @@ def _shutdown_local_node(
     progress["artifact"] = _relative_ref(root, state_path)
     atomic_write_json(state_path, final_state)
     progress["contribution_records_finalized"] = True
+    _append_shutdown_audit_event(
+        root,
+        timestamp=started_at,
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        manifest_ref=_relative_ref(root, manifest_path),
+        validation_receipt_refs=receipt_refs,
+        lineage_refs=lineage_refs,
+        contribution_refs=contribution_refs,
+        exit_mode=shutdown_outcome,
+    )
     _append_log(
         log_path,
         event="shutdown_persistence_complete",
@@ -326,6 +340,72 @@ def _shutdown_already_completed(path: Path) -> bool:
     except LocalShutdownError:
         return False
     return document.get("status") == "stopped"
+
+
+def _append_shutdown_audit_event(
+    root: Path,
+    *,
+    timestamp: str,
+    node_id: str,
+    creator_node_id: str,
+    manifest_ref: str,
+    validation_receipt_refs: list[str],
+    lineage_refs: list[str],
+    contribution_refs: list[str],
+    exit_mode: str,
+) -> None:
+    """Append durable local shutdown evidence without making teardown fragile."""
+
+    receipt_ref = validation_receipt_refs[-1] if validation_receipt_refs else None
+    node_instance_id = (
+        f"local-startup:{receipt_ref}" if receipt_ref else f"unavailable:{node_id}"
+    )
+    event_id = f"node-shutdown:{node_instance_id}"
+    path = root / LOCAL_AUDIT_LOG_PATH
+    if _audit_event_exists(path, event_id):
+        return
+    try:
+        append_local_audit_event(
+            path,
+            {
+                "schema_version": 1,
+                "event_id": event_id,
+                "timestamp": timestamp,
+                "event_type": "node.shutdown",
+                "actor_node_id": node_id,
+                "creator_node_id": creator_node_id,
+                "local_run_id": node_instance_id,
+                "node_instance_id": node_instance_id,
+                "shutdown_reason": "normal local shutdown",
+                "exit_mode": exit_mode,
+                "final_lifecycle_state": "stopped",
+                "validation_status": "available" if receipt_ref else "unavailable",
+                "manifest_ref": manifest_ref,
+                "validation_receipt_ref": receipt_ref,
+                "lineage_refs": lineage_refs,
+                "contribution_attribution_refs": contribution_refs,
+                "related_file_paths": [
+                    manifest_ref,
+                    *validation_receipt_refs,
+                    *lineage_refs,
+                    *contribution_refs,
+                ],
+            },
+        )
+    except (OSError, ValueError):
+        # Final state has already been atomically written. Do not turn a missing
+        # best-effort audit write into an unsafe shutdown or alter prior JSONL.
+        pass
+
+
+def _audit_event_exists(path: Path, event_id: str) -> bool:
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip() and json.loads(line).get("event_id") == event_id:
+                return True
+    except (OSError, ValueError):
+        return False
+    return False
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
