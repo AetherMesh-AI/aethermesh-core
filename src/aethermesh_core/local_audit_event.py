@@ -100,7 +100,7 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
             _require_text_list(document[field], f"local audit event.{field}")
     for field in ("lineage_refs", "contribution_attribution_refs"):
         if field in document:
-            _require_text_list(document[field], f"local audit event.{field}")
+            _require_local_paths(document[field], f"local audit event.{field}")
     for field in (
         "node_instance_id",
         "exit_mode",
@@ -112,8 +112,13 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
     for field in ("shutdown_reason", "manifest_ref", "validation_receipt_ref"):
         if field in document and document[field] is not None:
             _require_text(document[field], f"local audit event.{field}")
+    for field in ("manifest_ref", "validation_receipt_ref"):
+        if field in document and document[field] is not None:
+            _require_local_paths([document[field]], f"local audit event.{field}")
     if "related_file_paths" in document:
-        _require_local_paths(document["related_file_paths"])
+        _require_local_paths(
+            document["related_file_paths"], "local audit event.related_file_paths"
+        )
     for field in ("hashes", "signatures"):
         if field in document:
             _require_text_mapping(document[field], f"local audit event.{field}")
@@ -160,12 +165,10 @@ def _require_text_list(value: object, label: str) -> None:
         raise LocalAuditEventError(f"{label} must be a list of non-empty strings")
 
 
-def _require_local_paths(value: object) -> None:
+def _require_local_paths(value: object, label: str) -> None:
     if not isinstance(value, list):
-        raise LocalAuditEventError(
-            "local audit event.related_file_paths must be a list of non-empty strings"
-        )
-    _require_text_list(value, "local audit event.related_file_paths")
+        raise LocalAuditEventError(f"{label} must be a list of non-empty strings")
+    _require_text_list(value, label)
     for item in value:
         path_variants = (Path(item), PureWindowsPath(item))
         has_parent_reference = any(".." in path.parts for path in path_variants)
@@ -177,9 +180,7 @@ def _require_local_paths(value: object) -> None:
             or "://" in item
             or "\\" in item
         ):
-            raise LocalAuditEventError(
-                "local audit event.related_file_paths must be safe relative paths"
-            )
+            raise LocalAuditEventError(f"{label} must contain safe relative paths")
 
 
 def _require_text_mapping(value: object, label: str) -> None:

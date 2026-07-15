@@ -69,6 +69,13 @@ class LocalAuditEventTests(unittest.TestCase):
             ({"related_file_paths": ["../outside.json"]}, "safe relative"),
             ({"related_file_paths": ["C:\\outside.json"]}, "safe relative"),
             ({"related_file_paths": ["https://example.test/a"]}, "safe relative"),
+            ({"manifest_ref": "/private/node.json"}, "safe relative"),
+            ({"validation_receipt_ref": "../receipt.json"}, "safe relative"),
+            ({"lineage_refs": ["~/lineage.json"]}, "safe relative"),
+            (
+                {"contribution_attribution_refs": ["C:\\contribution.json"]},
+                "safe relative",
+            ),
             ({"hashes": {"": "sha256:value"}}, "hashes"),
             ({"signatures": {"receipt": ""}}, "signatures"),
         ]
