@@ -93,11 +93,15 @@ class ContributionRecordTests(unittest.TestCase):
             validate_local_contribution_record(self.failed, self.root), self.failed
         )
 
-    def test_records_one_passed_contribution_with_linked_audit_fields(self) -> None:
+    def test_records_one_accepted_contribution_with_exact_evidence_and_attribution(
+        self,
+    ) -> None:
+        accepted = copy.deepcopy(self.minimal)
+        accepted["lineage"]["parent_contribution_ids"] = ["contribution.parent-001"]
         with TemporaryDirectory() as directory:
             journal_path = Path(directory) / "audit" / "contributions.jsonl"
             entry = record_validated_contribution(
-                self.minimal,
+                accepted,
                 self.root,
                 journal_path,
                 clock=lambda: datetime(2026, 7, 13, 12, 0, 2, tzinfo=UTC),
@@ -107,22 +111,35 @@ class ContributionRecordTests(unittest.TestCase):
                 entry["manifest_id"],
                 "sha256:72426ae139e40863ceb9ea2896c01d33114c226f944659de08eba371bbe8791c",
             )
-            self.assertEqual(entry["creator_node_id"], self.minimal["creator_node_id"])
+            self.assertEqual(entry["creator_node_id"], "node.local-creator")
+            self.assertEqual(entry["contributor_node_id"], "node.local-worker")
+            self.assertEqual(entry["validator_node_id"], "node.local-validator")
             self.assertEqual(
-                entry["contributor_node_id"], self.minimal["contributor_node_id"]
+                entry["validation_receipt_id"],
+                "local-validation-receipt-local-job-echo-001",
             )
             self.assertEqual(
-                entry["validator_node_id"],
-                self.minimal["validation"]["validator_node_id"],
+                entry["lineage_parent_contribution_ids"], ["contribution.parent-001"]
+            )
+            self.assertEqual(entry["contribution"]["job_id"], "local-job-echo-001")
+            self.assertEqual(
+                entry["contribution"]["manifest_links"]["work_manifest_ref"],
+                "examples/job-envelopes/minimal-local-echo.json",
             )
             self.assertEqual(
-                entry["validation_receipt_id"], self.minimal["validation_receipt_id"]
+                entry["contribution"]["validation"]["validation_receipt_ref"],
+                "examples/validation-receipts/local-echo-pass.json",
             )
             self.assertEqual(
-                entry["lineage_parent_contribution_ids"],
-                self.minimal["lineage"]["parent_contribution_ids"],
+                entry["contribution"]["attribution"],
+                {
+                    "author_id": "node.local-worker",
+                    "author_kind": "node",
+                    "role": "worker",
+                    "declared_tool_or_runtime": "aethermesh-core",
+                    "creation_mode": "automatic",
+                },
             )
-            self.assertIs(entry["contribution"], self.minimal)
             self.assertEqual(entry["recorded_at"], "2026-07-13T12:00:02Z")
             self.assertIsNone(entry["prior_entry_hash"])
             self.assertRegex(entry["entry_hash"], r"^sha256:[0-9a-f]{64}$")
@@ -145,6 +162,21 @@ class ContributionRecordTests(unittest.TestCase):
             missing["manifest_links"]["validation_manifest_ref"] = None
             with self.assertRaisesRegex(ContributionRecordError, "receipt reference"):
                 record_validated_contribution(missing, self.root, journal_path)
+            self.assertFalse(journal_path.exists())
+
+            malformed = copy.deepcopy(self.minimal)
+            malformed_receipt_ref = "examples/contributions/minimal-local-echo.json"
+            malformed["validation"]["validation_receipt_ref"] = malformed_receipt_ref
+            malformed["validation"]["status_history"][-1]["validation_receipt_ref"] = (
+                malformed_receipt_ref
+            )
+            malformed["manifest_links"]["validation_manifest_ref"] = (
+                malformed_receipt_ref
+            )
+            with self.assertRaisesRegex(
+                ContributionRecordError, "receipt file is invalid"
+            ):
+                record_validated_contribution(malformed, self.root, journal_path)
             self.assertFalse(journal_path.exists())
 
     def test_duplicate_validated_manifest_is_not_recorded_twice(self) -> None:
