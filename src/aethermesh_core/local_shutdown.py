@@ -252,6 +252,7 @@ def _shutdown_local_node(
         timestamp=started_at,
         node_id=node_id,
         creator_node_id=creator_node_id,
+        startup_log_path=configured_runtime_path(root, config, "log"),
         manifest_ref=_relative_ref(root, manifest_path),
         validation_receipt_refs=receipt_refs,
         lineage_refs=lineage_refs,
@@ -348,6 +349,7 @@ def _append_shutdown_audit_event(
     timestamp: str,
     node_id: str,
     creator_node_id: str,
+    startup_log_path: Path,
     manifest_ref: str,
     validation_receipt_refs: list[str],
     lineage_refs: list[str],
@@ -362,7 +364,8 @@ def _append_shutdown_audit_event(
     node_instance_id = (
         f"local-startup-lineage:{lineage_refs[-1]}"
         if lineage_refs
-        else f"unavailable:{node_id}"
+        else _latest_startup_run_id(startup_log_path)
+        or f"unavailable:{node_id}:{timestamp}"
     )
     event_id = f"node-shutdown:{node_instance_id}"
     path = root / LOCAL_AUDIT_LOG_PATH
@@ -414,6 +417,31 @@ def _audit_event_exists(path: Path, event_id: str) -> bool:
     except OSError:
         return False
     return False
+
+
+def _latest_startup_run_id(path: Path) -> str | None:
+    """Recover the latest startup instance when optional lineage files are absent."""
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    startup_count = 0
+    latest_run_id = None
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(event, dict) or event.get("event") != "local_node_startup":
+            continue
+        startup_count += 1
+        local_run_id = event.get("local_run_id")
+        if isinstance(local_run_id, str) and local_run_id.strip():
+            latest_run_id = local_run_id
+    if latest_run_id is None:
+        return None
+    return f"{latest_run_id}:occurrence-{startup_count}"
 
 
 def _latest_validation_context(

@@ -9,6 +9,7 @@ from unittest.mock import patch
 from aethermesh_core.cli import main
 from aethermesh_core.local_shutdown import (
     LocalShutdownError,
+    _latest_startup_run_id,
     _latest_validation_context,
     shutdown_local_node,
 )
@@ -202,9 +203,11 @@ class LocalShutdownTests(unittest.TestCase):
             root = Path(temp_dir)
             first = start_local_node(root).to_dict()
             (root / str(first["validation_receipt_path"])).unlink()
+            (root / str(first["lineage_path"])).unlink()
             shutdown_local_node(root)
             second = start_local_node(root).to_dict()
             (root / str(second["validation_receipt_path"])).unlink()
+            (root / str(second["lineage_path"])).unlink()
             shutdown_local_node(root)
             events = [
                 json.loads(line)
@@ -245,6 +248,23 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(
             non_object_context, ("receipts/non-object.json", "unavailable")
         )
+
+    def test_latest_startup_run_id_handles_missing_or_malformed_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "startup.log"
+            self.assertIsNone(_latest_startup_run_id(path))
+            path.write_text(
+                "not-json\n"
+                "[]\n"
+                + json.dumps({"event": "other"})
+                + "\n"
+                + json.dumps({"event": "local_node_startup", "local_run_id": None})
+                + "\n"
+                + json.dumps({"event": "local_node_startup", "local_run_id": ""})
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertIsNone(_latest_startup_run_id(path))
 
     def test_shutdown_keeps_a_malformed_prior_audit_log_intact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
