@@ -40,7 +40,7 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
         self.assertEqual(
             self.minimal["result_hash"],
-            "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
+            "sha256:d38453ef5f09ed11c37d19c129e6980366aa7bb43e11a17950ae3d8017a8eda0",
         )
         self.assertEqual(self.minimal["validation"]["status"], "passed")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
@@ -101,7 +101,10 @@ class ContributionRecordTests(unittest.TestCase):
                 clock=lambda: datetime(2026, 7, 13, 12, 0, 2, tzinfo=UTC),
             )
 
-            self.assertEqual(entry["manifest_id"], "sha256:" + "a" * 64)
+            self.assertEqual(
+                entry["manifest_id"],
+                "sha256:72426ae139e40863ceb9ea2896c01d33114c226f944659de08eba371bbe8791c",
+            )
             self.assertEqual(entry["creator_node_id"], self.minimal["creator_node_id"])
             self.assertEqual(
                 entry["contributor_node_id"], self.minimal["contributor_node_id"]
@@ -315,7 +318,8 @@ class ContributionRecordTests(unittest.TestCase):
             local_root = Path(directory)
             receipt_ref = self.minimal["validation"]["validation_receipt_ref"]
             manifest_ref = self.minimal["manifest_links"]["work_manifest_ref"]
-            for reference in (receipt_ref, manifest_ref):
+            result_ref = self.minimal["source"]["local_source_path"]
+            for reference in (receipt_ref, manifest_ref, result_ref):
                 assert isinstance(reference, str)
                 target = local_root / reference
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -327,6 +331,14 @@ class ContributionRecordTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(ContributionRecordError, "creator_node_id"):
                 validate_local_contribution_record(self.minimal, local_root)
+
+            manifest["creator_node_id"] = self.minimal["creator_node_id"]
+            manifest["created_at"] = "2026-07-12T12:00:01Z"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(ContributionRecordError, "manifest_id"):
+                record_validated_contribution(
+                    self.minimal, local_root, local_root / "contributions.jsonl"
+                )
 
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"

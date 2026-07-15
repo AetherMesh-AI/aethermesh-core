@@ -229,6 +229,14 @@ def record_validated_contribution(
         raise ContributionRecordError(
             "contribution recording requires an accepted passed validation receipt"
         )
+    work_manifest_ref = cast(str, contribution["manifest_links"]["work_manifest_ref"])
+    work_manifest = cast(
+        dict[str, Any], _read_local_json(local_root, work_manifest_ref, "work manifest")
+    )
+    if canonical_json_hash(work_manifest, prefix="sha256:") != receipt["manifest_id"]:
+        raise ContributionRecordError(
+            "validation receipt manifest_id does not match work manifest"
+        )
 
     with _contribution_journal_lock(journal_path):
         entries = _load_contribution_journal(journal_path)
