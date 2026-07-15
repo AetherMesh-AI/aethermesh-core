@@ -298,6 +298,7 @@ def start_local_node(
     )
     _ensure_manifest_directories(root, manifest, runtime_dirs=runtime_dirs)
     manifest_hash = _document_hash(manifest)
+    runtime_metadata = validate_version_metadata(manifest["runtime_version"])
     receipt_ref = _next_artifact_ref(
         root, config, "validation_receipts", "startup-validation", timestamp
     )
@@ -312,7 +313,7 @@ def start_local_node(
         creator_node_id=creator_node_id,
         manifest_ref=_relative_ref(root, manifest_path),
         manifest_hash=manifest_hash,
-        runtime_metadata=validate_version_metadata(manifest["runtime_version"]),
+        runtime_metadata=runtime_metadata,
         timestamp=timestamp,
     )
     try:
@@ -327,7 +328,7 @@ def start_local_node(
         manifest_ref=_relative_ref(root, manifest_path),
         manifest_hash=manifest_hash,
         receipt_ref=receipt_ref,
-        runtime_metadata=validate_version_metadata(manifest["runtime_version"]),
+        runtime_metadata=runtime_metadata,
         timestamp=timestamp,
         config_ref=LOCAL_RUNTIME_CONFIG_PATH,
     )
@@ -338,11 +339,22 @@ def start_local_node(
                 json.dumps(
                     {
                         "event": "local_node_startup",
+                        "event_type": "node_startup",
                         "timestamp": timestamp,
                         "node_id": identity.node_id,
                         "creator_node_id": creator_node_id,
+                        "manifest_ref": _relative_ref(root, manifest_path),
                         "manifest_hash": manifest_hash,
-                        "validation_result": "passed",
+                        "lineage_ref": lineage_ref,
+                        "local_run_id": f"local-startup:{receipt_ref}",
+                        "software_version": runtime_metadata,
+                        "validation_status": "passed",
+                        "contribution_attribution": {
+                            "creator_node_id": creator_node_id,
+                            "attribution_node_id": identity.node_id,
+                            "event": "local_node_startup",
+                            "scoring_applied": False,
+                        },
                     },
                     sort_keys=True,
                 )
