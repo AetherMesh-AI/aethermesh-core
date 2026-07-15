@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import json
+import os
 import re
-from datetime import datetime
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator, cast
+
+if os.name == "nt":  # pragma: no cover - justification: Windows-only import
+    import msvcrt
+else:  # pragma: no cover - justification: mutually exclusive platform import
+    import fcntl
 
 from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
     validate_job_result_document,
 )
+from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     validate_validation_receipt_document,
@@ -19,6 +27,7 @@ from aethermesh_core.validation_receipt_schema import (
 )
 
 CONTRIBUTION_RECORD_SCHEMA_VERSION = 4
+LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION = 1
 VALIDATION_STATUSES = frozenset({"unvalidated", "passed", "failed"})
 AUTHOR_KINDS = frozenset({"human", "node"})
 CREATION_MODES = frozenset({"manual", "automatic"})
@@ -200,6 +209,164 @@ def validate_local_contribution_record(
                 f"result payload {field} does not match contribution evidence"
             )
     return contribution
+
+
+def record_validated_contribution(
+    document: object,
+    local_root: Path,
+    journal_path: Path,
+    *,
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+) -> dict[str, Any]:
+    """Append passed receipt-backed attribution once per work manifest."""
+
+    contribution = validate_local_contribution_record(document, local_root)
+    receipt_ref = cast(str, contribution["validation"]["validation_receipt_ref"])
+    receipt = validate_validation_receipt_document(
+        _read_local_json(local_root, receipt_ref, "validation receipt")
+    )
+    if receipt["status"] != "accepted" or receipt["validation_status"] != "pass":
+        raise ContributionRecordError(
+            "contribution recording requires an accepted passed validation receipt"
+        )
+    work_manifest_ref = cast(str, contribution["manifest_links"]["work_manifest_ref"])
+    work_manifest = cast(
+        dict[str, Any], _read_local_json(local_root, work_manifest_ref, "work manifest")
+    )
+    if canonical_json_hash(work_manifest, prefix="sha256:") != receipt["manifest_id"]:
+        raise ContributionRecordError(
+            "validation receipt manifest_id does not match work manifest"
+        )
+
+    with _contribution_journal_lock(journal_path):
+        entries = _load_contribution_journal(journal_path)
+        manifest_id = receipt["manifest_id"]
+        for existing_entry in entries:
+            if existing_entry["manifest_id"] == manifest_id:
+                return existing_entry
+
+        entry: dict[str, Any] = {
+            "entry_version": LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION,
+            "recorded_at": _utc_timestamp(clock()),
+            "manifest_id": manifest_id,
+            "creator_node_id": contribution["creator_node_id"],
+            "contributor_node_id": contribution["contributor_node_id"],
+            "validator_node_id": receipt["validator_id"],
+            "validation_receipt_id": contribution["validation_receipt_id"],
+            "lineage_parent_contribution_ids": contribution["lineage"][
+                "parent_contribution_ids"
+            ],
+            "contribution": contribution,
+            "prior_entry_hash": entries[-1]["entry_hash"] if entries else None,
+        }
+        entry["entry_hash"] = _journal_entry_hash(entry)
+        try:
+            with journal_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, sort_keys=True))
+                handle.write("\n")
+        except OSError as exc:
+            raise ContributionRecordError("contribution journal is unwritable") from exc
+        return entry
+
+
+@contextmanager
+def _contribution_journal_lock(journal_path: Path) -> Iterator[None]:
+    """Serialize journal validation, deduplication, and append across processes."""
+
+    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = journal_path.with_name(f".{journal_path.name}.lock")
+    try:
+        with lock_path.open("a+b") as lock_handle:
+            if os.name == "nt":  # pragma: no cover - justification: Windows-only lock
+                lock_handle.seek(0)
+                if lock_handle.read(1) == b"":
+                    lock_handle.write(b"\0")
+                    lock_handle.flush()
+                lock_handle.seek(0)
+                getattr(msvcrt, "locking")(
+                    lock_handle.fileno(),
+                    getattr(msvcrt, "LK_LOCK"),
+                    1,
+                )
+            else:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                if (
+                    os.name == "nt"
+                ):  # pragma: no cover - justification: Windows-only unlock
+                    lock_handle.seek(0)
+                    getattr(msvcrt, "locking")(
+                        lock_handle.fileno(),
+                        getattr(msvcrt, "LK_UNLCK"),
+                        1,
+                    )
+                else:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
+    except OSError as exc:
+        raise ContributionRecordError(
+            "contribution journal lock is unavailable"
+        ) from exc
+
+
+def _load_contribution_journal(journal_path: Path) -> list[dict[str, Any]]:
+    if not journal_path.exists():
+        return []
+    try:
+        lines = journal_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ContributionRecordError("contribution journal is unreadable") from exc
+
+    entries: list[dict[str, Any]] = []
+    previous_hash: str | None = None
+    for index, line in enumerate(lines, start=1):
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ContributionRecordError(
+                f"contribution journal entry {index} is malformed"
+            ) from exc
+        if not isinstance(entry, dict) or entry.get("entry_version") != (
+            LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION
+        ):
+            raise ContributionRecordError(
+                f"contribution journal entry {index} is invalid"
+            )
+        if entry.get("prior_entry_hash") != previous_hash:
+            raise ContributionRecordError(
+                f"contribution journal entry {index} has a broken hash chain"
+            )
+        entry_hash = entry.get("entry_hash")
+        if not isinstance(entry_hash, str) or entry_hash != _journal_entry_hash(entry):
+            raise ContributionRecordError(
+                f"contribution journal entry {index} has an invalid hash"
+            )
+        manifest_id = entry.get("manifest_id")
+        if not isinstance(manifest_id, str) or not _SHA256.fullmatch(manifest_id):
+            raise ContributionRecordError(
+                f"contribution journal entry {index} has an invalid manifest_id"
+            )
+        entries.append(entry)
+        previous_hash = entry_hash
+    return entries
+
+
+def _journal_entry_hash(entry: dict[str, Any]) -> str:
+    return canonical_json_hash(
+        {key: value for key, value in entry.items() if key != "entry_hash"},
+        prefix="sha256:",
+    )
+
+
+def _utc_timestamp(value: datetime) -> str:
+    if value.tzinfo is None:
+        raise ContributionRecordError(
+            "contribution record clock must be timezone-aware"
+        )
+    return (
+        value.astimezone(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
 
 
 def _exact_fields(value: object, fields: frozenset[str], label: str) -> dict[str, Any]:

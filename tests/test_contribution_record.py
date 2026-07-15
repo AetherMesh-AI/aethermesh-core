@@ -1,7 +1,9 @@
 import copy
 import json
 import re
+import threading
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -10,9 +12,11 @@ from unittest.mock import patch
 from aethermesh_core.contribution_record import (
     ContributionRecordError,
     PHASE_1_JOB_CAPABILITIES,
+    record_validated_contribution,
     validate_local_contribution_record,
     validate_contribution_record,
 )
+from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.runtime_service import LOCAL_CAPABILITY_DEFINITIONS
 
 
@@ -36,7 +40,7 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
         self.assertEqual(
             self.minimal["result_hash"],
-            "sha256:618f55efe0eb708c82b6d8533d824c1015d9a4f7bf575af1a6a7ecbaeba24bf6",
+            "sha256:d38453ef5f09ed11c37d19c129e6980366aa7bb43e11a17950ae3d8017a8eda0",
         )
         self.assertEqual(self.minimal["validation"]["status"], "passed")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])
@@ -86,6 +90,152 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertIs(
             validate_local_contribution_record(self.failed, self.root), self.failed
         )
+
+    def test_records_one_passed_contribution_with_linked_audit_fields(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "audit" / "contributions.jsonl"
+            entry = record_validated_contribution(
+                self.minimal,
+                self.root,
+                journal_path,
+                clock=lambda: datetime(2026, 7, 13, 12, 0, 2, tzinfo=UTC),
+            )
+
+            self.assertEqual(
+                entry["manifest_id"],
+                "sha256:72426ae139e40863ceb9ea2896c01d33114c226f944659de08eba371bbe8791c",
+            )
+            self.assertEqual(entry["creator_node_id"], self.minimal["creator_node_id"])
+            self.assertEqual(
+                entry["contributor_node_id"], self.minimal["contributor_node_id"]
+            )
+            self.assertEqual(
+                entry["validator_node_id"],
+                self.minimal["validation"]["validator_node_id"],
+            )
+            self.assertEqual(
+                entry["validation_receipt_id"], self.minimal["validation_receipt_id"]
+            )
+            self.assertEqual(
+                entry["lineage_parent_contribution_ids"],
+                self.minimal["lineage"]["parent_contribution_ids"],
+            )
+            self.assertIs(entry["contribution"], self.minimal)
+            self.assertEqual(entry["recorded_at"], "2026-07-13T12:00:02Z")
+            self.assertIsNone(entry["prior_entry_hash"])
+            self.assertRegex(entry["entry_hash"], r"^sha256:[0-9a-f]{64}$")
+            self.assertEqual(
+                len(journal_path.read_text(encoding="utf-8").splitlines()), 1
+            )
+
+    def test_failed_or_missing_validation_records_nothing(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            with self.assertRaisesRegex(
+                ContributionRecordError,
+                "requires an accepted passed validation receipt",
+            ):
+                record_validated_contribution(self.failed, self.root, journal_path)
+            self.assertFalse(journal_path.exists())
+
+            missing = copy.deepcopy(self.minimal)
+            missing["validation"]["validation_receipt_ref"] = None
+            missing["manifest_links"]["validation_manifest_ref"] = None
+            with self.assertRaisesRegex(ContributionRecordError, "required"):
+                record_validated_contribution(missing, self.root, journal_path)
+            self.assertFalse(journal_path.exists())
+
+    def test_duplicate_validated_manifest_is_not_recorded_twice(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            first = record_validated_contribution(self.minimal, self.root, journal_path)
+            duplicate = record_validated_contribution(
+                self.minimal, self.root, journal_path
+            )
+
+            self.assertEqual(duplicate, first)
+            self.assertEqual(
+                len(journal_path.read_text(encoding="utf-8").splitlines()), 1
+            )
+
+            prior = json.loads(journal_path.read_text(encoding="utf-8"))
+            prior["manifest_id"] = "sha256:" + "b" * 64
+            prior["entry_hash"] = canonical_json_hash(
+                {key: value for key, value in prior.items() if key != "entry_hash"},
+                prefix="sha256:",
+            )
+            journal_path.write_text(json.dumps(prior) + "\n", encoding="utf-8")
+            appended = record_validated_contribution(
+                self.minimal, self.root, journal_path
+            )
+            self.assertEqual(appended["prior_entry_hash"], prior["entry_hash"])
+            self.assertEqual(
+                len(journal_path.read_text(encoding="utf-8").splitlines()), 2
+            )
+
+    def test_concurrent_duplicate_submission_is_recorded_once(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            barrier = threading.Barrier(2)
+            original_validate = validate_local_contribution_record
+            errors: list[Exception] = []
+
+            def synchronized_validate(
+                document: object, local_root: Path
+            ) -> dict[str, Any]:
+                contribution = original_validate(document, local_root)
+                barrier.wait()
+                return contribution
+
+            def record() -> None:
+                try:
+                    record_validated_contribution(self.minimal, self.root, journal_path)
+                except (
+                    Exception
+                ) as exc:  # pragma: no cover - justification: failure capture
+                    errors.append(exc)
+
+            with patch(
+                "aethermesh_core.contribution_record.validate_local_contribution_record",
+                side_effect=synchronized_validate,
+            ):
+                threads = [threading.Thread(target=record) for _ in range(2)]
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
+
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                len(journal_path.read_text(encoding="utf-8").splitlines()), 1
+            )
+
+    def test_rejects_tampered_or_malformed_journal_before_appending(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            record_validated_contribution(self.minimal, self.root, journal_path)
+            entry = json.loads(journal_path.read_text(encoding="utf-8"))
+            entry["creator_node_id"] = "node.tampered"
+            journal_path.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ContributionRecordError, "invalid hash"):
+                record_validated_contribution(self.minimal, self.root, journal_path)
+
+            journal_path.write_text("not-json\n", encoding="utf-8")
+            with self.assertRaisesRegex(ContributionRecordError, "malformed"):
+                record_validated_contribution(self.minimal, self.root, journal_path)
+
+    def test_recording_clock_must_be_timezone_aware(self) -> None:
+        with TemporaryDirectory() as directory:
+            journal_path = Path(directory) / "contributions.jsonl"
+            with self.assertRaisesRegex(ContributionRecordError, "timezone-aware"):
+                record_validated_contribution(
+                    self.minimal,
+                    self.root,
+                    journal_path,
+                    clock=lambda: datetime(2026, 7, 13, 12, 0, 2),
+                )
+            self.assertFalse(journal_path.exists())
 
     def test_local_receipt_reference_rejects_missing_or_synthetic_receipts(
         self,
@@ -168,7 +318,8 @@ class ContributionRecordTests(unittest.TestCase):
             local_root = Path(directory)
             receipt_ref = self.minimal["validation"]["validation_receipt_ref"]
             manifest_ref = self.minimal["manifest_links"]["work_manifest_ref"]
-            for reference in (receipt_ref, manifest_ref):
+            result_ref = self.minimal["source"]["local_source_path"]
+            for reference in (receipt_ref, manifest_ref, result_ref):
                 assert isinstance(reference, str)
                 target = local_root / reference
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -180,6 +331,14 @@ class ContributionRecordTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(ContributionRecordError, "creator_node_id"):
                 validate_local_contribution_record(self.minimal, local_root)
+
+            manifest["creator_node_id"] = self.minimal["creator_node_id"]
+            manifest["created_at"] = "2026-07-12T12:00:01Z"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(ContributionRecordError, "manifest_id"):
+                record_validated_contribution(
+                    self.minimal, local_root, local_root / "contributions.jsonl"
+                )
 
         record = copy.deepcopy(self.failed)
         record["validation"]["failure_reason"] = "synthetic failure"
