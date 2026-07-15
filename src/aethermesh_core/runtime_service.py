@@ -1559,10 +1559,11 @@ class NodeRuntimeService:
 
         manifests = self.paths.data_dir / "job-submissions"
         statuses = self.paths.data_dir / "job-status"
+        receipts = self.paths.data_dir / "job-validation-receipts"
         job_ids = sorted(
             {
                 path.stem
-                for directory in (manifests, statuses)
+                for directory in (manifests, statuses, receipts)
                 if directory.exists()
                 for path in directory.glob("*.json")
             }
@@ -2000,6 +2001,17 @@ class NodeRuntimeService:
                         )
                     except RuntimeServiceError as exc:
                         evidence_errors.append(str(exc))
+        elif expected_receipt_path.exists():
+            evidence_errors.append(
+                "job status record has no validation receipt reference"
+                if status
+                else "validation receipt has no matching job status reference"
+            )
+            receipt = self._load_summary_document(
+                expected_receipt_path,
+                "validation receipt",
+                evidence_errors,
+            )
         elif status and status.get("status") in LOCAL_JOB_TERMINAL_STATES:
             evidence_errors.append(
                 "job status record has no validation receipt reference"
@@ -2079,6 +2091,9 @@ class NodeRuntimeService:
         if not isinstance(lineage_links, list):
             evidence_errors.append("job submission manifest has invalid lineage links")
             lineage_links = []
+        provenance_matches = _provenance_matches_job(
+            lineage, attribution, job_id, manifest.get("creator_node_id")
+        )
         if (
             receipt
             and isinstance(validation_method, dict)
@@ -2140,7 +2155,9 @@ class NodeRuntimeService:
             "creator_node_id": creator_node_id,
             "contributing_node_id": contributing_node_id,
             "contribution_attribution": attribution,
-            "attribution_id": None,
+            "attribution_id": (
+                f"local-contribution-{job_id}" if provenance_matches else None
+            ),
             "manifest_ref": manifest_ref,
             "manifest_id": (
                 canonical_json_hash(manifest, prefix="sha256:") if manifest else None
@@ -2152,6 +2169,7 @@ class NodeRuntimeService:
             "validation_receipt_id": receipt.get("validation_receipt_id"),
             "lineage_links": lineage_links,
             "lineage_parent_ids": lineage_links,
+            "lineage_id": f"local-lineage-{job_id}" if provenance_matches else None,
             "validated_at": receipt.get("validated_at"),
             "timestamps": {"submitted_at": manifest.get("submitted_at")},
             "evidence_errors": evidence_errors,

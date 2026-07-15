@@ -2697,7 +2697,14 @@ class RuntimeServiceTests(unittest.TestCase):
                 accepted_item["validation_receipt_id"],
                 f"local-validation-receipt-{accepted['job_id']}",
             )
-            self.assertEqual(accepted_item["attribution_id"], None)
+            self.assertEqual(
+                accepted_item["attribution_id"],
+                f"local-contribution-{accepted['job_id']}",
+            )
+            self.assertEqual(
+                accepted_item["lineage_id"],
+                f"local-lineage-{accepted['job_id']}",
+            )
             self.assertEqual(
                 accepted_item["contribution_attribution"]["creator_node_id"],
                 "creator-local-a",
@@ -2755,6 +2762,67 @@ class RuntimeServiceTests(unittest.TestCase):
             response = asyncio.run(fetch())
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json(), summary)
+
+    def test_contribution_summary_reports_orphaned_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(
+                {
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {
+                        "payload_type": "json",
+                        "content": {"message": "hello"},
+                    },
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "schema_version": 1,
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
+                }
+            )
+            service.execute_submitted_local_job(submission["job_id"], "worker-local-a")
+            (root / submission["manifest_ref"]).unlink()
+            (root / "data" / "job-status" / f"{submission['job_id']}.json").unlink()
+
+            summary = service.contribution_summary()
+            item = summary["items"][0]
+
+            self.assertEqual(summary["contribution_count"], 1)
+            self.assertEqual(item["validation_status"], "unavailable")
+            self.assertEqual(
+                item["validation_receipt_id"],
+                f"local-validation-receipt-{submission['job_id']}",
+            )
+            self.assertIn(
+                "validation receipt has no matching job status reference",
+                item["evidence_errors"],
+            )
+
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{submission['job_id']}.json"
+            )
+            receipt_path.unlink()
+            status_path = root / "data" / "job-status" / f"{submission['job_id']}.json"
+            status_path.write_text(
+                json.dumps(
+                    {
+                        "job_id": submission["job_id"],
+                        "status": "succeeded",
+                        "validation": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            item = service.contribution_summary()["items"][0]
+            self.assertIn(
+                "job status record has no validation receipt reference",
+                item["evidence_errors"],
+            )
 
     def test_contribution_summary_marks_inconsistent_receipt_evidence_invalid(
         self,
