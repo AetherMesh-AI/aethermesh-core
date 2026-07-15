@@ -82,6 +82,34 @@ jobs:
         self.assertEqual(exit_code, 1)
 
 
+class LocalParityGateTests(unittest.TestCase):
+    def test_install_smoke_requires_exactly_one_wheel(self) -> None:
+        module = load_quality_gates_module()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "dist").mkdir()
+            with mock.patch.object(module, "ROOT", root):
+                exit_code = module.command_install_smoke(Namespace(dist="dist"))
+
+        self.assertEqual(exit_code, 1)
+
+    def test_flaky_tests_runs_all_three_hash_seeds(self) -> None:
+        module = load_quality_gates_module()
+        completed = mock.Mock(returncode=0, stdout="ok\n")
+
+        with mock.patch.object(module, "run", return_value=completed) as run:
+            exit_code = module.command_flaky_tests(Namespace())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            [call.kwargs["env"]["PYTHONHASHSEED"] for call in run.call_args_list],
+            ["1", "2", "3"],
+        )
+        self.assertTrue(
+            all(call.args[0][-2:] == ["-q", "tests"] for call in run.call_args_list)
+        )
+
+
 class DesktopReleaseWorkflowTests(unittest.TestCase):
     def test_stage_step_normalizes_release_asset_names(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "desktop-release.yml").read_text(

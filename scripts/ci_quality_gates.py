@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import venv
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -25,12 +26,17 @@ FORBIDDEN_SUPPRESSION_RE = re.compile(
 
 
 def run(
-    args: list[str], *, cwd: Path = ROOT, input_text: str | None = None
+    args: list[str],
+    *,
+    cwd: Path = ROOT,
+    input_text: str | None = None,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         args,
         cwd=cwd,
         input=input_text,
+        env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -302,6 +308,49 @@ def _verify_wheel_record(wheel: Path) -> list[str]:
     return violations
 
 
+def command_install_smoke(args: argparse.Namespace) -> int:
+    wheels = sorted((ROOT / args.dist).glob("*.whl"))
+    if len(wheels) != 1:
+        print(f"Install smoke requires exactly one wheel, found {len(wheels)}.")
+        return 1
+
+    with tempfile.TemporaryDirectory(prefix="aethermesh-install-") as directory:
+        environment = Path(directory)
+        venv.EnvBuilder(with_pip=True).create(environment)
+        scripts = environment / ("Scripts" if os.name == "nt" else "bin")
+        python = scripts / ("python.exe" if os.name == "nt" else "python")
+        cli = scripts / (
+            "aethermesh-core.exe" if os.name == "nt" else "aethermesh-core"
+        )
+        install = run(
+            [str(python), "-m", "pip", "install", "--force-reinstall", str(wheels[0])]
+        )
+        print(install.stdout, end="")
+        if install.returncode != 0:
+            return install.returncode
+        smoke = run([str(cli), "--help"])
+        print(smoke.stdout, end="")
+        return smoke.returncode
+
+
+def command_flaky_tests(_: argparse.Namespace) -> int:
+    for seed in ("1", "2", "3"):
+        print(f"Flaky-test pass with PYTHONHASHSEED={seed}")
+        env = os.environ.copy()
+        env.update(
+            {
+                "PYTHONHASHSEED": seed,
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTEST_ADDOPTS": f"-o cache_dir=.pytest_cache/full-test-flaky-{seed}",
+            }
+        )
+        result = run([sys.executable, "-m", "pytest", "-q", "tests"], env=env)
+        print(result.stdout, end="")
+        if result.returncode != 0:
+            return result.returncode
+    return 0
+
+
 def command_artifact_provenance(args: argparse.Namespace) -> int:
     dist = ROOT / args.dist
     if not dist.exists():
@@ -374,6 +423,13 @@ def main() -> int:
     pr_size.add_argument("--max-binary-files", type=int, default=0)
     pr_size.add_argument("--exclude-path-prefix", action="append", default=[])
     pr_size.set_defaults(func=command_pr_size)
+
+    install_smoke = sub.add_parser("install-smoke")
+    install_smoke.add_argument("--dist", default="dist")
+    install_smoke.set_defaults(func=command_install_smoke)
+
+    flaky_tests = sub.add_parser("flaky-tests")
+    flaky_tests.set_defaults(func=command_flaky_tests)
 
     provenance = sub.add_parser("artifact-provenance")
     provenance.add_argument("--dist", default="dist")
