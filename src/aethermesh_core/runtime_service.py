@@ -1559,10 +1559,11 @@ class NodeRuntimeService:
 
         manifests = self.paths.data_dir / "job-submissions"
         statuses = self.paths.data_dir / "job-status"
+        receipts = self.paths.data_dir / "job-validation-receipts"
         job_ids = sorted(
             {
                 path.stem
-                for directory in (manifests, statuses)
+                for directory in (manifests, statuses, receipts)
                 if directory.exists()
                 for path in directory.glob("*.json")
             }
@@ -1571,12 +1572,35 @@ class NodeRuntimeService:
         accepted_work_count = sum(
             1 for item in items if item["acceptance_status"] == "accepted"
         )
+        validation_status_counts = {
+            status: sum(1 for item in items if item["validation_status"] == status)
+            for status in ("accepted", "rejected", "pending", "unavailable", "invalid")
+        }
+        validated_at_values = sorted(
+            item["validated_at"]
+            for item in items
+            if item["validation_status"] in {"accepted", "rejected"}
+            and _is_utc_timestamp(item["validated_at"])
+        )
+        current_node_id = _config_node_id(self.load_config())
         return {
             "schema_version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "network_mode": "local-only-no-p2p",
             "summary_status": "empty" if not items else "recorded",
+            "current_node_identity": {
+                "node_id": current_node_id,
+            },
+            "contribution_count": len(items),
             "accepted_work_count": accepted_work_count,
             "non_accepted_work_count": len(items) - accepted_work_count,
+            "accepted_count": validation_status_counts["accepted"],
+            "rejected_count": validation_status_counts["rejected"],
+            "pending_count": validation_status_counts["pending"],
+            "unavailable_count": validation_status_counts["unavailable"],
+            "invalid_count": validation_status_counts["invalid"],
+            "latest_receipt_time": (
+                validated_at_values[-1] if validated_at_values else None
+            ),
             "items": items,
         }
 
@@ -1932,18 +1956,15 @@ class NodeRuntimeService:
         manifest_ref = f"data/job-submissions/{job_id}.json"
         status_ref = f"data/job-status/{job_id}.json"
         expected_receipt_ref = f"data/job-validation-receipts/{job_id}.json"
+        expected_receipt_path = self.paths.home / expected_receipt_ref
         manifest_path = self.paths.data_dir / "job-submissions" / f"{job_id}.json"
         status_path = self.paths.data_dir / "job-status" / f"{job_id}.json"
         evidence_errors: list[str] = []
         manifest = self._load_summary_document(
             manifest_path, "job submission manifest", evidence_errors
         )
-        status = (
-            self._load_summary_document(
-                status_path, "job status record", evidence_errors
-            )
-            if status_path.exists()
-            else {}
+        status = self._load_summary_document(
+            status_path, "job status record", evidence_errors
         )
         status_validation = status.get("validation")
         validation = status_validation if isinstance(status_validation, dict) else {}
@@ -1957,7 +1978,7 @@ class NodeRuntimeService:
                 )
             else:
                 receipt = self._load_summary_document(
-                    self.paths.home / receipt_ref,
+                    expected_receipt_path,
                     "validation receipt",
                     evidence_errors,
                 )
@@ -1976,6 +1997,17 @@ class NodeRuntimeService:
                         )
                     except RuntimeServiceError as exc:
                         evidence_errors.append(str(exc))
+        elif expected_receipt_path.exists():
+            evidence_errors.append(
+                "job status record has no validation receipt reference"
+                if status
+                else "validation receipt has no matching job status reference"
+            )
+            receipt = self._load_summary_document(
+                expected_receipt_path,
+                "validation receipt",
+                evidence_errors,
+            )
         elif status and status.get("status") in LOCAL_JOB_TERMINAL_STATES:
             evidence_errors.append(
                 "job status record has no validation receipt reference"
@@ -1999,6 +2031,10 @@ class NodeRuntimeService:
             evidence_errors.append("job status record does not match work item")
         if receipt and receipt.get("job_id") != job_id:
             evidence_errors.append("validation receipt does not match work item")
+        if receipt and receipt.get("validation_receipt_id") != self._receipt_id_for_job(
+            job_id
+        ):
+            evidence_errors.append("validation receipt has invalid receipt ID")
         expected_result_ref = f"data/job-results/{job_id}.json"
         if receipt and receipt.get("result_ref") != expected_result_ref:
             evidence_errors.append("validation receipt does not match work result")
@@ -2051,6 +2087,9 @@ class NodeRuntimeService:
         if not isinstance(lineage_links, list):
             evidence_errors.append("job submission manifest has invalid lineage links")
             lineage_links = []
+        provenance_matches = _provenance_matches_job(
+            lineage, attribution, job_id, manifest.get("creator_node_id")
+        )
         if (
             receipt
             and isinstance(validation_method, dict)
@@ -2066,7 +2105,41 @@ class NodeRuntimeService:
             evidence_errors.append(
                 "validation method does not match receipt provenance"
             )
+        receipt_validation = receipt.get("validation")
+        receipt_valid = (
+            receipt_validation.get("valid")
+            if isinstance(receipt_validation, dict)
+            else None
+        )
+        if receipt and not isinstance(receipt_valid, bool):
+            evidence_errors.append("validation receipt has invalid validation evidence")
+        if receipt and validation.get("passed") is not receipt_valid:
+            evidence_errors.append("job status validation does not match receipt")
+        expected_receipt_status = "accepted" if receipt_valid is True else "rejected"
+        if receipt and receipt.get("status") != expected_receipt_status:
+            evidence_errors.append("validation receipt status is inconsistent")
         accepted = accepted and not evidence_errors
+        if evidence_errors:
+            validation_status = (
+                "unavailable"
+                if not manifest
+                or not status_path.exists()
+                or (
+                    not receipt
+                    and receipt_ref == expected_receipt_ref
+                    and not expected_receipt_path.exists()
+                )
+                else "invalid"
+            )
+        elif receipt_passed:
+            validation_status = "accepted"
+        elif (
+            isinstance(receipt_validation, dict)
+            and receipt_validation.get("valid") is False
+        ):
+            validation_status = "rejected"
+        else:
+            validation_status = "pending"
         return {
             "work_item_id": job_id,
             "status": status.get("status", "incomplete"),
@@ -2075,14 +2148,26 @@ class NodeRuntimeService:
             else "degraded"
             if evidence_errors
             else "not_accepted",
+            "validation_status": validation_status,
             "creator_node_id": creator_node_id,
             "contributing_node_id": contributing_node_id,
+            "contribution_attribution": attribution,
+            "attribution_id": (
+                f"local-contribution-{job_id}" if provenance_matches else None
+            ),
             "manifest_ref": manifest_ref,
+            "manifest_id": (
+                canonical_json_hash(manifest, prefix="sha256:") if manifest else None
+            ),
             "status_ref": status_ref if status_path.exists() else None,
             "validation_receipt_ref": receipt_ref
             if isinstance(receipt_ref, str)
             else None,
+            "validation_receipt_id": receipt.get("validation_receipt_id"),
             "lineage_links": lineage_links,
+            "lineage_parent_ids": lineage_links,
+            "lineage_id": f"local-lineage-{job_id}" if provenance_matches else None,
+            "validated_at": receipt.get("validated_at"),
             "timestamps": {"submitted_at": manifest.get("submitted_at")},
             "evidence_errors": evidence_errors,
         }
