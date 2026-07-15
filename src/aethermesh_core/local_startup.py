@@ -16,6 +16,7 @@ from aethermesh_core.identity import (
     reset_identity,
 )
 from aethermesh_core.json_io import atomic_create_json, atomic_write_json
+from aethermesh_core.local_audit_event import append_local_audit_event
 from aethermesh_core.local_runtime_config import (
     DEFAULT_RUNTIME_PATHS,
     LOCAL_RUNTIME_CONFIG_PATH,
@@ -256,7 +257,9 @@ def start_local_node(
     receipt_ref = _next_artifact_ref(
         root, config, "validation_receipts", "startup-validation", timestamp
     )
+    advertisement_action = "refreshed"
     if reset_creator_identity and identity_existed:
+        advertisement_action = "replaced"
         _write_default_manifest(
             manifest_path,
             node_id=identity.node_id,
@@ -268,6 +271,7 @@ def start_local_node(
             replace_existing=True,
         )
     elif not manifest_path.exists():
+        advertisement_action = "created"
         _write_default_manifest(
             manifest_path,
             node_id=identity.node_id,
@@ -280,6 +284,7 @@ def start_local_node(
         )
     manifest = _load_manifest(manifest_path)
     if "capability_advertisements" not in manifest:
+        advertisement_action = "created"
         manifest["capability_advertisements"] = _default_capability_advertisements(
             creator_node_id=creator_node_id,
             manifest_ref=_relative_ref(root, manifest_path),
@@ -360,6 +365,18 @@ def start_local_node(
                 )
             )
             handle.write("\n")
+        _append_capability_advertisement_audit_events(
+            root,
+            advertisements=manifest["capability_advertisements"],
+            action=advertisement_action,
+            timestamp=timestamp.replace("+00:00", "Z"),
+            node_id=identity.node_id,
+            creator_node_id=creator_node_id,
+            manifest_ref=_relative_ref(root, manifest_path),
+            manifest_hash=manifest_hash,
+            validation_receipt_ref=receipt_ref,
+            lineage_ref=lineage_ref,
+        )
     except OSError as exc:
         raise LocalStartupError(
             f"could not record startup lineage or log: {exc}"
@@ -696,6 +713,65 @@ def _document_hash(document: dict[str, object]) -> str:
         "utf-8"
     )
     return "sha256:" + sha256(encoded).hexdigest()
+
+
+def _append_capability_advertisement_audit_events(
+    root: Path,
+    *,
+    advertisements: object,
+    action: str,
+    timestamp: str,
+    node_id: str,
+    creator_node_id: str,
+    manifest_ref: str,
+    manifest_hash: str,
+    validation_receipt_ref: str,
+    lineage_ref: str,
+) -> None:
+    """Append one digest-only audit event for each validated local claim."""
+
+    for advertisement in cast(list[dict[str, object]], advertisements):
+        validation = cast(dict[str, object], advertisement["validation"])
+        attribution = cast(dict[str, object], advertisement["contribution_attribution"])
+        required_receipt_ref = cast(str, validation["required_receipt_ref"])
+        work_record_ref = cast(str, attribution["work_record_ref"])
+        capability_id = cast(str, advertisement["capability_id"])
+        append_local_audit_event(
+            root / "logs" / "local-audit-events.jsonl",
+            {
+                "schema_version": 1,
+                "event_id": (
+                    f"capability-advertisement:{action}:{validation_receipt_ref}:"
+                    f"{capability_id}"
+                ),
+                "timestamp": timestamp,
+                "event_type": "capability_advertised",
+                "actor_node_id": node_id,
+                "creator_node_id": creator_node_id,
+                "local_run_id": f"local-startup:{validation_receipt_ref}",
+                "capability_advertisement_action": action,
+                "node_id": node_id,
+                "capability_id": capability_id,
+                "manifest_ref": manifest_ref,
+                "manifest_digest": manifest_hash,
+                "advertisement_payload_digest": _document_hash(advertisement),
+                "validation_status": "passed",
+                "validation_receipt_refs": [required_receipt_ref],
+                "lineage_refs": [lineage_ref],
+                "contribution_attribution": {
+                    "creator_node_id": creator_node_id,
+                    "attribution_node_id": node_id,
+                    "work_record_ref": work_record_ref,
+                },
+                "related_file_paths": [
+                    manifest_ref,
+                    required_receipt_ref,
+                    validation_receipt_ref,
+                    lineage_ref,
+                    work_record_ref,
+                ],
+            },
+        )
 
 
 def _next_artifact_ref(

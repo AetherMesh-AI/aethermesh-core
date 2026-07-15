@@ -9,6 +9,7 @@ from unittest.mock import patch
 from aethermesh_core.cli import main
 from aethermesh_core.local_shutdown import (
     LocalShutdownError,
+    _audit_event_exists,
     _latest_startup_run_id,
     _latest_validation_context,
     shutdown_local_node,
@@ -135,6 +136,7 @@ class LocalShutdownTests(unittest.TestCase):
             events = [
                 json.loads(line)
                 for line in audit_path.read_text(encoding="utf-8").splitlines()
+                if json.loads(line).get("event_type") == "node.shutdown"
             ]
 
         self.assertEqual(len(events), 2)
@@ -165,8 +167,12 @@ class LocalShutdownTests(unittest.TestCase):
             start = start_local_node(root).to_dict()
             (root / str(start["validation_receipt_path"])).unlink()
             shutdown_local_node(root)
-            event = json.loads(
-                (root / "logs" / "local-audit-events.jsonl").read_text(encoding="utf-8")
+            event = next(
+                json.loads(line)
+                for line in (root / "logs" / "local-audit-events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if json.loads(line).get("event_type") == "node.shutdown"
             )
 
         self.assertIsNone(event["validation_receipt_ref"])
@@ -185,8 +191,12 @@ class LocalShutdownTests(unittest.TestCase):
                 json.dumps({"validation_status": "pass"}), encoding="utf-8"
             )
             shutdown_local_node(root)
-            event = json.loads(
-                (root / "logs" / "local-audit-events.jsonl").read_text(encoding="utf-8")
+            event = next(
+                json.loads(line)
+                for line in (root / "logs" / "local-audit-events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if json.loads(line).get("event_type") == "node.shutdown"
             )
 
         self.assertEqual(
@@ -214,6 +224,7 @@ class LocalShutdownTests(unittest.TestCase):
                 for line in (root / "logs" / "local-audit-events.jsonl")
                 .read_text(encoding="utf-8")
                 .splitlines()
+                if json.loads(line).get("event_type") == "node.shutdown"
             ]
 
         self.assertEqual(len(events), 2)
@@ -248,6 +259,12 @@ class LocalShutdownTests(unittest.TestCase):
         self.assertEqual(
             non_object_context, ("receipts/non-object.json", "unavailable")
         )
+
+    def test_audit_event_lookup_returns_false_for_an_unreadable_log(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.assertFalse(
+                _audit_event_exists(Path(temp_dir) / "missing.jsonl", "event-001")
+            )
 
     def test_latest_startup_run_id_handles_missing_or_malformed_logs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

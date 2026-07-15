@@ -155,6 +155,78 @@ class LocalNodeStartupTests(unittest.TestCase):
                 first["validation_receipt_path"],
             )
             self.assertEqual(advertisement["network_mode"], "local-only-no-p2p")
+            advertisement_audit_events = [
+                json.loads(line)
+                for line in (runtime / "logs" / "local-audit-events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(advertisement_audit_events), 2)
+            for event, startup, action in zip(
+                advertisement_audit_events,
+                (first, second),
+                ("created", "refreshed"),
+                strict=True,
+            ):
+                self.assertEqual(event["event_type"], "capability_advertised")
+                self.assertEqual(event["capability_advertisement_action"], action)
+                self.assertEqual(event["creator_node_id"], startup["creator_node_id"])
+                self.assertEqual(event["node_id"], startup["node_id"])
+                self.assertEqual(event["capability_id"], advertisement["capability_id"])
+                self.assertEqual(event["manifest_digest"], startup["manifest_hash"])
+                self.assertEqual(
+                    event["validation_receipt_refs"],
+                    [advertisement["validation"]["required_receipt_ref"]],
+                )
+                self.assertEqual(event["lineage_refs"], [startup["lineage_path"]])
+                self.assertEqual(
+                    event["contribution_attribution"]["creator_node_id"],
+                    startup["creator_node_id"],
+                )
+                self.assertNotIn("description", event)
+                self.assertRegex(
+                    event["advertisement_payload_digest"], r"^sha256:[0-9a-f]{64}$"
+                )
+
+    def test_reset_startup_appends_a_replaced_capability_advertisement_event(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            reset = start_local_node(runtime, reset_creator_identity=True)
+
+            events = [
+                json.loads(line)
+                for line in (runtime / "logs" / "local-audit-events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+
+            self.assertEqual(
+                [event["capability_advertisement_action"] for event in events],
+                ["created", "replaced"],
+            )
+            self.assertEqual(events[-1]["creator_node_id"], reset.creator_node_id)
+
+    def test_rejected_manifest_does_not_append_capability_advertisement_event(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime = Path(temp_dir)
+            start_local_node(runtime)
+            audit_path = runtime / "logs" / "local-audit-events.jsonl"
+            before = audit_path.read_text(encoding="utf-8")
+            (runtime / "manifests" / "local-node-manifest.json").write_text(
+                "{not json", encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(
+                LocalStartupError, "startup manifest JSON is malformed"
+            ):
+                start_local_node(runtime)
+
+            self.assertEqual(audit_path.read_text(encoding="utf-8"), before)
 
     def test_existing_identity_missing_manifest_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

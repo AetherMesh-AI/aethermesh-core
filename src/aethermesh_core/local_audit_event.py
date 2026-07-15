@@ -18,6 +18,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "validation_result",
         "lineage_linked",
         "contribution_record_updated",
+        "capability_advertised",
         "node.shutdown",
     }
 )
@@ -51,6 +52,13 @@ _OPTIONAL_FIELDS = frozenset(
         "validation_receipt_ref",
         "lineage_refs",
         "contribution_attribution_refs",
+        "capability_advertisement_action",
+        "node_id",
+        "capability_id",
+        "manifest_digest",
+        "advertisement_payload_digest",
+        "validation_receipt_refs",
+        "contribution_attribution",
     }
 )
 
@@ -124,6 +132,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
             _require_text_mapping(document[field], f"local audit event.{field}")
     if document["event_type"] == "node.shutdown":
         _validate_shutdown_event(document)
+    if document["event_type"] == "capability_advertised":
+        _validate_capability_advertisement_event(document)
     return document
 
 
@@ -214,3 +224,51 @@ def _validate_shutdown_event(document: Mapping[str, Any]) -> None:
             f"node.shutdown event is missing required context: {', '.join(missing)}"
         )
     _require_text(document["creator_node_id"], "node.shutdown.creator_node_id")
+
+
+def _validate_capability_advertisement_event(document: Mapping[str, Any]) -> None:
+    """Require compact provenance for one local capability advertisement."""
+
+    required_fields = (
+        "capability_advertisement_action",
+        "node_id",
+        "capability_id",
+        "manifest_ref",
+        "manifest_digest",
+        "advertisement_payload_digest",
+        "validation_status",
+        "validation_receipt_refs",
+        "lineage_refs",
+        "contribution_attribution",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            "capability_advertised event is missing required context: "
+            f"{', '.join(missing)}"
+        )
+    if document["capability_advertisement_action"] not in {
+        "created",
+        "refreshed",
+        "replaced",
+    }:
+        raise LocalAuditEventError(
+            "capability_advertised action must be created, refreshed, or replaced"
+        )
+    for field in (
+        "node_id",
+        "capability_id",
+        "manifest_digest",
+        "advertisement_payload_digest",
+        "validation_status",
+    ):
+        _require_text(document[field], f"capability_advertised.{field}")
+    _require_text(document["creator_node_id"], "capability_advertised.creator_node_id")
+    _require_local_paths(
+        document["validation_receipt_refs"],
+        "capability_advertised.validation_receipt_refs",
+    )
+    _require_text_mapping(
+        document["contribution_attribution"],
+        "capability_advertised.contribution_attribution",
+    )
