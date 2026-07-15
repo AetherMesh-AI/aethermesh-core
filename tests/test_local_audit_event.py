@@ -16,7 +16,7 @@ class LocalAuditEventTests(unittest.TestCase):
         event = _minimal_event()
 
         self.assertEqual(validate_local_audit_event(event), event)
-        self.assertEqual(len(AUDIT_EVENT_TYPES), 7)
+        self.assertEqual(len(AUDIT_EVENT_TYPES), 8)
         self.assertIsNone(event["creator_node_id"])
 
     def test_appends_parseable_jsonl_events_with_local_references(self) -> None:
@@ -69,6 +69,13 @@ class LocalAuditEventTests(unittest.TestCase):
             ({"related_file_paths": ["../outside.json"]}, "safe relative"),
             ({"related_file_paths": ["C:\\outside.json"]}, "safe relative"),
             ({"related_file_paths": ["https://example.test/a"]}, "safe relative"),
+            ({"manifest_ref": "/private/node.json"}, "safe relative"),
+            ({"validation_receipt_ref": "../receipt.json"}, "safe relative"),
+            ({"lineage_refs": ["~/lineage.json"]}, "safe relative"),
+            (
+                {"contribution_attribution_refs": ["C:\\contribution.json"]},
+                "safe relative",
+            ),
             ({"hashes": {"": "sha256:value"}}, "hashes"),
             ({"signatures": {"receipt": ""}}, "signatures"),
         ]

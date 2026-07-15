@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from aethermesh_core.json_io import atomic_write_json
+from aethermesh_core.local_audit_event import append_local_audit_event
 from aethermesh_core.local_json_helpers import (
     append_json_line,
     canonical_json_hash,
@@ -22,6 +24,7 @@ from aethermesh_core.local_runtime_config import (
 )
 
 LOCAL_SHUTDOWN_STATE_VERSION = 1
+LOCAL_AUDIT_LOG_PATH = "logs/local-audit-events.jsonl"
 
 
 class LocalShutdownError(ValueError):
@@ -244,6 +247,18 @@ def _shutdown_local_node(
     progress["component"] = "worker_termination"
     progress["artifact"] = _relative_ref(root, pid_path)
     released = _release_runtime_resources(pid_path, lock_path)
+    _append_shutdown_audit_event(
+        root,
+        timestamp=started_at,
+        node_id=node_id,
+        creator_node_id=creator_node_id,
+        startup_log_path=configured_runtime_path(root, config, "log"),
+        manifest_ref=_relative_ref(root, manifest_path),
+        validation_receipt_refs=receipt_refs,
+        lineage_refs=lineage_refs,
+        contribution_refs=contribution_refs,
+        exit_mode=shutdown_outcome,
+    )
     _append_log(
         log_path,
         event="shutdown_resources_released",
@@ -326,6 +341,136 @@ def _shutdown_already_completed(path: Path) -> bool:
     except LocalShutdownError:
         return False
     return document.get("status") == "stopped"
+
+
+def _append_shutdown_audit_event(
+    root: Path,
+    *,
+    timestamp: str,
+    node_id: str,
+    creator_node_id: str,
+    startup_log_path: Path,
+    manifest_ref: str,
+    validation_receipt_refs: list[str],
+    lineage_refs: list[str],
+    contribution_refs: list[str],
+    exit_mode: str,
+) -> None:
+    """Append durable local shutdown evidence without making teardown fragile."""
+
+    receipt_ref, validation_status = _latest_validation_context(
+        root, validation_receipt_refs
+    )
+    node_instance_id = (
+        f"local-startup-lineage:{lineage_refs[-1]}"
+        if lineage_refs
+        else _latest_startup_run_id(startup_log_path)
+        or f"unavailable:{node_id}:{timestamp}"
+    )
+    event_id = f"node-shutdown:{node_instance_id}"
+    path = root / LOCAL_AUDIT_LOG_PATH
+    if _audit_event_exists(path, event_id):
+        return
+    try:
+        append_local_audit_event(
+            path,
+            {
+                "schema_version": 1,
+                "event_id": event_id,
+                "timestamp": timestamp,
+                "event_type": "node.shutdown",
+                "actor_node_id": node_id,
+                "creator_node_id": creator_node_id,
+                "local_run_id": node_instance_id,
+                "node_instance_id": node_instance_id,
+                "shutdown_reason": "normal local shutdown",
+                "exit_mode": exit_mode,
+                "final_lifecycle_state": "stopped",
+                "validation_status": validation_status,
+                "manifest_ref": manifest_ref,
+                "validation_receipt_ref": receipt_ref,
+                "lineage_refs": lineage_refs,
+                "contribution_attribution_refs": contribution_refs,
+                "related_file_paths": [
+                    manifest_ref,
+                    *validation_receipt_refs,
+                    *lineage_refs,
+                    *contribution_refs,
+                ],
+            },
+        )
+    except (OSError, ValueError):
+        # Final state has already been atomically written. Do not turn a missing
+        # best-effort audit write into an unsafe shutdown or alter prior JSONL.
+        pass
+
+
+def _audit_event_exists(path: Path, event_id: str) -> bool:
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            try:
+                event = json.loads(line)
+            except (TypeError, ValueError):
+                continue
+            if isinstance(event, dict) and event.get("event_id") == event_id:
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def _latest_startup_run_id(path: Path) -> str | None:
+    """Recover the latest startup instance when optional lineage files are absent."""
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    startup_count = 0
+    latest_run_id = None
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(event, dict) or event.get("event") != "local_node_startup":
+            continue
+        startup_count += 1
+        local_run_id = event.get("local_run_id")
+        if isinstance(local_run_id, str) and local_run_id.strip():
+            latest_run_id = local_run_id
+    if latest_run_id is None:
+        return None
+    return f"{latest_run_id}:occurrence-{startup_count}"
+
+
+def _latest_validation_context(
+    root: Path, receipt_refs: list[str]
+) -> tuple[str | None, str]:
+    """Return the newest local receipt reference and its reported status."""
+
+    candidates: list[tuple[int, str]] = []
+    for ref in receipt_refs:
+        try:
+            candidates.append(((root / ref).stat().st_mtime_ns, ref))
+        except OSError:
+            continue
+    if not candidates:
+        return None, "unavailable"
+    receipt_ref = max(candidates)[1]
+    try:
+        receipt = json.loads((root / receipt_ref).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return receipt_ref, "unavailable"
+    if not isinstance(receipt, dict):
+        return receipt_ref, "unavailable"
+    status = receipt.get("validation_status")
+    if not isinstance(status, str):
+        result = receipt.get("validation_result")
+        status = result.get("status") if isinstance(result, dict) else None
+    return receipt_ref, status if isinstance(
+        status, str
+    ) and status.strip() else "unavailable"
 
 
 def _load_json_object(path: Path, label: str) -> dict[str, Any]:
