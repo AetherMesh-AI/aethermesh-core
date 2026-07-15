@@ -1,8 +1,8 @@
 # Local Contribution Record Schema
 
-Version 4 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
+Version 5 defines a small, local-first contribution record for attribution and later audit. The JSON Schema is `examples/schemas/contribution-record.schema.json`; the Python validator is `aethermesh_core.contribution_record.validate_contribution_record`.
 
-Version 4 supersedes version 3 by requiring the canonical completed-result SHA-256 hash and its algorithm. Earlier records remain identifiable by version and must be migrated explicitly rather than silently reinterpreted.
+Version 5 supersedes version 4 by adding explicit validation states and receipt-backed status history. Version 4 introduced the canonical completed-result SHA-256 hash and its algorithm. Earlier records remain identifiable by version and must be migrated explicitly rather than silently reinterpreted.
 
 This record is evidence metadata only. It does not award credits, calculate rewards, assert peer agreement, or claim consensus or decentralization.
 
@@ -20,7 +20,7 @@ The local JSON `ContributionLedger` also writes `created_at` when `record()` cre
 
 ## Validation and lineage
 
-`validation.status` is `unvalidated`, `passed`, or `failed`. Validator identity, receipt reference, and timestamp are optional when unavailable. A failed validation requires `failure_reason`; it preserves all contribution attribution and lineage rather than deleting the record.
+`validation.status` is `unvalidated`, `pending`, `valid`, `invalid`, or `superseded`. Every record starts with an `unvalidated` history event. Each later event records the validation receipt ID that produced it, while the current non-`unvalidated` state also requires validator identity, receipt reference, and timestamp. Invalid and superseded states require a reason and preserve all contribution attribution and lineage rather than deleting the record.
 
 `lineage` records parent contribution IDs, derived artifact IDs, input/output SHA-256 hashes, and optional deterministic reproduction notes. `manifest_links` can associate node, work, input, output, and validation manifests when they exist.
 
@@ -32,4 +32,4 @@ Local evidence validation recomputes the linked result document's canonical hash
 
 All local path and artifact references must be relative and must not contain absolute paths, parent traversal, backslashes, or URI schemes.
 
-`examples/contributions/minimal-local-echo.json` is a valid minimal local record. `examples/contributions/failed-local-echo.json` demonstrates a failed validation that retains its manifest links, lineage, and attribution.
+`examples/contributions/minimal-local-echo.json` is a valid minimal local record. `examples/contributions/failed-local-echo.json` demonstrates an invalid contribution that retains its manifest links, lineage, validation history, and attribution.
