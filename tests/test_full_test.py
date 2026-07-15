@@ -3,7 +3,11 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import os
+import signal
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -124,6 +128,44 @@ class FullTestRunnerTests(unittest.TestCase):
             ),
             ("build", (python, "-m", "build")),
             (
+                "install smoke",
+                (
+                    python,
+                    "scripts/ci_quality_gates.py",
+                    "install-smoke",
+                    "--dist",
+                    "dist",
+                ),
+            ),
+            (
+                "artifact provenance",
+                (
+                    python,
+                    "scripts/ci_quality_gates.py",
+                    "artifact-provenance",
+                    "--dist",
+                    "dist",
+                ),
+            ),
+            (
+                "secret scan",
+                (
+                    "gitleaks",
+                    "detect",
+                    "--no-banner",
+                    "--source",
+                    ".",
+                    "--redact",
+                    "--verbose",
+                ),
+            ),
+            (
+                "flaky tests",
+                (python, "scripts/ci_quality_gates.py", "flaky-tests"),
+            ),
+        ]
+        expected_mutation = [
+            (
                 "mutation",
                 (python, "scripts/mutmut_early_fail.py", "--max-children", "4"),
             ),
@@ -139,19 +181,29 @@ class FullTestRunnerTests(unittest.TestCase):
             ),
         ]
 
-        fast = module._checks_for_mode("fast", "chosen/base")
-        full = module._checks_for_mode("full", "chosen/base")
+        fast = module._checks_for_mode("fast", "chosen/base", include_mutation=False)
+        full = module._checks_for_mode("full", "chosen/base", include_mutation=False)
+        full_with_mutation = module._checks_for_mode(
+            "full", "chosen/base", include_mutation=True
+        )
 
         self.assertEqual([(check.name, check.command) for check in fast], expected_fast)
         self.assertEqual(
             [(check.name, check.command) for check in full],
             expected_fast + expected_full_extra,
         )
+        self.assertEqual(
+            [(check.name, check.command) for check in full_with_mutation],
+            expected_fast + expected_full_extra + expected_mutation,
+        )
+        self.assertNotIn("mutation", {check.name for check in full})
+        self.assertNotIn("mutation score", {check.name for check in full})
 
     def test_dag_declares_required_dependencies_and_resource_conflicts(self) -> None:
         module = load_full_test_module()
         checks = {
-            check.name: check for check in module._checks_for_mode("full", "base")
+            check.name: check
+            for check in module._checks_for_mode("full", "base", include_mutation=True)
         }
 
         self.assertEqual(checks["mutation"].dependencies, ("pytest", "branch coverage"))
@@ -175,6 +227,9 @@ class FullTestRunnerTests(unittest.TestCase):
             checks["ruff check"].resources & checks["ruff format"].resources
         )
         self.assertIn("build-dist", checks["build"].resources)
+        self.assertEqual(checks["install smoke"].dependencies, ("build",))
+        self.assertEqual(checks["artifact provenance"].dependencies, ("build",))
+        self.assertTrue(checks["build"].resources & checks["install smoke"].resources)
 
     def test_missing_required_tools_are_reported_before_running(self) -> None:
         module = load_full_test_module()
@@ -263,6 +318,98 @@ class FullTestRunnerTests(unittest.TestCase):
         )
         self.assertEqual(started, ["fail"])
 
+    def test_runner_exception_cancels_concurrent_subprocess_and_is_reported(
+        self,
+    ) -> None:
+        module = load_full_test_module()
+        with tempfile.TemporaryDirectory(
+            prefix="full-test-runner-exception-"
+        ) as directory:
+            marker = Path(directory) / "sleeper-started"
+            checks = [
+                module.Check("explode", (sys.executable,)),
+                module.Check(
+                    "sleeper",
+                    (
+                        sys.executable,
+                        "-c",
+                        f"from pathlib import Path; import time; Path({str(marker)!r}).touch(); time.sleep(30)",
+                    ),
+                ),
+            ]
+
+            def runner(check: object, cancel_event: threading.Event) -> object:
+                if getattr(check, "name", None) == "sleeper":
+                    return module._run_check(check, cancel_event)
+                deadline = time.monotonic() + 5
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                raise RuntimeError("deterministic runner boom")
+
+            stdout = io.StringIO()
+            started = time.monotonic()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = module.run_checks(
+                    checks, keep_going=False, jobs=2, runner=runner
+                )
+
+        self.assertEqual(exit_code, 1)
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertIn(
+            "runner raised RuntimeError: deterministic runner boom", stdout.getvalue()
+        )
+        self.assertIn("CANCELLED: sleeper", stdout.getvalue())
+
+    def test_spawn_registration_is_atomic_with_cancellation(self) -> None:
+        module = load_full_test_module()
+        registry = module._ProcessRegistry()
+        cancel_event = threading.Event()
+        popen_entered = threading.Event()
+        release_popen = threading.Event()
+        terminated = threading.Event()
+
+        class FakeProcess:
+            pid = 12345
+
+            def poll(self) -> None:
+                return None
+
+        process = FakeProcess()
+
+        def delayed_popen(*args: object, **kwargs: object) -> object:
+            del args, kwargs
+            popen_entered.set()
+            self.assertTrue(release_popen.wait(timeout=5))
+            return process
+
+        spawned: list[object] = []
+        with (
+            mock.patch.object(module.subprocess, "Popen", side_effect=delayed_popen),
+            mock.patch.object(
+                module,
+                "_terminate_process_group",
+                side_effect=lambda child: terminated.set(),
+            ),
+        ):
+            spawn_thread = threading.Thread(
+                target=lambda: spawned.append(
+                    registry.spawn(cancel_event, (sys.executable,))
+                )
+            )
+            spawn_thread.start()
+            self.assertTrue(popen_entered.wait(timeout=5))
+            cancel_event.set()
+            terminate_thread = threading.Thread(target=registry.terminate_all)
+            terminate_thread.start()
+            time.sleep(0.03)
+            self.assertFalse(terminated.is_set())
+            release_popen.set()
+            spawn_thread.join(timeout=5)
+            terminate_thread.join(timeout=5)
+
+        self.assertEqual(spawned, [process])
+        self.assertTrue(terminated.is_set())
+
     def test_keep_going_runs_all_checks_and_collects_failures(self) -> None:
         module = load_full_test_module()
         started: list[str] = []
@@ -279,6 +426,41 @@ class FullTestRunnerTests(unittest.TestCase):
             module.run_checks(checks, keep_going=True, jobs=2, runner=runner), 1
         )
         self.assertCountEqual(started, ["fail", "pass"])
+
+    def test_failed_prerequisite_skips_dependents_in_stable_order(self) -> None:
+        module = load_full_test_module()
+        started: list[str] = []
+        checks = [
+            module.Check("prerequisite", (sys.executable,)),
+            module.Check(
+                "dependent", (sys.executable,), dependencies=("prerequisite",)
+            ),
+            module.Check("transitive", (sys.executable,), dependencies=("dependent",)),
+            module.Check("independent", (sys.executable,)),
+        ]
+
+        def runner(check: object, _: threading.Event) -> object:
+            started.append(check.name)
+            return module.CheckResult(
+                check, 7 if check.name == "prerequisite" else 0, ""
+            )
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = module.run_checks(
+                checks, keep_going=True, jobs=2, runner=runner
+            )
+
+        self.assertEqual(exit_code, 1)
+        self.assertCountEqual(started, ["prerequisite", "independent"])
+        output = stdout.getvalue()
+        self.assertLess(output.index("==> dependent"), output.index("==> transitive"))
+        self.assertIn(
+            "SKIPPED: dependent (unsuccessful prerequisites: prerequisite)", output
+        )
+        self.assertIn(
+            "SKIPPED: transitive (unsuccessful prerequisites: dependent)", output
+        )
 
     def test_fail_fast_terminates_active_subprocess_groups(self) -> None:
         module = load_full_test_module()
@@ -305,6 +487,57 @@ class FullTestRunnerTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertLess(time.monotonic() - started, 5)
         self.assertIn("CANCELLED: sleeper", stdout.getvalue())
+
+    @unittest.skipUnless(  # justification: os.killpg is POSIX-only.
+        os.name == "posix", "POSIX process-group regression"
+    )
+    def test_posix_termination_kills_owned_group_once_and_reaps(self) -> None:
+        module = load_full_test_module()
+        process = mock.Mock(pid=43210)
+        process.poll.return_value = None
+
+        with (
+            mock.patch.object(module.os, "killpg") as killpg,
+            mock.patch.object(module.subprocess, "run") as run,
+        ):
+            module._terminate_process_group(process)
+
+        killpg.assert_called_once_with(43210, signal.SIGKILL)
+        run.assert_not_called()
+        process.wait.assert_called_once_with()
+
+    @unittest.skipUnless(  # justification: os.killpg is POSIX-only.
+        os.name == "posix", "POSIX process-group regression"
+    )
+    def test_posix_termination_does_nothing_after_child_was_reaped(self) -> None:
+        module = load_full_test_module()
+        process = mock.Mock(pid=43210)
+        process.poll.return_value = 0
+
+        with mock.patch.object(module.os, "killpg") as killpg:
+            module._terminate_process_group(process)
+
+        killpg.assert_not_called()
+        process.wait.assert_not_called()
+
+    def test_windows_termination_uses_taskkill_for_entire_tree_and_waits(self) -> None:
+        module = load_full_test_module()
+        process = mock.Mock(pid=43210)
+        process.poll.return_value = None
+        process.wait.return_value = 0
+        with (
+            mock.patch.object(module.os, "name", "nt"),
+            mock.patch.object(module.subprocess, "run") as run,
+        ):
+            module._terminate_process_group(process)
+
+        run.assert_called_once_with(
+            ["taskkill", "/PID", "43210", "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        process.wait.assert_called_once_with()
 
     def test_reporting_is_buffered_in_configured_order(self) -> None:
         module = load_full_test_module()
@@ -362,6 +595,24 @@ class FullTestRunnerTests(unittest.TestCase):
         self.assertGreaterEqual(parser.parse_args([]).jobs, 1)
         with self.assertRaises(SystemExit):
             parser.parse_args(["--jobs", "0"])
+
+    def test_cli_requires_full_mode_for_explicit_mutation_opt_in(self) -> None:
+        module = load_full_test_module()
+
+        with self.assertRaises(SystemExit):
+            module.main(["--mode", "fast", "--include-mutation", "--list"])
+
+        args = module.build_parser().parse_args(
+            ["--mode", "full", "--include-mutation"]
+        )
+        self.assertTrue(args.include_mutation)
+
+    def test_cli_help_marks_mutation_early_phase_optional_and_nonblocking(self) -> None:
+        help_text = load_full_test_module().build_parser().format_help().lower()
+
+        self.assertIn("explicit opt-in", help_text)
+        self.assertIn("early-phase", help_text)
+        self.assertIn("nonblocking", help_text)
 
     def test_list_mode_prints_commands_without_running(self) -> None:
         module = load_full_test_module()

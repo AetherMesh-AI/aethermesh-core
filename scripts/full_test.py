@@ -4,7 +4,8 @@
 The automation loop uses this script before opening a PR so local validation
 matches the repository's GitHub quality gates closely enough to catch failures
 early. ``fast`` is intended for normal autonomous-loop cycles; ``full`` adds
-slower parity checks such as mutation testing and packaging.
+slower parity checks such as security, repeatability, and packaging. Mutation
+testing is an explicit, early-phase opt-in rather than a normal blocking gate.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import IO, Literal, TypedDict, Unpack
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,9 +48,22 @@ class CheckResult:
     returncode: int
     output: str
     canceled: bool = False
+    skipped: bool = False
 
 
 Runner = Callable[[Check, threading.Event], CheckResult]
+
+
+class _TextPopenKwargs(TypedDict):
+    """Keyword arguments for the validation runner's text-mode child process."""
+
+    cwd: Path
+    env: dict[str, str]
+    stdout: IO[str]
+    stderr: int
+    text: Literal[True]
+    start_new_session: bool
+    creationflags: int
 
 
 class _ProcessRegistry:
@@ -58,9 +73,20 @@ class _ProcessRegistry:
         self._lock = threading.Lock()
         self._processes: set[subprocess.Popen[str]] = set()
 
-    def add(self, process: subprocess.Popen[str]) -> None:
+    def spawn(
+        self,
+        cancel_event: threading.Event,
+        command: Sequence[str],
+        **kwargs: Unpack[_TextPopenKwargs],
+    ) -> subprocess.Popen[str] | None:
+        """Atomically check cancellation, spawn, and register a child."""
+
         with self._lock:
+            if cancel_event.is_set():
+                return None
+            process = subprocess.Popen(command, **kwargs)
             self._processes.add(process)
+            return process
 
     def discard(self, process: subprocess.Popen[str]) -> None:
         with self._lock:
@@ -157,8 +183,8 @@ def _base_checks(base: str) -> list[Check]:
     ]
 
 
-def _full_extra_checks() -> list[Check]:
-    return [
+def _full_extra_checks(*, include_mutation: bool) -> list[Check]:
+    checks = [
         Check(
             "duplicate code",
             (
@@ -193,18 +219,56 @@ def _full_extra_checks() -> list[Check]:
             resources=frozenset({"build-dist"}),
         ),
         Check(
-            "mutation",
-            _python("scripts/mutmut_early_fail.py", "--max-children", "4"),
-            dependencies=("pytest", "branch coverage"),
-            resources=frozenset({"mutation"}),
+            "install smoke",
+            _python("scripts/ci_quality_gates.py", "install-smoke", "--dist", "dist"),
+            dependencies=("build",),
+            resources=frozenset({"build-dist"}),
         ),
         Check(
-            "mutation score",
-            _python("scripts/ci_quality_gates.py", "mutation-score", "--minimum", "95"),
-            dependencies=("mutation",),
-            resources=frozenset({"mutation"}),
+            "artifact provenance",
+            _python(
+                "scripts/ci_quality_gates.py", "artifact-provenance", "--dist", "dist"
+            ),
+            dependencies=("build",),
+            resources=frozenset({"build-dist"}),
         ),
+        Check(
+            "secret scan",
+            (
+                "gitleaks",
+                "detect",
+                "--no-banner",
+                "--source",
+                ".",
+                "--redact",
+                "--verbose",
+            ),
+        ),
+        Check("flaky tests", _python("scripts/ci_quality_gates.py", "flaky-tests")),
     ]
+    if include_mutation:
+        checks.extend(
+            [
+                Check(
+                    "mutation",
+                    _python("scripts/mutmut_early_fail.py", "--max-children", "4"),
+                    dependencies=("pytest", "branch coverage"),
+                    resources=frozenset({"mutation"}),
+                ),
+                Check(
+                    "mutation score",
+                    _python(
+                        "scripts/ci_quality_gates.py",
+                        "mutation-score",
+                        "--minimum",
+                        "95",
+                    ),
+                    dependencies=("mutation",),
+                    resources=frozenset({"mutation"}),
+                ),
+            ]
+        )
+    return checks
 
 
 def _quiet_py_env(cache_name: str, *, coverage: bool = False) -> dict[str, str]:
@@ -242,33 +306,35 @@ def _merged_env(overrides: dict[str, str] | None) -> dict[str, str]:
 
 
 def _terminate_process_group(process: subprocess.Popen[str]) -> None:
+    """Force-stop and reap one child in its owned process group.
+
+    Built-in validation commands must keep descendants in the session/process
+    group created at spawn; commands that escape it are unsupported.
+    """
+
     if process.poll() is not None:
         return
-    try:
-        if os.name == "posix":
-            os.killpg(process.pid, signal.SIGTERM)
-        else:  # pragma: no cover - Windows portability path
-            process.terminate()
-        process.wait(timeout=1)
-    except (ProcessLookupError, subprocess.TimeoutExpired):
-        if process.poll() is None:
-            try:
-                if os.name == "posix":
-                    os.killpg(process.pid, signal.SIGKILL)
-                else:  # pragma: no cover - Windows portability path
-                    process.kill()
-            except ProcessLookupError:
-                pass
+    if os.name == "posix":
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except (PermissionError, ProcessLookupError):
+            pass
+    else:  # pragma: no cover - Windows portability path
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    process.wait()
 
 
 def _run_check(check: Check, cancel_event: threading.Event) -> CheckResult:
-    if cancel_event.is_set():
-        return CheckResult(check, -signal.SIGTERM, "", canceled=True)
-
     with tempfile.TemporaryFile(
         mode="w+", encoding="utf-8", errors="replace"
     ) as output:
-        process = subprocess.Popen(
+        process = _ACTIVE_PROCESSES.spawn(
+            cancel_event,
             check.command,
             cwd=ROOT,
             env=_merged_env(check.env),
@@ -276,8 +342,14 @@ def _run_check(check: Check, cancel_event: threading.Event) -> CheckResult:
             stderr=subprocess.STDOUT,
             text=True,
             start_new_session=os.name == "posix",
+            creationflags=(
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                if os.name == "nt"
+                else 0
+            ),
         )
-        _ACTIVE_PROCESSES.add(process)
+        if process is None:
+            return CheckResult(check, -signal.SIGKILL, "", canceled=True)
         try:
             returncode = int(process.wait())
         finally:
@@ -294,10 +366,12 @@ def _run_check(check: Check, cancel_event: threading.Event) -> CheckResult:
     )
 
 
-def _checks_for_mode(mode: str, base: str) -> list[Check]:
+def _checks_for_mode(
+    mode: str, base: str, *, include_mutation: bool = False
+) -> list[Check]:
     checks = _base_checks(base)
     if mode == "full":
-        checks.extend(_full_extra_checks())
+        checks.extend(_full_extra_checks(include_mutation=include_mutation))
     return checks
 
 
@@ -339,14 +413,20 @@ def _print_result(result: CheckResult) -> None:
     check = result.check
     print(f"\n==> {check.name}")
     print("$ " + " ".join(check.command))
-    if result.output:
+    if result.output and not result.skipped:
         print(result.output, end="" if result.output.endswith("\n") else "\n")
-    if result.canceled:
+    if result.skipped:
+        print(f"SKIPPED: {check.name} ({result.output})")
+    elif result.canceled:
         print(f"CANCELLED: {check.name}")
     elif result.returncode == 0:
         print(f"PASS: {check.name}")
     else:
         print(f"FAIL: {check.name} exited {result.returncode}")
+
+
+def _result_succeeded(result: CheckResult) -> bool:
+    return result.returncode == 0 and not result.canceled and not result.skipped
 
 
 def run_checks(
@@ -377,6 +457,34 @@ def run_checks(
     executor = ThreadPoolExecutor(max_workers=jobs, thread_name_prefix="validation")
     try:
         while pending or running:
+            while True:
+                blocked = [
+                    check
+                    for check in pending
+                    if set(check.dependencies) <= completed
+                    and any(
+                        not _result_succeeded(results[dependency])
+                        for dependency in check.dependencies
+                    )
+                ]
+                if not blocked:
+                    break
+                for check in blocked:
+                    unsuccessful = ", ".join(
+                        dependency
+                        for dependency in check.dependencies
+                        if not _result_succeeded(results[dependency])
+                    )
+                    result = CheckResult(
+                        check,
+                        0,
+                        f"unsuccessful prerequisites: {unsuccessful}",
+                        skipped=True,
+                    )
+                    pending.remove(check)
+                    completed.add(check.name)
+                    results[check.name] = result
+
             capacity = jobs - len(running)
             if capacity and not fail_fast_triggered:
                 while capacity:
@@ -396,7 +504,14 @@ def run_checks(
             for future in done:
                 check = running.pop(future)
                 active_resources.difference_update(check.resources)
-                result = future.result()
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = CheckResult(
+                        check,
+                        1,
+                        f"runner raised {type(exc).__name__}: {exc}\n",
+                    )
                 results[check.name] = result
                 completed.add(check.name)
                 if result.returncode != 0 and not result.canceled and not keep_going:
@@ -456,7 +571,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--mode",
         choices=("fast", "full"),
         default="fast",
-        help="Validation set to run. fast omits slow parity checks; full includes them.",
+        help=(
+            "Validation set to run. fast runs the ordinary quick gates; full adds "
+            "ordinary security, repeatability, and packaging gates but not mutation."
+        ),
+    )
+    parser.add_argument(
+        "--include-mutation",
+        action="store_true",
+        help=(
+            "Explicit opt-in for the early-phase, optional/nonblocking mutation and "
+            "mutation-score checks; valid only with --mode full."
+        ),
     )
     parser.add_argument(
         "--base",
@@ -483,8 +609,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    checks = _checks_for_mode(args.mode, args.base)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.include_mutation and args.mode != "full":
+        parser.error("--include-mutation requires --mode full")
+    checks = _checks_for_mode(
+        args.mode, args.base, include_mutation=args.include_mutation
+    )
     if args.list:
         for check in checks:
             print(f"{check.name}: {' '.join(check.command)}")
