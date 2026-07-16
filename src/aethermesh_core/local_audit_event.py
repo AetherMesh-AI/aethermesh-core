@@ -11,12 +11,29 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
 AUDIT_EVENT_SCHEMA_VERSION = 2
+AUDIT_REDACTED_VALUE = "[REDACTED]"
+_SENSITIVE_KEY_PARTS = frozenset(
+    {
+        "token",
+        "secret",
+        "password",
+        "privatekey",
+        "apikey",
+        "seed",
+        "credential",
+        "authorization",
+    }
+)
+_PRIVATE_CONTENT_KEYS = frozenset(
+    {"env", "environment", "payload", "requestpayload", "rawrequestpayload"}
+)
 AUDIT_EVENT_TYPES = frozenset(
     {
         "node_initialized",
@@ -96,6 +113,12 @@ _OPTIONAL_FIELDS = frozenset(
 
 class LocalAuditEventError(ValueError):
     """Raised when a local audit event does not match the canonical format."""
+
+
+def sanitize_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Return an audit-safe copy without secrets or host-specific absolute paths."""
+
+    return {key: _sanitize_audit_value(value, key=key) for key, value in event.items()}
 
 
 def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
@@ -193,7 +216,7 @@ def append_local_audit_event(
 ) -> dict[str, Any]:
     """Validate and append one event; this API never updates prior JSONL records."""
 
-    document = validate_local_audit_event(event)
+    document = validate_local_audit_event(sanitize_local_audit_event(event))
     audit_path = Path(path)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as handle:
@@ -201,6 +224,41 @@ def append_local_audit_event(
         handle.flush()
         os.fsync(handle.fileno())
     return document
+
+
+def _sanitize_audit_value(value: Any, *, key: object | None = None) -> Any:
+    if isinstance(key, str) and _is_private_audit_key(key):
+        return AUDIT_REDACTED_VALUE
+    if isinstance(value, Mapping):
+        return {
+            child_key: _sanitize_audit_value(child_value, key=child_key)
+            for child_key, child_value in value.items()
+        }
+    if isinstance(value, list):
+        return [_sanitize_audit_value(item) for item in value]
+    if isinstance(value, str):
+        return _sanitize_local_path(value)
+    return value
+
+
+def _is_private_audit_key(key: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]", "", key.lower())
+    if normalized in _SENSITIVE_KEY_PARTS or normalized in _PRIVATE_CONTENT_KEYS:
+        return True
+    parts = {
+        part for part in re.split(r"[^A-Za-z0-9]+|(?<=[a-z])(?=[A-Z])", key) if part
+    }
+    return any(part.lower() in _SENSITIVE_KEY_PARTS for part in parts)
+
+
+def _sanitize_local_path(value: str) -> str:
+    path_variants = (Path(value), PureWindowsPath(value))
+    if not value.startswith("~") and not any(
+        path.is_absolute() for path in path_variants
+    ):
+        return value
+    name = next((path.name for path in reversed(path_variants) if path.name), "")
+    return f"local-path/{name}" if name else "local-path"
 
 
 def _require_text(value: object, label: str) -> None:
