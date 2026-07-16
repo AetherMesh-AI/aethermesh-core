@@ -20,6 +20,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "validation_result",
         "lineage_linked",
         "contribution_record_updated",
+        "job.execution.started",
         "capability_advertised",
         "node.shutdown",
     }
@@ -65,6 +66,7 @@ _OPTIONAL_FIELDS = frozenset(
         "local_node_id",
         "validation_expectation",
         "attribution_metadata_hash",
+        "executing_node_id",
     }
 )
 
@@ -142,6 +144,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_capability_advertisement_event(document)
     if document["event_type"] == "job_submitted":
         _validate_job_submission_event(document)
+    if document["event_type"] == "job.execution.started":
+        _validate_job_execution_started_event(document)
     return document
 
 
@@ -316,4 +320,41 @@ def _validate_job_submission_event(document: Mapping[str, Any]) -> None:
     _require_text(document["creator_node_id"], "job_submitted.creator_node_id")
     _require_text_mapping(
         document["contribution_attribution"], "job_submitted.contribution_attribution"
+    )
+
+
+def _validate_job_execution_started_event(document: Mapping[str, Any]) -> None:
+    """Require compact provenance before a locally submitted job can run."""
+
+    required_fields = (
+        "job_id",
+        "executing_node_id",
+        "manifest_id",
+        "manifest_ref",
+        "hashes",
+        "lineage_refs",
+        "contribution_attribution",
+        "attribution_metadata_hash",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            "job.execution.started event is missing required context: "
+            f"{', '.join(missing)}"
+        )
+    for field in (
+        "job_id",
+        "executing_node_id",
+        "manifest_id",
+        "attribution_metadata_hash",
+    ):
+        _require_text(document[field], f"job.execution.started.{field}")
+    if document["actor_node_id"] != document["executing_node_id"]:
+        raise LocalAuditEventError(
+            "job.execution.started.executing_node_id must match actor_node_id"
+        )
+    _require_text(document["creator_node_id"], "job.execution.started.creator_node_id")
+    _require_text_mapping(
+        document["contribution_attribution"],
+        "job.execution.started.contribution_attribution",
     )

@@ -2258,14 +2258,6 @@ class NodeRuntimeService:
             raise RuntimeServiceError("local job is not queued")
         if not isinstance(worker_node_id, str) or not worker_node_id.strip():
             raise RuntimeServiceError("worker_node_id must be a non-empty string")
-        self._transition_local_job_state(
-            job_id,
-            "running",
-            updates={
-                "worker_node_id": worker_node_id,
-                "executor_node_id": worker_node_id,
-            },
-        )
         manifest = self._load_local_job_document(
             self.paths.data_dir / "job-submissions" / f"{job_id}.json",
             "job submission manifest",
@@ -2289,6 +2281,22 @@ class NodeRuntimeService:
             raise RuntimeServiceError(
                 "job submission manifest input_payload hash is invalid"
             )
+        self._append_job_execution_started_audit_event(
+            job_id=job_id,
+            worker_node_id=worker_node_id,
+            manifest=manifest,
+            manifest_ref=f"data/job-submissions/{job_id}.json",
+            manifest_hash=canonical_json_hash(manifest, prefix="sha256:"),
+            payload_hash=payload_hash,
+        )
+        self._transition_local_job_state(
+            job_id,
+            "running",
+            updates={
+                "worker_node_id": worker_node_id,
+                "executor_node_id": worker_node_id,
+            },
+        )
         job = Job(
             job_id=job_id,
             job_type=job_data["job_type"],
@@ -2517,6 +2525,68 @@ class NodeRuntimeService:
         )
         self._append_event(f"executed local job submission {job_id}")
         return self.get_local_job_status(job_id)
+
+    def _append_job_execution_started_audit_event(
+        self,
+        *,
+        job_id: str,
+        worker_node_id: str,
+        manifest: dict[str, Any],
+        manifest_ref: str,
+        manifest_hash: str,
+        payload_hash: str,
+    ) -> None:
+        """Append the durable local start receipt before invoking the work runner."""
+
+        creator_node_id = manifest.get("creator_node_id")
+        lineage = manifest.get("lineage")
+        attribution = manifest.get("contribution_attribution")
+        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+            raise RuntimeServiceError(
+                "job submission manifest creator_node_id is required for execution audit"
+            )
+        if not _provenance_matches_job(lineage, attribution, job_id, creator_node_id):
+            raise RuntimeServiceError(
+                "job submission manifest lineage or contribution attribution is invalid "
+                "for execution audit"
+            )
+        lineage = cast(dict[str, Any], lineage)
+        attribution = cast(dict[str, Any], attribution)
+        metadata_hash = canonical_json_hash(attribution["metadata"], prefix="sha256:")
+        try:
+            append_local_audit_event(
+                self.paths.data_dir / "audit" / "job-executions.jsonl",
+                {
+                    "schema_version": 1,
+                    "event_id": f"local-audit-{job_id}-execution-started",
+                    "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "event_type": "job.execution.started",
+                    "actor_node_id": worker_node_id,
+                    "creator_node_id": creator_node_id,
+                    "local_run_id": job_id,
+                    "job_id": job_id,
+                    "work_id": job_id,
+                    "executing_node_id": worker_node_id,
+                    "manifest_id": job_id,
+                    "manifest_ref": manifest_ref,
+                    "hashes": {
+                        "manifest_hash": manifest_hash,
+                        "input_payload_hash": payload_hash,
+                    },
+                    "lineage_refs": lineage["parent_refs"],
+                    "contribution_attribution": {
+                        "job_id": job_id,
+                        "creator_node_id": creator_node_id,
+                        "executing_node_id": worker_node_id,
+                        "metadata_hash": metadata_hash,
+                    },
+                    "attribution_metadata_hash": metadata_hash,
+                },
+            )
+        except (LocalAuditEventError, OSError, ValueError) as exc:
+            raise RuntimeServiceError(
+                f"could not write local job execution start audit event: {exc}"
+            ) from exc
 
     def cancel_submitted_local_job(self, job_id: str) -> dict[str, Any]:
         """Cancel an unstarted local job without altering its manifest evidence."""
