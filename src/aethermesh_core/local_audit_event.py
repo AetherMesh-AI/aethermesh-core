@@ -22,6 +22,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "contribution_record_updated",
         "job.execution.started",
         "job.execution.finished",
+        "result.reported",
         "capability_advertised",
         "node.shutdown",
     }
@@ -76,6 +77,8 @@ _OPTIONAL_FIELDS = frozenset(
         "validator_node_id",
         "output_artifact_refs",
         "error_summary",
+        "reporting_node_id",
+        "result_status",
     }
 )
 
@@ -157,6 +160,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_job_execution_started_event(document)
     if document["event_type"] == "job.execution.finished":
         _validate_job_execution_finished_event(document)
+    if document["event_type"] == "result.reported":
+        _validate_result_reported_event(document)
     return document
 
 
@@ -427,4 +432,38 @@ def _validate_job_execution_finished_event(document: Mapping[str, Any]) -> None:
     _require_text_mapping(
         document["contribution_attribution"],
         "job.execution.finished.contribution_attribution",
+    )
+
+
+def _validate_result_reported_event(document: Mapping[str, Any]) -> None:
+    """Require compact references for one accepted local result report."""
+
+    required_fields = (
+        "reporting_node_id",
+        "work_id",
+        "manifest_id",
+        "manifest_ref",
+        "validation_receipt_id",
+        "validation_receipt_ref",
+        "lineage_refs",
+        "contribution_attribution_ids",
+        "contribution_attribution_refs",
+        "result_status",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            "result.reported event is missing required context: " + ", ".join(missing)
+        )
+    for field in ("reporting_node_id", "work_id", "manifest_id", "result_status"):
+        _require_text(document[field], f"result.reported.{field}")
+    if document["actor_node_id"] != document["reporting_node_id"]:
+        raise LocalAuditEventError(
+            "result.reported.reporting_node_id must match actor_node_id"
+        )
+    _require_text(document["creator_node_id"], "result.reported.creator_node_id")
+    _require_local_paths(document["lineage_refs"], "result.reported.lineage_refs")
+    _require_local_paths(
+        document["contribution_attribution_refs"],
+        "result.reported.contribution_attribution_refs",
     )

@@ -2487,6 +2487,15 @@ class NodeRuntimeService:
                 "validated_at": validated_at,
             },
         )
+        self._append_result_reported_audit_event(
+            job_id=job_id,
+            worker_node_id=worker_node_id,
+            manifest=manifest,
+            manifest_id=manifest_id,
+            manifest_ref=manifest_ref,
+            validation_receipt_ref=receipt_ref,
+            result_status=result_document["status"],
+        )
         succeeded = result.status == "completed" and validation.valid
         error = result.error or (
             None if succeeded else f"validation failed: {validation.reason}"
@@ -2610,6 +2619,68 @@ class NodeRuntimeService:
         except (LocalAuditEventError, OSError, ValueError) as exc:
             raise RuntimeServiceError(
                 f"could not write local job execution start audit event: {exc}"
+            ) from exc
+
+    def _append_result_reported_audit_event(
+        self,
+        *,
+        job_id: str,
+        worker_node_id: str,
+        manifest: dict[str, Any],
+        manifest_id: str,
+        manifest_ref: str,
+        validation_receipt_ref: str,
+        result_status: str,
+    ) -> None:
+        """Append one deterministic, reference-only audit event for a local report."""
+
+        creator_node_id = manifest.get("creator_node_id")
+        receipt_path = self.paths.home / validation_receipt_ref
+        manifest_path = self.paths.home / manifest_ref
+        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+            raise RuntimeServiceError("result report audit requires a creator node ID")
+        if not manifest_path.is_file() or not receipt_path.is_file():
+            raise RuntimeServiceError(
+                "result report audit requires existing manifest and validation receipt"
+            )
+        receipt = self._load_local_job_document(receipt_path, "validation receipt")
+        if receipt.get("validation_receipt_id") != self._receipt_id_for_job(job_id):
+            raise RuntimeServiceError(
+                "result report audit receipt does not match work ID"
+            )
+        audit_path = self.paths.data_dir / "audit" / "result-reports.jsonl"
+        event_id = f"local-audit-{job_id}-result-reported"
+        try:
+            if audit_path.exists() and any(
+                json.loads(line).get("event_id") == event_id
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ):
+                return
+            append_local_audit_event(
+                audit_path,
+                {
+                    "schema_version": 1,
+                    "event_id": event_id,
+                    "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "event_type": "result.reported",
+                    "actor_node_id": worker_node_id,
+                    "creator_node_id": creator_node_id,
+                    "local_run_id": job_id,
+                    "reporting_node_id": worker_node_id,
+                    "work_id": job_id,
+                    "manifest_id": manifest_id,
+                    "manifest_ref": manifest_ref,
+                    "validation_receipt_id": receipt["validation_receipt_id"],
+                    "validation_receipt_ref": validation_receipt_ref,
+                    "lineage_refs": [manifest_ref],
+                    "contribution_attribution_ids": [f"local-contribution-{job_id}"],
+                    "contribution_attribution_refs": [f"data/job-status/{job_id}.json"],
+                    "result_status": result_status,
+                },
+            )
+        except (LocalAuditEventError, OSError, ValueError) as exc:
+            raise RuntimeServiceError(
+                f"could not write local result report audit event: {exc}"
             ) from exc
 
     def _append_job_execution_finished_audit_event(

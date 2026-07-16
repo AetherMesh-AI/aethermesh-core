@@ -2469,6 +2469,68 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertIsNone(report["output_payload"]["payload_ref"])
             self.assertLessEqual(report["started_at"], report["finished_at"])
             self.assertLessEqual(report["finished_at"], report["reported_at"])
+            audit_path = root / "data" / "audit" / "result-reports.jsonl"
+            audit_events = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(len(audit_events), 1)
+            audit_event = audit_events[0]
+            self.assertEqual(
+                audit_event["event_id"], f"local-audit-{job_id}-result-reported"
+            )
+            self.assertEqual(audit_event["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(audit_event["reporting_node_id"], "worker-local-fixture")
+            self.assertEqual(audit_event["manifest_id"], report["manifest_id"])
+            self.assertEqual(
+                audit_event["validation_receipt_id"], report["validation_receipt_id"]
+            )
+            self.assertEqual(audit_event["lineage_refs"], [submission["manifest_ref"]])
+            self.assertEqual(
+                audit_event["contribution_attribution_ids"],
+                [f"local-contribution-{job_id}"],
+            )
+            self.assertNotIn("output_payload", audit_event)
+
+            service._append_result_reported_audit_event(
+                job_id=job_id,
+                worker_node_id="worker-local-fixture",
+                manifest=manifest,
+                manifest_id=report["manifest_id"],
+                manifest_ref=submission["manifest_ref"],
+                validation_receipt_ref=f"data/job-validation-receipts/{job_id}.json",
+                result_status=report["status"],
+            )
+            self.assertEqual(
+                len(audit_path.read_text(encoding="utf-8").splitlines()), 1
+            )
+
+    def test_result_report_audit_requires_existing_manifest_and_receipt(self) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            manifest = json.loads(
+                (root / submission["manifest_ref"]).read_text(encoding="utf-8")
+            )
+            job_id = submission["job_id"]
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "manifest and validation receipt"
+            ):
+                service._append_result_reported_audit_event(
+                    job_id=job_id,
+                    worker_node_id="worker-local-fixture",
+                    manifest=manifest,
+                    manifest_id=canonical_json_hash(manifest, prefix="sha256:"),
+                    manifest_ref=submission["manifest_ref"],
+                    validation_receipt_ref=f"data/job-validation-receipts/{job_id}.json",
+                    result_status="succeeded",
+                )
+            self.assertFalse(
+                (root / "data" / "audit" / "result-reports.jsonl").exists()
+            )
 
     def test_local_job_result_read_path_rejects_missing_invalid_and_mismatched_reports(
         self,
