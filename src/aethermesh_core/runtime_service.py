@@ -1011,7 +1011,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "job-submissions.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-submitted",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "job_submitted",
@@ -2612,7 +2612,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "validation-receipt-creations.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-validation-receipt-created",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "validation_receipt_created",
@@ -2669,7 +2669,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "job-executions.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-execution-started",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "job.execution.started",
@@ -2739,7 +2739,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 audit_path,
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": event_id,
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "result.reported",
@@ -2823,7 +2823,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 audit_path,
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-execution-finished",
                     "timestamp": audit_finished_at,
                     "event_type": "job.execution.finished",

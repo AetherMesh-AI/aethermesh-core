@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
-AUDIT_EVENT_SCHEMA_VERSION = 1
+AUDIT_EVENT_SCHEMA_VERSION = 2
 AUDIT_EVENT_TYPES = frozenset(
     {
         "node_initialized",
@@ -119,7 +119,7 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         or isinstance(document["schema_version"], bool)
         or document["schema_version"] != AUDIT_EVENT_SCHEMA_VERSION
     ):
-        raise LocalAuditEventError("local audit event.schema_version must be integer 1")
+        raise LocalAuditEventError("local audit event.schema_version must be integer 2")
     for field in ("event_id", "actor_node_id", "local_run_id"):
         _require_text(document[field], f"local audit event.{field}")
     if (

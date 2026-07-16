@@ -375,7 +375,7 @@ def _append_shutdown_audit_event(
         append_local_audit_event(
             path,
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event_id": event_id,
                 "timestamp": timestamp,
                 "event_type": "node.shutdown",

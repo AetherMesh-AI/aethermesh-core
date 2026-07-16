@@ -741,7 +741,7 @@ def _append_capability_advertisement_audit_events(
         append_local_audit_event(
             root / "logs" / "local-audit-events.jsonl",
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event_id": (
                     f"capability-advertisement:{action}:{validation_receipt_ref}:"
                     f"{capability_id}"
