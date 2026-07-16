@@ -37,6 +37,10 @@ from aethermesh_core.job_result_schema import (
     validate_job_result_document,
 )
 from aethermesh_core.local_json_helpers import canonical_json_hash
+from aethermesh_core.local_audit_event import (
+    LocalAuditEventError,
+    append_local_audit_event,
+)
 from aethermesh_core.models import Job, JobResult, NodeIdentity
 from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
@@ -999,6 +1003,51 @@ class NodeRuntimeService:
             return self._existing_local_submission(
                 manifest_path, job_id, submission_fingerprint
             )
+        try:
+            local_node_id = self._local_node_id_for_submission()
+            attribution_metadata_hash = canonical_json_hash(
+                attribution_metadata, prefix="sha256:"
+            )
+            append_local_audit_event(
+                self.paths.data_dir / "audit" / "job-submissions.jsonl",
+                {
+                    "schema_version": 1,
+                    "event_id": f"local-audit-{job_id}-submitted",
+                    "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "event_type": "job_submitted",
+                    "actor_node_id": local_node_id,
+                    "local_node_id": local_node_id,
+                    "creator_node_id": creator_node_id,
+                    "local_run_id": job_id,
+                    "job_id": job_id,
+                    "work_id": job_id,
+                    "manifest_id": job_id,
+                    "manifest_ref": manifest_ref,
+                    "hashes": {
+                        "manifest_hash": canonical_json_hash(
+                            json.loads(manifest_path.read_text(encoding="utf-8")),
+                            prefix="sha256:",
+                        )
+                    },
+                    "lineage_refs": lineage_parent_refs,
+                    "validation_expectation": validation_mode,
+                    "validation_status": "pending",
+                    "contribution_attribution": {
+                        "job_id": job_id,
+                        "creator_node_id": creator_node_id,
+                        "metadata_hash": attribution_metadata_hash,
+                    },
+                    "attribution_metadata_hash": attribution_metadata_hash,
+                },
+            )
+        except (LocalAuditEventError, OSError, ValueError) as exc:
+            try:
+                manifest_path.unlink()
+            except OSError:
+                pass
+            raise RuntimeServiceError(
+                f"could not write local job submission audit event: {exc}"
+            ) from exc
         record: dict[str, Any] = {
             "version": LOCAL_JOB_SUBMISSION_SCHEMA_VERSION,
             "job_id": job_id,
@@ -1032,6 +1081,18 @@ class NodeRuntimeService:
             "next_validation_expectation": "pending_requested_local_validation",
             "network_mode": "local-only-no-p2p",
         }
+
+    def _local_node_id_for_submission(self) -> str:
+        """Load the persistent local identity needed for a submission audit record."""
+
+        if not self.paths.config_path.exists():
+            self.initialize_local_node_data()
+        local_node_id = _config_node_id(self.load_config())
+        if local_node_id is None:
+            raise RuntimeServiceError(
+                "local node identity is unavailable for job audit"
+            )
+        return local_node_id
 
     def _existing_local_submission(
         self, manifest_path: Path, job_id: str, submission_fingerprint: str

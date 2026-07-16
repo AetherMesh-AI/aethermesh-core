@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path, PureWindowsPath
@@ -14,6 +15,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "node_initialized",
         "manifest_created",
         "work_submitted",
+        "job_submitted",
         "validation_attempted",
         "validation_result",
         "lineage_linked",
@@ -59,6 +61,10 @@ _OPTIONAL_FIELDS = frozenset(
         "advertisement_payload_digest",
         "validation_receipt_refs",
         "contribution_attribution",
+        "job_id",
+        "local_node_id",
+        "validation_expectation",
+        "attribution_metadata_hash",
     }
 )
 
@@ -134,6 +140,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_shutdown_event(document)
     if document["event_type"] == "capability_advertised":
         _validate_capability_advertisement_event(document)
+    if document["event_type"] == "job_submitted":
+        _validate_job_submission_event(document)
     return document
 
 
@@ -147,6 +155,8 @@ def append_local_audit_event(
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     with audit_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(document, sort_keys=True, separators=(",", ":")) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
     return document
 
 
@@ -271,4 +281,39 @@ def _validate_capability_advertisement_event(document: Mapping[str, Any]) -> Non
     _require_text_mapping(
         document["contribution_attribution"],
         "capability_advertised.contribution_attribution",
+    )
+
+
+def _validate_job_submission_event(document: Mapping[str, Any]) -> None:
+    """Require compact, non-payload evidence for one accepted local submission."""
+
+    required_fields = (
+        "job_id",
+        "local_node_id",
+        "manifest_ref",
+        "hashes",
+        "lineage_refs",
+        "validation_expectation",
+        "contribution_attribution",
+        "attribution_metadata_hash",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            f"job_submitted event is missing required context: {', '.join(missing)}"
+        )
+    for field in (
+        "job_id",
+        "local_node_id",
+        "validation_expectation",
+        "attribution_metadata_hash",
+    ):
+        _require_text(document[field], f"job_submitted.{field}")
+    if document["actor_node_id"] != document["local_node_id"]:
+        raise LocalAuditEventError(
+            "job_submitted.local_node_id must match actor_node_id"
+        )
+    _require_text(document["creator_node_id"], "job_submitted.creator_node_id")
+    _require_text_mapping(
+        document["contribution_attribution"], "job_submitted.contribution_attribution"
     )
