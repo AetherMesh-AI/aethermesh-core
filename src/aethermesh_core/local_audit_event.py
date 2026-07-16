@@ -21,6 +21,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "lineage_linked",
         "contribution_record_updated",
         "job.execution.started",
+        "job.execution.finished",
         "capability_advertised",
         "node.shutdown",
     }
@@ -67,6 +68,14 @@ _OPTIONAL_FIELDS = frozenset(
         "validation_expectation",
         "attribution_metadata_hash",
         "executing_node_id",
+        "execution_id",
+        "worker_node_id",
+        "terminal_status",
+        "finished_at",
+        "duration_ms",
+        "validator_node_id",
+        "output_artifact_refs",
+        "error_summary",
     }
 )
 
@@ -146,6 +155,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_job_submission_event(document)
     if document["event_type"] == "job.execution.started":
         _validate_job_execution_started_event(document)
+    if document["event_type"] == "job.execution.finished":
+        _validate_job_execution_finished_event(document)
     return document
 
 
@@ -357,4 +368,63 @@ def _validate_job_execution_started_event(document: Mapping[str, Any]) -> None:
     _require_text_mapping(
         document["contribution_attribution"],
         "job.execution.started.contribution_attribution",
+    )
+
+
+def _validate_job_execution_finished_event(document: Mapping[str, Any]) -> None:
+    """Require terminal local execution evidence without rewriting start entries."""
+
+    required_fields = (
+        "job_id",
+        "execution_id",
+        "worker_node_id",
+        "manifest_id",
+        "manifest_ref",
+        "lineage_refs",
+        "terminal_status",
+        "finished_at",
+        "duration_ms",
+        "validation_receipt_ref",
+        "validator_node_id",
+        "output_artifact_refs",
+        "error_summary",
+        "contribution_attribution",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            "job.execution.finished event is missing required context: "
+            f"{', '.join(missing)}"
+        )
+    for field in ("job_id", "execution_id", "manifest_id", "terminal_status"):
+        _require_text(document[field], f"job.execution.finished.{field}")
+    if document["terminal_status"] not in {
+        "completed",
+        "failed",
+        "cancelled",
+        "validation-failed",
+    }:
+        raise LocalAuditEventError(
+            "job.execution.finished.terminal_status is unsupported"
+        )
+    _require_timestamp(document["finished_at"])
+    if (
+        not isinstance(document["duration_ms"], int)
+        or isinstance(document["duration_ms"], bool)
+        or document["duration_ms"] < 0
+    ):
+        raise LocalAuditEventError(
+            "job.execution.finished.duration_ms must be a non-negative integer"
+        )
+    for field in ("worker_node_id", "validator_node_id", "error_summary"):
+        if document[field] is not None:
+            _require_text(document[field], f"job.execution.finished.{field}")
+    _require_local_paths(
+        document["output_artifact_refs"],
+        "job.execution.finished.output_artifact_refs",
+    )
+    _require_text(document["creator_node_id"], "job.execution.finished.creator_node_id")
+    _require_text_mapping(
+        document["contribution_attribution"],
+        "job.execution.finished.contribution_attribution",
     )

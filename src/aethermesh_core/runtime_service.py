@@ -2491,6 +2491,30 @@ class NodeRuntimeService:
         error = result.error or (
             None if succeeded else f"validation failed: {validation.reason}"
         )
+        self._append_job_execution_finished_audit_event(
+            job_id=job_id,
+            worker_node_id=worker_node_id,
+            manifest=manifest,
+            manifest_ref=manifest_ref,
+            manifest_id=manifest_id,
+            finished_at=executor_finished_at,
+            duration_ms=_duration_ms(executor_started_at, executor_finished_at),
+            terminal_status=(
+                "completed"
+                if succeeded
+                else "validation-failed"
+                if result.status == "completed"
+                else "failed"
+            ),
+            validation_receipt_ref=receipt_ref,
+            validator_node_id=worker_node_id,
+            # The result artifact is written for both successful and failed
+            # executions, and remains useful terminal evidence when validation
+            # rejects an otherwise completed result.
+            output_artifact_refs=[result_ref],
+            error_summary=None if succeeded else _result_summary(error),
+            contribution_attribution=contribution_attribution,
+        )
         self._transition_local_job_state(
             job_id,
             "succeeded" if succeeded else "failed",
@@ -2588,12 +2612,121 @@ class NodeRuntimeService:
                 f"could not write local job execution start audit event: {exc}"
             ) from exc
 
+    def _append_job_execution_finished_audit_event(
+        self,
+        *,
+        job_id: str,
+        worker_node_id: str | None,
+        manifest: dict[str, Any],
+        manifest_ref: str,
+        manifest_id: str,
+        finished_at: str,
+        duration_ms: int,
+        terminal_status: str,
+        validation_receipt_ref: str | None,
+        validator_node_id: str | None,
+        output_artifact_refs: list[str],
+        error_summary: str | None,
+        contribution_attribution: dict[str, Any],
+    ) -> None:
+        """Append one terminal local execution receipt before persisting terminal state."""
+
+        creator_node_id = manifest.get("creator_node_id")
+        lineage = manifest.get("lineage")
+        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+            raise RuntimeServiceError(
+                "job submission manifest creator_node_id is required for execution audit"
+            )
+        if not _provenance_matches_job(
+            lineage, contribution_attribution, job_id, creator_node_id
+        ):
+            raise RuntimeServiceError(
+                "job execution finish lineage or contribution attribution is invalid"
+            )
+        lineage = cast(dict[str, Any], lineage)
+        attribution_metadata = contribution_attribution.get("metadata")
+        if not isinstance(attribution_metadata, dict):
+            raise RuntimeServiceError(
+                "job execution finish contribution attribution metadata is invalid"
+            )
+        metadata_hash = canonical_json_hash(attribution_metadata, prefix="sha256:")
+        audit_attribution = {
+            "job_id": job_id,
+            "creator_node_id": creator_node_id,
+            "worker_node_id": worker_node_id or "not-assigned",
+            "validator_node_id": validator_node_id or "not-used",
+            "metadata_hash": metadata_hash,
+        }
+        actor_node_id = worker_node_id or self._local_node_id_for_submission()
+        audit_finished_at = datetime.fromisoformat(
+            finished_at.removesuffix("Z") + "+00:00"
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+        audit_path = self.paths.data_dir / "audit" / "job-executions.jsonl"
+        event_id = f"local-audit-{job_id}-execution-finished"
+        try:
+            if audit_path.exists():
+                for line in audit_path.read_text(encoding="utf-8").splitlines():
+                    if json.loads(line).get("event_id") == event_id:
+                        return
+            append_local_audit_event(
+                audit_path,
+                {
+                    "schema_version": 1,
+                    "event_id": f"local-audit-{job_id}-execution-finished",
+                    "timestamp": audit_finished_at,
+                    "event_type": "job.execution.finished",
+                    "actor_node_id": actor_node_id,
+                    "creator_node_id": creator_node_id,
+                    "local_run_id": job_id,
+                    "job_id": job_id,
+                    "work_id": job_id,
+                    "execution_id": f"local-execution-{job_id}",
+                    "worker_node_id": worker_node_id,
+                    "manifest_id": manifest_id,
+                    "manifest_ref": manifest_ref,
+                    "lineage_refs": lineage["parent_refs"],
+                    "terminal_status": terminal_status,
+                    "finished_at": audit_finished_at,
+                    "duration_ms": duration_ms,
+                    "validation_receipt_ref": validation_receipt_ref,
+                    "validator_node_id": validator_node_id,
+                    "output_artifact_refs": output_artifact_refs,
+                    "error_summary": error_summary,
+                    "contribution_attribution_ids": [f"local-contribution-{job_id}"],
+                    "contribution_attribution": audit_attribution,
+                },
+            )
+        except (LocalAuditEventError, OSError, ValueError) as exc:
+            raise RuntimeServiceError(
+                f"could not write local job execution finish audit event: {exc}"
+            ) from exc
+
     def cancel_submitted_local_job(self, job_id: str) -> dict[str, Any]:
         """Cancel an unstarted local job without altering its manifest evidence."""
 
         before = self.get_local_job_status(job_id)
         if before["status"] == "not_found":
             raise RuntimeServiceError("local job not found")
+        manifest = self._load_local_job_document(
+            self.paths.data_dir / "job-submissions" / f"{job_id}.json",
+            "job submission manifest",
+        )
+        finished_at = _utc_timestamp()
+        self._append_job_execution_finished_audit_event(
+            job_id=job_id,
+            worker_node_id=before["worker_node_id"],
+            manifest=manifest,
+            manifest_ref=before["manifest_ref"],
+            manifest_id=canonical_json_hash(manifest, prefix="sha256:"),
+            finished_at=finished_at,
+            duration_ms=0,
+            terminal_status="cancelled",
+            validation_receipt_ref=None,
+            validator_node_id=None,
+            output_artifact_refs=[],
+            error_summary="local job cancelled before completion",
+            contribution_attribution=before["contribution_attribution"],
+        )
         self._transition_local_job_state(job_id, "canceled")
         self._append_event(f"canceled local job submission {job_id}")
         return self.get_local_job_status(job_id)
