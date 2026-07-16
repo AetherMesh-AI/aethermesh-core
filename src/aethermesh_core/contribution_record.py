@@ -20,10 +20,7 @@ from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
     validate_job_result_document,
 )
-from aethermesh_core.local_audit_event import (
-    LocalAuditEventError,
-    append_local_audit_event,
-)
+from aethermesh_core.local_audit_event import append_local_audit_event
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
@@ -318,7 +315,12 @@ def _append_ledger_update_audit(
 ) -> None:
     """Append compact local evidence, never raw work payloads or credentials."""
 
-    contribution = document if isinstance(document, dict) else {}
+    # Only copy attribution from a schema-valid record. This helper also handles
+    # malformed input, whose arbitrary strings must not become durable audit data.
+    try:
+        contribution = validate_contribution_record(document)
+    except ContributionRecordError:
+        contribution = {}
     contributor = contribution.get("contributor_node_id")
     if not isinstance(contributor, str) or not contributor.strip():
         contributor = "local-ledger"
@@ -344,41 +346,24 @@ def _append_ledger_update_audit(
         "local_run_id": update_id,
         "validation_status": outcome,
     }
-    for field in ("job_id", "validation_receipt_id"):
-        value = contribution.get(field)
-        if isinstance(value, str) and value.strip():
-            event["work_id" if field == "job_id" else field] = value
+    if contribution:
+        event.update(
+            {
+                "work_id": contribution["job_id"],
+                "validation_receipt_id": contribution["validation_receipt_id"],
+                "manifest_ref": contribution["manifest_links"]["work_manifest_ref"],
+                "validation_receipt_ref": contribution["validation"][
+                    "validation_receipt_ref"
+                ],
+                "lineage_parent_ids": contribution["lineage"][
+                    "parent_contribution_ids"
+                ],
+                "contribution_attribution_ids": [contribution["record_id"]],
+            }
+        )
     if manifest_id is not None:
         event["manifest_id"] = manifest_id
-    manifest_links = contribution.get("manifest_links")
-    if isinstance(manifest_links, dict):
-        manifest_ref = manifest_links.get("work_manifest_ref")
-        if isinstance(manifest_ref, str) and manifest_ref.strip():
-            event["manifest_ref"] = manifest_ref
-    validation = contribution.get("validation")
-    if isinstance(validation, dict):
-        receipt_ref = validation.get("validation_receipt_ref")
-        if isinstance(receipt_ref, str) and receipt_ref.strip():
-            event["validation_receipt_ref"] = receipt_ref
-    lineage = contribution.get("lineage")
-    if isinstance(lineage, dict) and isinstance(
-        lineage.get("parent_contribution_ids"), list
-    ):
-        event["lineage_parent_ids"] = lineage["parent_contribution_ids"]
-    record_id = contribution.get("record_id")
-    if isinstance(record_id, str) and record_id.strip():
-        event["contribution_attribution_ids"] = [record_id]
-    try:
-        append_local_audit_event(audit_path, event)
-    except LocalAuditEventError:
-        # Invalid contribution evidence must not make its compact failure event invalid.
-        for field in (
-            "manifest_ref",
-            "validation_receipt_ref",
-            "lineage_parent_ids",
-        ):
-            event.pop(field, None)
-        append_local_audit_event(audit_path, event)
+    append_local_audit_event(audit_path, event)
 
 
 def new_unvalidated_validation() -> dict[str, Any]:

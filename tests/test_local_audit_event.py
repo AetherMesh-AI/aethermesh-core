@@ -84,6 +84,24 @@ class LocalAuditEventTests(unittest.TestCase):
                 with self.assertRaisesRegex(LocalAuditEventError, message):
                     validate_local_audit_event({**_minimal_event(), **optional_fields})
 
+    def test_contribution_update_requires_a_supported_outcome(self) -> None:
+        event = {
+            **_minimal_event(),
+            "event_type": "contribution_record_updated",
+            "validation_status": "recorded",
+        }
+        self.assertEqual(validate_local_audit_event(event), event)
+        with self.assertRaisesRegex(LocalAuditEventError, "missing validation_status"):
+            validate_local_audit_event(
+                {
+                    key: value
+                    for key, value in event.items()
+                    if key != "validation_status"
+                }
+            )
+        with self.assertRaisesRegex(LocalAuditEventError, "unsupported"):
+            validate_local_audit_event({**event, "validation_status": "rewarded"})
+
     def test_job_submitted_requires_compact_submission_evidence(self) -> None:
         event = {
             **_minimal_event(),

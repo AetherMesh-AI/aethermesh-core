@@ -236,7 +236,13 @@ class ContributionRecordTests(unittest.TestCase):
             self.assertIsNone(fallback_audit["creator_node_id"])
             self.assertEqual(fallback_audit["validation_status"], "validation_failed")
 
-            non_json = {"record_id": {"not-json"}}
+            non_json = {
+                "record_id": {"not-json"},
+                "creator_node_id": "secret-creator",
+                "contributor_node_id": "secret-contributor",
+                "job_id": "secret-job",
+                "validation_receipt_id": "secret-receipt",
+            }
             with self.assertRaisesRegex(ContributionRecordError, "missing"):
                 record_validated_contribution(non_json, self.root, journal_path)
             non_json_audit = json.loads(
@@ -245,6 +251,10 @@ class ContributionRecordTests(unittest.TestCase):
                 .splitlines()[-1]
             )
             self.assertEqual(non_json_audit["validation_status"], "validation_failed")
+            self.assertEqual(non_json_audit["actor_node_id"], "local-ledger")
+            self.assertIsNone(non_json_audit["creator_node_id"])
+            self.assertNotIn("work_id", non_json_audit)
+            self.assertNotIn("validation_receipt_id", non_json_audit)
 
             unsafe_rejected = copy.deepcopy(self.failed)
             unsafe_rejected["validation"]["validation_receipt_ref"] = "../../secret"
