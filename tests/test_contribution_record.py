@@ -232,6 +232,18 @@ class ContributionRecordTests(unittest.TestCase):
             self.assertIsNone(fallback_audit["creator_node_id"])
             self.assertEqual(fallback_audit["validation_status"], "validation_failed")
 
+            unsafe_rejected = copy.deepcopy(self.failed)
+            unsafe_rejected["validation"]["validation_receipt_ref"] = "../../secret"
+            with self.assertRaisesRegex(ContributionRecordError, "safe local"):
+                record_validated_contribution(unsafe_rejected, self.root, journal_path)
+            unsafe_audit = json.loads(
+                (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()[-1]
+            )
+            self.assertEqual(unsafe_audit["validation_status"], "validation_failed")
+            self.assertNotIn("validation_receipt_ref", unsafe_audit)
+
     def test_duplicate_validated_manifest_is_not_recorded_twice(self) -> None:
         with TemporaryDirectory() as directory:
             journal_path = Path(directory) / "contributions.jsonl"
