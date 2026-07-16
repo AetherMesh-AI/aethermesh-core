@@ -1040,7 +1040,7 @@ class NodeRuntimeService:
                     "attribution_metadata_hash": attribution_metadata_hash,
                 },
             )
-        except (LocalAuditEventError, OSError, ValueError) as exc:
+        except (LocalAuditEventError, OSError, RuntimeServiceError, ValueError) as exc:
             try:
                 manifest_path.unlink()
             except OSError:

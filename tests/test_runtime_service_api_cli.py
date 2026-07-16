@@ -751,6 +751,44 @@ class RuntimeServiceTests(unittest.TestCase):
                 (root / "data" / "job-submissions" / f"{job_id}.json").exists()
             )
 
+    def test_local_job_manifest_is_removed_when_audit_identity_is_unavailable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            job_id = "local-job-0123456789abcdef0123456789abcdef"
+            request = {
+                "schema_version": 1,
+                "job_id": job_id,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+
+            with patch.object(
+                service,
+                "_local_node_id_for_submission",
+                side_effect=RuntimeServiceError("identity unavailable"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError,
+                    "could not write local job submission audit event",
+                ):
+                    service.submit_local_job(request)
+
+            self.assertFalse((root / "data" / "job-status" / f"{job_id}.json").exists())
+            self.assertFalse(
+                (root / "data" / "job-submissions" / f"{job_id}.json").exists()
+            )
+
     def test_supplied_local_job_id_retries_idempotently_and_rejects_conflicts(
         self,
     ) -> None:
