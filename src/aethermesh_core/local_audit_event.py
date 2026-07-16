@@ -1,4 +1,11 @@
-"""Canonical local JSONL audit events for prototype actions."""
+"""Canonical local JSONL audit events for prototype actions.
+
+Every event records UTC ``timestamp``, a stable per-flow ``local_run_id``, and
+the positive ``event_sequence`` offset within that run. Together with actor
+and creator IDs plus event-specific manifest, receipt, lineage, and
+contribution references, these are the minimum local-only reconstruction
+fields. References are relative paths to avoid disclosing host locations.
+"""
 
 from __future__ import annotations
 
@@ -36,6 +43,7 @@ _REQUIRED_FIELDS = frozenset(
         "actor_node_id",
         "creator_node_id",
         "local_run_id",
+        "event_sequence",
         "schema_version",
     }
 )
@@ -114,6 +122,14 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         raise LocalAuditEventError("local audit event.schema_version must be integer 1")
     for field in ("event_id", "actor_node_id", "local_run_id"):
         _require_text(document[field], f"local audit event.{field}")
+    if (
+        not isinstance(document["event_sequence"], int)
+        or isinstance(document["event_sequence"], bool)
+        or document["event_sequence"] < 1
+    ):
+        raise LocalAuditEventError(
+            "local audit event.event_sequence must be a positive integer"
+        )
     _require_timestamp(document["timestamp"])
     creator_node_id = document["creator_node_id"]
     if creator_node_id is not None:

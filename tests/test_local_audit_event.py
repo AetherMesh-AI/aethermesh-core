@@ -50,6 +50,8 @@ class LocalAuditEventTests(unittest.TestCase):
             ({**_minimal_event(), "schema_version": 2}, "schema_version"),
             ({**_minimal_event(), "schema_version": True}, "schema_version"),
             ({**_minimal_event(), "timestamp": "not-utc"}, "timestamp"),
+            ({**_minimal_event(), "event_sequence": 0}, "event_sequence"),
+            ({**_minimal_event(), "event_sequence": True}, "event_sequence"),
             ({**_minimal_event(), "event_type": "unknown"}, "event_type"),
             ({**_minimal_event(), "event_type": []}, "event_type"),
             ({**_minimal_event(), "creator_node_id": ""}, "creator_node_id"),
@@ -168,6 +170,7 @@ def _minimal_event() -> dict[str, object]:
         "actor_node_id": "local-node-a",
         "creator_node_id": None,
         "local_run_id": "run-001",
+        "event_sequence": 1,
     }
 
 

@@ -382,6 +382,7 @@ def _append_shutdown_audit_event(
                 "actor_node_id": node_id,
                 "creator_node_id": creator_node_id,
                 "local_run_id": node_instance_id,
+                "event_sequence": 1,
                 "node_instance_id": node_instance_id,
                 "shutdown_reason": "normal local shutdown",
                 "exit_mode": exit_mode,
