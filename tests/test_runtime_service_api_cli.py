@@ -671,6 +671,124 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertNotEqual(response["job_id"], second["job_id"])
             self.assertFalse((Path(temp_dir) / "data" / "receipts").exists())
 
+    def test_local_job_submission_appends_complete_audit_events_before_queueing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "private"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+
+            first = service.submit_local_job(request)
+            second = service.submit_local_job(request)
+            audit_path = root / "data" / "audit" / "job-submissions.jsonl"
+            events = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ]
+
+            self.assertEqual(len(events), 2)
+            self.assertNotEqual(events[0]["event_id"], events[1]["event_id"])
+            for event, submission in zip(events, (first, second), strict=True):
+                self.assertEqual(event["event_type"], "job_submitted")
+                self.assertTrue(event["local_node_id"])
+                self.assertEqual(event["creator_node_id"], "creator-local-a")
+                self.assertEqual(event["job_id"], submission["job_id"])
+                self.assertEqual(event["manifest_ref"], submission["manifest_ref"])
+                self.assertEqual(event["lineage_refs"], ["data/prior-job.json"])
+                self.assertEqual(event["validation_expectation"], "deterministic-local")
+                self.assertEqual(
+                    event["contribution_attribution"]["creator_node_id"],
+                    "creator-local-a",
+                )
+                self.assertIn("metadata_hash", event["contribution_attribution"])
+                self.assertNotIn("private", json.dumps(event))
+
+    def test_local_job_is_not_accepted_when_submission_audit_write_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            job_id = "local-job-0123456789abcdef0123456789abcdef"
+            request = {
+                "schema_version": 1,
+                "job_id": job_id,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+
+            with patch(
+                "aethermesh_core.runtime_service.append_local_audit_event",
+                side_effect=OSError("read-only audit log"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError,
+                    "could not write local job submission audit event",
+                ):
+                    service.submit_local_job(request)
+
+            self.assertFalse((root / "data" / "job-status" / f"{job_id}.json").exists())
+            self.assertFalse(
+                (root / "data" / "job-submissions" / f"{job_id}.json").exists()
+            )
+
+    def test_local_job_manifest_is_removed_when_audit_identity_is_unavailable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            job_id = "local-job-0123456789abcdef0123456789abcdef"
+            request = {
+                "schema_version": 1,
+                "job_id": job_id,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "hello"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": [],
+                "attribution_metadata": {},
+            }
+
+            with patch.object(
+                service,
+                "_local_node_id_for_submission",
+                side_effect=RuntimeServiceError("identity unavailable"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError,
+                    "could not write local job submission audit event",
+                ):
+                    service.submit_local_job(request)
+
+            self.assertFalse((root / "data" / "job-status" / f"{job_id}.json").exists())
+            self.assertFalse(
+                (root / "data" / "job-submissions" / f"{job_id}.json").exists()
+            )
+
     def test_supplied_local_job_id_retries_idempotently_and_rejects_conflicts(
         self,
     ) -> None:

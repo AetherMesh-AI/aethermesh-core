@@ -18,7 +18,7 @@ Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under th
 | `creator_node_id` | non-empty string or `null` | Original creator node when known; `null` explicitly records that it is not known. |
 | `local_run_id` | non-empty string | Local invocation/run that produced the event. |
 
-Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `validation_attempted`, `validation_result`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
+Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `job_submitted`, `validation_attempted`, `validation_result`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
 
 ## Optional references
 
@@ -36,6 +36,10 @@ Omit optional fields when they do not apply. Their absence is valid and has no e
 | `signatures` | object of non-empty string pairs | Signatures already available locally. |
 
 Hashes and signatures are optional. This format neither creates nor requires them unless existing local validation already produces them.
+
+## Job submission events
+
+A `job_submitted` event is appended to `data/audit/job-submissions.jsonl` before a local submission is queued. It requires `job_id`, `local_node_id`, `manifest_ref`, a `manifest_hash` in `hashes`, `lineage_refs`, `validation_expectation`, `contribution_attribution`, and `attribution_metadata_hash`. The attribution map preserves the job and creator IDs plus a digest of the submitted metadata. The metadata body and input payload are deliberately not copied into the audit log, preventing prompts, credentials, and other large or private request data from being exposed there.
 
 ## Capability advertisement events
 

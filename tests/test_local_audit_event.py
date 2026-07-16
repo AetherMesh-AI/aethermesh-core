@@ -16,7 +16,7 @@ class LocalAuditEventTests(unittest.TestCase):
         event = _minimal_event()
 
         self.assertEqual(validate_local_audit_event(event), event)
-        self.assertEqual(len(AUDIT_EVENT_TYPES), 9)
+        self.assertEqual(len(AUDIT_EVENT_TYPES), 10)
         self.assertIsNone(event["creator_node_id"])
 
     def test_appends_parseable_jsonl_events_with_local_references(self) -> None:
@@ -83,6 +83,30 @@ class LocalAuditEventTests(unittest.TestCase):
             with self.subTest(message=message):
                 with self.assertRaisesRegex(LocalAuditEventError, message):
                     validate_local_audit_event({**_minimal_event(), **optional_fields})
+
+    def test_job_submitted_requires_compact_submission_evidence(self) -> None:
+        event = {
+            **_minimal_event(),
+            "event_type": "job_submitted",
+            "actor_node_id": "local-node-a",
+            "creator_node_id": "creator-node-a",
+            "job_id": "local-job-a",
+            "local_node_id": "local-node-a",
+            "manifest_ref": "data/job-submissions/local-job-a.json",
+            "hashes": {"manifest_hash": "sha256:manifest"},
+            "lineage_refs": ["data/lineage/parent.json"],
+            "validation_expectation": "deterministic-local",
+            "contribution_attribution": {
+                "job_id": "local-job-a",
+                "creator_node_id": "creator-node-a",
+                "metadata_hash": "sha256:metadata",
+            },
+            "attribution_metadata_hash": "sha256:metadata",
+        }
+
+        self.assertEqual(validate_local_audit_event(event), event)
+        with self.assertRaisesRegex(LocalAuditEventError, "local_node_id"):
+            validate_local_audit_event({**event, "local_node_id": "other-node"})
 
 
 def _minimal_event() -> dict[str, object]:
