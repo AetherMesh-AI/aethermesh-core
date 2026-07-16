@@ -146,6 +146,34 @@ class ContributionRecordTests(unittest.TestCase):
             self.assertEqual(
                 len(journal_path.read_text(encoding="utf-8").splitlines()), 1
             )
+            audit_entries = [
+                json.loads(line)
+                for line in (journal_path.parent / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(audit_entries), 1)
+            audit = audit_entries[0]
+            self.assertEqual(audit["validation_status"], "recorded")
+            self.assertEqual(audit["creator_node_id"], "node.local-creator")
+            self.assertEqual(audit["actor_node_id"], "node.local-worker")
+            self.assertEqual(audit["manifest_id"], entry["manifest_id"])
+            self.assertEqual(
+                audit["manifest_ref"],
+                "examples/job-envelopes/minimal-local-echo.json",
+            )
+            self.assertEqual(
+                audit["validation_receipt_ref"],
+                "examples/validation-receipts/local-echo-pass.json",
+            )
+            self.assertEqual(
+                audit["validation_receipt_id"], entry["validation_receipt_id"]
+            )
+            self.assertEqual(audit["lineage_parent_ids"], ["contribution.parent-001"])
+            self.assertEqual(
+                audit["contribution_attribution_ids"], [accepted["record_id"]]
+            )
+            self.assertEqual(audit["event_id"], audit["local_run_id"])
 
     def test_failed_or_missing_validation_records_nothing(self) -> None:
         with TemporaryDirectory() as directory:
@@ -160,6 +188,7 @@ class ContributionRecordTests(unittest.TestCase):
             missing = copy.deepcopy(self.minimal)
             missing["validation"]["validation_receipt_ref"] = None
             missing["manifest_links"]["validation_manifest_ref"] = None
+            missing["manifest_links"]["work_manifest_ref"] = None
             with self.assertRaisesRegex(ContributionRecordError, "receipt reference"):
                 record_validated_contribution(missing, self.root, journal_path)
             self.assertFalse(journal_path.exists())
@@ -178,6 +207,66 @@ class ContributionRecordTests(unittest.TestCase):
             ):
                 record_validated_contribution(malformed, self.root, journal_path)
             self.assertFalse(journal_path.exists())
+            audit_entries = [
+                json.loads(line)
+                for line in (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(
+                [entry["validation_status"] for entry in audit_entries],
+                ["rejected", "validation_failed", "validation_failed"],
+            )
+            self.assertEqual(
+                audit_entries[0]["validation_receipt_id"],
+                self.failed["validation_receipt_id"],
+            )
+            self.assertEqual(
+                audit_entries[0]["manifest_id"],
+                "sha256:" + "d" * 64,
+            )
+            with self.assertRaisesRegex(ContributionRecordError, "missing"):
+                record_validated_contribution({}, self.root, journal_path)
+            fallback_audit = json.loads(
+                (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()[-1]
+            )
+            self.assertEqual(fallback_audit["actor_node_id"], "local-ledger")
+            self.assertIsNone(fallback_audit["creator_node_id"])
+            self.assertEqual(fallback_audit["validation_status"], "validation_failed")
+
+            non_json = {
+                "record_id": {"not-json"},
+                "creator_node_id": "secret-creator",
+                "contributor_node_id": "secret-contributor",
+                "job_id": "secret-job",
+                "validation_receipt_id": "secret-receipt",
+            }
+            with self.assertRaisesRegex(ContributionRecordError, "missing"):
+                record_validated_contribution(non_json, self.root, journal_path)
+            non_json_audit = json.loads(
+                (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()[-1]
+            )
+            self.assertEqual(non_json_audit["validation_status"], "validation_failed")
+            self.assertEqual(non_json_audit["actor_node_id"], "local-ledger")
+            self.assertIsNone(non_json_audit["creator_node_id"])
+            self.assertNotIn("work_id", non_json_audit)
+            self.assertNotIn("validation_receipt_id", non_json_audit)
+
+            unsafe_rejected = copy.deepcopy(self.failed)
+            unsafe_rejected["validation"]["validation_receipt_ref"] = "../../secret"
+            with self.assertRaisesRegex(ContributionRecordError, "safe local"):
+                record_validated_contribution(unsafe_rejected, self.root, journal_path)
+            unsafe_audit = json.loads(
+                (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()[-1]
+            )
+            self.assertEqual(unsafe_audit["validation_status"], "validation_failed")
+            self.assertNotIn("validation_receipt_ref", unsafe_audit)
 
     def test_duplicate_validated_manifest_is_not_recorded_twice(self) -> None:
         with TemporaryDirectory() as directory:
@@ -191,6 +280,15 @@ class ContributionRecordTests(unittest.TestCase):
             self.assertEqual(
                 len(journal_path.read_text(encoding="utf-8").splitlines()), 1
             )
+            audit_entries = [
+                json.loads(line)
+                for line in (Path(directory) / "contribution-ledger-updates.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(audit_entries), 2)
+            self.assertEqual(audit_entries[1]["validation_status"], "already_recorded")
+            self.assertEqual(audit_entries[1]["manifest_id"], first["manifest_id"])
 
             prior = json.loads(journal_path.read_text(encoding="utf-8"))
             prior["manifest_id"] = "sha256:" + "b" * 64

@@ -20,6 +20,7 @@ from aethermesh_core.job_result_schema import (
     JobResultSchemaError,
     validate_job_result_document,
 )
+from aethermesh_core.local_audit_event import append_local_audit_event
 from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
@@ -220,56 +221,149 @@ def record_validated_contribution(
     journal_path: Path,
     *,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    audit_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Append passed receipt-backed attribution once per work manifest."""
+    """Append receipt-backed attribution and one local audit event per attempt."""
 
-    contribution = validate_local_contribution_record(document, local_root)
-    receipt_ref = cast(str, contribution["validation"]["validation_receipt_ref"])
-    receipt = validate_validation_receipt_document(
-        _read_local_json(local_root, receipt_ref, "validation receipt")
+    resolved_audit_path = audit_path or journal_path.with_name(
+        "contribution-ledger-updates.jsonl"
     )
-    if receipt["status"] != "accepted" or receipt["validation_status"] != "pass":
-        raise ContributionRecordError(
-            "contribution recording requires an accepted passed validation receipt"
+    rejected_evidence = False
+    audit_manifest_id: str | None = None
+    try:
+        contribution = validate_local_contribution_record(document, local_root)
+        receipt_ref = cast(str, contribution["validation"]["validation_receipt_ref"])
+        receipt = validate_validation_receipt_document(
+            _read_local_json(local_root, receipt_ref, "validation receipt")
         )
-    work_manifest_ref = cast(str, contribution["manifest_links"]["work_manifest_ref"])
-    work_manifest = cast(
-        dict[str, Any], _read_local_json(local_root, work_manifest_ref, "work manifest")
-    )
-    if canonical_json_hash(work_manifest, prefix="sha256:") != receipt["manifest_id"]:
-        raise ContributionRecordError(
-            "validation receipt manifest_id does not match work manifest"
+        audit_manifest_id = receipt["manifest_id"]
+        if receipt["status"] != "accepted" or receipt["validation_status"] != "pass":
+            rejected_evidence = True
+            raise ContributionRecordError(
+                "contribution recording requires an accepted passed validation receipt"
+            )
+        work_manifest_ref = cast(
+            str, contribution["manifest_links"]["work_manifest_ref"]
         )
+        work_manifest = cast(
+            dict[str, Any],
+            _read_local_json(local_root, work_manifest_ref, "work manifest"),
+        )
+        if (
+            canonical_json_hash(work_manifest, prefix="sha256:")
+            != receipt["manifest_id"]
+        ):
+            raise ContributionRecordError(
+                "validation receipt manifest_id does not match work manifest"
+            )
 
-    with _contribution_journal_lock(journal_path):
-        entries = _load_contribution_journal(journal_path)
-        manifest_id = receipt["manifest_id"]
-        for existing_entry in entries:
-            if existing_entry["manifest_id"] == manifest_id:
-                return existing_entry
+        with _contribution_journal_lock(journal_path):
+            entries = _load_contribution_journal(journal_path)
+            manifest_id = receipt["manifest_id"]
+            for existing_entry in entries:
+                if existing_entry["manifest_id"] == manifest_id:
+                    _append_ledger_update_audit(
+                        resolved_audit_path,
+                        contribution,
+                        manifest_id,
+                        clock,
+                        "already_recorded",
+                    )
+                    return existing_entry
 
-        entry: dict[str, Any] = {
-            "entry_version": LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION,
-            "recorded_at": _utc_timestamp(clock()),
-            "manifest_id": manifest_id,
-            "creator_node_id": contribution["creator_node_id"],
-            "contributor_node_id": contribution["contributor_node_id"],
-            "validator_node_id": receipt["validator_id"],
-            "validation_receipt_id": contribution["validation_receipt_id"],
-            "lineage_parent_contribution_ids": contribution["lineage"][
-                "parent_contribution_ids"
-            ],
-            "contribution": contribution,
-            "prior_entry_hash": entries[-1]["entry_hash"] if entries else None,
-        }
-        entry["entry_hash"] = _journal_entry_hash(entry)
-        try:
-            with journal_path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(entry, sort_keys=True))
-                handle.write("\n")
-        except OSError as exc:
-            raise ContributionRecordError("contribution journal is unwritable") from exc
+            entry: dict[str, Any] = {
+                "entry_version": LOCAL_CONTRIBUTION_JOURNAL_ENTRY_VERSION,
+                "recorded_at": _utc_timestamp(clock()),
+                "manifest_id": manifest_id,
+                "creator_node_id": contribution["creator_node_id"],
+                "contributor_node_id": contribution["contributor_node_id"],
+                "validator_node_id": receipt["validator_id"],
+                "validation_receipt_id": contribution["validation_receipt_id"],
+                "lineage_parent_contribution_ids": contribution["lineage"][
+                    "parent_contribution_ids"
+                ],
+                "contribution": contribution,
+                "prior_entry_hash": entries[-1]["entry_hash"] if entries else None,
+            }
+            entry["entry_hash"] = _journal_entry_hash(entry)
+            try:
+                with journal_path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(entry, sort_keys=True))
+                    handle.write("\n")
+            except OSError as exc:
+                raise ContributionRecordError(
+                    "contribution journal is unwritable"
+                ) from exc
+        _append_ledger_update_audit(
+            resolved_audit_path, contribution, manifest_id, clock, "recorded"
+        )
         return entry
+    except ContributionRecordError:
+        outcome = "rejected" if rejected_evidence else "validation_failed"
+        _append_ledger_update_audit(
+            resolved_audit_path, document, audit_manifest_id, clock, outcome
+        )
+        raise
+
+
+def _append_ledger_update_audit(
+    audit_path: Path,
+    document: object,
+    manifest_id: str | None,
+    clock: Callable[[], datetime],
+    outcome: str,
+) -> None:
+    """Append compact local evidence, never raw work payloads or credentials."""
+
+    # Only copy attribution from a schema-valid record. This helper also handles
+    # malformed input, whose arbitrary strings must not become durable audit data.
+    try:
+        contribution = validate_contribution_record(document)
+    except ContributionRecordError:
+        contribution = {}
+    contributor = contribution.get("contributor_node_id")
+    if not isinstance(contributor, str) or not contributor.strip():
+        contributor = "local-ledger"
+    creator = contribution.get("creator_node_id")
+    if not isinstance(creator, str) or not creator.strip():
+        creator = None
+    update_identity = {
+        field: value if isinstance(value, str) and value.strip() else None
+        for field in ("record_id", "job_id", "validation_receipt_id")
+        for value in (contribution.get(field),)
+    }
+    update_identity["outcome"] = outcome
+    update_id = "ledger-update-" + canonical_json_hash(update_identity).removeprefix(
+        "sha256:"
+    )
+    event: dict[str, Any] = {
+        "schema_version": 1,
+        "event_id": update_id,
+        "timestamp": _utc_timestamp(clock()),
+        "event_type": "contribution_record_updated",
+        "actor_node_id": contributor,
+        "creator_node_id": creator,
+        "local_run_id": update_id,
+        "validation_status": outcome,
+    }
+    if contribution:
+        event.update(
+            {
+                "work_id": contribution["job_id"],
+                "validation_receipt_id": contribution["validation_receipt_id"],
+                "manifest_ref": contribution["manifest_links"]["work_manifest_ref"],
+                "validation_receipt_ref": contribution["validation"][
+                    "validation_receipt_ref"
+                ],
+                "lineage_parent_ids": contribution["lineage"][
+                    "parent_contribution_ids"
+                ],
+                "contribution_attribution_ids": [contribution["record_id"]],
+            }
+        )
+    if manifest_id is not None:
+        event["manifest_id"] = manifest_id
+    append_local_audit_event(audit_path, event)
 
 
 def new_unvalidated_validation() -> dict[str, Any]:

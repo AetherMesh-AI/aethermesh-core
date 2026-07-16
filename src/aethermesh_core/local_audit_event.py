@@ -167,6 +167,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_result_reported_event(document)
     if document["event_type"] == "validation_receipt_created":
         _validate_validation_receipt_created_event(document)
+    if document["event_type"] == "contribution_record_updated":
+        _validate_contribution_record_updated_event(document)
     return document
 
 
@@ -307,6 +309,24 @@ def _validate_capability_advertisement_event(document: Mapping[str, Any]) -> Non
         document["contribution_attribution"],
         "capability_advertised.contribution_attribution",
     )
+
+
+def _validate_contribution_record_updated_event(document: Mapping[str, Any]) -> None:
+    """Limit ledger updates to the documented local evidence outcomes."""
+
+    if "validation_status" not in document:
+        raise LocalAuditEventError(
+            "contribution_record_updated event is missing validation_status"
+        )
+    if document["validation_status"] not in {
+        "recorded",
+        "already_recorded",
+        "rejected",
+        "validation_failed",
+    }:
+        raise LocalAuditEventError(
+            "contribution_record_updated.validation_status is unsupported"
+        )
 
 
 def _validate_job_submission_event(document: Mapping[str, Any]) -> None:

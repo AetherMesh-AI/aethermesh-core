@@ -51,6 +51,12 @@ Startup appends one event per capability advertisement. Normal repeat startup is
 
 A `validation_receipt_created` event is appended to `data/audit/validation-receipt-creations.jsonl` only after its local validation receipt is durably created. It requires the work and manifest references, receipt ID and reference, accepted or rejected validation result, validator node and validator name, lineage references, and available contribution attribution. The lineage references include the submitted-work manifest and any parent references already present in that manifest. A rejected receipt remains explicitly `rejected`; this log does not imply a successful validation, production security, or network consensus. If this append fails, receipt creation fails clearly rather than reporting the job as complete.
 
+## Contribution ledger update events
+
+`record_validated_contribution` appends exactly one `contribution_record_updated` event for each local attribution attempt beside its contribution journal, unless an explicit audit path is supplied. The event records the creator as known, the contributing node as the actor, work ID, validation receipt ID, available manifest ID, lineage parent IDs, and contribution record ID. Its deterministic `event_id`/`local_run_id` is derived from compact identifiers and the local outcome, making repeated attempts traceable without copying a prompt, result payload, credentials, or other sensitive data.
+
+`validation_status` is deliberately limited to `recorded`, `already_recorded`, `rejected`, or `validation_failed`. These are local evidence states only; they do not assert consensus, finality, reputation, or a reward value. A rejected receipt or invalid evidence still receives an audit event, while only an accepted passed receipt can enter the contribution journal.
+
 ## Examples
 
 A minimal initialization event intentionally has no optional references:
