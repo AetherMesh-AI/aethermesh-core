@@ -789,6 +789,112 @@ class RuntimeServiceTests(unittest.TestCase):
                 (root / "data" / "job-submissions" / f"{job_id}.json").exists()
             )
 
+    def test_execution_finish_audits_terminal_provenance_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "done"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            successful = service.submit_local_job(request)
+            completed = service.execute_submitted_local_job(
+                successful["job_id"], "worker-local-a"
+            )
+            failed = service.submit_local_job(
+                {
+                    **request,
+                    "job_type": "text_stats",
+                    "requested_capability": {"identifier": "work.text_stats"},
+                }
+            )
+            failed_status = service.execute_submitted_local_job(
+                failed["job_id"], "worker-local-b"
+            )
+            audit_path = root / "data" / "audit" / "job-executions.jsonl"
+            before_status_checks = audit_path.read_text(encoding="utf-8")
+            service.get_local_job_status(successful["job_id"])
+            service.get_local_job_status(failed["job_id"])
+            self.assertEqual(
+                audit_path.read_text(encoding="utf-8"), before_status_checks
+            )
+
+            finish_events = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+                if json.loads(line)["event_type"] == "job.execution.finished"
+            ]
+            self.assertEqual(len(finish_events), 2)
+            success_event, failure_event = finish_events
+            self.assertEqual(success_event["terminal_status"], "completed")
+            self.assertEqual(success_event["job_id"], successful["job_id"])
+            self.assertEqual(
+                success_event["execution_id"],
+                f"local-execution-{successful['job_id']}",
+            )
+            self.assertEqual(success_event["creator_node_id"], "creator-local-a")
+            self.assertEqual(success_event["worker_node_id"], "worker-local-a")
+            self.assertEqual(success_event["manifest_ref"], successful["manifest_ref"])
+            self.assertEqual(success_event["lineage_refs"], ["data/prior-job.json"])
+            self.assertEqual(
+                success_event["validation_receipt_ref"],
+                completed["validation"]["receipt_ref"],
+            )
+            self.assertEqual(success_event["validator_node_id"], "worker-local-a")
+            self.assertEqual(
+                success_event["contribution_attribution"],
+                {
+                    "job_id": successful["job_id"],
+                    "creator_node_id": "creator-local-a",
+                    "worker_node_id": "worker-local-a",
+                    "validator_node_id": "worker-local-a",
+                    "metadata_hash": success_event["contribution_attribution"][
+                        "metadata_hash"
+                    ],
+                },
+            )
+            self.assertEqual(
+                success_event["contribution_attribution_ids"],
+                [f"local-contribution-{successful['job_id']}"],
+            )
+            self.assertEqual(
+                success_event["output_artifact_refs"], [completed["result"]["ref"]]
+            )
+            self.assertIsNone(success_event["error_summary"])
+            self.assertEqual(failure_event["terminal_status"], "failed")
+            self.assertEqual(failure_event["job_id"], failed["job_id"])
+            self.assertEqual(failure_event["worker_node_id"], "worker-local-b")
+            self.assertEqual(
+                failure_event["validation_receipt_ref"],
+                failed_status["validation"]["receipt_ref"],
+            )
+            self.assertEqual(failure_event["output_artifact_refs"], [])
+            self.assertEqual(failure_event["error_summary"], failed_status["error"])
+
+            cancel_root = root / "cancelled-runtime"
+            cancel_service = NodeRuntimeService.from_home(cancel_root)
+            cancelled = cancel_service.submit_local_job(request)
+            cancel_service.cancel_submitted_local_job(cancelled["job_id"])
+            cancellation_events = [
+                json.loads(line)
+                for line in (cancel_root / "data" / "audit" / "job-executions.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if json.loads(line)["event_type"] == "job.execution.finished"
+            ]
+            self.assertEqual(len(cancellation_events), 1)
+            self.assertEqual(cancellation_events[0]["terminal_status"], "cancelled")
+            self.assertIsNone(cancellation_events[0]["validation_receipt_ref"])
+
     def test_execution_start_audits_precede_work_and_preserve_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -832,9 +938,17 @@ class RuntimeServiceTests(unittest.TestCase):
                 json.loads(line)
                 for line in audit_path.read_text(encoding="utf-8").splitlines()
             ]
-            self.assertEqual(len(events), 2)
-            self.assertNotEqual(events[0]["event_id"], events[1]["event_id"])
-            for event, submission in zip(events, (first, second), strict=True):
+            self.assertEqual(len(events), 4)
+            started_events = [
+                event
+                for event in events
+                if event["event_type"] == "job.execution.started"
+            ]
+            self.assertEqual(len(started_events), 2)
+            self.assertNotEqual(
+                started_events[0]["event_id"], started_events[1]["event_id"]
+            )
+            for event, submission in zip(started_events, (first, second), strict=True):
                 self.assertEqual(event["event_type"], "job.execution.started")
                 self.assertEqual(event["job_id"], submission["job_id"])
                 self.assertEqual(event["creator_node_id"], "creator-local-a")
