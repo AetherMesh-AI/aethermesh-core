@@ -95,7 +95,7 @@ _OPTIONAL_FIELDS = frozenset(
 
 
 class LocalAuditEventError(ValueError):
-    """Raised when a local audit event does not match the stable v1 format."""
+    """Raised when a local audit event does not match the canonical format."""
 
 
 def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
