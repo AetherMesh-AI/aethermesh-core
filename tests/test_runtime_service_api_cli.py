@@ -789,6 +789,137 @@ class RuntimeServiceTests(unittest.TestCase):
                 (root / "data" / "job-submissions" / f"{job_id}.json").exists()
             )
 
+    def test_execution_start_audits_precede_work_and_preserve_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "private execution payload"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-job.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            first = service.submit_local_job(request)
+            second = service.submit_local_job(request)
+            audit_path = root / "data" / "audit" / "job-executions.jsonl"
+            runner = run_local_job
+
+            def run_after_start(*args: Any, **kwargs: Any) -> JobResult:
+                events = [
+                    json.loads(line)
+                    for line in audit_path.read_text(encoding="utf-8").splitlines()
+                ]
+                self.assertEqual(len(events), 1)
+                self.assertFalse(
+                    (root / "data" / "job-results" / f"{first['job_id']}.json").exists()
+                )
+                return runner(*args, **kwargs)
+
+            with patch(
+                "aethermesh_core.runtime_service.run_local_job", run_after_start
+            ):
+                service.execute_submitted_local_job(first["job_id"], "worker-local-a")
+            service.execute_submitted_local_job(second["job_id"], "worker-local-a")
+
+            events = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(len(events), 2)
+            self.assertNotEqual(events[0]["event_id"], events[1]["event_id"])
+            for event, submission in zip(events, (first, second), strict=True):
+                self.assertEqual(event["event_type"], "job.execution.started")
+                self.assertEqual(event["job_id"], submission["job_id"])
+                self.assertEqual(event["creator_node_id"], "creator-local-a")
+                self.assertEqual(event["executing_node_id"], "worker-local-a")
+                self.assertEqual(event["manifest_id"], submission["job_id"])
+                self.assertEqual(event["manifest_ref"], submission["manifest_ref"])
+                self.assertEqual(event["lineage_refs"], ["data/prior-job.json"])
+                self.assertEqual(
+                    event["contribution_attribution"]["creator_node_id"],
+                    "creator-local-a",
+                )
+                self.assertIn("input_payload_hash", event["hashes"])
+                self.assertNotIn("private execution payload", json.dumps(event))
+
+    def test_execution_start_audit_failure_keeps_job_queued_and_blocks_work(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(
+                {
+                    "schema_version": 1,
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {"payload_type": "json", "content": {}},
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
+                }
+            )
+            with (
+                patch(
+                    "aethermesh_core.runtime_service.append_local_audit_event",
+                    side_effect=OSError("read-only audit log"),
+                ),
+                patch("aethermesh_core.runtime_service.run_local_job") as runner,
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError,
+                    "could not write local job execution start audit event",
+                ):
+                    service.execute_submitted_local_job(
+                        submission["job_id"], "worker-local-a"
+                    )
+            runner.assert_not_called()
+            self.assertEqual(
+                service.get_local_job_status(submission["job_id"])["status"], "queued"
+            )
+
+    def test_execution_start_requires_manifest_creator_identifier(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(
+                {
+                    "schema_version": 1,
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {"payload_type": "json", "content": {}},
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
+                }
+            )
+            manifest_path = root / submission["manifest_ref"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["creator_node_id"] = ""
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "creator_node_id is required"
+            ):
+                service.execute_submitted_local_job(
+                    submission["job_id"], "worker-local-a"
+                )
+            self.assertFalse(
+                (root / "data" / "audit" / "job-executions.jsonl").exists()
+            )
+            self.assertEqual(
+                service.get_local_job_status(submission["job_id"])["status"], "queued"
+            )
+
     def test_supplied_local_job_id_retries_idempotently_and_rejects_conflicts(
         self,
     ) -> None:

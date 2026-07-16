@@ -16,7 +16,7 @@ class LocalAuditEventTests(unittest.TestCase):
         event = _minimal_event()
 
         self.assertEqual(validate_local_audit_event(event), event)
-        self.assertEqual(len(AUDIT_EVENT_TYPES), 10)
+        self.assertEqual(len(AUDIT_EVENT_TYPES), 11)
         self.assertIsNone(event["creator_node_id"])
 
     def test_appends_parseable_jsonl_events_with_local_references(self) -> None:
@@ -107,6 +107,38 @@ class LocalAuditEventTests(unittest.TestCase):
         self.assertEqual(validate_local_audit_event(event), event)
         with self.assertRaisesRegex(LocalAuditEventError, "local_node_id"):
             validate_local_audit_event({**event, "local_node_id": "other-node"})
+
+    def test_execution_started_requires_compact_execution_provenance(self) -> None:
+        event = {
+            **_minimal_event(),
+            "event_type": "job.execution.started",
+            "actor_node_id": "worker-node-a",
+            "creator_node_id": "creator-node-a",
+            "job_id": "local-job-a",
+            "executing_node_id": "worker-node-a",
+            "manifest_id": "local-job-a",
+            "manifest_ref": "data/job-submissions/local-job-a.json",
+            "hashes": {
+                "manifest_hash": "sha256:manifest",
+                "input_payload_hash": "sha256:input",
+            },
+            "lineage_refs": ["data/lineage/parent.json"],
+            "contribution_attribution": {
+                "job_id": "local-job-a",
+                "creator_node_id": "creator-node-a",
+                "executing_node_id": "worker-node-a",
+                "metadata_hash": "sha256:metadata",
+            },
+            "attribution_metadata_hash": "sha256:metadata",
+        }
+
+        self.assertEqual(validate_local_audit_event(event), event)
+        with self.assertRaisesRegex(LocalAuditEventError, "manifest_id"):
+            validate_local_audit_event(
+                {key: value for key, value in event.items() if key != "manifest_id"}
+            )
+        with self.assertRaisesRegex(LocalAuditEventError, "must match actor_node_id"):
+            validate_local_audit_event({**event, "executing_node_id": "other-node"})
 
 
 def _minimal_event() -> dict[str, object]:
