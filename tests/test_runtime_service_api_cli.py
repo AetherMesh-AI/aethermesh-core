@@ -22,6 +22,9 @@ from aethermesh_core.api import _lifespan, create_app
 from aethermesh_core.identity import deterministic_machine_node_id
 from aethermesh_core.job_result_schema import validate_job_result_document
 from aethermesh_core.local_json_helpers import canonical_json_hash
+from aethermesh_core.local_audit_event import (
+    append_local_audit_event as real_append_audit_event,
+)
 from aethermesh_core.models import JobResult
 from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
@@ -897,6 +900,119 @@ class RuntimeServiceTests(unittest.TestCase):
             self.assertEqual(len(cancellation_events), 1)
             self.assertEqual(cancellation_events[0]["terminal_status"], "cancelled")
             self.assertIsNone(cancellation_events[0]["validation_receipt_ref"])
+
+    def test_validation_receipt_creation_audit_is_append_only_and_truthful(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            request = {
+                "schema_version": 1,
+                "job_type": "echo",
+                "requested_capability": {"identifier": "work.echo"},
+                "input_payload": {
+                    "payload_type": "json",
+                    "content": {"message": "expected"},
+                },
+                "creator_node_id": "creator-local-a",
+                "requested_validation_mode": "deterministic-local",
+                "lineage_parent_refs": ["data/prior-receipt.json"],
+                "attribution_metadata": {"project": "prototype"},
+            }
+            accepted = service.submit_local_job(request)
+            service.execute_submitted_local_job(accepted["job_id"], "worker-local-a")
+            rejected = service.submit_local_job(
+                {
+                    **request,
+                    "job_type": "text_stats",
+                    "requested_capability": {"identifier": "work.text_stats"},
+                }
+            )
+            service.execute_submitted_local_job(rejected["job_id"], "worker-local-b")
+
+            audit_path = root / "data" / "audit" / "validation-receipt-creations.jsonl"
+            events = [
+                json.loads(line)
+                for line in audit_path.read_text(encoding="utf-8").splitlines()
+            ]
+
+            self.assertEqual(len(events), 2)
+            self.assertEqual(
+                [event["validation_result"] for event in events],
+                ["accepted", "rejected"],
+            )
+            for event, submission, worker in zip(
+                events,
+                (accepted, rejected),
+                ("worker-local-a", "worker-local-b"),
+                strict=True,
+            ):
+                self.assertEqual(event["event_type"], "validation_receipt_created")
+                self.assertEqual(event["creator_node_id"], "creator-local-a")
+                self.assertEqual(event["actor_node_id"], worker)
+                self.assertEqual(event["validator_node_id"], worker)
+                self.assertEqual(event["manifest_ref"], submission["manifest_ref"])
+                self.assertEqual(
+                    event["validation_receipt_ref"],
+                    f"data/job-validation-receipts/{submission['job_id']}.json",
+                )
+                self.assertEqual(
+                    event["lineage_refs"],
+                    [submission["manifest_ref"], "data/prior-receipt.json"],
+                )
+                self.assertEqual(
+                    event["contribution_attribution"]["creator_node_id"],
+                    "creator-local-a",
+                )
+
+    def test_validation_receipt_creation_fails_when_audit_append_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(
+                {
+                    "schema_version": 1,
+                    "job_type": "echo",
+                    "requested_capability": {"identifier": "work.echo"},
+                    "input_payload": {"payload_type": "json", "content": {}},
+                    "creator_node_id": "creator-local-a",
+                    "requested_validation_mode": "deterministic-local",
+                    "lineage_parent_refs": [],
+                    "attribution_metadata": {},
+                }
+            )
+
+            def fail_receipt_audit(path: Path, event: dict[str, Any]) -> dict[str, Any]:
+                if path.name == "validation-receipt-creations.jsonl":
+                    raise OSError("read-only audit log")
+                return real_append_audit_event(path, event)
+
+            with patch(
+                "aethermesh_core.runtime_service.append_local_audit_event",
+                side_effect=fail_receipt_audit,
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeServiceError,
+                    "could not write local validation receipt creation audit event",
+                ):
+                    service.execute_submitted_local_job(
+                        submission["job_id"], "worker-local-a"
+                    )
+
+            self.assertTrue(
+                (
+                    root
+                    / "data"
+                    / "job-validation-receipts"
+                    / f"{submission['job_id']}.json"
+                ).is_file()
+            )
+            self.assertFalse(
+                (
+                    root / "data" / "audit" / "validation-receipt-creations.jsonl"
+                ).exists()
+            )
 
     def test_execution_start_audits_precede_work_and_preserve_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

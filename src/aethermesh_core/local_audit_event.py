@@ -18,6 +18,7 @@ AUDIT_EVENT_TYPES = frozenset(
         "job_submitted",
         "validation_attempted",
         "validation_result",
+        "validation_receipt_created",
         "lineage_linked",
         "contribution_record_updated",
         "job.execution.started",
@@ -79,6 +80,8 @@ _OPTIONAL_FIELDS = frozenset(
         "error_summary",
         "reporting_node_id",
         "result_status",
+        "validation_result",
+        "validator_name",
     }
 )
 
@@ -162,6 +165,8 @@ def validate_local_audit_event(event: Mapping[str, Any]) -> dict[str, Any]:
         _validate_job_execution_finished_event(document)
     if document["event_type"] == "result.reported":
         _validate_result_reported_event(document)
+    if document["event_type"] == "validation_receipt_created":
+        _validate_validation_receipt_created_event(document)
     return document
 
 
@@ -466,4 +471,55 @@ def _validate_result_reported_event(document: Mapping[str, Any]) -> None:
     _require_local_paths(
         document["contribution_attribution_refs"],
         "result.reported.contribution_attribution_refs",
+    )
+
+
+def _validate_validation_receipt_created_event(document: Mapping[str, Any]) -> None:
+    """Require durable receipt provenance for one local validation creation."""
+
+    required_fields = (
+        "work_id",
+        "manifest_id",
+        "manifest_ref",
+        "validation_receipt_id",
+        "validation_receipt_ref",
+        "validation_result",
+        "validator_node_id",
+        "validator_name",
+        "lineage_refs",
+        "contribution_attribution_ids",
+        "contribution_attribution",
+    )
+    missing = [field for field in required_fields if field not in document]
+    if missing:
+        raise LocalAuditEventError(
+            "validation_receipt_created event is missing required context: "
+            f"{', '.join(missing)}"
+        )
+    for field in (
+        "work_id",
+        "manifest_id",
+        "validation_receipt_id",
+        "validation_result",
+        "validator_node_id",
+        "validator_name",
+    ):
+        _require_text(document[field], f"validation_receipt_created.{field}")
+    if document["validation_result"] not in {"accepted", "rejected"}:
+        raise LocalAuditEventError(
+            "validation_receipt_created.validation_result must be accepted or rejected"
+        )
+    if document["actor_node_id"] != document["validator_node_id"]:
+        raise LocalAuditEventError(
+            "validation_receipt_created.validator_node_id must match actor_node_id"
+        )
+    _require_text(
+        document["creator_node_id"], "validation_receipt_created.creator_node_id"
+    )
+    _require_local_paths(
+        document["lineage_refs"], "validation_receipt_created.lineage_refs"
+    )
+    _require_text_mapping(
+        document["contribution_attribution"],
+        "validation_receipt_created.contribution_attribution",
     )
