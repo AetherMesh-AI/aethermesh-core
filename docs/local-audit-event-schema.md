@@ -1,6 +1,6 @@
 # Local Audit Event Schema
 
-`aethermesh_core.local_audit_event` defines the small, stable v1 event format for a local JSONL audit log. It makes prototype actions traceable on one machine. It is not a production security log, peer protocol, blockchain, consensus record, reward ledger, or claim of decentralized finality.
+`aethermesh_core.local_audit_event` defines the small, stable v2 event format for a local JSONL audit log. It makes prototype actions traceable on one machine. It is not a production security log, peer protocol, blockchain, consensus record, reward ledger, or claim of decentralized finality.
 
 ## Storage and append-only rule
 
@@ -10,13 +10,16 @@ Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under th
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `schema_version` | integer `1` | Event-format version. |
+| `schema_version` | integer `2` | Event-format version. |
 | `event_id` | non-empty string | Locally unique event identifier chosen by the caller. |
 | `timestamp` | UTC timestamp (`YYYY-MM-DDTHH:MM:SSZ`) | Human-readable timestamp recorded by the caller. |
 | `event_type` | enum | Prototype action listed below. |
 | `actor_node_id` | non-empty string | Node performing or recording the action. |
 | `creator_node_id` | non-empty string or `null` | Original creator node when known; `null` explicitly records that it is not known. |
 | `local_run_id` | non-empty string | Local invocation/run that produced the event. |
+| `event_sequence` | positive integer | Stable ordering position of the event within its local run. |
+
+Version 2 adds `event_sequence` so events from separate JSONL files can be reconstructed in flow order without relying on equal-second timestamps. Existing version 1 lines remain immutable historical evidence; the current validator accepts newly produced version 2 events.
 
 Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `job_submitted`, `validation_attempted`, `validation_result`, `validation_receipt_created`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
 
@@ -62,13 +65,13 @@ A `validation_receipt_created` event is appended to `data/audit/validation-recei
 A minimal initialization event intentionally has no optional references:
 
 ```json
-{"actor_node_id":"local-node-a","creator_node_id":"local-node-a","event_id":"audit-init-001","event_type":"node_initialized","local_run_id":"run-001","schema_version":1,"timestamp":"2026-07-15T06:00:00Z"}
+{"actor_node_id":"local-node-a","creator_node_id":"local-node-a","event_id":"audit-init-001","event_sequence":1,"event_type":"node_initialized","local_run_id":"run-001","schema_version":2,"timestamp":"2026-07-15T06:00:00Z"}
 ```
 
 This validation-result event links local manifest, work, receipt, lineage, contribution attribution, and related artifacts without any network access:
 
 ```json
-{"actor_node_id":"validator-local-a","contribution_attribution_ids":["local-contribution-work-001"],"creator_node_id":"creator-local-a","event_id":"audit-validation-001","event_type":"validation_result","hashes":{"result_hash":"sha256:example"},"lineage_parent_ids":["work-parent-001"],"local_run_id":"run-001","manifest_id":"manifest-work-001","related_file_paths":["data/manifests/work-001.json","data/receipts/work-001.json"],"schema_version":1,"timestamp":"2026-07-15T06:01:00Z","validation_receipt_id":"receipt-work-001","work_id":"work-001"}
+{"actor_node_id":"validator-local-a","contribution_attribution_ids":["local-contribution-work-001"],"creator_node_id":"creator-local-a","event_id":"audit-validation-001","event_sequence":2,"event_type":"validation_result","hashes":{"result_hash":"sha256:example"},"lineage_parent_ids":["work-parent-001"],"local_run_id":"run-001","manifest_id":"manifest-work-001","related_file_paths":["data/manifests/work-001.json","data/receipts/work-001.json"],"schema_version":2,"timestamp":"2026-07-15T06:01:00Z","validation_receipt_id":"receipt-work-001","work_id":"work-001"}
 ```
 
 The examples are individual JSONL lines. They remain readable with ordinary JSON tooling, and a local script can parse each non-empty line with `json.loads` before calling `validate_local_audit_event`.
