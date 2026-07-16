@@ -232,12 +232,14 @@ def record_validated_contribution(
         "contribution-ledger-updates.jsonl"
     )
     rejected_evidence = False
+    audit_manifest_id: str | None = None
     try:
         contribution = validate_local_contribution_record(document, local_root)
         receipt_ref = cast(str, contribution["validation"]["validation_receipt_ref"])
         receipt = validate_validation_receipt_document(
             _read_local_json(local_root, receipt_ref, "validation receipt")
         )
+        audit_manifest_id = receipt["manifest_id"]
         if receipt["status"] != "accepted" or receipt["validation_status"] != "pass":
             rejected_evidence = True
             raise ContributionRecordError(
@@ -266,7 +268,7 @@ def record_validated_contribution(
                     _append_ledger_update_audit(
                         resolved_audit_path,
                         contribution,
-                        None,
+                        manifest_id,
                         clock,
                         "already_recorded",
                     )
@@ -301,7 +303,9 @@ def record_validated_contribution(
         return entry
     except ContributionRecordError:
         outcome = "rejected" if rejected_evidence else "validation_failed"
-        _append_ledger_update_audit(resolved_audit_path, document, None, clock, outcome)
+        _append_ledger_update_audit(
+            resolved_audit_path, document, audit_manifest_id, clock, outcome
+        )
         raise
 
 
@@ -321,14 +325,15 @@ def _append_ledger_update_audit(
     creator = contribution.get("creator_node_id")
     if not isinstance(creator, str) or not creator.strip():
         creator = None
-    update_id = "ledger-update-" + canonical_json_hash(
-        {
-            "record_id": contribution.get("record_id"),
-            "job_id": contribution.get("job_id"),
-            "validation_receipt_id": contribution.get("validation_receipt_id"),
-            "outcome": outcome,
-        }
-    ).removeprefix("sha256:")
+    update_identity = {
+        field: value if isinstance(value, str) and value.strip() else None
+        for field in ("record_id", "job_id", "validation_receipt_id")
+        for value in (contribution.get(field),)
+    }
+    update_identity["outcome"] = outcome
+    update_id = "ledger-update-" + canonical_json_hash(update_identity).removeprefix(
+        "sha256:"
+    )
     event: dict[str, Any] = {
         "schema_version": 1,
         "event_id": update_id,
