@@ -337,13 +337,14 @@ def _append_ledger_update_audit(
         "sha256:"
     )
     event: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "event_id": update_id,
         "timestamp": _utc_timestamp(clock()),
         "event_type": "contribution_record_updated",
         "actor_node_id": contributor,
         "creator_node_id": creator,
         "local_run_id": update_id,
+        "event_sequence": 1,
         "validation_status": outcome,
     }
     if contribution:

@@ -730,7 +730,9 @@ def _append_capability_advertisement_audit_events(
 ) -> None:
     """Append one digest-only audit event for each validated local claim."""
 
-    for advertisement in cast(list[dict[str, object]], advertisements):
+    for event_sequence, advertisement in enumerate(
+        cast(list[dict[str, object]], advertisements), start=1
+    ):
         validation = cast(dict[str, object], advertisement["validation"])
         attribution = cast(dict[str, object], advertisement["contribution_attribution"])
         required_receipt_ref = cast(str, validation["required_receipt_ref"])
@@ -739,7 +741,7 @@ def _append_capability_advertisement_audit_events(
         append_local_audit_event(
             root / "logs" / "local-audit-events.jsonl",
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event_id": (
                     f"capability-advertisement:{action}:{validation_receipt_ref}:"
                     f"{capability_id}"
@@ -749,6 +751,7 @@ def _append_capability_advertisement_audit_events(
                 "actor_node_id": node_id,
                 "creator_node_id": creator_node_id,
                 "local_run_id": f"local-startup:{validation_receipt_ref}",
+                "event_sequence": event_sequence,
                 "capability_advertisement_action": action,
                 "node_id": node_id,
                 "capability_id": capability_id,

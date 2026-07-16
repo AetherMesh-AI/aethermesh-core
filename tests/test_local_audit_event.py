@@ -47,9 +47,11 @@ class LocalAuditEventTests(unittest.TestCase):
                 },
                 "missing required",
             ),
-            ({**_minimal_event(), "schema_version": 2}, "schema_version"),
+            ({**_minimal_event(), "schema_version": 1}, "schema_version"),
             ({**_minimal_event(), "schema_version": True}, "schema_version"),
             ({**_minimal_event(), "timestamp": "not-utc"}, "timestamp"),
+            ({**_minimal_event(), "event_sequence": 0}, "event_sequence"),
+            ({**_minimal_event(), "event_sequence": True}, "event_sequence"),
             ({**_minimal_event(), "event_type": "unknown"}, "event_type"),
             ({**_minimal_event(), "event_type": []}, "event_type"),
             ({**_minimal_event(), "creator_node_id": ""}, "creator_node_id"),
@@ -161,13 +163,14 @@ class LocalAuditEventTests(unittest.TestCase):
 
 def _minimal_event() -> dict[str, object]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "event_id": "audit-init-001",
         "timestamp": "2026-07-15T06:00:00Z",
         "event_type": "node_initialized",
         "actor_node_id": "local-node-a",
         "creator_node_id": None,
         "local_run_id": "run-001",
+        "event_sequence": 1,
     }
 
 

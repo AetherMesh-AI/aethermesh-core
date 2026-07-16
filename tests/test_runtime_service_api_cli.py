@@ -2608,6 +2608,45 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertNotIn("output_payload", audit_event)
 
+            audit_paths = (
+                root / "data" / "audit" / "job-submissions.jsonl",
+                root / "data" / "audit" / "job-executions.jsonl",
+                root / "data" / "audit" / "validation-receipt-creations.jsonl",
+                root / "data" / "audit" / "result-reports.jsonl",
+            )
+            run_events = [
+                json.loads(line)
+                for path in audit_paths
+                for line in path.read_text(encoding="utf-8").splitlines()
+                if json.loads(line)["local_run_id"] == job_id
+            ]
+            self.assertEqual(
+                [
+                    event["event_sequence"]
+                    for event in sorted(
+                        run_events, key=lambda event: event["event_sequence"]
+                    )
+                ],
+                [1, 2, 3, 4, 5],
+            )
+            for event in run_events:
+                self.assertEqual(event["local_run_id"], job_id)
+                self.assertEqual(event["creator_node_id"], request["creator_node_id"])
+                self.assertRegex(event["timestamp"], r"^\d{4}-\d{2}-\d{2}T.*Z$")
+                self.assertTrue(event["manifest_id"])
+            receipt_event = next(
+                event
+                for event in run_events
+                if event["event_type"] == "validation_receipt_created"
+            )
+            self.assertEqual(
+                receipt_event["validation_receipt_id"], report["validation_receipt_id"]
+            )
+            self.assertEqual(
+                receipt_event["lineage_refs"],
+                [submission["manifest_ref"], *request["lineage_parent_refs"]],
+            )
+
             service._append_result_reported_audit_event(
                 job_id=job_id,
                 worker_node_id="worker-local-fixture",

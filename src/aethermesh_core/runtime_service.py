@@ -1011,7 +1011,7 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "job-submissions.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-submitted",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "job_submitted",
@@ -1019,6 +1019,7 @@ class NodeRuntimeService:
                     "local_node_id": local_node_id,
                     "creator_node_id": creator_node_id,
                     "local_run_id": job_id,
+                    "event_sequence": 1,
                     "job_id": job_id,
                     "work_id": job_id,
                     "manifest_id": job_id,
@@ -2611,13 +2612,14 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "validation-receipt-creations.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-validation-receipt-created",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "validation_receipt_created",
                     "actor_node_id": worker_node_id,
                     "creator_node_id": creator_node_id,
                     "local_run_id": job_id,
+                    "event_sequence": 3,
                     "work_id": job_id,
                     "manifest_id": manifest_id,
                     "manifest_ref": manifest_ref,
@@ -2667,13 +2669,14 @@ class NodeRuntimeService:
             append_local_audit_event(
                 self.paths.data_dir / "audit" / "job-executions.jsonl",
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-execution-started",
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "job.execution.started",
                     "actor_node_id": worker_node_id,
                     "creator_node_id": creator_node_id,
                     "local_run_id": job_id,
+                    "event_sequence": 2,
                     "job_id": job_id,
                     "work_id": job_id,
                     "executing_node_id": worker_node_id,
@@ -2736,13 +2739,14 @@ class NodeRuntimeService:
             append_local_audit_event(
                 audit_path,
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": event_id,
                     "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "event_type": "result.reported",
                     "actor_node_id": worker_node_id,
                     "creator_node_id": creator_node_id,
                     "local_run_id": job_id,
+                    "event_sequence": 5,
                     "reporting_node_id": worker_node_id,
                     "work_id": job_id,
                     "manifest_id": manifest_id,
@@ -2819,13 +2823,14 @@ class NodeRuntimeService:
             append_local_audit_event(
                 audit_path,
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "event_id": f"local-audit-{job_id}-execution-finished",
                     "timestamp": audit_finished_at,
                     "event_type": "job.execution.finished",
                     "actor_node_id": actor_node_id,
                     "creator_node_id": creator_node_id,
                     "local_run_id": job_id,
+                    "event_sequence": 4,
                     "job_id": job_id,
                     "work_id": job_id,
                     "execution_id": f"local-execution-{job_id}",

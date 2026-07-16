@@ -375,13 +375,14 @@ def _append_shutdown_audit_event(
         append_local_audit_event(
             path,
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "event_id": event_id,
                 "timestamp": timestamp,
                 "event_type": "node.shutdown",
                 "actor_node_id": node_id,
                 "creator_node_id": creator_node_id,
                 "local_run_id": node_instance_id,
+                "event_sequence": 1,
                 "node_instance_id": node_instance_id,
                 "shutdown_reason": "normal local shutdown",
                 "exit_mode": exit_mode,
