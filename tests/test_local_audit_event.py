@@ -16,7 +16,7 @@ class LocalAuditEventTests(unittest.TestCase):
         event = _minimal_event()
 
         self.assertEqual(validate_local_audit_event(event), event)
-        self.assertEqual(len(AUDIT_EVENT_TYPES), 13)
+        self.assertEqual(len(AUDIT_EVENT_TYPES), 14)
         self.assertIsNone(event["creator_node_id"])
 
     def test_appends_parseable_jsonl_events_with_local_references(self) -> None:

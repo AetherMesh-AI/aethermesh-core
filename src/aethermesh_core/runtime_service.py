@@ -2487,6 +2487,16 @@ class NodeRuntimeService:
                 "validated_at": validated_at,
             },
         )
+        self._append_validation_receipt_created_audit_event(
+            job_id=job_id,
+            worker_node_id=worker_node_id,
+            manifest=manifest,
+            manifest_id=manifest_id,
+            manifest_ref=manifest_ref,
+            receipt_ref=receipt_ref,
+            validation_result="accepted" if succeeded else "rejected",
+            contribution_attribution=contribution_attribution,
+        )
         self._append_result_reported_audit_event(
             job_id=job_id,
             worker_node_id=worker_node_id,
@@ -2558,6 +2568,73 @@ class NodeRuntimeService:
         )
         self._append_event(f"executed local job submission {job_id}")
         return self.get_local_job_status(job_id)
+
+    def _append_validation_receipt_created_audit_event(
+        self,
+        *,
+        job_id: str,
+        worker_node_id: str,
+        manifest: dict[str, Any],
+        manifest_id: str,
+        manifest_ref: str,
+        receipt_ref: str,
+        validation_result: str,
+        contribution_attribution: dict[str, Any],
+    ) -> None:
+        """Append evidence only after the local validation receipt is durable."""
+
+        creator_node_id = manifest.get("creator_node_id")
+        lineage = manifest.get("lineage")
+        if not isinstance(creator_node_id, str) or not creator_node_id.strip():
+            raise RuntimeServiceError(
+                "validation receipt audit requires a creator node ID"
+            )
+        if not isinstance(lineage, dict) or not isinstance(
+            lineage.get("parent_refs"), list
+        ):
+            raise RuntimeServiceError(
+                "validation receipt audit requires manifest lineage"
+            )
+        metadata = contribution_attribution.get("metadata")
+        if not isinstance(metadata, dict):
+            raise RuntimeServiceError(
+                "validation receipt audit requires contribution attribution metadata"
+            )
+        audit_attribution = {
+            "job_id": job_id,
+            "creator_node_id": creator_node_id,
+            "worker_node_id": worker_node_id,
+            "executor_node_id": worker_node_id,
+            "metadata_hash": canonical_json_hash(metadata, prefix="sha256:"),
+        }
+        try:
+            append_local_audit_event(
+                self.paths.data_dir / "audit" / "validation-receipt-creations.jsonl",
+                {
+                    "schema_version": 1,
+                    "event_id": f"local-audit-{job_id}-validation-receipt-created",
+                    "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "event_type": "validation_receipt_created",
+                    "actor_node_id": worker_node_id,
+                    "creator_node_id": creator_node_id,
+                    "local_run_id": job_id,
+                    "work_id": job_id,
+                    "manifest_id": manifest_id,
+                    "manifest_ref": manifest_ref,
+                    "validation_receipt_id": self._receipt_id_for_job(job_id),
+                    "validation_receipt_ref": receipt_ref,
+                    "validation_result": validation_result,
+                    "validator_node_id": worker_node_id,
+                    "validator_name": "deterministic_local_result_check",
+                    "lineage_refs": [manifest_ref, *lineage["parent_refs"]],
+                    "contribution_attribution_ids": [f"local-contribution-{job_id}"],
+                    "contribution_attribution": audit_attribution,
+                },
+            )
+        except (LocalAuditEventError, OSError, ValueError) as exc:
+            raise RuntimeServiceError(
+                f"could not write local validation receipt creation audit event: {exc}"
+            ) from exc
 
     def _append_job_execution_started_audit_event(
         self,

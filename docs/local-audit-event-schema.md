@@ -18,7 +18,7 @@ Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under th
 | `creator_node_id` | non-empty string or `null` | Original creator node when known; `null` explicitly records that it is not known. |
 | `local_run_id` | non-empty string | Local invocation/run that produced the event. |
 
-Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `job_submitted`, `validation_attempted`, `validation_result`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
+Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `job_submitted`, `validation_attempted`, `validation_result`, `validation_receipt_created`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
 
 ## Optional references
 
@@ -46,6 +46,10 @@ A `job_submitted` event is appended to `data/audit/job-submissions.jsonl` before
 A `capability_advertised` event records one validated local startup-manifest claim after startup artifacts have been created. It requires `capability_advertisement_action` (`created`, `refreshed`, or `replaced`), `node_id`, `capability_id`, `manifest_ref`, `manifest_digest`, `advertisement_payload_digest`, `validation_status`, `validation_receipt_refs`, `lineage_refs`, and a string-only `contribution_attribution` map. The event stores digests and safe relative references rather than the full advertisement payload, so local runtime details are not copied into the audit log.
 
 Startup appends one event per capability advertisement. Normal repeat startup is `refreshed`; explicit creator-identity reset is `replaced`; creating or upgrading a manifest advertisement is `created`. Rejected manifests fail before this event is appended.
+
+## Validation receipt creation events
+
+A `validation_receipt_created` event is appended to `data/audit/validation-receipt-creations.jsonl` only after its local validation receipt is durably created. It requires the work and manifest references, receipt ID and reference, accepted or rejected validation result, validator node and validator name, lineage references, and available contribution attribution. The lineage references include the submitted-work manifest and any parent references already present in that manifest. A rejected receipt remains explicitly `rejected`; this log does not imply a successful validation, production security, or network consensus. If this append fails, receipt creation fails clearly rather than reporting the job as complete.
 
 ## Examples
 
