@@ -2508,7 +2508,10 @@ class NodeRuntimeService:
             ),
             validation_receipt_ref=receipt_ref,
             validator_node_id=worker_node_id,
-            output_artifact_refs=[result_ref] if succeeded else [],
+            # The result artifact is written for both successful and failed
+            # executions, and remains useful terminal evidence when validation
+            # rejects an otherwise completed result.
+            output_artifact_refs=[result_ref],
             error_summary=None if succeeded else _result_summary(error),
             contribution_attribution=contribution_attribution,
         )

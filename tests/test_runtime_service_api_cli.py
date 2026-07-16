@@ -877,7 +877,10 @@ class RuntimeServiceTests(unittest.TestCase):
                 failure_event["validation_receipt_ref"],
                 failed_status["validation"]["receipt_ref"],
             )
-            self.assertEqual(failure_event["output_artifact_refs"], [])
+            self.assertEqual(
+                failure_event["output_artifact_refs"],
+                [failed_status["result"]["ref"]],
+            )
             self.assertEqual(failure_event["error_summary"], failed_status["error"])
 
             cancel_root = root / "cancelled-runtime"
