@@ -18,7 +18,7 @@ Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under th
 | `creator_node_id` | non-empty string or `null` | Original creator node when known; `null` explicitly records that it is not known. |
 | `local_run_id` | non-empty string | Local invocation/run that produced the event. |
 
-Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `validation_attempted`, `validation_result`, `lineage_linked`, and `contribution_record_updated`.
+Supported event types are `node_initialized`, `manifest_created`, `work_submitted`, `validation_attempted`, `validation_result`, `lineage_linked`, `contribution_record_updated`, `capability_advertised`, and `node.shutdown`.
 
 ## Optional references
 
@@ -36,6 +36,12 @@ Omit optional fields when they do not apply. Their absence is valid and has no e
 | `signatures` | object of non-empty string pairs | Signatures already available locally. |
 
 Hashes and signatures are optional. This format neither creates nor requires them unless existing local validation already produces them.
+
+## Capability advertisement events
+
+A `capability_advertised` event records one validated local startup-manifest claim after startup artifacts have been created. It requires `capability_advertisement_action` (`created`, `refreshed`, or `replaced`), `node_id`, `capability_id`, `manifest_ref`, `manifest_digest`, `advertisement_payload_digest`, `validation_status`, `validation_receipt_refs`, `lineage_refs`, and a string-only `contribution_attribution` map. The event stores digests and safe relative references rather than the full advertisement payload, so local runtime details are not copied into the audit log.
+
+Startup appends one event per capability advertisement. Normal repeat startup is `refreshed`; explicit creator-identity reset is `replaced`; creating or upgrading a manifest advertisement is `created`. Rejected manifests fail before this event is appended.
 
 ## Examples
 
