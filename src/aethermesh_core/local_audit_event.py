@@ -245,6 +245,8 @@ def _is_private_audit_key(key: str) -> bool:
     normalized = re.sub(r"[^a-z0-9]", "", key.lower())
     if normalized in _SENSITIVE_KEY_PARTS or normalized in _PRIVATE_CONTENT_KEYS:
         return True
+    if "apikey" in normalized or "privatekey" in normalized:
+        return True
     parts = {
         part for part in re.split(r"[^A-Za-z0-9]+|(?<=[a-z])(?=[A-Z])", key) if part
     }

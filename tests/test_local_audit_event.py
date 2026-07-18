@@ -21,11 +21,13 @@ class LocalAuditEventTests(unittest.TestCase):
             "hashes": {
                 "result_hash": "sha256:example",
                 "apiKey": "private-api-key",
+                "service_api_key": "private-service-api-key",
                 "access_token": "private-token",
                 "environment": "HOME=/Users/private",
             },
             "signatures": {
                 "privateKey": "private-key",
+                "signingPrivateKey": "private-signing-key",
                 "authorization": "Bearer private-token",
                 "credential": "private-credential",
                 "password": "private-password",
@@ -38,7 +40,7 @@ class LocalAuditEventTests(unittest.TestCase):
 
         self.assertEqual(sanitized["related_file_paths"], ["local-path/work-001.json"])
         self.assertEqual(sanitized["hashes"]["result_hash"], "sha256:example")
-        for field in ("apiKey", "access_token", "environment"):
+        for field in ("apiKey", "service_api_key", "access_token", "environment"):
             self.assertEqual(sanitized["hashes"][field], AUDIT_REDACTED_VALUE)
         for value in sanitized["signatures"].values():
             self.assertEqual(value, AUDIT_REDACTED_VALUE)
