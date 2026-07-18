@@ -151,7 +151,8 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_usable_requires_matching_artifact_and_real_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            directory = Path(temp_dir)
+            directory = Path(temp_dir) / "expert"
+            directory.mkdir()
             artifact = directory / "artifact.txt"
             artifact.write_text("artifact", encoding="utf-8")
             receipt = directory / "receipt.json"
