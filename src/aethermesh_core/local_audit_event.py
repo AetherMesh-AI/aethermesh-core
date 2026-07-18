@@ -48,7 +48,7 @@ _PRIVATE_CONTENT_KEYS = frozenset(
     }
 )
 _LOCAL_PATH_IN_TEXT = re.compile(
-    r"(?<![A-Za-z0-9:/])(?:~[/\\]|/(?!/)|[A-Za-z]:[/\\]|\\\\)[^\s\"']+"
+    r"(?<![A-Za-z0-9/])(?:file:///|~[/\\]|/(?!/)|[A-Za-z]:[/\\]|\\\\)[^\s\"']+"
 )
 AUDIT_EVENT_TYPES = frozenset(
     {

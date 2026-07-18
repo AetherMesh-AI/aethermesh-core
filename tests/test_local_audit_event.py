@@ -77,13 +77,17 @@ class LocalAuditEventTests(unittest.TestCase):
     def test_sanitizes_embedded_local_path_in_short_summary(self) -> None:
         event = {
             **_referenced_event(),
-            "error_summary": "could not read /Users/private/node/key.pem",
+            "error_summary": (
+                "could not read path:/Users/private/node/key.pem or "
+                "file:///home/private/node/backup.pem"
+            ),
         }
 
         sanitized = sanitize_local_audit_event(event)
 
         self.assertEqual(
-            sanitized["error_summary"], "could not read local-path/key.pem"
+            sanitized["error_summary"],
+            "could not read path:local-path/key.pem or local-path/backup.pem",
         )
 
     def test_validates_required_fields_and_allows_missing_optional_fields(self) -> None:
