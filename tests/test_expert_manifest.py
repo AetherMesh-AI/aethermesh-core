@@ -104,6 +104,26 @@ class ExpertManifestTests(unittest.TestCase):
         ):
             validate_expert_manifest(document)
 
+        document = self._sample()
+        document["lineage"]["derived_artifact_refs"] = None
+        with self.assertRaisesRegex(
+            ExpertManifestError, "derived_artifact_refs must be"
+        ):
+            validate_expert_manifest(document)
+
+    def test_validation_evidence_matches_contribution_attribution(self) -> None:
+        document = self._sample()
+        document["validation"]["validator_node_id"] = "node-validator"
+        with self.assertRaisesRegex(
+            ExpertManifestError, "validator_node_id must match"
+        ):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        document["validation"]["receipt_path"] = "receipt.json"
+        with self.assertRaisesRegex(ExpertManifestError, "must appear in"):
+            validate_expert_manifest(document)
+
     def test_usable_requires_matching_artifact_and_real_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
@@ -145,6 +165,20 @@ class ExpertManifestTests(unittest.TestCase):
             ):
                 self.assertFalse(expert_is_usable(path))
             self.assertTrue(expert_is_usable(path))
+
+            outside = directory.parent / "outside.txt"
+            outside.write_text("artifact", encoding="utf-8")
+            artifact.unlink()
+            artifact.symlink_to(outside)
+            self.assertFalse(expert_is_usable(path))
+
+    def test_read_error_does_not_leak_local_path(self) -> None:
+        missing = Path(tempfile.gettempdir()) / "private-manifest-location.json"
+        with self.assertRaisesRegex(
+            ExpertManifestError, "could not read expert manifest"
+        ) as raised:
+            load_expert_manifest(missing)
+        self.assertNotIn(str(missing), str(raised.exception))
 
     @staticmethod
     def _sample() -> dict[str, Any]:

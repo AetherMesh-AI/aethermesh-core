@@ -37,7 +37,7 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
     except OSError as exc:
-        raise ExpertManifestError(f"could not read expert manifest: {exc}") from exc
+        raise ExpertManifestError("could not read expert manifest") from exc
     except json.JSONDecodeError as exc:
         raise ExpertManifestError(
             f"expert manifest JSON is malformed: {exc.msg}"
@@ -59,6 +59,7 @@ def validate_expert_manifest(document: object) -> None:
     _lineage(document["lineage"])
     _validation(document["validation"])
     _attribution(document["contribution_attribution"], document["creator_node_id"])
+    _consistent_validation_attribution(document)
 
 
 def expert_is_usable(path: str | Path) -> bool:
@@ -70,11 +71,16 @@ def expert_is_usable(path: str | Path) -> bool:
         return False
     artifact = _object(document["artifact"], {"reference", "sha256"}, "artifact")
     try:
+        artifact_path = _local_reference_path(
+            manifest_path.parent, str(artifact["reference"])
+        )
+        receipt_path = _local_reference_path(
+            manifest_path.parent, str(validation["receipt_path"])
+        )
         return (
-            (manifest_path.parent / str(artifact["reference"])).is_file()
-            and (manifest_path.parent / str(validation["receipt_path"])).is_file()
-            and _sha256(manifest_path.parent / str(artifact["reference"]))
-            == artifact["sha256"]
+            artifact_path.is_file()
+            and receipt_path.is_file()
+            and _sha256(artifact_path) == artifact["sha256"]
         )
     except OSError:
         return False
@@ -110,18 +116,17 @@ def _text(value: object, context: str) -> None:
 
 def _timestamp(value: object, context: str) -> None:
     _string(value, context)
-    assert isinstance(value, str)
-    if not _TIMESTAMP.fullmatch(value):
+    if not _TIMESTAMP.fullmatch(cast(str, value)):
         raise ExpertManifestError(f"{context} must be a UTC timestamp ending in Z")
 
 
 def _reference(value: object, context: str) -> None:
     _string(value, context)
-    assert isinstance(value, str)
+    reference = cast(str, value)
     if (
-        not _SAFE_REFERENCE.fullmatch(value)
-        or "/../" in f"/{value}"
-        or value.startswith("/")
+        not _SAFE_REFERENCE.fullmatch(reference)
+        or "/../" in f"/{reference}"
+        or reference.startswith("/")
     ):
         raise ExpertManifestError(f"{context} must be a safe local relative reference")
 
@@ -157,6 +162,7 @@ def _lineage(value: object) -> None:
     if not isinstance(value["local_changes"], str):
         raise ExpertManifestError("lineage.local_changes must be a string")
     _strings(value["parent_manifest_ids"], "lineage.parent_manifest_ids")
+    _strings(value["derived_artifact_refs"], "lineage.derived_artifact_refs")
     for item in value["derived_artifact_refs"]:
         _reference(item, "lineage.derived_artifact_refs item")
 
@@ -215,6 +221,28 @@ def _attribution(value: object, creator_node_id: object) -> None:
         )
     for item in value["receipt_refs"]:
         _reference(item, "contribution_attribution.receipt_refs item")
+
+
+def _consistent_validation_attribution(document: dict[str, Any]) -> None:
+    validation = cast(dict[str, Any], document["validation"])
+    attribution = cast(dict[str, Any], document["contribution_attribution"])
+    if attribution["validator_node_id"] != validation["validator_node_id"]:
+        raise ExpertManifestError(
+            "contribution validator_node_id must match validation.validator_node_id"
+        )
+    receipt_path = validation["receipt_path"]
+    if receipt_path is not None and receipt_path not in attribution["receipt_refs"]:
+        raise ExpertManifestError(
+            "validation.receipt_path must appear in contribution receipt_refs"
+        )
+
+
+def _local_reference_path(root: Path, reference: str) -> Path:
+    resolved_root = root.resolve()
+    path = (resolved_root / reference).resolve()
+    if resolved_root != path and resolved_root not in path.parents:
+        raise OSError("local reference escapes manifest directory")
+    return path
 
 
 def _sha256(path: Path) -> str:
