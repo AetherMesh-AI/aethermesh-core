@@ -187,7 +187,7 @@ _LINEAGE = {
 
 def _validation(value: object) -> None:
     value = _object(value, _VALIDATION, "validation")
-    if value["status"] not in _STATUSES:
+    if not isinstance(value["status"], str) or value["status"] not in _STATUSES:
         raise ExpertManifestError(
             "validation.status must be unvalidated, passed, or failed"
         )
@@ -219,6 +219,7 @@ def _attribution(value: object, creator_node_id: object) -> None:
         _string(
             value["validator_node_id"], "contribution_attribution.validator_node_id"
         )
+    _strings(value["receipt_refs"], "contribution_attribution.receipt_refs")
     for item in value["receipt_refs"]:
         _reference(item, "contribution_attribution.receipt_refs item")
 

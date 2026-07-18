@@ -124,6 +124,19 @@ class ExpertManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ExpertManifestError, "must appear in"):
             validate_expert_manifest(document)
 
+    def test_nested_collections_and_status_fail_with_manifest_error(self) -> None:
+        document = self._sample()
+        document["validation"]["status"] = []
+        with self.assertRaisesRegex(ExpertManifestError, "validation.status must be"):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        document["contribution_attribution"]["receipt_refs"] = "abc"
+        with self.assertRaisesRegex(
+            ExpertManifestError, "contribution_attribution.receipt_refs must be"
+        ):
+            validate_expert_manifest(document)
+
     def test_usable_requires_matching_artifact_and_real_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir)
