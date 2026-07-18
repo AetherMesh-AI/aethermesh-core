@@ -1,0 +1,35 @@
+{
+  "manifest_version": "aethermesh-expert-manifest/v0",
+  "expert_id": "local-echo-fixture-v0",
+  "display_name": "local-echo-fixture-v0",
+  "creator_node_id": "node-local-fixture",
+  "created_at": "2026-07-18T00:00:00Z",
+  "artifact": {
+    "reference": "artifact.txt",
+    "sha256": "sha256:f0dfa5bb9b76a4cc47883babe74f0666e7198e1659769a6f229da929c4af12d1"
+  },
+  "supported_task_categories": ["echo"],
+  "runtime_requirements": ["python-local-runner", "text-fixture"],
+  "lineage": {
+    "source_model": "local-fixture",
+    "adapter_ref": null,
+    "prompt_template_ref": null,
+    "local_changes": "root fixture; no adapter or prompt template",
+    "parent_manifest_ids": [],
+    "derived_artifact_refs": []
+  },
+  "validation": {
+    "test_command": null,
+    "expected_inputs_ref": null,
+    "receipt_path": null,
+    "last_validated_at": null,
+    "status": "unvalidated",
+    "validator_node_id": null
+  },
+  "contribution_attribution": {
+    "creator_node_id": "node-local-fixture",
+    "modifier_node_ids": [],
+    "validator_node_id": null,
+    "receipt_refs": []
+  }
+}
