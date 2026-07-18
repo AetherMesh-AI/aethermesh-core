@@ -55,6 +55,9 @@ class ExpertManifestTests(unittest.TestCase):
             path.write_text("{broken", encoding="utf-8")
             with self.assertRaisesRegex(ExpertManifestError, "JSON is malformed"):
                 load_expert_manifest(path)
+            path.write_bytes(b"\xff")
+            with self.assertRaisesRegex(ExpertManifestError, "invalid UTF-8"):
+                load_expert_manifest(path)
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
@@ -197,6 +200,8 @@ class ExpertManifestTests(unittest.TestCase):
             self.assertTrue(expert_is_usable(path))
 
             receipt.write_text("not JSON", encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt.write_bytes(b"\xff")
             self.assertFalse(expert_is_usable(path))
             receipt.write_text("{}", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))

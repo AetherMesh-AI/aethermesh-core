@@ -40,6 +40,10 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
     except OSError as exc:
         raise ExpertManifestError("could not read expert manifest") from exc
+    except UnicodeDecodeError as exc:
+        raise ExpertManifestError(
+            "expert manifest JSON is malformed: invalid UTF-8"
+        ) from exc
     except json.JSONDecodeError as exc:
         raise ExpertManifestError(
             f"expert manifest JSON is malformed: {exc.msg}"
@@ -93,7 +97,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
     """Reject a self-asserted pass unless its receipt binds the validated artifact."""
     try:
         receipt = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return False
     if not isinstance(receipt, dict) or set(receipt) != {
         "receipt_version",
