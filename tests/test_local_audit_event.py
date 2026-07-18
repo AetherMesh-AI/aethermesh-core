@@ -5,13 +5,91 @@ from pathlib import Path
 
 from aethermesh_core.local_audit_event import (
     AUDIT_EVENT_TYPES,
+    AUDIT_REDACTED_VALUE,
     LocalAuditEventError,
     append_local_audit_event,
+    sanitize_local_audit_event,
     validate_local_audit_event,
 )
 
 
 class LocalAuditEventTests(unittest.TestCase):
+    def test_sanitizes_secrets_private_content_and_absolute_paths(self) -> None:
+        event = {
+            **_referenced_event(),
+            "related_file_paths": ["/Users/private/node/manifests/work-001.json"],
+            "hashes": {
+                "result_hash": "sha256:example",
+                "apiKey": "private-api-key",
+                "service_api_key": "private-service-api-key",
+                "access_token": "private-token",
+                "environment": "HOME=/Users/private",
+                "environment_variables": "HOME=/Users/private",
+            },
+            "signatures": {
+                "privateKey": "private-key",
+                "signingPrivateKey": "private-signing-key",
+                "authorization": "Bearer private-token",
+                "credential": "private-credential",
+                "password": "private-password",
+                "secret": "private-secret",
+                "seed": "private-seed",
+            },
+        }
+
+        sanitized = sanitize_local_audit_event(event)
+
+        self.assertEqual(sanitized["related_file_paths"], ["local-path/work-001.json"])
+        self.assertEqual(sanitized["hashes"]["result_hash"], "sha256:example")
+        for field in (
+            "apiKey",
+            "service_api_key",
+            "access_token",
+            "environment",
+            "environment_variables",
+        ):
+            self.assertEqual(sanitized["hashes"][field], AUDIT_REDACTED_VALUE)
+        for value in sanitized["signatures"].values():
+            self.assertEqual(value, AUDIT_REDACTED_VALUE)
+
+    def test_appended_sanitized_event_keeps_audit_attribution(self) -> None:
+        event = {
+            **_referenced_event(),
+            "related_file_paths": ["/home/private/aethermesh/work-001.json"],
+            "signatures": {"token": "must-not-be-written"},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "events.jsonl"
+            written = append_local_audit_event(path, event)
+            output = path.read_text(encoding="utf-8")
+
+        self.assertNotIn("must-not-be-written", output)
+        self.assertNotIn("/home/private", output)
+        self.assertEqual(written["creator_node_id"], "creator-local-a")
+        self.assertEqual(written["manifest_id"], "manifest-work-001")
+        self.assertEqual(written["validation_receipt_id"], "receipt-work-001")
+        self.assertEqual(written["lineage_parent_ids"], ["work-parent-001"])
+        self.assertEqual(
+            written["contribution_attribution_ids"],
+            ["local-contribution-work-001"],
+        )
+
+    def test_sanitizes_embedded_local_path_in_short_summary(self) -> None:
+        event = {
+            **_referenced_event(),
+            "error_summary": (
+                "could not read path:/Users/private/node/key.pem or "
+                "file:///home/private/node/backup.pem"
+            ),
+        }
+
+        sanitized = sanitize_local_audit_event(event)
+
+        self.assertEqual(
+            sanitized["error_summary"],
+            "could not read path:local-path/key.pem or local-path/backup.pem",
+        )
+
     def test_validates_required_fields_and_allows_missing_optional_fields(self) -> None:
         event = _minimal_event()
 

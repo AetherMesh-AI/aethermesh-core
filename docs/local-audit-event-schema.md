@@ -4,7 +4,15 @@
 
 ## Storage and append-only rule
 
-Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under the selected local AetherMesh home. `append_local_audit_event(path, event)` validates an event and opens the file only in append mode; it never reads, replaces, edits, or deletes prior records. Consumers must treat an existing line as immutable evidence. Local filesystem access can still alter files outside this API, so this phase does not claim tamper resistance.
+Store one event per UTF-8 newline-delimited JSON (JSONL) line, normally under the selected local AetherMesh home. `append_local_audit_event(path, event)` sanitizes and validates an event before opening the file in append mode; it never reads, replaces, edits, or deletes prior records. Consumers must treat an existing line as immutable evidence. Local filesystem access can still alter files outside this API, so this phase does not claim tamper resistance.
+
+## Log-safety policy
+
+Audit events preserve intentionally safe accountability fields: node and work IDs, manifest hashes and references, validation receipt IDs, lineage, and contribution attribution. They should contain hashes, IDs, safe relative references, and short summaries instead of raw request or result content.
+
+`sanitize_local_audit_event` recursively replaces values under secret-bearing keys (`token`, `secret`, `password`, `privateKey`, `apiKey`, `seed`, `credential`, and `authorization`, including common compound forms) with `[REDACTED]`. Environment maps and raw request payload fields are also redacted. Absolute Unix, home-relative, and Windows paths become `local-path/<name>` labels; callers should supply a project-relative artifact reference when that reference is needed for validation. Do not place environment-variable dumps, private keys, credentials, full prompts, request payloads, or node-local configuration bodies in audit fields.
+
+Sanitization is a persistence boundary, not a general secret detector. Callers must still prefer the compact schema and must not hide arbitrary secret text inside an unrelated identifier or summary field.
 
 ## Required fields
 
