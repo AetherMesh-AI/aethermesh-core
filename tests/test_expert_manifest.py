@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from aethermesh_core.expert_manifest import (
     ExpertManifestError,
+    RECEIPT_VERSION,
     expert_is_usable,
     load_expert_manifest,
     validate_expert_manifest,
@@ -169,15 +170,33 @@ class ExpertManifestTests(unittest.TestCase):
             path = directory / "manifest.json"
             path.write_text(json.dumps(document), encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
-            receipt.write_text("receipt", encoding="utf-8")
             document["artifact"]["sha256"] = self._hash(artifact)
             path.write_text(json.dumps(document), encoding="utf-8")
+            receipt_document = {
+                "receipt_version": RECEIPT_VERSION,
+                "expert_id": document["expert_id"],
+                "artifact_sha256": document["artifact"]["sha256"],
+                "validated_at": validation["last_validated_at"],
+                "validator_node_id": validation["validator_node_id"],
+                "status": "passed",
+            }
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
             with patch(
                 "aethermesh_core.expert_manifest._sha256",
                 side_effect=OSError("read failed"),
             ):
                 self.assertFalse(expert_is_usable(path))
             self.assertTrue(expert_is_usable(path))
+
+            receipt.write_text("not JSON", encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt.write_text("{}", encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt_document["artifact_sha256"] = "sha256:" + "0" * 64
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt_document["artifact_sha256"] = document["artifact"]["sha256"]
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
 
             outside = directory.parent / "outside.txt"
             outside.write_text("artifact", encoding="utf-8")

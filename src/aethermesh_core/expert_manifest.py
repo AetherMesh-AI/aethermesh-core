@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 
 MANIFEST_VERSION = "aethermesh-expert-manifest/v0"
+RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
@@ -63,7 +64,7 @@ def validate_expert_manifest(document: object) -> None:
 
 
 def expert_is_usable(path: str | Path) -> bool:
-    """Require passed validation plus real adjacent artifact and receipt evidence."""
+    """Require passed validation plus matching local artifact and receipt evidence."""
     manifest_path = Path(path)
     document = load_expert_manifest(manifest_path)
     validation = _object(document["validation"], _VALIDATION, "validation")
@@ -79,11 +80,37 @@ def expert_is_usable(path: str | Path) -> bool:
         )
         return (
             artifact_path.is_file()
-            and receipt_path.is_file()
             and _sha256(artifact_path) == artifact["sha256"]
+            and _receipt_matches_manifest(receipt_path, document)
         )
     except OSError:
         return False
+
+
+def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
+    """Reject a self-asserted pass unless its receipt binds the validated artifact."""
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(receipt, dict) or set(receipt) != {
+        "receipt_version",
+        "expert_id",
+        "artifact_sha256",
+        "validated_at",
+        "validator_node_id",
+        "status",
+    }:
+        return False
+    validation = cast(dict[str, Any], document["validation"])
+    return receipt == {
+        "receipt_version": RECEIPT_VERSION,
+        "expert_id": document["expert_id"],
+        "artifact_sha256": cast(dict[str, Any], document["artifact"])["sha256"],
+        "validated_at": validation["last_validated_at"],
+        "validator_node_id": validation["validator_node_id"],
+        "status": "passed",
+    }
 
 
 def _object(value: object, keys: set[str], context: str) -> dict[str, Any]:

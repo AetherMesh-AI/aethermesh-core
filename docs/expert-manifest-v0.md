@@ -2,7 +2,7 @@
 
 A model or expert stored locally may carry an adjacent `*.manifest.json` file. This is a small, hand-authored audit document, not a registry, network advertisement, capability guarantee, consensus proof, or reward record.
 
-`aethermesh_core.expert_manifest.load_expert_manifest()` validates the exact JSON v0 shape. `expert_is_usable()` is deliberately stricter: it returns true only when validation is `passed`, the adjacent artifact exists and matches its SHA-256 hash, and the recorded local validation receipt exists. A `receipt_path` must be `null` until a real local validation creates it; the sample remains `unvalidated` and does not invent one.
+`aethermesh_core.expert_manifest.load_expert_manifest()` validates the exact JSON v0 shape. `expert_is_usable()` is deliberately stricter: it returns true only when validation is `passed`, the adjacent artifact exists and matches its SHA-256 hash, and the recorded local validation receipt is valid and binds the same expert ID, artifact hash, validation time, and validator. A `receipt_path` must be `null` until a real local validation creates it; the sample remains `unvalidated` and does not invent one.
 
 ## Required top-level fields
 
@@ -19,3 +19,5 @@ A model or expert stored locally may carry an adjacent `*.manifest.json` file. T
 | `contribution_attribution` | Creator (matching the top level), modifiers, validator, and receipt references. It records attribution only—never rewards, credits, or token accounting. |
 
 All references are safe relative paths, and usability checks reject references that resolve outside the manifest directory. Validation and contribution attribution must name the same validator and receipt. The format rejects unknown fields so a handoff or copy keeps the same complete provenance shape. `examples/model-experts/echo-expert-v0/manifest.json` sits next to its artifact and is a parseable, deliberately unvalidated root example.
+
+A passed manifest's receipt is an exact JSON object with `receipt_version` set to `aethermesh-expert-validation-receipt/v0`, `status` set to `passed`, and matching `expert_id`, `artifact_sha256`, `validated_at`, and `validator_node_id` values. Merely creating a file at `receipt_path` does not make an expert usable.
