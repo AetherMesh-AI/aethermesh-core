@@ -71,6 +71,14 @@ class ExpertManifestTests(unittest.TestCase):
                 with self.assertRaisesRegex(ExpertManifestError, message):
                     validate_expert_manifest(document)
 
+        document = self._sample()
+        document["display_name"] = "Local Echo Expert"
+        validate_expert_manifest(document)
+
+        document["created_at"] = "2026-99-99T99:99:99Z"
+        with self.assertRaisesRegex(ExpertManifestError, "created_at must be"):
+            validate_expert_manifest(document)
+
     def test_schema_rejects_incomplete_or_unsafe_nested_evidence(self) -> None:
         cases = [
             (

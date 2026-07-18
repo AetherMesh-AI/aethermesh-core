@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -51,8 +52,9 @@ def validate_expert_manifest(document: object) -> None:
     """Validate required v0 fields without claiming network trust or capability."""
     document = _object(document, _TOP_LEVEL, "expert manifest")
     _expected(document, "manifest_version", MANIFEST_VERSION)
-    for field in ("expert_id", "display_name", "creator_node_id", "created_at"):
+    for field in ("expert_id", "creator_node_id", "created_at"):
         _string(document[field], field)
+    _text(document["display_name"], "display_name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
     _strings(document["supported_task_categories"], "supported_task_categories", True)
@@ -143,8 +145,15 @@ def _text(value: object, context: str) -> None:
 
 def _timestamp(value: object, context: str) -> None:
     _string(value, context)
-    if not _TIMESTAMP.fullmatch(cast(str, value)):
+    timestamp = cast(str, value)
+    if not _TIMESTAMP.fullmatch(timestamp):
         raise ExpertManifestError(f"{context} must be a UTC timestamp ending in Z")
+    try:
+        datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise ExpertManifestError(
+            f"{context} must be a UTC timestamp ending in Z"
+        ) from exc
 
 
 def _reference(value: object, context: str) -> None:
