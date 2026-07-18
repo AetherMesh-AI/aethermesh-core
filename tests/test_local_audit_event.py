@@ -24,6 +24,7 @@ class LocalAuditEventTests(unittest.TestCase):
                 "service_api_key": "private-service-api-key",
                 "access_token": "private-token",
                 "environment": "HOME=/Users/private",
+                "environment_variables": "HOME=/Users/private",
             },
             "signatures": {
                 "privateKey": "private-key",
@@ -40,7 +41,13 @@ class LocalAuditEventTests(unittest.TestCase):
 
         self.assertEqual(sanitized["related_file_paths"], ["local-path/work-001.json"])
         self.assertEqual(sanitized["hashes"]["result_hash"], "sha256:example")
-        for field in ("apiKey", "service_api_key", "access_token", "environment"):
+        for field in (
+            "apiKey",
+            "service_api_key",
+            "access_token",
+            "environment",
+            "environment_variables",
+        ):
             self.assertEqual(sanitized["hashes"][field], AUDIT_REDACTED_VALUE)
         for value in sanitized["signatures"].values():
             self.assertEqual(value, AUDIT_REDACTED_VALUE)
@@ -65,6 +72,18 @@ class LocalAuditEventTests(unittest.TestCase):
         self.assertEqual(
             written["contribution_attribution_ids"],
             ["local-contribution-work-001"],
+        )
+
+    def test_sanitizes_embedded_local_path_in_short_summary(self) -> None:
+        event = {
+            **_referenced_event(),
+            "error_summary": "could not read /Users/private/node/key.pem",
+        }
+
+        sanitized = sanitize_local_audit_event(event)
+
+        self.assertEqual(
+            sanitized["error_summary"], "could not read local-path/key.pem"
         )
 
     def test_validates_required_fields_and_allows_missing_optional_fields(self) -> None:

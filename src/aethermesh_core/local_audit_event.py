@@ -32,7 +32,23 @@ _SENSITIVE_KEY_PARTS = frozenset(
     }
 )
 _PRIVATE_CONTENT_KEYS = frozenset(
-    {"env", "environment", "payload", "requestpayload", "rawrequestpayload"}
+    {
+        "env",
+        "environment",
+        "environmentmap",
+        "environmentvariables",
+        "envmap",
+        "envvars",
+        "payload",
+        "rawpayload",
+        "rawrequest",
+        "rawrequestpayload",
+        "requestbody",
+        "requestpayload",
+    }
+)
+_LOCAL_PATH_IN_TEXT = re.compile(
+    r"(?<![A-Za-z0-9:/])(?:~[/\\]|/(?!/)|[A-Za-z]:[/\\]|\\\\)[^\s\"']+"
 )
 AUDIT_EVENT_TYPES = frozenset(
     {
@@ -245,12 +261,7 @@ def _is_private_audit_key(key: str) -> bool:
     normalized = re.sub(r"[^a-z0-9]", "", key.lower())
     if normalized in _SENSITIVE_KEY_PARTS or normalized in _PRIVATE_CONTENT_KEYS:
         return True
-    if "apikey" in normalized or "privatekey" in normalized:
-        return True
-    parts = {
-        part for part in re.split(r"[^A-Za-z0-9]+|(?<=[a-z])(?=[A-Z])", key) if part
-    }
-    return any(part.lower() in _SENSITIVE_KEY_PARTS for part in parts)
+    return any(part in normalized for part in _SENSITIVE_KEY_PARTS)
 
 
 def _sanitize_local_path(value: str) -> str:
@@ -258,7 +269,14 @@ def _sanitize_local_path(value: str) -> str:
     if not value.startswith("~") and not any(
         path.is_absolute() for path in path_variants
     ):
-        return value
+        return _LOCAL_PATH_IN_TEXT.sub(
+            lambda match: _local_path_label(match.group()), value
+        )
+    return _local_path_label(value)
+
+
+def _local_path_label(value: str) -> str:
+    path_variants = (Path(value), PureWindowsPath(value))
     name = next((path.name for path in reversed(path_variants) if path.name), "")
     return f"local-path/{name}" if name else "local-path"
 
