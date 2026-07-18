@@ -14,6 +14,57 @@ from aethermesh_core.local_audit_event import (
 
 
 class LocalAuditEventTests(unittest.TestCase):
+    def test_sanitizes_secret_values_in_unstructured_audit_context(self) -> None:
+        secrets = {
+            "api_key": "api-live-9Fj2qL",
+            "private_token": "token-live-4Md8pQ",
+            "password": "password-live-6Hs3wK",
+            "bearer_token": "bearer-live-1Rt7xV",
+            "seed_phrase": "ember river cloud lantern meadow",
+            "manifest_secret": "manifest-secret-5Np2cZ",
+        }
+        event = {
+            **_referenced_event(),
+            "api_key": secrets["api_key"],
+            "hashes": {
+                "result_hash": "sha256:example",
+                "metadata": {"private_token": secrets["private_token"]},
+                "stringified_payload": (
+                    '{"authorization":"Bearer ' + secrets["bearer_token"] + '"}'
+                ),
+            },
+            "lineage_parent_ids": [
+                "work-parent-001",
+                {"seed_phrase": secrets["seed_phrase"]},
+            ],
+            "signatures": {"password": secrets["password"]},
+            "error_summary": (
+                "submission failed: Bearer "
+                + secrets["bearer_token"]
+                + "; api_key="
+                + secrets["api_key"]
+                + '; seed phrase="'
+                + secrets["seed_phrase"]
+                + '"; manifest_secret="'
+                + secrets["manifest_secret"]
+                + '"'
+            ),
+        }
+
+        sanitized = sanitize_local_audit_event(event)
+        rendered = json.dumps(sanitized, sort_keys=True)
+
+        _assert_secret_values_absent(self, rendered, secrets)
+        self.assertEqual(sanitized["api_key"], AUDIT_REDACTED_VALUE)
+        self.assertEqual(
+            sanitized["hashes"]["metadata"]["private_token"], AUDIT_REDACTED_VALUE
+        )
+        self.assertEqual(
+            sanitized["lineage_parent_ids"][1]["seed_phrase"], AUDIT_REDACTED_VALUE
+        )
+        self.assertEqual(sanitized["signatures"]["password"], AUDIT_REDACTED_VALUE)
+        self.assertIn(AUDIT_REDACTED_VALUE, sanitized["error_summary"])
+
     def test_sanitizes_secrets_private_content_and_absolute_paths(self) -> None:
         event = {
             **_referenced_event(),
@@ -71,6 +122,52 @@ class LocalAuditEventTests(unittest.TestCase):
         self.assertEqual(written["lineage_parent_ids"], ["work-parent-001"])
         self.assertEqual(
             written["contribution_attribution_ids"],
+            ["local-contribution-work-001"],
+        )
+
+    def test_persisted_event_redacts_error_summary_without_losing_evidence(
+        self,
+    ) -> None:
+        secrets = {
+            "api_key": "api-live-7Bq3mN",
+            "private_token": "token-live-2Kp8sD",
+            "password": "password-live-5Wc1rT",
+            "bearer_token": "bearer-live-8Zv4hJ",
+            "seed_phrase": "orchid maple silver comet harbor",
+            "manifest_secret": "manifest-secret-6Xa9fL",
+        }
+        event = {
+            **_referenced_event(),
+            "hashes": {"manifest_digest": "sha256:manifest-safe"},
+            "signatures": {"private_token": secrets["private_token"]},
+            "error_summary": (
+                "validation failed: Bearer "
+                + secrets["bearer_token"]
+                + "; api_key="
+                + secrets["api_key"]
+                + "; password="
+                + secrets["password"]
+                + '; seed phrase="'
+                + secrets["seed_phrase"]
+                + '"; manifest_secret="'
+                + secrets["manifest_secret"]
+                + '"'
+            ),
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "events.jsonl"
+            append_local_audit_event(path, event)
+            persisted = path.read_text(encoding="utf-8")
+
+        _assert_secret_values_absent(self, persisted, secrets)
+        parsed = json.loads(persisted)
+        self.assertIn(AUDIT_REDACTED_VALUE, persisted)
+        self.assertEqual(parsed["creator_node_id"], "creator-local-a")
+        self.assertEqual(parsed["manifest_id"], "manifest-work-001")
+        self.assertEqual(parsed["validation_receipt_id"], "receipt-work-001")
+        self.assertEqual(parsed["lineage_parent_ids"], ["work-parent-001"])
+        self.assertEqual(
+            parsed["contribution_attribution_ids"],
             ["local-contribution-work-001"],
         )
 
@@ -268,3 +365,11 @@ def _referenced_event() -> dict[str, object]:
         "hashes": {"result_hash": "sha256:example"},
         "signatures": {"receipt_signature": "existing-local-signature"},
     }
+
+
+def _assert_secret_values_absent(
+    test_case: unittest.TestCase, rendered: str, secrets: dict[str, str]
+) -> None:
+    for label, secret in secrets.items():
+        if secret in rendered:
+            test_case.fail(f"{label} leaked into audit output")

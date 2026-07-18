@@ -50,6 +50,13 @@ _PRIVATE_CONTENT_KEYS = frozenset(
 _LOCAL_PATH_IN_TEXT = re.compile(
     r"(?<![A-Za-z0-9/])(?:file:///|~[/\\]|/(?!/)|[A-Za-z]:[/\\]|\\\\)[^\s\"']+"
 )
+_SECRET_IN_TEXT = re.compile(
+    r"""(?ix)
+    \bbearer\s+[a-z0-9._~+/-]+={0,2}
+    |
+    [\"']?(?:[a-z0-9]+[_-])?(?:api[_-]?key|private[_-]?key|password|secret|token|seed(?:[_ -]?phrase)?|credential|authorization)[\"']?\s*[:=]\s*(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,;]+)
+    """
+)
 AUDIT_EVENT_TYPES = frozenset(
     {
         "node_initialized",
@@ -253,7 +260,7 @@ def _sanitize_audit_value(value: Any, *, key: object | None = None) -> Any:
     if isinstance(value, list):
         return [_sanitize_audit_value(item) for item in value]
     if isinstance(value, str):
-        return _sanitize_local_path(value)
+        return _redact_secret_text(_sanitize_local_path(value))
     return value
 
 
@@ -273,6 +280,10 @@ def _sanitize_local_path(value: str) -> str:
             lambda match: _local_path_label(match.group()), value
         )
     return _local_path_label(value)
+
+
+def _redact_secret_text(value: str) -> str:
+    return _SECRET_IN_TEXT.sub(AUDIT_REDACTED_VALUE, value)
 
 
 def _local_path_label(value: str) -> str:
