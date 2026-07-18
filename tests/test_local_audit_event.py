@@ -16,10 +16,11 @@ from aethermesh_core.local_audit_event import (
 class LocalAuditEventTests(unittest.TestCase):
     def test_sanitizes_secret_values_in_unstructured_audit_context(self) -> None:
         secrets = {
-            "api_key": "api-live-9Fj2qL",
+            "api_key": "api-live-" + "9Fj2qL",
             "private_token": "token-live-4Md8pQ",
             "password": "password-live-6Hs3wK",
-            "bearer_token": "bearer-live-1Rt7xV",
+            "bearer_token": "bearer-live-" + "1Rt7xV",
+            "basic_credential": "dXNlci1maXh0dXJl" + "OnBhc3N3b3Jk",
             "seed_phrase": "ember river cloud lantern meadow",
             "manifest_secret": "manifest-secret-5Np2cZ",
         }
@@ -41,11 +42,13 @@ class LocalAuditEventTests(unittest.TestCase):
             "error_summary": (
                 "submission failed: Bearer "
                 + secrets["bearer_token"]
+                + "; upstream rejected Basic "
+                + secrets["basic_credential"]
                 + "; api_key="
                 + secrets["api_key"]
-                + '; seed phrase="'
+                + "; seed phrase="
                 + secrets["seed_phrase"]
-                + '"; manifest_secret="'
+                + '; manifest_secret="'
                 + secrets["manifest_secret"]
                 + '"'
             ),
@@ -129,10 +132,10 @@ class LocalAuditEventTests(unittest.TestCase):
         self,
     ) -> None:
         secrets = {
-            "api_key": "api-live-7Bq3mN",
+            "api_key": "api-live-" + "7Bq3mN",
             "private_token": "token-live-2Kp8sD",
             "password": "password-live-5Wc1rT",
-            "bearer_token": "bearer-live-8Zv4hJ",
+            "bearer_token": "bearer-live-" + "8Zv4hJ",
             "seed_phrase": "orchid maple silver comet harbor",
             "manifest_secret": "manifest-secret-6Xa9fL",
         }
