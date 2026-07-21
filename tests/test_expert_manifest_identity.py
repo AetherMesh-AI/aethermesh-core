@@ -64,6 +64,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "sha256:" + hashlib.sha256(artifact.read_bytes()).hexdigest()
             )
             document["artifact"]["sha256"] = artifact_hash
+            document["artifact_hash"] = artifact_hash
             document["lineage"]["derived_artifact_refs"] = ["artifact.txt"]
             document["validation"].update(
                 {
@@ -89,7 +90,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "model_id": document["model_id"],
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],
-                "artifact_sha256": artifact_hash,
+                "artifact_hash": artifact_hash,
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
                 "status": "passed",

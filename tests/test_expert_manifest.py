@@ -10,6 +10,7 @@ from unittest.mock import patch
 from aethermesh_core.expert_manifest import (
     ExpertManifestError,
     RECEIPT_VERSION,
+    deterministic_non_model_artifact_placeholder,
     expert_is_usable,
     load_expert_manifest,
     validate_expert_manifest,
@@ -46,6 +47,44 @@ class ExpertManifestTests(unittest.TestCase):
         )
         self.assertEqual(handoff["creator_node_id"], original["creator_node_id"])
         self.assertEqual(handoff["created_at"], original["created_at"])
+
+    def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
+        self,
+    ) -> None:
+        document = self._sample()
+        document["artifact"] = {"reference": "local-echo-interface-v0", "sha256": None}
+        document["artifact_hash"] = deterministic_non_model_artifact_placeholder(
+            document
+        )
+
+        validate_expert_manifest(document)
+        self.assertEqual(
+            document["artifact_hash"],
+            deterministic_non_model_artifact_placeholder(copy.deepcopy(document)),
+        )
+
+        changed = copy.deepcopy(document)
+        changed["artifact"]["reference"] = "different-local-interface-v0"
+        changed["artifact_hash"] = deterministic_non_model_artifact_placeholder(changed)
+        validate_expert_manifest(changed)
+        self.assertNotEqual(changed["artifact_hash"], document["artifact_hash"])
+
+    def test_artifact_hash_must_match_concrete_content_hash(self) -> None:
+        document = self._sample()
+        document["artifact_hash"] = "sha256:" + "0" * 64
+
+        with self.assertRaisesRegex(ExpertManifestError, "must match artifact.sha256"):
+            validate_expert_manifest(document)
+
+    def test_concrete_artifact_content_hash_changes_only_with_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            artifact = Path(temp_dir) / "worker.py"
+            artifact.write_text("print('one')\n", encoding="utf-8")
+            first_hash = self._hash(artifact)
+            self.assertEqual(first_hash, self._hash(artifact))
+
+            artifact.write_text("print('two')\n", encoding="utf-8")
+            self.assertNotEqual(first_hash, self._hash(artifact))
 
     def test_renaming_preserves_stable_identity_lineage_and_attribution(self) -> None:
         original = self._sample()
@@ -223,6 +262,7 @@ class ExpertManifestTests(unittest.TestCase):
             document["artifact"]["sha256"] = (
                 "sha256:cfb2e16a101a0000000000000000000000000000000000000000000000000000"
             )
+            document["artifact_hash"] = document["artifact"]["sha256"]
             validation = document["validation"]
             validation.update(
                 {
@@ -246,6 +286,7 @@ class ExpertManifestTests(unittest.TestCase):
             path.write_text(json.dumps(document), encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
             document["artifact"]["sha256"] = self._hash(artifact)
+            document["artifact_hash"] = document["artifact"]["sha256"]
             path.write_text(json.dumps(document), encoding="utf-8")
             receipt_document = {
                 "receipt_version": RECEIPT_VERSION,
@@ -253,7 +294,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "expert_id": document["expert_id"],
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],
-                "artifact_sha256": document["artifact"]["sha256"],
+                "artifact_hash": document["artifact_hash"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
                 "status": "passed",
@@ -291,10 +332,10 @@ class ExpertManifestTests(unittest.TestCase):
             self.assertFalse(expert_is_usable(path))
             receipt.write_text("{}", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
-            receipt_document["artifact_sha256"] = "sha256:" + "0" * 64
+            receipt_document["artifact_hash"] = "sha256:" + "0" * 64
             receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
-            receipt_document["artifact_sha256"] = document["artifact"]["sha256"]
+            receipt_document["artifact_hash"] = document["artifact_hash"]
             receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
 
             outside = directory.parent / "outside.txt"

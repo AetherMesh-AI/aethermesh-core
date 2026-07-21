@@ -12,6 +12,7 @@ from typing import Any, cast
 MANIFEST_SCHEMA_VERSION = 1
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
+_PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
@@ -22,6 +23,7 @@ _TOP_LEVEL = {
     "name",
     "creator_node_id",
     "created_at",
+    "artifact_hash",
     "artifact",
     "supported_task_categories",
     "runtime_requirements",
@@ -64,6 +66,7 @@ def validate_expert_manifest(document: object) -> None:
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
+    _artifact_hash(document)
     _strings(document["supported_task_categories"], "supported_task_categories", True)
     _strings(document["runtime_requirements"], "runtime_requirements", True)
     _lineage(document["lineage"])
@@ -111,7 +114,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         **{field: document[field] for field in _identity_fields(document)},
         "creator_node_id": document["creator_node_id"],
         "created_at": document["created_at"],
-        "artifact_sha256": cast(dict[str, Any], document["artifact"])["sha256"],
+        "artifact_hash": document["artifact_hash"],
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
         "status": "passed",
@@ -223,9 +226,45 @@ def _nullable_reference(value: object, context: str) -> None:
 def _artifact(value: object) -> None:
     value = _object(value, {"reference", "sha256"}, "artifact")
     _reference(value["reference"], "artifact.reference")
-    if not isinstance(value["sha256"], str) or not _HASH.fullmatch(value["sha256"]):
+    if value["sha256"] is not None and (
+        not isinstance(value["sha256"], str) or not _HASH.fullmatch(value["sha256"])
+    ):
         raise ExpertManifestError(
-            "artifact.sha256 must be a lowercase sha256 content hash"
+            "artifact.sha256 must be null or a lowercase sha256 content hash"
+        )
+
+
+def deterministic_non_model_artifact_placeholder(document: dict[str, Any]) -> str:
+    """Return the reproducible identity for an early expert without an artifact."""
+    artifact = cast(dict[str, Any], document["artifact"])
+    inputs = {
+        "artifact_reference": artifact["reference"],
+        "creator_node_id": document["creator_node_id"],
+        "expert_id": document.get("expert_id", ""),
+        "model_id": document.get("model_id", ""),
+        "version": document["version"],
+    }
+    encoded = json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "placeholder:sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _artifact_hash(document: dict[str, Any]) -> None:
+    artifact_hash = document["artifact_hash"]
+    artifact = cast(dict[str, Any], document["artifact"])
+    if isinstance(artifact_hash, str) and _HASH.fullmatch(artifact_hash):
+        if artifact_hash != artifact["sha256"]:
+            raise ExpertManifestError(
+                "artifact_hash must match artifact.sha256 for a concrete artifact"
+            )
+        return
+    expected = deterministic_non_model_artifact_placeholder(document)
+    if (
+        artifact["sha256"] is not None
+        or artifact_hash != expected
+        or not _PLACEHOLDER_HASH.fullmatch(str(artifact_hash))
+    ):
+        raise ExpertManifestError(
+            "artifact_hash must be a concrete sha256 hash or its deterministic placeholder"
         )
 
 
