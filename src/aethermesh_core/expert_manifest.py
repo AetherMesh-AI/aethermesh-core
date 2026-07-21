@@ -19,7 +19,7 @@ _TOP_LEVEL = {
     "manifest_version",
     "model_id",
     "expert_id",
-    "display_name",
+    "name",
     "creator_node_id",
     "created_at",
     "artifact",
@@ -61,7 +61,7 @@ def validate_expert_manifest(document: object) -> None:
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
-    _text(document["display_name"], "display_name")
+    _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
     _strings(document["supported_task_categories"], "supported_task_categories", True)
@@ -107,6 +107,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
     validation = cast(dict[str, Any], document["validation"])
     return receipt == {
         "receipt_version": RECEIPT_VERSION,
+        "name": document["name"],
         **{field: document[field] for field in _identity_fields(document)},
         "artifact_sha256": cast(dict[str, Any], document["artifact"])["sha256"],
         "validated_at": validation["last_validated_at"],

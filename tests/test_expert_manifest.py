@@ -25,6 +25,7 @@ class ExpertManifestTests(unittest.TestCase):
         document = load_expert_manifest(SAMPLE)
 
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
+        self.assertEqual(document["name"], "Local Echo Fixture Expert")
         self.assertEqual(document["validation"]["receipt_path"], None)
         self.assertFalse(expert_is_usable(SAMPLE))
 
@@ -40,6 +41,22 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(
             handoff["contribution_attribution"], original["contribution_attribution"]
         )
+
+    def test_renaming_preserves_stable_identity_lineage_and_attribution(self) -> None:
+        original = self._sample()
+        renamed = copy.deepcopy(original)
+        renamed["name"] = "Renamed Local Echo Expert"
+
+        validate_expert_manifest(renamed)
+
+        for field in (
+            "expert_id",
+            "creator_node_id",
+            "lineage",
+            "contribution_attribution",
+        ):
+            with self.subTest(field=field):
+                self.assertEqual(renamed[field], original[field])
 
     def test_required_fields_and_malformed_json_fail_clearly(self) -> None:
         with self.assertRaisesRegex(ExpertManifestError, "must contain exactly"):
@@ -68,6 +85,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "requires at least one non-empty model_id or expert_id",
             ),
             ("created_at", "yesterday", "created_at must be"),
+            ("name", "   ", "name must be a non-empty string"),
             ("supported_task_categories", [], "supported_task_categories must be"),
             ("runtime_requirements", [""], "runtime_requirements must be"),
         ]
@@ -79,9 +97,11 @@ class ExpertManifestTests(unittest.TestCase):
                     validate_expert_manifest(document)
 
         document = self._sample()
-        document["display_name"] = "Local Echo Expert"
-        validate_expert_manifest(document)
+        document.pop("name")
+        with self.assertRaisesRegex(ExpertManifestError, "must contain exactly"):
+            validate_expert_manifest(document)
 
+        document = self._sample()
         document["created_at"] = "2026-99-99T99:99:99Z"
         with self.assertRaisesRegex(ExpertManifestError, "created_at must be"):
             validate_expert_manifest(document)
@@ -190,6 +210,7 @@ class ExpertManifestTests(unittest.TestCase):
             path.write_text(json.dumps(document), encoding="utf-8")
             receipt_document = {
                 "receipt_version": RECEIPT_VERSION,
+                "name": document["name"],
                 "expert_id": document["expert_id"],
                 "artifact_sha256": document["artifact"]["sha256"],
                 "validated_at": validation["last_validated_at"],
@@ -203,6 +224,7 @@ class ExpertManifestTests(unittest.TestCase):
             ):
                 self.assertFalse(expert_is_usable(path))
             self.assertTrue(expert_is_usable(path))
+            self.assertEqual(receipt_document["name"], "Local Echo Fixture Expert")
 
             receipt.write_text("not JSON", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
