@@ -1,5 +1,5 @@
 {
-  "manifest_version": "aethermesh-expert-manifest/v0",
+  "version": 1,
   "expert_id": "local-echo-fixture-v0",
   "name": "Local Echo Fixture Expert",
   "creator_node_id": "node-local-fixture",

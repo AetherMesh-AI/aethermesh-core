@@ -1,4 +1,4 @@
-"""Small, local-only v0 model/expert manifest validation."""
+"""Small, local-only version 1 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-MANIFEST_VERSION = "aethermesh-expert-manifest/v0"
+MANIFEST_SCHEMA_VERSION = 1
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
 _TOP_LEVEL = {
-    "manifest_version",
+    "version",
     "model_id",
     "expert_id",
     "name",
@@ -33,11 +33,11 @@ _REQUIRED_TOP_LEVEL = _TOP_LEVEL - {"model_id", "expert_id"}
 
 
 class ExpertManifestError(ValueError):
-    """Raised when a local expert manifest v0 is incomplete or malformed."""
+    """Raised when a local expert manifest is incomplete or malformed."""
 
 
 def load_expert_manifest(path: str | Path) -> dict[str, Any]:
-    """Load and structurally validate one hand-authored expert manifest v0."""
+    """Load and structurally validate one hand-authored version 1 expert manifest."""
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
     except OSError as exc:
@@ -55,9 +55,9 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
 
 
 def validate_expert_manifest(document: object) -> None:
-    """Validate required v0 fields without claiming network trust or capability."""
+    """Validate required version 1 fields without claiming network trust or capability."""
     document = _top_level_object(document)
-    _expected(document, "manifest_version", MANIFEST_VERSION)
+    _manifest_version(document["version"])
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
@@ -124,10 +124,16 @@ def _object(value: object, keys: set[str], context: str) -> dict[str, Any]:
 
 
 def _top_level_object(value: object) -> dict[str, Any]:
-    if (
-        not isinstance(value, dict)
-        or not _REQUIRED_TOP_LEVEL <= set(value) <= _TOP_LEVEL
-    ):
+    if not isinstance(value, dict):
+        raise ExpertManifestError("expert manifest must be a JSON object")
+    fields = set(value)
+    missing = _REQUIRED_TOP_LEVEL - fields
+    if missing:
+        raise ExpertManifestError(
+            "expert manifest is missing required field(s): "
+            + ", ".join(sorted(missing))
+        )
+    if not fields <= _TOP_LEVEL:
         listed = ", ".join(sorted(_TOP_LEVEL))
         raise ExpertManifestError(
             f"expert manifest must contain exactly these allowed fields: {listed}"
@@ -151,9 +157,11 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
     return {field for field in ("model_id", "expert_id") if field in document}
 
 
-def _expected(document: dict[str, Any], field: str, expected: str) -> None:
-    if document[field] != expected:
-        raise ExpertManifestError(f"{field} must be {expected!r}")
+def _manifest_version(value: object) -> None:
+    if type(value) is not int or value != MANIFEST_SCHEMA_VERSION:
+        raise ExpertManifestError(
+            f"version must be {MANIFEST_SCHEMA_VERSION} (the integer for this manifest format)"
+        )
 
 
 def _string(value: object, context: str) -> None:

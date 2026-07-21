@@ -24,6 +24,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
+        self.assertEqual(document["version"], 1)
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
         self.assertEqual(document["validation"]["receipt_path"], None)
@@ -50,22 +51,28 @@ class ExpertManifestTests(unittest.TestCase):
         validate_expert_manifest(renamed)
 
         for field in (
+            "version",
             "expert_id",
             "creator_node_id",
             "lineage",
+            "validation",
             "contribution_attribution",
         ):
             with self.subTest(field=field):
                 self.assertEqual(renamed[field], original[field])
 
     def test_required_fields_and_malformed_json_fail_clearly(self) -> None:
-        with self.assertRaisesRegex(ExpertManifestError, "must contain exactly"):
+        with self.assertRaisesRegex(ExpertManifestError, "must be a JSON object"):
             validate_expert_manifest([])
         document = self._sample()
-        document.pop("creator_node_id")
+        document.pop("version")
         with self.assertRaisesRegex(
-            ExpertManifestError, "expert manifest must contain exactly"
+            ExpertManifestError, "missing required field\\(s\\): version"
         ):
+            validate_expert_manifest(document)
+        document = self._sample()
+        document["unexpected"] = "field"
+        with self.assertRaisesRegex(ExpertManifestError, "allowed fields"):
             validate_expert_manifest(document)
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "manifest.json"
@@ -78,7 +85,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("manifest_version", "other", "manifest_version must be"),
+            ("version", "1", "version must be 1"),
+            ("version", 2, "version must be 1"),
+            ("version", True, "version must be 1"),
             (
                 "expert_id",
                 "",
@@ -98,7 +107,9 @@ class ExpertManifestTests(unittest.TestCase):
 
         document = self._sample()
         document.pop("name")
-        with self.assertRaisesRegex(ExpertManifestError, "must contain exactly"):
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): name"
+        ):
             validate_expert_manifest(document)
 
         document = self._sample()
