@@ -62,7 +62,11 @@ class ExpertManifestTests(unittest.TestCase):
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
             ("manifest_version", "other", "manifest_version must be"),
-            ("expert_id", "", "expert_id must be"),
+            (
+                "expert_id",
+                "",
+                "requires at least one non-empty model_id or expert_id",
+            ),
             ("created_at", "yesterday", "created_at must be"),
             ("supported_task_categories", [], "supported_task_categories must be"),
             ("runtime_requirements", [""], "runtime_requirements must be"),
@@ -203,6 +207,8 @@ class ExpertManifestTests(unittest.TestCase):
             receipt.write_text("not JSON", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
             receipt.write_bytes(b"\xff")
+            self.assertFalse(expert_is_usable(path))
+            receipt.write_text("[]", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
             receipt.write_text("{}", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))
