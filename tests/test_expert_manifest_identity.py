@@ -87,6 +87,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "receipt_version": RECEIPT_VERSION,
                 "name": document["name"],
                 "model_id": document["model_id"],
+                "creator_node_id": document["creator_node_id"],
                 "artifact_sha256": artifact_hash,
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
@@ -102,6 +103,12 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                     "model_id"
                 ],
                 "local-echo-model-v0",
+            )
+            self.assertEqual(
+                json.loads((directory / "receipt.json").read_text(encoding="utf-8"))[
+                    "creator_node_id"
+                ],
+                document["creator_node_id"],
             )
 
     @staticmethod
