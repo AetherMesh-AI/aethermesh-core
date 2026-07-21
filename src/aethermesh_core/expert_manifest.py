@@ -17,6 +17,7 @@ _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
 _TOP_LEVEL = {
     "manifest_version",
+    "model_id",
     "expert_id",
     "display_name",
     "creator_node_id",
@@ -28,6 +29,7 @@ _TOP_LEVEL = {
     "validation",
     "contribution_attribution",
 }
+_REQUIRED_TOP_LEVEL = _TOP_LEVEL - {"model_id", "expert_id"}
 
 
 class ExpertManifestError(ValueError):
@@ -54,9 +56,10 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
 
 def validate_expert_manifest(document: object) -> None:
     """Validate required v0 fields without claiming network trust or capability."""
-    document = _object(document, _TOP_LEVEL, "expert manifest")
+    document = _top_level_object(document)
     _expected(document, "manifest_version", MANIFEST_VERSION)
-    for field in ("expert_id", "creator_node_id", "created_at"):
+    _identity(document)
+    for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
     _text(document["display_name"], "display_name")
     _timestamp(document["created_at"], "created_at")
@@ -99,19 +102,12 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         receipt = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return False
-    if not isinstance(receipt, dict) or set(receipt) != {
-        "receipt_version",
-        "expert_id",
-        "artifact_sha256",
-        "validated_at",
-        "validator_node_id",
-        "status",
-    }:
+    if not isinstance(receipt, dict):
         return False
     validation = cast(dict[str, Any], document["validation"])
     return receipt == {
         "receipt_version": RECEIPT_VERSION,
-        "expert_id": document["expert_id"],
+        **{field: document[field] for field in _identity_fields(document)},
         "artifact_sha256": cast(dict[str, Any], document["artifact"])["sha256"],
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
@@ -124,6 +120,34 @@ def _object(value: object, keys: set[str], context: str) -> dict[str, Any]:
         listed = ", ".join(sorted(keys))
         raise ExpertManifestError(f"{context} must contain exactly: {listed}")
     return cast(dict[str, Any], value)
+
+
+def _top_level_object(value: object) -> dict[str, Any]:
+    if (
+        not isinstance(value, dict)
+        or not _REQUIRED_TOP_LEVEL <= set(value) <= _TOP_LEVEL
+    ):
+        listed = ", ".join(sorted(_TOP_LEVEL))
+        raise ExpertManifestError(
+            f"expert manifest must contain exactly these allowed fields: {listed}"
+        )
+    return cast(dict[str, Any], value)
+
+
+def _identity(document: dict[str, Any]) -> None:
+    fields = _identity_fields(document)
+    if not any(
+        isinstance(document[field], str) and document[field].strip() for field in fields
+    ):
+        raise ExpertManifestError(
+            "expert manifest requires at least one non-empty model_id or expert_id"
+        )
+    for field in fields:
+        _string(document[field], field)
+
+
+def _identity_fields(document: dict[str, Any]) -> set[str]:
+    return {field for field in ("model_id", "expert_id") if field in document}
 
 
 def _expected(document: dict[str, Any], field: str, expected: str) -> None:
