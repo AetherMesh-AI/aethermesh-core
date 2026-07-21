@@ -85,6 +85,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
             manifest.write_text(json.dumps(document), encoding="utf-8")
             receipt = {
                 "receipt_version": RECEIPT_VERSION,
+                "name": document["name"],
                 "model_id": document["model_id"],
                 "artifact_sha256": artifact_hash,
                 "validated_at": document["validation"]["last_validated_at"],
