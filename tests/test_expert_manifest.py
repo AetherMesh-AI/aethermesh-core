@@ -28,6 +28,7 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
         self.assertTrue(document["creator_node_id"])
+        self.assertEqual(document["created_at"], "2026-07-18T00:00:00Z")
         self.assertEqual(document["validation"]["receipt_path"], None)
         self.assertFalse(expert_is_usable(SAMPLE))
 
@@ -44,6 +45,7 @@ class ExpertManifestTests(unittest.TestCase):
             handoff["contribution_attribution"], original["contribution_attribution"]
         )
         self.assertEqual(handoff["creator_node_id"], original["creator_node_id"])
+        self.assertEqual(handoff["created_at"], original["created_at"])
 
     def test_renaming_preserves_stable_identity_lineage_and_attribution(self) -> None:
         original = self._sample()
@@ -56,6 +58,7 @@ class ExpertManifestTests(unittest.TestCase):
             "version",
             "expert_id",
             "creator_node_id",
+            "created_at",
             "lineage",
             "validation",
             "contribution_attribution",
@@ -124,9 +127,23 @@ class ExpertManifestTests(unittest.TestCase):
             validate_expert_manifest(document)
 
         document = self._sample()
-        document["created_at"] = "2026-99-99T99:99:99Z"
-        with self.assertRaisesRegex(ExpertManifestError, "created_at must be"):
+        document.pop("created_at")
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): created_at"
+        ):
             validate_expert_manifest(document)
+
+        document = self._sample()
+        for timestamp in (
+            "2026-99-99T99:99:99Z",
+            "2026-07-18T00:00:00",
+            "2026-07-18T00:00:00+00:00",
+            "2026-07-18T00:00:00-04:00",
+        ):
+            with self.subTest(timestamp=timestamp):
+                document["created_at"] = timestamp
+                with self.assertRaisesRegex(ExpertManifestError, "created_at must be"):
+                    validate_expert_manifest(document)
 
     def test_schema_rejects_incomplete_or_unsafe_nested_evidence(self) -> None:
         cases = [
@@ -235,6 +252,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "name": document["name"],
                 "expert_id": document["expert_id"],
                 "creator_node_id": document["creator_node_id"],
+                "created_at": document["created_at"],
                 "artifact_sha256": document["artifact"]["sha256"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
@@ -251,6 +269,13 @@ class ExpertManifestTests(unittest.TestCase):
             self.assertEqual(
                 receipt_document["creator_node_id"], document["creator_node_id"]
             )
+            self.assertEqual(receipt_document["created_at"], document["created_at"])
+
+            receipt_document["created_at"] = "2026-07-18T00:00:02Z"
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt_document["created_at"] = document["created_at"]
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
 
             receipt_document.pop("creator_node_id")
             receipt.write_text(json.dumps(receipt_document), encoding="utf-8")

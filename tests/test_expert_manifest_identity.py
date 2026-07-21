@@ -88,6 +88,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "name": document["name"],
                 "model_id": document["model_id"],
                 "creator_node_id": document["creator_node_id"],
+                "created_at": document["created_at"],
                 "artifact_sha256": artifact_hash,
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
@@ -109,6 +110,12 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                     "creator_node_id"
                 ],
                 document["creator_node_id"],
+            )
+            self.assertEqual(
+                json.loads((directory / "receipt.json").read_text(encoding="utf-8"))[
+                    "created_at"
+                ],
+                document["created_at"],
             )
 
     @staticmethod
