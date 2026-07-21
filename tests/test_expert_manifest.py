@@ -27,6 +27,7 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(document["version"], 1)
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
+        self.assertTrue(document["creator_node_id"])
         self.assertEqual(document["validation"]["receipt_path"], None)
         self.assertFalse(expert_is_usable(SAMPLE))
 
@@ -42,6 +43,7 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(
             handoff["contribution_attribution"], original["contribution_attribution"]
         )
+        self.assertEqual(handoff["creator_node_id"], original["creator_node_id"])
 
     def test_renaming_preserves_stable_identity_lineage_and_attribution(self) -> None:
         original = self._sample()
@@ -94,6 +96,8 @@ class ExpertManifestTests(unittest.TestCase):
                 "requires at least one non-empty model_id or expert_id",
             ),
             ("created_at", "yesterday", "created_at must be"),
+            ("creator_node_id", "", "creator_node_id must be"),
+            ("creator_node_id", "   ", "creator_node_id must be"),
             ("name", "   ", "name must be a non-empty string"),
             ("supported_task_categories", [], "supported_task_categories must be"),
             ("runtime_requirements", [""], "runtime_requirements must be"),
@@ -109,6 +113,13 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("name")
         with self.assertRaisesRegex(
             ExpertManifestError, "missing required field\\(s\\): name"
+        ):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        document.pop("creator_node_id")
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): creator_node_id"
         ):
             validate_expert_manifest(document)
 
@@ -223,6 +234,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "receipt_version": RECEIPT_VERSION,
                 "name": document["name"],
                 "expert_id": document["expert_id"],
+                "creator_node_id": document["creator_node_id"],
                 "artifact_sha256": document["artifact"]["sha256"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
@@ -236,6 +248,15 @@ class ExpertManifestTests(unittest.TestCase):
                 self.assertFalse(expert_is_usable(path))
             self.assertTrue(expert_is_usable(path))
             self.assertEqual(receipt_document["name"], "Local Echo Fixture Expert")
+            self.assertEqual(
+                receipt_document["creator_node_id"], document["creator_node_id"]
+            )
+
+            receipt_document.pop("creator_node_id")
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertFalse(expert_is_usable(path))
+            receipt_document["creator_node_id"] = document["creator_node_id"]
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
 
             receipt.write_text("not JSON", encoding="utf-8")
             self.assertFalse(expert_is_usable(path))

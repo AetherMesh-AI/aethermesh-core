@@ -109,6 +109,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         "receipt_version": RECEIPT_VERSION,
         "name": document["name"],
         **{field: document[field] for field in _identity_fields(document)},
+        "creator_node_id": document["creator_node_id"],
         "artifact_sha256": cast(dict[str, Any], document["artifact"])["sha256"],
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
