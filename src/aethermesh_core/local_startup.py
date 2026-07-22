@@ -806,6 +806,7 @@ def _startup_receipt(
     return {
         "version": LOCAL_STARTUP_RECEIPT_VERSION,
         "receipt_type": "startup_validation",
+        "command_invoked": "start-local-node",
         "timestamp": timestamp,
         "node_id": node_id,
         "creator_node_id": creator_node_id,
