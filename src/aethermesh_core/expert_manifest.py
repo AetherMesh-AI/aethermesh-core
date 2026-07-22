@@ -1,4 +1,4 @@
-"""Small, local-only version 1 through 6 model/expert manifest validation."""
+"""Small, local-only version 1 through 7 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from referencing.exceptions import Unresolvable
 
-MANIFEST_SCHEMA_VERSION = 6
+MANIFEST_SCHEMA_VERSION = 7
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
@@ -95,6 +95,7 @@ _V4_TOP_LEVEL = _V3_TOP_LEVEL | {
 }
 _V5_TOP_LEVEL = _V4_TOP_LEVEL | {"training_lineage"}
 _V6_TOP_LEVEL = _V5_TOP_LEVEL | {"validation_history"}
+_V7_TOP_LEVEL = _V6_TOP_LEVEL | {"external_artifacts", "license"}
 
 
 class ExpertManifestError(ValueError):
@@ -139,6 +140,8 @@ def validate_expert_manifest(document: object) -> None:
         _training_lineage(document["training_lineage"])
     if document["version"] >= 6:
         _validation_history(document["validation_history"])
+    if document["version"] >= 7:
+        _license(document)
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -248,6 +251,14 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
             if document["version"] >= 6
             else {}
         ),
+        **(
+            {
+                "external_artifacts": document["external_artifacts"],
+                "license": document["license"],
+            }
+            if document["version"] >= 7 and document["external_artifacts"]
+            else {}
+        ),
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
         "status": validation["status"],
@@ -270,7 +281,9 @@ def _top_level_object(value: object) -> dict[str, Any]:
         )
     _manifest_version(value["version"])
     allowed = (
-        _V6_TOP_LEVEL
+        _V7_TOP_LEVEL
+        if value["version"] == 7
+        else _V6_TOP_LEVEL
         if value["version"] == 6
         else _V5_TOP_LEVEL
         if value["version"] == 5
@@ -282,7 +295,7 @@ def _top_level_object(value: object) -> dict[str, Any]:
         if value["version"] == 2
         else _V1_TOP_LEVEL
     )
-    required = allowed - {"model_id", "expert_id"}
+    required = allowed - {"model_id", "expert_id", "license"}
     fields = set(value)
     missing = required - fields
     if missing:
@@ -315,8 +328,16 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value not in {1, 2, 3, 4, 5, MANIFEST_SCHEMA_VERSION}:
-        raise ExpertManifestError("version must be 1, 2, 3, 4, 5, or 6")
+    if type(value) is not int or value not in {
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        MANIFEST_SCHEMA_VERSION,
+    }:
+        raise ExpertManifestError("version must be 1, 2, 3, 4, 5, 6, or 7")
 
 
 def _string(value: object, context: str) -> None:
@@ -598,6 +619,15 @@ _LINEAGE = {
     "derived_artifact_refs",
 }
 _TRAINING_LINEAGE_ENTRY = {"kind", "reference", "sha256"}
+_EXTERNAL_ARTIFACT = {"kind", "reference"}
+_EXTERNAL_ARTIFACT_KINDS = {
+    "adapter",
+    "checkpoint",
+    "dataset-derived-artifact",
+    "expert-code",
+    "model",
+    "prompt-pack",
+}
 
 
 def _training_lineage(value: object) -> None:
@@ -619,6 +649,31 @@ def _validation_history(value: object) -> None:
     """Reserve an evidence-only append point without treating it as network trust."""
     if not isinstance(value, list):
         raise ExpertManifestError("validation_history must be a list")
+
+
+def _license(document: dict[str, Any]) -> None:
+    """Require a declared license for explicitly external artifact inputs only."""
+    artifacts = document["external_artifacts"]
+    if not isinstance(artifacts, list):
+        raise ExpertManifestError("external_artifacts must be a list")
+    for index, artifact in enumerate(artifacts):
+        context = f"external_artifacts[{index}]"
+        artifact = _object(artifact, _EXTERNAL_ARTIFACT, context)
+        if artifact["kind"] not in _EXTERNAL_ARTIFACT_KINDS:
+            choices = ", ".join(sorted(_EXTERNAL_ARTIFACT_KINDS))
+            raise ExpertManifestError(f"{context}.kind must be one of: {choices}")
+        _text(artifact["reference"], f"{context}.reference")
+    has_license = "license" in document
+    if artifacts and not has_license:
+        raise ExpertManifestError(
+            "license is required when external_artifacts are declared"
+        )
+    if not artifacts and has_license:
+        raise ExpertManifestError(
+            "license must be omitted when no external_artifacts are declared"
+        )
+    if has_license:
+        _text(document["license"], "license")
 
 
 def _capabilities(value: object) -> None:
