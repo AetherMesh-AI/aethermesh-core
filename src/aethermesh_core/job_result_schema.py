@@ -34,8 +34,15 @@ _LINEAGE_FIELDS = frozenset(
     }
 )
 _REFERENCE_FIELDS = frozenset(
-    {"manifest_hash", "artifact_refs", "validation_receipt_ids", "log_refs"}
+    {
+        "manifest_hash",
+        "manifest_ref",
+        "artifact_refs",
+        "validation_receipt_ids",
+        "log_refs",
+    }
 )
+_REQUIRED_REFERENCE_FIELDS = _REFERENCE_FIELDS - {"manifest_ref"}
 _OUTPUT_PAYLOAD_FIELDS = frozenset({"inline_payload", "payload_ref", "payload_digest"})
 _CONTRIBUTION_FIELDS = frozenset(
     {
@@ -303,14 +310,30 @@ def _output_payload(value: object, status: object) -> None:
 
 
 def _references(value: object, manifest_id: object, receipt_id: object) -> None:
-    references = _object(value, "job result.references", _REFERENCE_FIELDS)
-    if references["manifest_hash"] != manifest_id:
-        raise JobResultSchemaError(
-            "job result.references.manifest_hash must match manifest_id"
-        )
-    _content_addressed_id(
-        references["manifest_hash"], "job result.references.manifest_hash"
+    references = _object(
+        value,
+        "job result.references",
+        _REQUIRED_REFERENCE_FIELDS,
+        allowed=_REFERENCE_FIELDS,
     )
+    manifest_hash = references["manifest_hash"]
+    manifest_ref = references.get("manifest_ref")
+    if (manifest_hash is None) == (manifest_ref is None):
+        raise JobResultSchemaError(
+            "job result.references requires exactly one of manifest_hash or manifest_ref"
+        )
+    if manifest_hash is not None:
+        if manifest_hash != manifest_id:
+            raise JobResultSchemaError(
+                "job result.references.manifest_hash must match manifest_id"
+            )
+        _content_addressed_id(manifest_hash, "job result.references.manifest_hash")
+    else:
+        _immutable_local_manifest_ref(manifest_ref)
+        if manifest_ref != manifest_id:
+            raise JobResultSchemaError(
+                "job result.references.manifest_ref must match manifest_id"
+            )
     for field in ("artifact_refs", "log_refs"):
         _artifact_reference_list(references[field], f"job result.references.{field}")
     _identifier_list(
@@ -358,6 +381,19 @@ def _artifact_reference_list(value: object, context: str) -> None:
             raise JobResultSchemaError(
                 f"{context} entries must be relative local paths or content-addressed IDs"
             )
+
+
+def _immutable_local_manifest_ref(value: object) -> None:
+    """Accept only the atomic local work-manifest record as hash fallback."""
+
+    if (
+        not isinstance(value, str)
+        or re.fullmatch(r"data/job-submissions/local-job-[0-9a-f]{32}\.json", value)
+        is None
+    ):
+        raise JobResultSchemaError(
+            "job result.references.manifest_ref must be an immutable local work manifest reference"
+        )
 
 
 def _identifier_list(value: object, context: str) -> None:

@@ -2759,6 +2759,28 @@ class RuntimeServiceTests(unittest.TestCase):
             ready = service.preflight_local_result_report(pending_candidate)
             self.assertEqual(ready["status"], "ready_for_validation")
             self.assertEqual(ready["job_id"], submission["job_id"])
+            expected_manifest_hash = canonical_json_hash(
+                json.loads(
+                    (root / submission["manifest_ref"]).read_text(encoding="utf-8")
+                ),
+                prefix="sha256:",
+            )
+            self.assertEqual(
+                report["references"]["manifest_hash"], expected_manifest_hash
+            )
+
+            fallback_candidate = deepcopy(pending_candidate)
+            fallback_candidate["manifest_id"] = submission["manifest_ref"]
+            fallback_candidate["references"]["manifest_hash"] = None
+            fallback_candidate["references"]["manifest_ref"] = submission[
+                "manifest_ref"
+            ]
+            fallback_candidate["lineage"]["input_manifest_ids"] = [
+                submission["manifest_ref"]
+            ]
+            fallback_ready = service.preflight_local_result_report(fallback_candidate)
+            self.assertEqual(fallback_ready["status"], "ready_for_validation")
+            self.assertEqual(fallback_ready["manifest_ref"], submission["manifest_ref"])
 
             malformed_timestamp = deepcopy(report)
             malformed_timestamp["reported_at"] = "not-a-timestamp"

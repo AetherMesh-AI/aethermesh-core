@@ -1288,9 +1288,13 @@ class NodeRuntimeService:
                 "invalid_manifest",
                 "referenced local work manifest does not match work ID",
             )
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        report_manifest_link = report["references"]["manifest_hash"]
+        if report_manifest_link is None:
+            report_manifest_link = report["references"].get("manifest_ref")
         if (
-            report["manifest_id"] != manifest_id
-            or report["references"]["manifest_hash"] != manifest_id
+            report_manifest_link not in {manifest_id, manifest_ref}
+            or report["manifest_id"] != report_manifest_link
         ):
             raise _ResultReportPreflightError(
                 "manifest_mismatch",
@@ -1310,7 +1314,7 @@ class NodeRuntimeService:
             or report["references"]["validation_receipt_ids"] != [expected_receipt_id]
             or report["executor_node_id"] != expected_executor
             or report["validator_node_id"] != expected_executor
-            or report["lineage"]["input_manifest_ids"] != [manifest_id]
+            or report["lineage"]["input_manifest_ids"] != [report_manifest_link]
             or report["lineage"]["parent_job_ids"] != lineage.get("parent_refs")
         ):
             raise _ResultReportPreflightError(
@@ -2385,6 +2389,7 @@ class NodeRuntimeService:
             "output_payload": output_payload,
             "references": {
                 "manifest_hash": manifest_id,
+                "manifest_ref": None,
                 "artifact_refs": [output_manifest_id] if succeeded else [],
                 "validation_receipt_ids": [self._receipt_id_for_job(job_id)],
                 "log_refs": [],
