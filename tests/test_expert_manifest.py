@@ -169,6 +169,28 @@ class ExpertManifestTests(unittest.TestCase):
             ):
                 load_expert_manifest(path)
 
+            for required, field_type, message in (
+                ([{"not": "a field name"}], "string", "unique required input fields"),
+                (["message"], "not-a-json-schema-type", "accepted types"),
+            ):
+                with self.subTest(required=required, field_type=field_type):
+                    schema.write_text(
+                        json.dumps(
+                            {
+                                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": required,
+                                "properties": {
+                                    "message": {"type": field_type, "minLength": 1}
+                                },
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(ExpertManifestError, message):
+                        load_expert_manifest(path)
+
     def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
         self,
     ) -> None:

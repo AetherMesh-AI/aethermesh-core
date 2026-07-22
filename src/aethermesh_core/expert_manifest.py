@@ -16,6 +16,15 @@ _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
+_JSON_SCHEMA_TYPES = {
+    "array",
+    "boolean",
+    "integer",
+    "null",
+    "number",
+    "object",
+    "string",
+}
 _V1_TOP_LEVEL = {
     "version",
     "model_id",
@@ -321,8 +330,8 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
     if (
         not isinstance(required, list)
         or not required
-        or len(required) != len(set(required))
         or any(not isinstance(field, str) or not field for field in required)
+        or len(required) != len(set(required))
     ):
         raise ExpertManifestError(
             "input_schema_ref schema must list unique required input fields"
@@ -331,6 +340,7 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
     if any(field not in properties for field in required) or any(
         not isinstance(properties[field], dict)
         or not isinstance(properties[field].get("type"), str)
+        or properties[field].get("type") not in _JSON_SCHEMA_TYPES
         for field in required
     ):
         raise ExpertManifestError(
