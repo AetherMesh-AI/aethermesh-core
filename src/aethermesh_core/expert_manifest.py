@@ -25,6 +25,48 @@ _JSON_SCHEMA_TYPES = {
     "object",
     "string",
 }
+_JSON_SCHEMA_CONSTRAINTS_BY_TYPE = {
+    "array": {
+        "const",
+        "contains",
+        "enum",
+        "maxContains",
+        "maxItems",
+        "minContains",
+        "minItems",
+        "uniqueItems",
+    },
+    "boolean": {"const", "enum"},
+    "integer": {
+        "const",
+        "enum",
+        "exclusiveMaximum",
+        "exclusiveMinimum",
+        "maximum",
+        "minimum",
+        "multipleOf",
+    },
+    "null": {"const", "enum"},
+    "number": {
+        "const",
+        "enum",
+        "exclusiveMaximum",
+        "exclusiveMinimum",
+        "maximum",
+        "minimum",
+        "multipleOf",
+    },
+    "object": {
+        "const",
+        "dependentRequired",
+        "enum",
+        "maxProperties",
+        "minProperties",
+        "propertyNames",
+        "required",
+    },
+    "string": {"const", "enum", "maxLength", "minLength", "pattern"},
+}
 _V1_TOP_LEVEL = {
     "version",
     "model_id",
@@ -347,7 +389,13 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
             "input_schema_ref schema must declare accepted types for required input fields"
         )
     if schema.get("additionalProperties") is not False or not any(
-        any(key != "type" for key in cast(dict[str, Any], properties[field]))
+        any(
+            key
+            in _JSON_SCHEMA_CONSTRAINTS_BY_TYPE[
+                cast(str, cast(dict[str, Any], properties[field])["type"])
+            ]
+            for key in cast(dict[str, Any], properties[field])
+        )
         for field in required
     ):
         raise ExpertManifestError(
