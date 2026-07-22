@@ -31,7 +31,7 @@ _V1_TOP_LEVEL = {
     "validation",
     "contribution_attribution",
 }
-_V2_TOP_LEVEL = _V1_TOP_LEVEL | {"manifest_id", "capabilities"}
+_V2_TOP_LEVEL = _V1_TOP_LEVEL | {"manifest_id", "capabilities", "input_schema_ref"}
 
 
 class ExpertManifestError(ValueError):
@@ -53,6 +53,7 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
             f"expert manifest JSON is malformed: {exc.msg}"
         ) from exc
     validate_expert_manifest(document)
+    _input_schema_ref(document, Path(path).parent)
     return cast(dict[str, Any], document)
 
 
@@ -121,6 +122,11 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         "creator_node_id": document["creator_node_id"],
         "created_at": document["created_at"],
         "artifact_hash": document["artifact_hash"],
+        **(
+            {"input_schema_ref": document["input_schema_ref"]}
+            if document["version"] == 2
+            else {}
+        ),
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
         "status": "passed",
@@ -278,6 +284,64 @@ def _artifact_hash(document: dict[str, Any]) -> None:
         raise ExpertManifestError(
             "artifact_hash must be a concrete sha256 hash or a deterministic "
             "non-model expert placeholder"
+        )
+
+
+def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
+    """Require a readable local JSON Schema for each version 2 expert input."""
+    if document["version"] == 1:
+        return
+    reference = document["input_schema_ref"]
+    _reference(reference, "input_schema_ref")
+    try:
+        contents = _local_reference_path(manifest_root, cast(str, reference)).read_text(
+            encoding="utf-8"
+        )
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ExpertManifestError(
+            "input_schema_ref must name a readable local JSON Schema"
+        ) from exc
+    try:
+        schema = json.loads(contents)
+    except json.JSONDecodeError as exc:
+        raise ExpertManifestError(
+            "input_schema_ref must contain readable JSON"
+        ) from exc
+    if not isinstance(schema, dict) or schema.get("$schema") != (
+        "https://json-schema.org/draft/2020-12/schema"
+    ):
+        raise ExpertManifestError(
+            "input_schema_ref must point to a JSON Schema draft 2020-12 file"
+        )
+    if schema.get("type") != "object" or not isinstance(schema.get("properties"), dict):
+        raise ExpertManifestError(
+            "input_schema_ref schema must describe an object with properties"
+        )
+    required = schema.get("required")
+    if (
+        not isinstance(required, list)
+        or not required
+        or len(required) != len(set(required))
+        or any(not isinstance(field, str) or not field for field in required)
+    ):
+        raise ExpertManifestError(
+            "input_schema_ref schema must list unique required input fields"
+        )
+    properties = cast(dict[str, Any], schema["properties"])
+    if any(field not in properties for field in required) or any(
+        not isinstance(properties[field], dict)
+        or not isinstance(properties[field].get("type"), str)
+        for field in required
+    ):
+        raise ExpertManifestError(
+            "input_schema_ref schema must declare accepted types for required input fields"
+        )
+    if schema.get("additionalProperties") is not False or not any(
+        any(key != "type" for key in cast(dict[str, Any], properties[field]))
+        for field in required
+    ):
+        raise ExpertManifestError(
+            "input_schema_ref schema must declare input validation constraints"
         )
 
 

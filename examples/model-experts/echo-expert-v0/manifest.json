@@ -10,6 +10,7 @@
     "reference": "artifact.txt",
     "sha256": "sha256:f0dfa5bb9b76a4cc47883babe74f0666e7198e1659769a6f229da929c4af12d1"
   },
+  "input_schema_ref": "schemas/local-echo-input.schema.json",
   "supported_task_categories": ["echo"],
   "runtime_requirements": ["python-local-runner", "text-fixture"],
   "capabilities": [

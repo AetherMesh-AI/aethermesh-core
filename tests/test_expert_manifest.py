@@ -13,6 +13,7 @@ from aethermesh_core.expert_manifest import (
     expert_is_usable,
     load_expert_manifest,
     validate_expert_manifest,
+    _receipt_matches_manifest,
 )
 
 
@@ -30,6 +31,9 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
         self.assertTrue(document["creator_node_id"])
         self.assertEqual(document["created_at"], "2026-07-18T00:00:00Z")
+        self.assertEqual(
+            document["input_schema_ref"], "schemas/local-echo-input.schema.json"
+        )
         self.assertEqual(document["validation"]["receipt_path"], None)
         self.assertEqual(
             document["capabilities"][0]["validation"]["status"], "unvalidated"
@@ -40,6 +44,7 @@ class ExpertManifestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             saved = Path(temp_dir) / "manifest.json"
             original = load_expert_manifest(SAMPLE)
+            self._write_input_schema(Path(temp_dir), original)
             saved.write_text(json.dumps(original, sort_keys=True), encoding="utf-8")
             handoff = load_expert_manifest(saved)
 
@@ -93,8 +98,76 @@ class ExpertManifestTests(unittest.TestCase):
         document["version"] = 1
         document.pop("manifest_id")
         document.pop("capabilities")
+        document.pop("input_schema_ref")
 
         validate_expert_manifest(document)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "manifest.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            self.assertEqual(load_expert_manifest(path)["version"], 1)
+            receipt = Path(temp_dir) / "receipt.json"
+            receipt.write_text(
+                json.dumps(
+                    {
+                        "receipt_version": RECEIPT_VERSION,
+                        "name": document["name"],
+                        "expert_id": document["expert_id"],
+                        "creator_node_id": document["creator_node_id"],
+                        "created_at": document["created_at"],
+                        "artifact_hash": document["artifact_hash"],
+                        "validated_at": None,
+                        "validator_node_id": None,
+                        "status": "passed",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertTrue(_receipt_matches_manifest(receipt, document))
+
+    def test_input_schema_reference_must_be_present_and_resolvable(self) -> None:
+        document = self._sample()
+        document.pop("input_schema_ref")
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): input_schema_ref"
+        ):
+            validate_expert_manifest(document)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "manifest.json"
+            document = self._sample()
+            document["input_schema_ref"] = "schemas/missing.schema.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ExpertManifestError, "must name a readable local JSON Schema"
+            ):
+                load_expert_manifest(path)
+
+    def test_input_schema_reference_must_describe_required_typed_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            schemas = directory / "schemas"
+            schemas.mkdir()
+            schema = schemas / "input.schema.json"
+            schema.write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["message"],
+                        "properties": {"message": {"type": "string"}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            document = self._sample()
+            document["input_schema_ref"] = "schemas/input.schema.json"
+            path = directory / "manifest.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ExpertManifestError, "must declare input validation constraints"
+            ):
+                load_expert_manifest(path)
 
     def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
         self,
@@ -316,6 +389,7 @@ class ExpertManifestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             directory = Path(temp_dir) / "expert"
             directory.mkdir()
+            self._write_input_schema(directory, load_expert_manifest(SAMPLE))
             artifact = directory / "artifact.txt"
             artifact.write_text("artifact", encoding="utf-8")
             receipt = directory / "receipt.json"
@@ -357,6 +431,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],
                 "artifact_hash": document["artifact_hash"],
+                "input_schema_ref": document["input_schema_ref"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
                 "status": "passed",
@@ -371,6 +446,9 @@ class ExpertManifestTests(unittest.TestCase):
             self.assertEqual(receipt_document["name"], "Local Echo Fixture Expert")
             self.assertEqual(
                 receipt_document["creator_node_id"], document["creator_node_id"]
+            )
+            self.assertEqual(
+                receipt_document["input_schema_ref"], document["input_schema_ref"]
             )
             self.assertEqual(receipt_document["created_at"], document["created_at"])
 
@@ -423,6 +501,13 @@ class ExpertManifestTests(unittest.TestCase):
         import hashlib
 
         return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+    @staticmethod
+    def _write_input_schema(directory: Path, document: dict[str, Any]) -> None:
+        source = SAMPLE.parent / document["input_schema_ref"]
+        destination = directory / document["input_schema_ref"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
 
 
 if __name__ == "__main__":

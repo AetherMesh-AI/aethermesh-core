@@ -58,6 +58,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
             artifact = directory / "artifact.txt"
             artifact.write_text("artifact", encoding="utf-8")
             document = self._sample()
+            self._write_input_schema(directory, document)
             document.pop("expert_id")
             document["model_id"] = "local-echo-model-v0"
             artifact_hash = (
@@ -92,6 +93,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],
                 "artifact_hash": artifact_hash,
+                "input_schema_ref": document["input_schema_ref"],
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
                 "status": "passed",
@@ -123,6 +125,13 @@ class ExpertManifestIdentityTests(unittest.TestCase):
     @staticmethod
     def _sample() -> dict[str, Any]:
         return copy.deepcopy(load_expert_manifest(SAMPLE))
+
+    @staticmethod
+    def _write_input_schema(directory: Path, document: dict[str, Any]) -> None:
+        source = SAMPLE.parent / document["input_schema_ref"]
+        destination = directory / document["input_schema_ref"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
 
 
 if __name__ == "__main__":
