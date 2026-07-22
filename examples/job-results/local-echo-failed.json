@@ -1,6 +1,6 @@
 {
   "schema_version": 10,
-  "result_hash": "sha256:2e2e2ecb48525bef9af5f3ff7abfb18e22fa1c20868e43c46574eac3fbe28323",
+  "result_hash": "sha256:2b8a909f42d98a085d11f5423704b8b892516df3d7fdc7a11c6b85f11b3b1c44",
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",
@@ -9,14 +9,14 @@
   "expert_version": "1",
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
-  "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "manifest_id": "sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8",
   "output_payload": {
     "inline_payload": null,
     "payload_ref": null,
     "payload_digest": null
   },
   "references": {
-    "manifest_hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "manifest_hash": "sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8",
     "artifact_refs": [],
     "validation_receipt_ids": ["local-validation-receipt-local-job-echo-002"],
     "log_refs": ["logs/echo-002.log"]
@@ -40,7 +40,7 @@
     "missing_artifact": "examples/job-envelope-inputs/missing.json"
   },
   "lineage": {
-    "input_manifest_ids": ["sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],
+    "input_manifest_ids": ["sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8"],
     "output_manifest_ids": [],
     "parent_job_ids": ["local-job-parent-001"],
     "parent_task_ids": ["local-task-parent-001"],

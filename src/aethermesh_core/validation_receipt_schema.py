@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 9
+VALIDATION_RECEIPT_SCHEMA_VERSION = 10
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -30,6 +30,7 @@ _REQUIRED_FIELDS = frozenset(
         "job_id",
         "work_id",
         "manifest_id",
+        "manifest_reference",
         "status",
         "rejection_reason",
         "validation_status",
@@ -51,6 +52,7 @@ _LINEAGE_FIELDS = frozenset(
         "prior_receipt_ids",
     }
 )
+_MANIFEST_REFERENCE_FIELDS = frozenset({"manifest_id", "manifest_ref"})
 _CONTRIBUTION_FIELDS = frozenset(
     {
         "contributor_node_id",
@@ -119,7 +121,7 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 9"
+            "validation receipt.schema_version must be integer 10"
         )
     for field in (
         "receipt_id",
@@ -129,7 +131,6 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         "expert_version",
         "job_id",
         "work_id",
-        "manifest_id",
         "validator_id",
     ):
         _identifier(receipt[field], f"validation receipt.{field}")
@@ -141,7 +142,10 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         raise ValidationReceiptSchemaError(
             "validation receipt.job_id must match its work_id"
         )
-    _content_addressed_id(receipt["manifest_id"], "validation receipt.manifest_id")
+    _nullable_content_addressed_id(
+        receipt["manifest_id"], "validation receipt.manifest_id"
+    )
+    _manifest_reference(receipt["manifest_reference"], receipt["manifest_id"])
     _sha256_content_id(receipt["result_hash"], "validation receipt.result_hash")
     _timestamp(receipt["created_at"], "validation receipt.created_at")
     _timestamp(receipt["validated_at"], "validation receipt.validated_at")
@@ -339,6 +343,11 @@ def _sha256_content_id(value: object, label: str) -> None:
         )
 
 
+def _nullable_content_addressed_id(value: object, label: str) -> None:
+    if value is not None:
+        _content_addressed_id(value, label)
+
+
 def _local_reference(value: object, label: str, *, nullable: bool = False) -> None:
     if value is None and nullable:
         return
@@ -415,6 +424,28 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
     ):
         raise ValidationReceiptSchemaError(
             "validation receipt.validation_method.contribution_manifest_ref must match receipt"
+        )
+
+
+def _manifest_reference(value: object, manifest_id: object) -> None:
+    if value is None:
+        if manifest_id is not None:
+            raise ValidationReceiptSchemaError(
+                "validation receipt.manifest_reference is required when manifest_id is present"
+            )
+        return
+    reference = _object(
+        value, "validation receipt.manifest_reference", _MANIFEST_REFERENCE_FIELDS
+    )
+    _content_addressed_id(
+        reference["manifest_id"], "validation receipt.manifest_reference.manifest_id"
+    )
+    _local_reference(
+        reference["manifest_ref"], "validation receipt.manifest_reference.manifest_ref"
+    )
+    if reference["manifest_id"] != manifest_id:
+        raise ValidationReceiptSchemaError(
+            "validation receipt.manifest_reference.manifest_id must match receipt"
         )
 
 

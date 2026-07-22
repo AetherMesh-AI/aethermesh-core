@@ -10,6 +10,7 @@ from aethermesh_core.result_hash import (
     canonical_result_document_hash,
     validate_validation_receipt_result_hash,
 )
+from aethermesh_core.local_json_helpers import canonical_json_hash
 from aethermesh_core.validation_receipt_schema import (
     ValidationReceiptSchemaError,
     canonical_validation_receipt_hash,
@@ -54,6 +55,20 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         )
         self.assertEqual(self.failing["contributor_node_id"], "node.local-worker")
         self.assertEqual(self.failing["creator_node_id"], "node.local-creator")
+        self.assertEqual(
+            self.passing["manifest_reference"],
+            {
+                "manifest_id": self.passing["manifest_id"],
+                "manifest_ref": "examples/job-envelopes/minimal-local-echo.json",
+            },
+        )
+        self.assertEqual(
+            self.failing["manifest_reference"],
+            {
+                "manifest_id": self.failing["manifest_id"],
+                "manifest_ref": "examples/job-envelopes/complete-local-echo.json",
+            },
+        )
         for block in ("validation_method", "lineage", "contribution"):
             with self.subTest(block=block):
                 self.assertEqual(
@@ -83,6 +98,44 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
 
         self.assertEqual(captured["validator_build_identifier"], "unknown")
         self.assertEqual(captured["receipt_schema_version"], 8)
+
+    def test_manifest_references_resolve_to_their_content_addressed_manifests(
+        self,
+    ) -> None:
+        for receipt in (self.passing, self.failing):
+            with self.subTest(receipt_id=receipt["receipt_id"]):
+                reference = receipt["manifest_reference"]
+                self.assertIsInstance(reference, dict)
+                manifest_path = (
+                    Path(__file__).resolve().parents[1] / reference["manifest_ref"]
+                )
+                manifest = json.loads(manifest_path.read_text("utf-8"))
+                self.assertEqual(
+                    canonical_json_hash(manifest, prefix="sha256:"),
+                    reference["manifest_id"],
+                )
+                self.assertEqual(reference["manifest_id"], receipt["manifest_id"])
+
+    def test_non_manifest_receipt_remains_valid(self) -> None:
+        receipt = copy.deepcopy(self.failing)
+        receipt["manifest_id"] = None
+        receipt["manifest_reference"] = None
+        receipt["validation_method"]["manifest_id"] = None
+        receipt["receipt_hash"] = canonical_validation_receipt_hash(receipt)
+        self.assertIs(validate_validation_receipt_document(receipt), receipt)
+
+    def test_manifest_reference_is_exact_and_local_when_present(self) -> None:
+        mismatched = copy.deepcopy(self.passing)
+        mismatched["manifest_reference"]["manifest_id"] = "sha256:" + "0" * 64
+        mismatched["receipt_hash"] = canonical_validation_receipt_hash(mismatched)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must match receipt"):
+            validate_validation_receipt_document(mismatched)
+
+        missing = copy.deepcopy(self.passing)
+        missing["manifest_reference"] = None
+        missing["receipt_hash"] = canonical_validation_receipt_hash(missing)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "is required"):
+            validate_validation_receipt_document(missing)
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
@@ -242,8 +295,8 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                     validate_validation_receipt_document(receipt)
 
         old_version = copy.deepcopy(self.passing)
-        old_version["schema_version"] = 6
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 9"):
+        old_version["schema_version"] = 9
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 10"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)
