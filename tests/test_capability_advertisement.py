@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from aethermesh_core.job_result_schema import JOB_RESULT_SCHEMA_VERSION
 from aethermesh_core.runtime_service import NodeRuntimeService, RuntimeServiceError
 
 
@@ -41,8 +42,12 @@ class CapabilityAdvertisementTests(unittest.TestCase):
             )
             self.assertTrue(capability["validation_requirements"]["required"])
             self.assertEqual(
+                capability["expected_outputs"],
+                f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
+            )
+            self.assertEqual(
                 capability["lineage"]["result_manifest_template"],
-                "data/job-status/{job_id}.json",
+                "data/job-results/{job_id}.json",
             )
             manifest_path = Path(
                 temp_dir, capability["lineage"]["capability_manifest_ref"]
@@ -50,6 +55,14 @@ class CapabilityAdvertisementTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["creator_node_id"], initialized["node_id"])
             self.assertEqual(manifest["task_type"], "echo")
+            self.assertEqual(
+                manifest["expected_outputs"],
+                f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
+            )
+            self.assertEqual(
+                manifest["lineage"]["result_manifest_template"],
+                "data/job-results/{job_id}.json",
+            )
             self.assertEqual(
                 manifest["validation"]["receipt_format"],
                 capability["validation_requirements"]["receipt_format"],

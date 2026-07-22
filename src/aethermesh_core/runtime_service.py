@@ -3333,7 +3333,7 @@ def _capability_advertisement_manifest(
         "task_type": work_type,
         "description": description,
         "required_inputs": _capability_check_payload(work_type),
-        "expected_outputs": "local-job-result-schema-v1",
+        "expected_outputs": f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
         "validation": {
             "method": "local-deterministic-job-result-validation",
             "receipt_format": (
@@ -3342,7 +3342,7 @@ def _capability_advertisement_manifest(
         },
         "lineage": {
             "node_manifest_ref": "config.json",
-            "result_manifest_template": "data/job-status/{job_id}.json",
+            "result_manifest_template": "data/job-results/{job_id}.json",
         },
         "contribution_attribution": {"creator_node_id": creator_node_id},
     }
@@ -3366,7 +3366,7 @@ def _advertised_capability(
         "prototype_status": "prototype-local-validation-required",
         "runtime_limits": {"max_concurrent_jobs": LOCAL_CAPABILITY_WORKER_CAPACITY},
         "required_inputs": _capability_check_payload(work_type),
-        "expected_outputs": "local-job-result-schema-v1",
+        "expected_outputs": f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
         "validation_requirements": {
             "method": "local-deterministic-job-result-validation",
             "receipt_format": (
@@ -3380,7 +3380,7 @@ def _advertised_capability(
             "validation_receipt_format": (
                 f"local-validation-receipt-schema-v{VALIDATION_RECEIPT_SCHEMA_VERSION}"
             ),
-            "result_manifest_template": "data/job-status/{job_id}.json",
+            "result_manifest_template": "data/job-results/{job_id}.json",
         },
         "contribution_attribution": {"creator_node_id": creator_node_id},
     }
