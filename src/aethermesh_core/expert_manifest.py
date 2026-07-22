@@ -156,7 +156,7 @@ def expert_is_usable(path: str | Path) -> bool:
 
 
 def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
-    """Reject a self-asserted pass unless its receipt binds the validated artifact."""
+    """Require receipt evidence to bind the manifest and validation result."""
     try:
         receipt = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
@@ -181,7 +181,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         ),
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
-        "status": "passed",
+        "status": validation["status"],
     }
 
 

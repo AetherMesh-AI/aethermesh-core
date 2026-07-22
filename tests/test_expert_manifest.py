@@ -99,6 +99,22 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("manifest_id")
         document.pop("capabilities")
         document.pop("input_schema_ref")
+        document["validation"].update(
+            {
+                "status": "passed",
+                "test_command": "python -m unittest",
+                "expected_inputs_ref": "input.json",
+                "receipt_path": "receipt.json",
+                "last_validated_at": "2026-07-18T00:00:01Z",
+                "validator_node_id": "node-validator",
+            }
+        )
+        document["contribution_attribution"].update(
+            {
+                "validator_node_id": "node-validator",
+                "receipt_refs": ["receipt.json"],
+            }
+        )
 
         validate_expert_manifest(document)
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -115,8 +131,10 @@ class ExpertManifestTests(unittest.TestCase):
                         "creator_node_id": document["creator_node_id"],
                         "created_at": document["created_at"],
                         "artifact_hash": document["artifact_hash"],
-                        "validated_at": None,
-                        "validator_node_id": None,
+                        "validated_at": document["validation"]["last_validated_at"],
+                        "validator_node_id": document["validation"][
+                            "validator_node_id"
+                        ],
                         "status": "passed",
                     }
                 ),
@@ -226,6 +244,32 @@ class ExpertManifestTests(unittest.TestCase):
                     )
                     with self.assertRaisesRegex(ExpertManifestError, message):
                         load_expert_manifest(path)
+
+    def test_failed_receipt_records_manifest_creator_and_input_schema(self) -> None:
+        document = self._sample()
+        validation = document["validation"]
+        validation["status"] = "failed"
+        receipt_document = {
+            "receipt_version": RECEIPT_VERSION,
+            "name": document["name"],
+            "manifest_id": document["manifest_id"],
+            "expert_id": document["expert_id"],
+            "creator_node_id": document["creator_node_id"],
+            "created_at": document["created_at"],
+            "artifact_hash": document["artifact_hash"],
+            "input_schema_ref": document["input_schema_ref"],
+            "validated_at": validation["last_validated_at"],
+            "validator_node_id": validation["validator_node_id"],
+            "status": "failed",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt = Path(temp_dir) / "receipt.json"
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertTrue(_receipt_matches_manifest(receipt, document))
+
+            receipt_document["status"] = "passed"
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertFalse(_receipt_matches_manifest(receipt, document))
 
     def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
         self,
