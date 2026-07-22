@@ -1773,6 +1773,7 @@ class NodeRuntimeService:
             or receipt.get("input_payload_hash") != expected_payload_hash
             or receipt.get("contribution_attribution") != attribution
             or receipt.get("result_hash") != result.get("result_hash")
+            or receipt.get("model_expert_id") != result.get("model_expert_id")
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1905,6 +1906,7 @@ class NodeRuntimeService:
             "job_id": job_id,
             "work_id": job_id,
             "capability": capability,
+            "model_expert_id": result["model_expert_id"],
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": executor_node_id,
             "requester_identity": requester_identity,
