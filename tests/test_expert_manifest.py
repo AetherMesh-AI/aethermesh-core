@@ -136,10 +136,6 @@ class ExpertManifestTests(unittest.TestCase):
                         "creator_node_id": document["creator_node_id"],
                         "created_at": document["created_at"],
                         "artifact_hash": document["artifact_hash"],
-                        "lineage": document["lineage"],
-                        "contribution_attribution": document[
-                            "contribution_attribution"
-                        ],
                         "validated_at": document["validation"]["last_validated_at"],
                         "validator_node_id": document["validation"][
                             "validator_node_id"
@@ -149,6 +145,46 @@ class ExpertManifestTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            self.assertTrue(_receipt_matches_manifest(receipt, document))
+
+    def test_version_2_receipt_remains_accepted_without_version_3_fields(self) -> None:
+        document = self._sample()
+        document["version"] = 2
+        document.pop("output_schema_ref")
+        document["validation"].update(
+            {
+                "status": "passed",
+                "test_command": "python -m unittest",
+                "expected_inputs_ref": "input.json",
+                "receipt_path": "receipt.json",
+                "last_validated_at": "2026-07-18T00:00:01Z",
+                "validator_node_id": "node-validator",
+            }
+        )
+        document["contribution_attribution"].update(
+            {
+                "validator_node_id": "node-validator",
+                "receipt_refs": ["receipt.json"],
+            }
+        )
+        receipt_document = {
+            "receipt_version": RECEIPT_VERSION,
+            "name": document["name"],
+            "manifest_id": document["manifest_id"],
+            "expert_id": document["expert_id"],
+            "creator_node_id": document["creator_node_id"],
+            "created_at": document["created_at"],
+            "artifact_hash": document["artifact_hash"],
+            "input_schema_ref": document["input_schema_ref"],
+            "validated_at": document["validation"]["last_validated_at"],
+            "validator_node_id": document["validation"]["validator_node_id"],
+            "status": "passed",
+        }
+
+        validate_expert_manifest(document)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt = Path(temp_dir) / "receipt.json"
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
             self.assertTrue(_receipt_matches_manifest(receipt, document))
 
     def test_input_schema_reference_must_be_present_and_resolvable(self) -> None:

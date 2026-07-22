@@ -206,8 +206,14 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
             if document["version"] == 3
             else {}
         ),
-        "lineage": document["lineage"],
-        "contribution_attribution": document["contribution_attribution"],
+        **(
+            {
+                "lineage": document["lineage"],
+                "contribution_attribution": document["contribution_attribution"],
+            }
+            if document["version"] == 3
+            else {}
+        ),
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
         "status": validation["status"],
