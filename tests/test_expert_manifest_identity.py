@@ -58,7 +58,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
             artifact = directory / "artifact.txt"
             artifact.write_text("artifact", encoding="utf-8")
             document = self._sample()
-            self._write_input_schema(directory, document)
+            self._write_schemas(directory, document)
             document.pop("expert_id")
             document["model_id"] = "local-echo-model-v0"
             artifact_hash = (
@@ -94,6 +94,9 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "created_at": document["created_at"],
                 "artifact_hash": artifact_hash,
                 "input_schema_ref": document["input_schema_ref"],
+                "output_schema_ref": document["output_schema_ref"],
+                "lineage": document["lineage"],
+                "contribution_attribution": document["contribution_attribution"],
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
                 "status": "passed",
@@ -130,6 +133,14 @@ class ExpertManifestIdentityTests(unittest.TestCase):
     def _write_input_schema(directory: Path, document: dict[str, Any]) -> None:
         source = SAMPLE.parent / document["input_schema_ref"]
         destination = directory / document["input_schema_ref"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+
+    @classmethod
+    def _write_schemas(cls, directory: Path, document: dict[str, Any]) -> None:
+        cls._write_input_schema(directory, document)
+        source = SAMPLE.parent / document["output_schema_ref"]
+        destination = directory / document["output_schema_ref"]
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(source.read_bytes())
 
