@@ -1701,7 +1701,7 @@ class NodeRuntimeService:
         validator_id = receipt.get("validator_id")
         executor_node_id = receipt.get("executor_node_id")
         validation = receipt.get("validation")
-        if receipt.get("version") != 5:
+        if receipt.get("version") != 6:
             raise RuntimeServiceError("validation receipt has unsupported version")
         if receipt.get("job_id") != job_id:
             raise RuntimeServiceError("validation receipt does not match its work ID")
@@ -1774,6 +1774,7 @@ class NodeRuntimeService:
             or receipt.get("contribution_attribution") != attribution
             or receipt.get("result_hash") != result.get("result_hash")
             or receipt.get("model_expert_id") != result.get("model_expert_id")
+            or receipt.get("expert_version") != result.get("expert_version")
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1907,6 +1908,7 @@ class NodeRuntimeService:
             "work_id": job_id,
             "capability": capability,
             "model_expert_id": result["model_expert_id"],
+            "expert_version": result["expert_version"],
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": executor_node_id,
             "requester_identity": requester_identity,
@@ -2047,7 +2049,7 @@ class NodeRuntimeService:
                     evidence_errors,
                 )
                 if receipt:
-                    if receipt.get("version") != 5:
+                    if receipt.get("version") != 6:
                         evidence_errors.append(
                             "validation receipt has unsupported version"
                         )
@@ -2376,6 +2378,7 @@ class NodeRuntimeService:
             "model_expert_id": (
                 f"local-runner:{LocalRunner.EXECUTOR_NAME}@{LocalRunner.EXECUTOR_VERSION}"
             ),
+            "expert_version": LocalRunner.EXECUTOR_VERSION,
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,
             "manifest_id": manifest_id,
@@ -2437,10 +2440,11 @@ class NodeRuntimeService:
         atomic_create_json(
             self.paths.data_dir / "job-validation-receipts" / f"{job_id}.json",
             {
-                "version": 5,
+                "version": 6,
                 "job_id": job_id,
                 "capability": capability,
                 "model_expert_id": result_document["model_expert_id"],
+                "expert_version": result_document["expert_version"],
                 "receipt_id": self._receipt_id_for_job(job_id),
                 "validation_receipt_id": self._receipt_id_for_job(job_id),
                 "manifest_ref": manifest_ref,
@@ -2459,7 +2463,7 @@ class NodeRuntimeService:
                 "validator_id": worker_node_id,
                 "validator_software": capture_validator_software_metadata(
                     validator_name="deterministic_local_result_check",
-                    receipt_schema_version=5,
+                    receipt_schema_version=6,
                 ),
                 "executor_node_id": worker_node_id,
                 "requester_identity": manifest.get("requester_identity"),

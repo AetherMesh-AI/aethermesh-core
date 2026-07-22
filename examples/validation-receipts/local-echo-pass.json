@@ -1,13 +1,14 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "receipt_id": "local-validation-receipt-local-job-echo-001",
-  "receipt_hash": "sha256:3cc6b3cee0b91a943cfe8a27c25aeb7e914d0eac5bf7ffceac6650cd327ccd21",
-  "result_hash": "sha256:8b155027a82037544617cfcc8801dce2c1ad85d4ab6f06e397eeb5ee1319fa6b",
+  "receipt_hash": "sha256:aeb253c43a5246d03cb04d48d0a8e6afc12486378927a54ad1a576461b484422",
+  "result_hash": "sha256:54943ac2f5f9b8f921117791792e05efe0cc141a2f8a64719333cac2829be294",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
   "creator_node_id": "node.local-creator",
   "contributor_node_id": "node.local-worker",
   "model_expert_id": "local-runner:aethermesh-local-runner@1",
+  "expert_version": "1",
   "job_id": "local-job-echo-001",
   "work_id": "local-job-echo-001",
   "manifest_id": "sha256:72426ae139e40863ceb9ea2896c01d33114c226f944659de08eba371bbe8791c",
@@ -32,7 +33,7 @@
     "runtime_name": "CPython",
     "runtime_version": "3.14.2",
     "platform": "Darwin/arm64",
-    "receipt_schema_version": 8
+    "receipt_schema_version": 9
   },
   "lineage": {
     "contributor_node_id": "node.local-worker",

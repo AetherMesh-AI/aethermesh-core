@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 9
+JOB_RESULT_SCHEMA_VERSION = 10
 MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
@@ -54,6 +54,7 @@ _REQUIRED_FIELDS = frozenset(
         "task_id",
         "capability",
         "model_expert_id",
+        "expert_version",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",
@@ -108,6 +109,7 @@ def validate_job_result_document(
         "task_id",
         "capability",
         "model_expert_id",
+        "expert_version",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",

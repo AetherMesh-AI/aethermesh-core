@@ -4,7 +4,7 @@
   "job_id": "local-job-echo-002",
   "validation_receipt_id": "local-validation-receipt-local-job-echo-002",
   "result_hash_algorithm": "sha256",
-  "result_hash": "sha256:e200b5cd9128be570ba8dff7ef7a60c27ecb18b2518c793e01850cb422c70899",
+  "result_hash": "sha256:2e2e2ecb48525bef9af5f3ff7abfb18e22fa1c20868e43c46574eac3fbe28323",
   "creator_node_id": "node.local-creator",
   "contributor_node_id": "node.local-worker",
   "created_at": "2026-07-13T12:05:00Z",
@@ -15,6 +15,6 @@
   "source": {"local_source_path": null, "artifact_ref": "examples/job-results/local-echo-failed.json"},
   "manifest_links": {"node_manifest_ref": "examples/local-node-identity.json", "work_manifest_ref": "examples/job-envelopes/complete-local-echo.json", "input_manifest_ref": "examples/job-envelope-inputs/local-echo-input.json", "output_manifest_ref": "examples/job-results/local-echo-failed.json", "validation_manifest_ref": "examples/validation-receipts/local-echo-fail.json"},
   "validation": {"status": "invalid", "validator_node_id": "node.local-validator", "validation_receipt_ref": "examples/validation-receipts/local-echo-fail.json", "validated_at": "2026-07-13T12:00:01Z", "failure_reason": "output did not match deterministic echo expectation", "status_history": [{"status": "unvalidated", "validator_node_id": null, "validation_receipt_ref": null, "validated_at": null, "failure_reason": null}, {"status": "invalid", "validator_node_id": "node.local-validator", "validation_receipt_ref": "examples/validation-receipts/local-echo-fail.json", "validated_at": "2026-07-13T12:00:01Z", "failure_reason": "output did not match deterministic echo expectation"}]},
-  "lineage": {"contributor_node_id": "node.local-worker", "parent_contribution_ids": ["contribution.echo-0001"], "derived_artifact_ids": [], "input_hashes": ["sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f"], "output_hashes": ["sha256:e200b5cd9128be570ba8dff7ef7a60c27ecb18b2518c793e01850cb422c70899"], "deterministic_reproduction_notes": "Re-run the local echo fixture with the recorded input manifest."},
+  "lineage": {"contributor_node_id": "node.local-worker", "parent_contribution_ids": ["contribution.echo-0001"], "derived_artifact_ids": [], "input_hashes": ["sha256:a323e28d8df241a3873bf8b81be35611687d7ef97978a2f2df42691299bc391f"], "output_hashes": ["sha256:2e2e2ecb48525bef9af5f3ff7abfb18e22fa1c20868e43c46574eac3fbe28323"], "deterministic_reproduction_notes": "Re-run the local echo fixture with the recorded input manifest."},
   "attribution": {"author_id": "node.local-worker", "author_kind": "node", "role": "worker", "declared_tool_or_runtime": "aethermesh-core", "creation_mode": "automatic"}
 }
