@@ -104,6 +104,9 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("capabilities")
         document.pop("input_schema_ref")
         document.pop("output_schema_ref")
+        document.pop("author")
+        document.pop("owner")
+        document.pop("attribution_notes")
         document["validation"].update(
             {
                 "status": "passed",
@@ -134,10 +137,7 @@ class ExpertManifestTests(unittest.TestCase):
                         "name": document["name"],
                         "expert_id": document["expert_id"],
                         "creator_node_id": document["creator_node_id"],
-                        "author": document["author"],
-                        "owner": document["owner"],
                         "created_at": document["created_at"],
-                        "attribution_notes": document["attribution_notes"],
                         "artifact_hash": document["artifact_hash"],
                         "validated_at": document["validation"]["last_validated_at"],
                         "validator_node_id": document["validation"][
@@ -154,6 +154,9 @@ class ExpertManifestTests(unittest.TestCase):
         document = self._sample()
         document["version"] = 2
         document.pop("output_schema_ref")
+        document.pop("author")
+        document.pop("owner")
+        document.pop("attribution_notes")
         document["validation"].update(
             {
                 "status": "passed",
@@ -176,10 +179,7 @@ class ExpertManifestTests(unittest.TestCase):
             "manifest_id": document["manifest_id"],
             "expert_id": document["expert_id"],
             "creator_node_id": document["creator_node_id"],
-            "author": document["author"],
-            "owner": document["owner"],
             "created_at": document["created_at"],
-            "attribution_notes": document["attribution_notes"],
             "artifact_hash": document["artifact_hash"],
             "input_schema_ref": document["input_schema_ref"],
             "validated_at": document["validation"]["last_validated_at"],
