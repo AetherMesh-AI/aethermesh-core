@@ -99,6 +99,86 @@ class ExpertManifestTests(unittest.TestCase):
                 ):
                     validate_expert_manifest(document)
 
+    def test_version_7_requires_license_for_external_artifacts_only(self) -> None:
+        local_only = self._sample()
+        local_only["version"] = 7
+        local_only["external_artifacts"] = []
+        validate_expert_manifest(local_only)
+
+        third_party = copy.deepcopy(local_only)
+        third_party["external_artifacts"] = [
+            {"kind": "model", "reference": "upstream/example-model"}
+        ]
+        with self.assertRaisesRegex(
+            ExpertManifestError,
+            "license is required when external_artifacts are declared",
+        ):
+            validate_expert_manifest(third_party)
+
+        third_party["license"] = "Apache-2.0"
+        validate_expert_manifest(third_party)
+
+        third_party["external_artifacts"][0]["kind"] = "unknown"
+        with self.assertRaisesRegex(
+            ExpertManifestError, "external_artifacts\\[0\\].kind must be one of"
+        ):
+            validate_expert_manifest(third_party)
+
+    def test_version_7_license_metadata_preserves_manifest_provenance_and_receipt(
+        self,
+    ) -> None:
+        document = self._sample()
+        document["version"] = 7
+        document["external_artifacts"] = [
+            {"kind": "adapter", "reference": "upstream/example-adapter"}
+        ]
+        document["license"] = "MIT"
+        validate_expert_manifest(document)
+
+        for field in (
+            "manifest_id",
+            "creator_node_id",
+            "lineage",
+            "validation",
+            "contribution_attribution",
+        ):
+            with self.subTest(field=field):
+                self.assertEqual(document[field], self._sample()[field])
+
+        receipt = {
+            "receipt_version": RECEIPT_VERSION,
+            "name": document["name"],
+            "manifest_id": document["manifest_id"],
+            "expert_id": document["expert_id"],
+            "creator_node_id": document["creator_node_id"],
+            "author": document["author"],
+            "owner": document["owner"],
+            "created_at": document["created_at"],
+            "attribution_notes": document["attribution_notes"],
+            "artifact_hash": document["artifact_hash"],
+            "input_schema_ref": document["input_schema_ref"],
+            "output_schema_ref": document["output_schema_ref"],
+            "lineage": document["lineage"],
+            "training_lineage": document["training_lineage"],
+            "validation_history": document["validation_history"],
+            "external_artifacts": document["external_artifacts"],
+            "license": document["license"],
+            "contribution_attribution": document["contribution_attribution"],
+            "validated_at": document["validation"]["last_validated_at"],
+            "validator_node_id": document["validation"]["validator_node_id"],
+            "status": document["validation"]["status"],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt_path = Path(temp_dir) / "receipt.json"
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            self.assertTrue(_receipt_matches_manifest(receipt_path, document))
+
+        receipt["license"] = "GPL-3.0-only"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt_path = Path(temp_dir) / "receipt.json"
+            receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+            self.assertFalse(_receipt_matches_manifest(receipt_path, document))
+
     def test_training_lineage_entries_require_verified_local_hashes(self) -> None:
         document = self._sample()
         document["training_lineage"] = [
@@ -659,9 +739,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1, 2, 3, 4, 5, or 6"),
-            ("version", 7, "version must be 1, 2, 3, 4, 5, or 6"),
-            ("version", True, "version must be 1, 2, 3, 4, 5, or 6"),
+            ("version", "1", "version must be 1, 2, 3, 4, 5, 6, or 7"),
+            ("version", 8, "version must be 1, 2, 3, 4, 5, 6, or 7"),
+            ("version", True, "version must be 1, 2, 3, 4, 5, 6, or 7"),
             (
                 "expert_id",
                 "",
