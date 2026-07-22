@@ -223,6 +223,28 @@ class ExpertManifestTests(unittest.TestCase):
             ):
                 load_expert_manifest(path)
 
+            schema.write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://json-schema.org/draft/2020-12/schema",
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["message"],
+                        "properties": {
+                            "message": {
+                                "type": "string",
+                                "minLength": "not-an-integer",
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ExpertManifestError, "must contain a valid JSON Schema"
+            ):
+                load_expert_manifest(path)
+
             for required, field_type, message in (
                 ([{"not": "a field name"}], "string", "unique required input fields"),
                 (["message"], "not-a-json-schema-type", "accepted types"),

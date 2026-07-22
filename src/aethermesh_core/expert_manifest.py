@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
+
 MANIFEST_SCHEMA_VERSION = 2
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -401,6 +404,12 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
         raise ExpertManifestError(
             "input_schema_ref schema must declare input validation constraints"
         )
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ExpertManifestError(
+            "input_schema_ref must contain a valid JSON Schema draft 2020-12 schema"
+        ) from exc
 
 
 def _lineage(value: object) -> None:
