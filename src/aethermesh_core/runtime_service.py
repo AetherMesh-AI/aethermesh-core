@@ -46,6 +46,7 @@ from aethermesh_core.result_hash import canonical_result_document_hash
 from aethermesh_core.runner import LocalRunner, run_local_job
 from aethermesh_core.validation import validate_job_result
 from aethermesh_core.validation_receipt_schema import (
+    VALIDATION_RECEIPT_SCHEMA_VERSION,
     capture_validator_software_metadata,
     validate_validator_software_metadata,
 )
@@ -533,6 +534,67 @@ class NodeRuntimeService:
             "records": records,
             "note": "Local capability records only; validation is not network consensus.",
         }
+
+    def emit_capability_advertisement(self) -> dict[str, Any]:
+        """Write an honest, deterministic local capability advertisement artifact."""
+
+        config = self.load_config()
+        creator_node_id = _config_node_id(config)
+        if creator_node_id is None:
+            raise RuntimeServiceError(
+                "capability advertisement requires initialized local node identity"
+            )
+        enabled_work_types = _config_enabled_work_types(config)
+        current_workers = len(self.list_jobs()["current"])
+        capability_manifest_dir = self.paths.data_dir / "capability-manifests"
+        advertised_capabilities: list[dict[str, Any]] = []
+        for identifier, description, work_type in LOCAL_CAPABILITY_DEFINITIONS:
+            if work_type not in enabled_work_types:
+                continue
+            availability = self._work_capability_availability(
+                work_type=work_type,
+                enabled=True,
+                creator_node_id=creator_node_id,
+                current_workers=current_workers,
+            )
+            if availability["status"] != "available":
+                continue
+            manifest_ref = f"data/capability-manifests/{identifier}.json"
+            manifest = _capability_advertisement_manifest(
+                identifier=identifier,
+                description=description,
+                work_type=work_type,
+                creator_node_id=creator_node_id,
+            )
+            atomic_write_json(capability_manifest_dir / f"{identifier}.json", manifest)
+            advertised_capabilities.append(
+                _advertised_capability(
+                    identifier=identifier,
+                    description=description,
+                    work_type=work_type,
+                    creator_node_id=creator_node_id,
+                    manifest_ref=manifest_ref,
+                )
+            )
+        advertisement = {
+            "schema_version": 1,
+            "scope": "local-only-no-p2p",
+            "prototype_status": "prototype-local-validation-required",
+            "creator_node_id": creator_node_id,
+            "node_manifest_ref": "config.json",
+            "validation_receipt_format": (
+                f"local-validation-receipt-schema-v{VALIDATION_RECEIPT_SCHEMA_VERSION}"
+            ),
+            "capabilities": advertised_capabilities,
+            "note": (
+                "Local prototype advertisement only; it is not peer discovery, "
+                "network consensus, or reward eligibility."
+            ),
+        }
+        atomic_write_json(
+            self.paths.data_dir / "capability-advertisement.json", advertisement
+        )
+        return advertisement
 
     def _capability_record_summary(
         self, path: Path, local_node_id: str | None
@@ -3251,6 +3313,76 @@ def _capability_provenance(
             if identifier in resource_hints
             else {}
         ),
+    }
+
+
+def _capability_advertisement_manifest(
+    *,
+    identifier: str,
+    description: str,
+    work_type: str,
+    creator_node_id: str,
+) -> dict[str, Any]:
+    """Build the local manifest that backs one emitted capability claim."""
+
+    return {
+        "schema_version": 1,
+        "manifest_id": _capability_manifest_id(identifier),
+        "creator_node_id": creator_node_id,
+        "capability_id": identifier,
+        "task_type": work_type,
+        "description": description,
+        "required_inputs": _capability_check_payload(work_type),
+        "expected_outputs": f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
+        "validation": {
+            "method": "local-deterministic-job-result-validation",
+            "receipt_format": (
+                f"local-validation-receipt-schema-v{VALIDATION_RECEIPT_SCHEMA_VERSION}"
+            ),
+        },
+        "lineage": {
+            "node_manifest_ref": "config.json",
+            "result_manifest_template": "data/job-results/{job_id}.json",
+        },
+        "contribution_attribution": {"creator_node_id": creator_node_id},
+    }
+
+
+def _advertised_capability(
+    *,
+    identifier: str,
+    description: str,
+    work_type: str,
+    creator_node_id: str,
+    manifest_ref: str,
+) -> dict[str, Any]:
+    """Return one validation-gated local advertisement entry."""
+
+    return {
+        "capability_id": identifier,
+        "task_types": [work_type],
+        "description": description,
+        "scope": "local-only-no-p2p",
+        "prototype_status": "prototype-local-validation-required",
+        "runtime_limits": {"max_concurrent_jobs": LOCAL_CAPABILITY_WORKER_CAPACITY},
+        "required_inputs": _capability_check_payload(work_type),
+        "expected_outputs": f"local-job-result-schema-v{JOB_RESULT_SCHEMA_VERSION}",
+        "validation_requirements": {
+            "method": "local-deterministic-job-result-validation",
+            "receipt_format": (
+                f"local-validation-receipt-schema-v{VALIDATION_RECEIPT_SCHEMA_VERSION}"
+            ),
+            "required": True,
+        },
+        "lineage": {
+            "node_manifest_ref": "config.json",
+            "capability_manifest_ref": manifest_ref,
+            "validation_receipt_format": (
+                f"local-validation-receipt-schema-v{VALIDATION_RECEIPT_SCHEMA_VERSION}"
+            ),
+            "result_manifest_template": "data/job-results/{job_id}.json",
+        },
+        "contribution_attribution": {"creator_node_id": creator_node_id},
     }
 
 
