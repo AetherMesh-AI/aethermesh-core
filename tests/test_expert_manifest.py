@@ -738,11 +738,22 @@ class ExpertManifestTests(unittest.TestCase):
                 load_expert_manifest(path)
 
     def test_creator_node_id_is_required_before_local_manifest_use(self) -> None:
+        missing = self._sample()
+        missing.pop("creator_node_id")
+        with self.assertRaisesRegex(
+            ExpertManifestError,
+            "missing required field\\(s\\): creator_node_id",
+        ):
+            validate_expert_manifest(missing)
+
         for value, message in (
             (None, "creator_node_id must be a non-empty whitespace-free string"),
             ("", "creator_node_id must be a non-empty whitespace-free string"),
             (" \t ", "creator_node_id must be a non-empty whitespace-free string"),
+            ("placeholder", "creator_node_id must name a concrete creator node"),
             ("node-placeholder", "creator_node_id must name a concrete creator node"),
+            ("unknown", "creator_node_id must name a concrete creator node"),
+            ("unset", "creator_node_id must name a concrete creator node"),
         ):
             with self.subTest(value=value):
                 document = self._sample()
