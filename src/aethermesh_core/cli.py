@@ -712,6 +712,7 @@ def run_local_batch(
                 validation_valid=validation.valid,
                 validation_reason=validation.reason,
                 job_type=job.job_type,
+                manifest_ref=manifest_path,
             )
         save_ledger_document(ledger_path, ledger, extra_fields)
         result["ledger_path"] = ledger_path

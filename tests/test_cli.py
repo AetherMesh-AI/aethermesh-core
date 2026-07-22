@@ -1016,10 +1016,12 @@ class CliTests(unittest.TestCase):
         self.assertEqual(persisted["records"][0]["validation_valid"], True)
         self.assertEqual(persisted["records"][0]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][0]["job_type"], "echo")
+        self.assertEqual(persisted["records"][0]["manifest_ref"], str(manifest_path))
         self.assertEqual(persisted["records"][1]["node_id"], "local-node-b")
         self.assertEqual(persisted["records"][1]["validation_valid"], True)
         self.assertEqual(persisted["records"][1]["validation_reason"], "ok")
         self.assertEqual(persisted["records"][1]["job_type"], "text_stats")
+        self.assertEqual(persisted["records"][1]["manifest_ref"], str(manifest_path))
 
     def test_run_local_batch_preserves_existing_ledger_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

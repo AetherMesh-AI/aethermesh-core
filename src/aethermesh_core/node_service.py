@@ -107,6 +107,12 @@ class LocalNodeService:
 
     def _process_assignment(self, message: MeshMessage) -> ProcessedAssignment:
         job = _job_from_assignment_payload(message)
+        raw_manifest_ref = message.payload.get("manifest_ref")
+        manifest_ref = (
+            raw_manifest_ref
+            if isinstance(raw_manifest_ref, str) and raw_manifest_ref
+            else None
+        )
         result = self.runner.run(job)
         validation = validate_job_result(
             job, result, expected_node_id=self.identity.node_id
@@ -122,6 +128,7 @@ class LocalNodeService:
             validation_reason=validation.reason,
             job_type=job.job_type,
             version_metadata_ref=self.version_metadata_ref,
+            manifest_ref=manifest_ref,
         )
 
         result_message = self._send_message(

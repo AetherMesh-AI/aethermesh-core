@@ -21,6 +21,7 @@ class LocalNodeServiceTests(unittest.TestCase):
                 "job_id": "echo-1",
                 "job_type": "echo",
                 "payload": {"message": "hello mesh"},
+                "manifest_ref": "manifests/local-batch.json",
             },
         )
         bus.send(assignment)
@@ -37,6 +38,10 @@ class LocalNodeServiceTests(unittest.TestCase):
         self.assertEqual(processed.result.output, "hello mesh")
         self.assertTrue(processed.validation.valid)
         self.assertEqual(processed.contribution_record.contribution_units, 1)
+        self.assertEqual(
+            processed.contribution_record.manifest_ref,
+            "manifests/local-batch.json",
+        )
         self.assertEqual(ledger.summary_for_node("node-a").total_contribution_units, 1)
         self.assertEqual(
             [message.message_type for message in processed.emitted_messages],

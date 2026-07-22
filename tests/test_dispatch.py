@@ -64,18 +64,21 @@ class DispatchTests(unittest.TestCase):
                     "job_type": "echo",
                     "payload": {"message": "one"},
                     "node_id": "node-a",
+                    "manifest_ref": "examples/local-batch.json",
                 },
                 {
                     "job_id": "stats-1",
                     "job_type": "text_stats",
                     "payload": {"text": "hello mesh"},
                     "node_id": "node-a",
+                    "manifest_ref": "examples/local-batch.json",
                 },
                 {
                     "job_id": "echo-2",
                     "job_type": "echo",
                     "payload": {"message": "two"},
                     "node_id": "node-c",
+                    "manifest_ref": "examples/local-batch.json",
                 },
             ],
         )

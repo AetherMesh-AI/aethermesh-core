@@ -33,6 +33,7 @@ class ContributionRecord:
     result_hash: str | None = None
     version_metadata_ref: str | None = None
     created_at: str | None = None
+    manifest_ref: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the record into a JSON-compatible dictionary."""
@@ -40,6 +41,8 @@ class ContributionRecord:
         document = asdict(self)
         if self.version_metadata_ref is None:
             document.pop("version_metadata_ref")
+        if self.manifest_ref is None:
+            document.pop("manifest_ref")
         if self.created_at is None:
             document.pop("created_at")
         return document
@@ -80,6 +83,8 @@ class ContributionRecord:
             raise LedgerPersistenceError(
                 "ledger record field 'version_metadata_ref' must be a string or null"
             )
+        manifest_ref = payload.get("manifest_ref")
+        _require_optional_manifest_ref(manifest_ref)
         created_at = payload.get("created_at")
         if created_at is not None:
             _require_utc_timestamp("created_at", created_at)
@@ -95,6 +100,7 @@ class ContributionRecord:
             result_hash=result_hash,
             version_metadata_ref=version_ref,
             created_at=created_at,
+            manifest_ref=manifest_ref,
         )
 
 
@@ -134,14 +140,19 @@ class ContributionLedger:
         validation_reason: str | None = None,
         job_type: str | None = None,
         version_metadata_ref: str | None = None,
+        manifest_ref: str | None = None,
     ) -> ContributionRecord:
         """Record one result and return its local contribution record.
 
         Only completed results with positive integer contribution units add to
         totals. Failed, zero, and negative-unit results are preserved for local
         auditability but contribute zero units.
+
+        ``manifest_ref`` is recorded only when the caller has known manifest
+        provenance; it may be a stable local reference or content hash.
         """
 
+        _require_optional_manifest_ref(manifest_ref)
         units = _accounted_units(result)
         message = (
             result.error if result.error is not None else _string_output(result.output)
@@ -158,6 +169,7 @@ class ContributionLedger:
             result_hash=canonical_result_hash(result),
             version_metadata_ref=version_metadata_ref,
             created_at=_utc_timestamp(self._clock()),
+            manifest_ref=manifest_ref,
         )
         self._records.append(record)
         return record
@@ -335,6 +347,13 @@ def _require_record_field(
     if not isinstance(value, expected_type) or isinstance(value, bool):
         raise LedgerPersistenceError(
             f"ledger record field '{field_name}' must be {expected_type.__name__}"
+        )
+
+
+def _require_optional_manifest_ref(value: object) -> None:
+    if value is not None and (not isinstance(value, str) or not value.strip()):
+        raise LedgerPersistenceError(
+            "ledger record field 'manifest_ref' must be a non-empty string or null"
         )
 
 
