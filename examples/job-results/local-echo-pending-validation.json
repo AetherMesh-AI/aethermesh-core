@@ -1,11 +1,11 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "result_hash": null,
   "result_id": "local-result-echo-pending-001",
   "job_id": "local-job-echo-pending-001",
   "task_id": "local-task-echo-pending-001",
   "capability": "work.echo",
-  "model_ref": null,
+  "model_expert_id": "local-runner:aethermesh-local-runner@1",
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

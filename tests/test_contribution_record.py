@@ -42,7 +42,7 @@ class ContributionRecordTests(unittest.TestCase):
         self.assertEqual(self.minimal["result_hash_algorithm"], "sha256")
         self.assertEqual(
             self.minimal["result_hash"],
-            "sha256:d38453ef5f09ed11c37d19c129e6980366aa7bb43e11a17950ae3d8017a8eda0",
+            "sha256:8b155027a82037544617cfcc8801dce2c1ad85d4ab6f06e397eeb5ee1319fa6b",
         )
         self.assertEqual(self.minimal["validation"]["status"], "valid")
         self.assertEqual(self.minimal["lineage"]["parent_contribution_ids"], [])

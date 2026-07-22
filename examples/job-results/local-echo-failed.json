@@ -1,10 +1,11 @@
 {
-  "schema_version": 8,
-  "result_hash": "sha256:ddd69e30e335c07c253eec00f347c0fcaf591c793e3807f9ff87ecd3afd5ba31",
+  "schema_version": 9,
+  "result_hash": "sha256:e200b5cd9128be570ba8dff7ef7a60c27ecb18b2518c793e01850cb422c70899",
   "result_id": "local-result-echo-002",
   "job_id": "local-job-echo-002",
   "task_id": "local-task-echo-002",
   "capability": "work.echo",
+  "model_expert_id": "local-runner:aethermesh-local-runner@1",
   "creator_node_id": "node.local-creator",
   "executor_node_id": "node.local-worker",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",

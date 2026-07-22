@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from importlib import metadata
 from typing import Any
 
-VALIDATION_RECEIPT_SCHEMA_VERSION = 7
+VALIDATION_RECEIPT_SCHEMA_VERSION = 8
 VALIDATION_STATUSES = frozenset({"pass", "fail", "error", "skipped"})
 RECEIPT_STATUSES = frozenset({"accepted", "rejected"})
 VALIDATION_RECEIPT_ID_PREFIX = "local-validation-receipt-"
@@ -25,6 +25,7 @@ _REQUIRED_FIELDS = frozenset(
         "validated_at",
         "creator_node_id",
         "contributor_node_id",
+        "model_expert_id",
         "job_id",
         "work_id",
         "manifest_id",
@@ -117,12 +118,13 @@ def validate_validation_receipt_document(document: object) -> dict[str, Any]:
         or receipt["schema_version"] != VALIDATION_RECEIPT_SCHEMA_VERSION
     ):
         raise ValidationReceiptSchemaError(
-            "validation receipt.schema_version must be integer 7"
+            "validation receipt.schema_version must be integer 8"
         )
     for field in (
         "receipt_id",
         "creator_node_id",
         "contributor_node_id",
+        "model_expert_id",
         "job_id",
         "work_id",
         "manifest_id",
