@@ -1,7 +1,7 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "receipt_id": "local-validation-receipt-local-job-echo-002",
-  "receipt_hash": "sha256:c657644d0bb9c38a7e58e4478b2f37904e8dc494a51acbe1c3d98bca4785ac9e",
+  "receipt_hash": "sha256:c7668857820a81a94867e72f4f5f848da9f53b9525aa3235d8f75de4365c0542",
   "result_hash": "sha256:2e2e2ecb48525bef9af5f3ff7abfb18e22fa1c20868e43c46574eac3fbe28323",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
@@ -12,6 +12,7 @@
   "job_id": "local-job-echo-002",
   "work_id": "local-job-echo-002",
   "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "manifest_reference": null,
   "status": "rejected",
   "rejection_reason": "output did not match deterministic echo expectation",
   "validation_status": "fail",
@@ -35,7 +36,7 @@
     "runtime_name": "CPython",
     "runtime_version": "3.14.2",
     "platform": "Darwin/arm64",
-    "receipt_schema_version": 9
+    "receipt_schema_version": 10
   },
   "lineage": {
     "contributor_node_id": "node.local-worker",
