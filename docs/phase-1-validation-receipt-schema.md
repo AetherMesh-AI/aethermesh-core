@@ -8,7 +8,7 @@ Every top-level field is required and unknown top-level fields are rejected. Thi
 
 | Field | Meaning |
 | --- | --- |
-| `schema_version` | Fixed integer `7`. |
+| `schema_version` | Fixed integer `10`. |
 | `receipt_id` | Stable local receipt identifier derived as `local-validation-receipt-{work_id}`. |
 | `receipt_hash` | SHA-256 hash of the canonical stable receipt content. |
 | `result_hash` | Required `sha256:<64 lowercase hex>` digest of the durable job result being validated. |
