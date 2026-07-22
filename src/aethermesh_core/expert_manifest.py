@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
+from referencing.exceptions import Unresolvable
 
 MANIFEST_SCHEMA_VERSION = 3
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
@@ -173,7 +174,7 @@ def validate_expert_output(path: str | Path, output: object) -> None:
     schema = _output_schema_ref(document, manifest_path.parent)
     try:
         Draft202012Validator(cast(Any, schema)).validate(output)
-    except ValidationError as exc:
+    except (ValidationError, Unresolvable) as exc:
         raise ExpertManifestError("output does not satisfy output_schema_ref") from exc
 
 

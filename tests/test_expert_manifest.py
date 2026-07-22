@@ -388,6 +388,23 @@ class ExpertManifestTests(unittest.TestCase):
         ):
             validate_expert_output(SAMPLE, "")
 
+    def test_output_schema_reports_an_unresolvable_local_fragment(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir)
+            document = self._sample()
+            self._write_schemas(directory, document)
+            schema_path = directory / document["output_schema_ref"]
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema["$ref"] = "#/$defs/missing"
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+            manifest_path = directory / "manifest.json"
+            manifest_path.write_text(json.dumps(document), encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                ExpertManifestError, "output does not satisfy output_schema_ref"
+            ):
+                validate_expert_output(manifest_path, "echoed local value")
+
     def test_failed_receipt_records_manifest_creator_schema_lineage_and_attribution(
         self,
     ) -> None:
