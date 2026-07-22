@@ -93,7 +93,7 @@ jobs:
       - name: Install package and mypy
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[ui]" mypy
+          python -m pip install -e ".[dev,ui]" mypy
       - name: mypy strict passes
         run: mypy --strict src scripts
 
