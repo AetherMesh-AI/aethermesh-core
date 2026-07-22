@@ -1,5 +1,6 @@
 import copy
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -51,6 +52,72 @@ class JobResultSchemaTests(unittest.TestCase):
             self.pending["contribution"]["creator_node_id"],
             self.pending["creator_node_id"],
         )
+
+    def test_local_output_attribution_round_trips_with_authorizing_evidence(
+        self,
+    ) -> None:
+        output = copy.deepcopy(self.success)
+        output["lineage"]["parent_job_ids"] = ["local-parent-job-001"]
+        output["contribution"]["upstream_lineage_sources"] = ["local-parent-job-001"]
+        output["result_hash"] = canonical_result_document_hash(output)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "local-output.json"
+            path.write_text(json.dumps(output, sort_keys=True), encoding="utf-8")
+            reloaded = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertIs(validate_job_result_document(reloaded), reloaded)
+        self.assertEqual(reloaded["creator_node_id"], "node.local-creator")
+        self.assertEqual(
+            reloaded["manifest_id"],
+            "sha256:72426ae139e40863ceb9ea2896c01d33114c226f944659de08eba371bbe8791c",
+        )
+        self.assertEqual(
+            reloaded["manifest_id"], reloaded["references"]["manifest_hash"]
+        )
+        self.assertEqual(
+            reloaded["validation_receipt_id"],
+            "local-validation-receipt-local-job-echo-001",
+        )
+        self.assertIn(
+            reloaded["validation_receipt_id"],
+            reloaded["references"]["validation_receipt_ids"],
+        )
+        self.assertEqual(
+            reloaded["lineage"]["parent_job_ids"], ["local-parent-job-001"]
+        )
+        self.assertEqual(
+            reloaded["contribution"]["creator_node_id"], reloaded["creator_node_id"]
+        )
+        self.assertEqual(
+            reloaded["contribution"]["upstream_lineage_sources"],
+            reloaded["lineage"]["parent_job_ids"],
+        )
+
+        for label, mutation, message in (
+            (
+                "missing",
+                lambda document: document.pop("creator_node_id"),
+                "missing: creator_node_id",
+            ),
+            (
+                "empty",
+                lambda document: document.__setitem__("creator_node_id", ""),
+                "non-empty identifier",
+            ),
+            (
+                "mismatched",
+                lambda document: document["contribution"].__setitem__(
+                    "creator_node_id", "node.local-other"
+                ),
+                "must match the top-level record",
+            ),
+        ):
+            with self.subTest(label=label):
+                invalid = copy.deepcopy(reloaded)
+                mutation(invalid)
+                with self.assertRaisesRegex(JobResultSchemaError, message):
+                    validate_job_result_document(invalid)
 
     def test_model_expert_id_and_version_are_required_stable_local_provenance(
         self,
