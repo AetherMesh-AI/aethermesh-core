@@ -93,7 +93,7 @@ _V4_TOP_LEVEL = _V3_TOP_LEVEL | {
     "owner",
     "attribution_notes",
 }
-_V5_TOP_LEVEL = _V4_TOP_LEVEL | {"training_lineage"}
+_V5_TOP_LEVEL = _V4_TOP_LEVEL | {"training_lineage", "validation_history"}
 
 
 class ExpertManifestError(ValueError):
@@ -136,6 +136,7 @@ def validate_expert_manifest(document: object) -> None:
             _text(document[field], field)
     if document["version"] >= 5:
         _training_lineage(document["training_lineage"])
+        _validation_history(document["validation_history"])
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -236,7 +237,10 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
             else {}
         ),
         **(
-            {"training_lineage": document["training_lineage"]}
+            {
+                "training_lineage": document["training_lineage"],
+                "validation_history": document["validation_history"],
+            }
             if document["version"] >= 5
             else {}
         ),
@@ -603,6 +607,12 @@ def _training_lineage(value: object) -> None:
             raise ExpertManifestError(
                 f"{context}.sha256 must be a lowercase sha256 content hash"
             )
+
+
+def _validation_history(value: object) -> None:
+    """Reserve an evidence-only append point without treating it as network trust."""
+    if not isinstance(value, list):
+        raise ExpertManifestError("validation_history must be a list")
 
 
 def _capabilities(value: object) -> None:

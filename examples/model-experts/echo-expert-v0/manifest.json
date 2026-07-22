@@ -45,6 +45,7 @@
     "derived_artifact_refs": []
   },
   "training_lineage": [],
+  "validation_history": [],
   "validation": {
     "test_command": null,
     "expected_inputs_ref": null,
