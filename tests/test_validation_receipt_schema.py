@@ -62,7 +62,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
                 "manifest_ref": "examples/job-envelopes/minimal-local-echo.json",
             },
         )
-        self.assertIsNone(self.failing["manifest_reference"])
+        self.assertEqual(
+            self.failing["manifest_reference"],
+            {
+                "manifest_id": self.failing["manifest_id"],
+                "manifest_ref": "examples/job-envelopes/complete-local-echo.json",
+            },
+        )
         for block in ("validation_method", "lineage", "contribution"):
             with self.subTest(block=block):
                 self.assertEqual(
@@ -93,17 +99,22 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         self.assertEqual(captured["validator_build_identifier"], "unknown")
         self.assertEqual(captured["receipt_schema_version"], 8)
 
-    def test_manifest_reference_resolves_to_its_content_addressed_manifest(
+    def test_manifest_references_resolve_to_their_content_addressed_manifests(
         self,
     ) -> None:
-        reference = self.passing["manifest_reference"]
-        self.assertIsInstance(reference, dict)
-        manifest_path = Path(__file__).resolve().parents[1] / reference["manifest_ref"]
-        manifest = json.loads(manifest_path.read_text("utf-8"))
-        self.assertEqual(
-            canonical_json_hash(manifest, prefix="sha256:"), reference["manifest_id"]
-        )
-        self.assertEqual(reference["manifest_id"], self.passing["manifest_id"])
+        for receipt in (self.passing, self.failing):
+            with self.subTest(receipt_id=receipt["receipt_id"]):
+                reference = receipt["manifest_reference"]
+                self.assertIsInstance(reference, dict)
+                manifest_path = (
+                    Path(__file__).resolve().parents[1] / reference["manifest_ref"]
+                )
+                manifest = json.loads(manifest_path.read_text("utf-8"))
+                self.assertEqual(
+                    canonical_json_hash(manifest, prefix="sha256:"),
+                    reference["manifest_id"],
+                )
+                self.assertEqual(reference["manifest_id"], receipt["manifest_id"])
 
     def test_non_manifest_receipt_remains_valid(self) -> None:
         receipt = copy.deepcopy(self.failing)
@@ -119,6 +130,12 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         mismatched["receipt_hash"] = canonical_validation_receipt_hash(mismatched)
         with self.assertRaisesRegex(ValidationReceiptSchemaError, "must match receipt"):
             validate_validation_receipt_document(mismatched)
+
+        missing = copy.deepcopy(self.passing)
+        missing["manifest_reference"] = None
+        missing["receipt_hash"] = canonical_validation_receipt_hash(missing)
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "is required"):
+            validate_validation_receipt_document(missing)
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)

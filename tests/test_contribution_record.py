@@ -223,7 +223,10 @@ class ContributionRecordTests(unittest.TestCase):
             )
             self.assertEqual(
                 audit_entries[0]["manifest_id"],
-                "sha256:" + "d" * 64,
+                canonical_json_hash(
+                    self._load_job_envelope("complete-local-echo.json"),
+                    prefix="sha256:",
+                ),
             )
             with self.assertRaisesRegex(ContributionRecordError, "missing"):
                 record_validated_contribution({}, self.root, journal_path)

@@ -1,8 +1,8 @@
 {
   "schema_version": 10,
   "receipt_id": "local-validation-receipt-local-job-echo-002",
-  "receipt_hash": "sha256:c7668857820a81a94867e72f4f5f848da9f53b9525aa3235d8f75de4365c0542",
-  "result_hash": "sha256:2e2e2ecb48525bef9af5f3ff7abfb18e22fa1c20868e43c46574eac3fbe28323",
+  "receipt_hash": "sha256:5ef44219f0e4a88b0bc5da040882d33b1f6ed28bcece0af481d6360da06998dd",
+  "result_hash": "sha256:2b8a909f42d98a085d11f5423704b8b892516df3d7fdc7a11c6b85f11b3b1c44",
   "created_at": "2026-07-13T12:00:00.000000Z",
   "validated_at": "2026-07-13T12:00:01.000000Z",
   "creator_node_id": "node.local-creator",
@@ -11,15 +11,18 @@
   "expert_version": "1",
   "job_id": "local-job-echo-002",
   "work_id": "local-job-echo-002",
-  "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-  "manifest_reference": null,
+  "manifest_id": "sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8",
+  "manifest_reference": {
+    "manifest_id": "sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8",
+    "manifest_ref": "examples/job-envelopes/complete-local-echo.json"
+  },
   "status": "rejected",
   "rejection_reason": "output did not match deterministic echo expectation",
   "validation_status": "fail",
   "validation_method": {
     "kind": "deterministic_fixture_replay",
     "description": "Replayed the deterministic local echo fixture and found that its output differs from the result artifact.",
-    "manifest_id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "manifest_id": "sha256:408ad29f4b07cb3cf1bd3b50fddd3441fdd4d8c52727d707e68bff408a067bd8",
     "creator_node_id": "node.local-creator",
     "contributor_node_id": "node.local-worker",
     "work_id": "local-job-echo-002",

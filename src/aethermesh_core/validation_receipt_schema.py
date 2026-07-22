@@ -429,6 +429,10 @@ def _validation_method(value: object, receipt: dict[str, Any]) -> None:
 
 def _manifest_reference(value: object, manifest_id: object) -> None:
     if value is None:
+        if manifest_id is not None:
+            raise ValidationReceiptSchemaError(
+                "validation receipt.manifest_reference is required when manifest_id is present"
+            )
         return
     reference = _object(
         value, "validation receipt.manifest_reference", _MANIFEST_REFERENCE_FIELDS
