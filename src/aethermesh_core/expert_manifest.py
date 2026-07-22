@@ -77,7 +77,10 @@ _V1_TOP_LEVEL = {
     "expert_id",
     "name",
     "creator_node_id",
+    "author",
+    "owner",
     "created_at",
+    "attribution_notes",
     "artifact_hash",
     "artifact",
     "supported_task_categories",
@@ -125,6 +128,8 @@ def validate_expert_manifest(document: object) -> None:
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
+    for field in ("author", "owner", "attribution_notes"):
+        _text(document[field], field)
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -195,7 +200,10 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         ),
         **{field: document[field] for field in _identity_fields(document)},
         "creator_node_id": document["creator_node_id"],
+        "author": document["author"],
+        "owner": document["owner"],
         "created_at": document["created_at"],
+        "attribution_notes": document["attribution_notes"],
         "artifact_hash": document["artifact_hash"],
         **(
             {"input_schema_ref": document["input_schema_ref"]}

@@ -134,7 +134,10 @@ class ExpertManifestTests(unittest.TestCase):
                         "name": document["name"],
                         "expert_id": document["expert_id"],
                         "creator_node_id": document["creator_node_id"],
+                        "author": document["author"],
+                        "owner": document["owner"],
                         "created_at": document["created_at"],
+                        "attribution_notes": document["attribution_notes"],
                         "artifact_hash": document["artifact_hash"],
                         "validated_at": document["validation"]["last_validated_at"],
                         "validator_node_id": document["validation"][
@@ -173,7 +176,10 @@ class ExpertManifestTests(unittest.TestCase):
             "manifest_id": document["manifest_id"],
             "expert_id": document["expert_id"],
             "creator_node_id": document["creator_node_id"],
+            "author": document["author"],
+            "owner": document["owner"],
             "created_at": document["created_at"],
+            "attribution_notes": document["attribution_notes"],
             "artifact_hash": document["artifact_hash"],
             "input_schema_ref": document["input_schema_ref"],
             "validated_at": document["validation"]["last_validated_at"],
@@ -417,7 +423,10 @@ class ExpertManifestTests(unittest.TestCase):
             "manifest_id": document["manifest_id"],
             "expert_id": document["expert_id"],
             "creator_node_id": document["creator_node_id"],
+            "author": document["author"],
+            "owner": document["owner"],
             "created_at": document["created_at"],
+            "attribution_notes": document["attribution_notes"],
             "artifact_hash": document["artifact_hash"],
             "input_schema_ref": document["input_schema_ref"],
             "output_schema_ref": document["output_schema_ref"],
@@ -498,7 +507,10 @@ class ExpertManifestTests(unittest.TestCase):
             "version",
             "expert_id",
             "creator_node_id",
+            "author",
+            "owner",
             "created_at",
+            "attribution_notes",
             "lineage",
             "validation",
             "contribution_attribution",
@@ -541,6 +553,9 @@ class ExpertManifestTests(unittest.TestCase):
             ("created_at", "yesterday", "created_at must be"),
             ("creator_node_id", "", "creator_node_id must be"),
             ("creator_node_id", "   ", "creator_node_id must be"),
+            ("author", "   ", "author must be a non-empty string"),
+            ("owner", "", "owner must be a non-empty string"),
+            ("attribution_notes", "\t", "attribution_notes must be a non-empty string"),
             ("name", "   ", "name must be a non-empty string"),
             ("supported_task_categories", [], "supported_task_categories must be"),
             ("runtime_requirements", [""], "runtime_requirements must be"),
@@ -565,6 +580,15 @@ class ExpertManifestTests(unittest.TestCase):
             ExpertManifestError, "missing required field\\(s\\): creator_node_id"
         ):
             validate_expert_manifest(document)
+
+        for field in ("author", "owner", "attribution_notes"):
+            with self.subTest(field=field):
+                document = self._sample()
+                document.pop(field)
+                with self.assertRaisesRegex(
+                    ExpertManifestError, f"missing required field\\(s\\): {field}"
+                ):
+                    validate_expert_manifest(document)
 
         document = self._sample()
         document.pop("created_at")
@@ -696,7 +720,10 @@ class ExpertManifestTests(unittest.TestCase):
                 "manifest_id": document["manifest_id"],
                 "expert_id": document["expert_id"],
                 "creator_node_id": document["creator_node_id"],
+                "author": document["author"],
+                "owner": document["owner"],
                 "created_at": document["created_at"],
+                "attribution_notes": document["attribution_notes"],
                 "artifact_hash": document["artifact_hash"],
                 "input_schema_ref": document["input_schema_ref"],
                 "output_schema_ref": document["output_schema_ref"],
