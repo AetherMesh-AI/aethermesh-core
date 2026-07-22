@@ -78,11 +78,11 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             patch.dict(os.environ, {"AETHERMESH_BUILD_ID": "/private/build"}),
         ):
             captured = capture_validator_software_metadata(
-                validator_name="deterministic_fixture_replay", receipt_schema_version=7
+                validator_name="deterministic_fixture_replay", receipt_schema_version=8
             )
 
         self.assertEqual(captured["validator_build_identifier"], "unknown")
-        self.assertEqual(captured["receipt_schema_version"], 7)
+        self.assertEqual(captured["receipt_schema_version"], 8)
 
     def test_required_fields_and_unknown_fields_are_rejected(self) -> None:
         missing = copy.deepcopy(self.passing)
@@ -117,6 +117,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
             ValidationReceiptSchemaError, "missing: contributor_node_id"
         ):
             validate_validation_receipt_document(missing_contributor)
+
+        missing_model_expert = copy.deepcopy(self.passing)
+        missing_model_expert.pop("model_expert_id")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: model_expert_id"
+        ):
+            validate_validation_receipt_document(missing_model_expert)
 
         malformed_timestamp = copy.deepcopy(self.passing)
         malformed_timestamp["validated_at"] = "2026-07-13T12:00:00+00:00"
@@ -229,7 +236,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
 
         old_version = copy.deepcopy(self.passing)
         old_version["schema_version"] = 6
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 7"):
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 8"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)

@@ -1773,6 +1773,7 @@ class NodeRuntimeService:
             or receipt.get("input_payload_hash") != expected_payload_hash
             or receipt.get("contribution_attribution") != attribution
             or receipt.get("result_hash") != result.get("result_hash")
+            or receipt.get("model_expert_id") != result.get("model_expert_id")
             or not _provenance_matches_job(
                 lineage, attribution, job_id, manifest.get("creator_node_id")
             )
@@ -1905,6 +1906,7 @@ class NodeRuntimeService:
             "job_id": job_id,
             "work_id": job_id,
             "capability": capability,
+            "model_expert_id": result["model_expert_id"],
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": executor_node_id,
             "requester_identity": requester_identity,
@@ -2371,8 +2373,8 @@ class NodeRuntimeService:
             "job_id": job_id,
             "task_id": job_id,
             "capability": capability,
-            "model_ref": (
-                f"local-worker:{LocalRunner.EXECUTOR_NAME}@{LocalRunner.EXECUTOR_VERSION}"
+            "model_expert_id": (
+                f"local-runner:{LocalRunner.EXECUTOR_NAME}@{LocalRunner.EXECUTOR_VERSION}"
             ),
             "creator_node_id": manifest["creator_node_id"],
             "executor_node_id": worker_node_id,
@@ -2438,6 +2440,7 @@ class NodeRuntimeService:
                 "version": 5,
                 "job_id": job_id,
                 "capability": capability,
+                "model_expert_id": result_document["model_expert_id"],
                 "receipt_id": self._receipt_id_for_job(job_id),
                 "validation_receipt_id": self._receipt_id_for_job(job_id),
                 "manifest_ref": manifest_ref,

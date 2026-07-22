@@ -70,6 +70,7 @@ def canonical_result_document_hash(document: object) -> str:
         "job_id": result["job_id"],
         "task_id": result["task_id"],
         "capability": result["capability"],
+        "model_expert_id": result["model_expert_id"],
         "creator_node_id": result["creator_node_id"],
         "executor_node_id": result["executor_node_id"],
         "manifest_ref": result["manifest_id"],
@@ -90,8 +91,6 @@ def canonical_result_document_hash(document: object) -> str:
         "lineage": result["lineage"],
         "contribution": result["contribution"],
     }
-    if "model_ref" in result:
-        payload["model_ref"] = result["model_ref"]
     return "sha256:" + hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
 
 

@@ -2227,7 +2227,8 @@ class RuntimeServiceTests(unittest.TestCase):
                     self.assertEqual(document["creator_node_id"], "creator-local-a")
                     self.assertEqual(document["executor_node_id"], worker)
                     self.assertEqual(
-                        document["model_ref"], "local-worker:aethermesh-local-runner@1"
+                        document["model_expert_id"],
+                        "local-runner:aethermesh-local-runner@1",
                     )
                     self.assertEqual(document["status"], expected_status)
                     self.assertEqual(
@@ -2261,6 +2262,17 @@ class RuntimeServiceTests(unittest.TestCase):
                     )
                     if expected_status == "failed":
                         self.assertIsNotNone(document["failure_reasons"]["validation"])
+                    receipt = json.loads(
+                        (
+                            Path(temp_dir)
+                            / "data"
+                            / "job-validation-receipts"
+                            / f"{submission['job_id']}.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(
+                        receipt["model_expert_id"], document["model_expert_id"]
+                    )
             self.assertEqual(
                 succeeded["result"],
                 {
@@ -3008,6 +3020,10 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(payload["creator_node_id"], "creator-local-a")
             self.assertEqual(payload["executor_node_id"], "worker-local-a")
+            self.assertEqual(
+                payload["model_expert_id"],
+                "local-runner:aethermesh-local-runner@1",
+            )
             self.assertEqual(payload["manifest_ref"], accepted["manifest_ref"])
             self.assertEqual(payload["lineage_parent_ids"], ["data/prior-job.json"])
             self.assertEqual(payload["validation_status"], "passed")
@@ -3040,6 +3056,13 @@ class RuntimeServiceTests(unittest.TestCase):
                 stored_receipt["contribution_attribution"],
                 payload["contribution_attribution"],
             )
+            stored_receipt["model_expert_id"] = "local-runner:other@1"
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "incomplete provenance evidence"
+            ):
+                service.get_local_validation_receipt(work_id=accepted["job_id"])
+            stored_receipt["model_expert_id"] = payload["model_expert_id"]
             stored_receipt["execution"]["executor_node_id"] = "worker-local-other"
             receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
             with self.assertRaisesRegex(

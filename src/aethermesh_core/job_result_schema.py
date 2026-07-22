@@ -7,7 +7,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-JOB_RESULT_SCHEMA_VERSION = 8
+JOB_RESULT_SCHEMA_VERSION = 9
 MAX_INLINE_OUTPUT_PAYLOAD_BYTES = 4 * 1024
 RESULT_STATUSES = frozenset(
     {
@@ -53,6 +53,7 @@ _REQUIRED_FIELDS = frozenset(
         "job_id",
         "task_id",
         "capability",
+        "model_expert_id",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",
@@ -76,7 +77,6 @@ _REQUIRED_FIELDS = frozenset(
         "result_hash",
     }
 )
-_OPTIONAL_FIELDS = frozenset({"model_ref"})
 
 
 class JobResultSchemaError(ValueError):
@@ -95,7 +95,7 @@ def validate_job_result_document(
         document,
         "job result",
         required_fields,
-        allowed=_REQUIRED_FIELDS | _OPTIONAL_FIELDS,
+        allowed=_REQUIRED_FIELDS,
     )
     _exact_integer(
         result["schema_version"],
@@ -107,6 +107,7 @@ def validate_job_result_document(
         "job_id",
         "task_id",
         "capability",
+        "model_expert_id",
         "creator_node_id",
         "executor_node_id",
         "manifest_id",
@@ -114,9 +115,6 @@ def validate_job_result_document(
         "validator_node_id",
     ):
         _identifier(result[field], f"job result.{field}")
-    model_ref = result.get("model_ref")
-    if model_ref is not None:
-        _identifier(model_ref, "job result.model_ref")
     created_at = _timestamp(result["created_at"], "job result.created_at")
     started_at = _timestamp(result["started_at"], "job result.started_at")
     finished_at = _timestamp(result["finished_at"], "job result.finished_at")
