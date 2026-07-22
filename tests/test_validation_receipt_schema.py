@@ -125,6 +125,13 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
         ):
             validate_validation_receipt_document(missing_model_expert)
 
+        missing_expert_version = copy.deepcopy(self.passing)
+        missing_expert_version.pop("expert_version")
+        with self.assertRaisesRegex(
+            ValidationReceiptSchemaError, "missing: expert_version"
+        ):
+            validate_validation_receipt_document(missing_expert_version)
+
         malformed_timestamp = copy.deepcopy(self.passing)
         malformed_timestamp["validated_at"] = "2026-07-13T12:00:00+00:00"
         malformed_timestamp["receipt_hash"] = canonical_validation_receipt_hash(
@@ -236,7 +243,7 @@ class ValidationReceiptSchemaTests(unittest.TestCase):
 
         old_version = copy.deepcopy(self.passing)
         old_version["schema_version"] = 6
-        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 8"):
+        with self.assertRaisesRegex(ValidationReceiptSchemaError, "must be integer 9"):
             validate_validation_receipt_document(old_version)
 
         receipt = copy.deepcopy(self.passing)

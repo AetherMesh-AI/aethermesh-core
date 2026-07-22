@@ -52,20 +52,25 @@ class JobResultSchemaTests(unittest.TestCase):
             self.pending["creator_node_id"],
         )
 
-    def test_model_expert_id_is_required_stable_local_provenance(self) -> None:
+    def test_model_expert_id_and_version_are_required_stable_local_provenance(
+        self,
+    ) -> None:
         self.assertEqual(
             self.success["model_expert_id"], "local-runner:aethermesh-local-runner@1"
         )
+        self.assertEqual(self.success["expert_version"], "1")
         self.assertIs(validate_job_result_document(self.success), self.success)
 
-        missing = copy.deepcopy(self.success)
-        missing.pop("model_expert_id")
-        with self.assertRaisesRegex(JobResultSchemaError, "missing: model_expert_id"):
-            validate_job_result_document(missing)
+        for field in ("model_expert_id", "expert_version"):
+            with self.subTest(field=field):
+                missing = copy.deepcopy(self.success)
+                missing.pop(field)
+                with self.assertRaisesRegex(JobResultSchemaError, f"missing: {field}"):
+                    validate_job_result_document(missing)
 
         invalid = copy.deepcopy(self.success)
-        invalid["model_expert_id"] = "ambiguous local worker"
-        with self.assertRaisesRegex(JobResultSchemaError, "model_expert_id"):
+        invalid["expert_version"] = "ambiguous local worker"
+        with self.assertRaisesRegex(JobResultSchemaError, "expert_version"):
             validate_job_result_document(invalid)
 
     def test_required_attribution_lineage_manifest_and_validation_fields_reject_omission(
@@ -75,6 +80,7 @@ class JobResultSchemaTests(unittest.TestCase):
             "creator_node_id",
             "capability",
             "model_expert_id",
+            "expert_version",
             "executor_node_id",
             "manifest_id",
             "references",
@@ -107,7 +113,7 @@ class JobResultSchemaTests(unittest.TestCase):
     def test_invalid_status_and_missing_identifiers_are_rejected(self) -> None:
         old_version = copy.deepcopy(self.success)
         old_version["schema_version"] = 1
-        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 9"):
+        with self.assertRaisesRegex(JobResultSchemaError, "must be integer 10"):
             validate_job_result_document(old_version)
 
         invalid_status = copy.deepcopy(self.success)

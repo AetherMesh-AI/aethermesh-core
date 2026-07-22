@@ -292,7 +292,7 @@ class RuntimeServiceTests(unittest.TestCase):
                 receipt["validator_software"]["validator_name"],
                 "deterministic_local_result_check",
             )
-            self.assertEqual(receipt["validator_software"]["receipt_schema_version"], 5)
+            self.assertEqual(receipt["validator_software"]["receipt_schema_version"], 6)
             self.assertEqual(
                 receipt["validation_method"],
                 {
@@ -2230,6 +2230,7 @@ class RuntimeServiceTests(unittest.TestCase):
                         document["model_expert_id"],
                         "local-runner:aethermesh-local-runner@1",
                     )
+                    self.assertEqual(document["expert_version"], "1")
                     self.assertEqual(document["status"], expected_status)
                     self.assertEqual(
                         document["validation_status"],
@@ -2272,6 +2273,9 @@ class RuntimeServiceTests(unittest.TestCase):
                     )
                     self.assertEqual(
                         receipt["model_expert_id"], document["model_expert_id"]
+                    )
+                    self.assertEqual(
+                        receipt["expert_version"], document["expert_version"]
                     )
             self.assertEqual(
                 succeeded["result"],
