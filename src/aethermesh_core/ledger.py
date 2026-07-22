@@ -84,10 +84,7 @@ class ContributionRecord:
                 "ledger record field 'version_metadata_ref' must be a string or null"
             )
         manifest_ref = payload.get("manifest_ref")
-        if not isinstance(manifest_ref, (str, type(None))) or manifest_ref == "":
-            raise LedgerPersistenceError(
-                "ledger record field 'manifest_ref' must be a non-empty string or null"
-            )
+        _require_optional_manifest_ref(manifest_ref)
         created_at = payload.get("created_at")
         if created_at is not None:
             _require_utc_timestamp("created_at", created_at)
@@ -155,6 +152,7 @@ class ContributionLedger:
         provenance; it may be a stable local reference or content hash.
         """
 
+        _require_optional_manifest_ref(manifest_ref)
         units = _accounted_units(result)
         message = (
             result.error if result.error is not None else _string_output(result.output)
@@ -349,6 +347,13 @@ def _require_record_field(
     if not isinstance(value, expected_type) or isinstance(value, bool):
         raise LedgerPersistenceError(
             f"ledger record field '{field_name}' must be {expected_type.__name__}"
+        )
+
+
+def _require_optional_manifest_ref(value: object) -> None:
+    if value is not None and (not isinstance(value, str) or not value.strip()):
+        raise LedgerPersistenceError(
+            "ledger record field 'manifest_ref' must be a non-empty string or null"
         )
 
 

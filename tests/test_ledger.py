@@ -213,6 +213,17 @@ class ContributionLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(LedgerPersistenceError, "manifest_ref"):
             ContributionRecord.from_dict({**payload, "manifest_ref": ""})
 
+    def test_record_rejects_empty_manifest_reference_before_persistence(self) -> None:
+        ledger = ContributionLedger()
+
+        with self.assertRaisesRegex(LedgerPersistenceError, "manifest_ref"):
+            ledger.record(
+                JobResult("job-1", "node-a", "completed", "hello mesh", None, 1),
+                manifest_ref="",
+            )
+
+        self.assertEqual(ledger.to_document()["records"], [])
+
     def test_legacy_contribution_record_without_validation_metadata_loads(self) -> None:
         payload = {
             "node_id": "node-a",
