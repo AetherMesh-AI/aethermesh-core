@@ -174,11 +174,16 @@ class ContributionLedgerTests(unittest.TestCase):
             validation_reason="ok",
             job_type="echo",
             result_hash="a" * 64,
+            manifest_ref="examples/job-envelopes/minimal-local-echo.json",
         )
 
         decoded = ContributionRecord.from_dict(json.loads(json.dumps(record.to_dict())))
 
         self.assertEqual(decoded, record)
+        self.assertEqual(
+            decoded.manifest_ref,
+            "examples/job-envelopes/minimal-local-echo.json",
+        )
 
     def test_contribution_record_rejects_invalid_result_hash(self) -> None:
         valid = ContributionRecord(
@@ -196,6 +201,17 @@ class ContributionLedgerTests(unittest.TestCase):
                     LedgerPersistenceError, "lowercase SHA-256 hex digest"
                 ):
                     ContributionRecord.from_dict(payload)
+
+    def test_contribution_record_rejects_empty_manifest_reference(self) -> None:
+        payload = ContributionRecord(
+            node_id="node-a",
+            job_id="job-1",
+            status="completed",
+            contribution_units=1,
+        ).to_dict()
+
+        with self.assertRaisesRegex(LedgerPersistenceError, "manifest_ref"):
+            ContributionRecord.from_dict({**payload, "manifest_ref": ""})
 
     def test_legacy_contribution_record_without_validation_metadata_loads(self) -> None:
         payload = {
@@ -217,6 +233,7 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertIsNone(record.validation_reason)
         self.assertIsNone(record.job_type)
         self.assertIsNone(record.result_hash)
+        self.assertIsNone(record.manifest_ref)
 
     def test_record_persists_validation_metadata_when_supplied(self) -> None:
         ledger = ContributionLedger(
@@ -257,7 +274,7 @@ class ContributionLedgerTests(unittest.TestCase):
             },
         )
 
-    def test_timestamp_preserves_existing_audit_references(self) -> None:
+    def test_record_preserves_explicit_audit_references(self) -> None:
         ledger = ContributionLedger(
             clock=lambda: datetime(2026, 7, 14, 14, 8, 7, tzinfo=UTC)
         )
@@ -268,6 +285,7 @@ class ContributionLedgerTests(unittest.TestCase):
             validation_reason="ok",
             job_type="echo",
             version_metadata_ref="version-metadata.json",
+            manifest_ref="manifests/local-job-1.json",
         )
 
         self.assertEqual(record.node_id, "node-a")
@@ -275,7 +293,18 @@ class ContributionLedgerTests(unittest.TestCase):
         self.assertEqual(record.validation_valid, True)
         self.assertEqual(record.validation_reason, "ok")
         self.assertEqual(record.version_metadata_ref, "version-metadata.json")
+        self.assertEqual(record.manifest_ref, "manifests/local-job-1.json")
         self.assertEqual(record.created_at, "2026-07-14T14:08:07Z")
+
+    def test_non_manifest_record_omits_manifest_reference(self) -> None:
+        ledger = ContributionLedger()
+
+        record = ledger.record(
+            JobResult("job-1", "node-a", "completed", "hello mesh", None, 1)
+        )
+
+        self.assertIsNone(record.manifest_ref)
+        self.assertNotIn("manifest_ref", record.to_dict())
 
     def test_timestamp_rejects_non_utc_or_malformed_persisted_values(self) -> None:
         record = ContributionRecord(
