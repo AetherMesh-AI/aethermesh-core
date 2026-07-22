@@ -737,6 +737,53 @@ class ExpertManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ExpertManifestError, "invalid UTF-8"):
                 load_expert_manifest(path)
 
+    def test_missing_manifest_attribution_rejects_model_and_expert_before_use(
+        self,
+    ) -> None:
+        for identity_field, identity in (
+            ("expert_id", "local-attribution-expert-v0"),
+            ("model_id", "local-attribution-model-v0"),
+        ):
+            with self.subTest(identity_field=identity_field):
+                document = self._sample()
+                document.pop("expert_id")
+                document[identity_field] = identity
+                document.pop("contribution_attribution")
+
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    directory = Path(temp_dir)
+                    self._write_schemas(directory, document)
+                    manifest_path = directory / "manifest.json"
+                    manifest_path.write_text(
+                        json.dumps(document, sort_keys=True), encoding="utf-8"
+                    )
+                    records_before = {
+                        path.relative_to(directory): path.read_bytes()
+                        for path in directory.rglob("*")
+                        if path.is_file()
+                    }
+
+                    for use_manifest in (
+                        lambda: load_expert_manifest(manifest_path),
+                        lambda: validate_expert_output(
+                            manifest_path, "echoed local value"
+                        ),
+                    ):
+                        with self.assertRaisesRegex(
+                            ExpertManifestError,
+                            "missing required field\\(s\\): contribution_attribution",
+                        ):
+                            use_manifest()
+
+                    self.assertEqual(
+                        {
+                            path.relative_to(directory): path.read_bytes()
+                            for path in directory.rglob("*")
+                            if path.is_file()
+                        },
+                        records_before,
+                    )
+
     def test_creator_node_id_is_required_before_local_manifest_use(self) -> None:
         missing = self._sample()
         missing.pop("creator_node_id")
