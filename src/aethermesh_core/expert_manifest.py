@@ -1,4 +1,4 @@
-"""Small, local-only version 1 through 3 model/expert manifest validation."""
+"""Small, local-only version 1 through 4 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from referencing.exceptions import Unresolvable
 
-MANIFEST_SCHEMA_VERSION = 3
+MANIFEST_SCHEMA_VERSION = 4
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
@@ -88,6 +88,11 @@ _V1_TOP_LEVEL = {
 }
 _V2_TOP_LEVEL = _V1_TOP_LEVEL | {"manifest_id", "capabilities", "input_schema_ref"}
 _V3_TOP_LEVEL = _V2_TOP_LEVEL | {"output_schema_ref"}
+_V4_TOP_LEVEL = _V3_TOP_LEVEL | {
+    "author",
+    "owner",
+    "attribution_notes",
+}
 
 
 class ExpertManifestError(ValueError):
@@ -120,11 +125,14 @@ def validate_expert_manifest(document: object) -> None:
     if document["version"] >= 2:
         _string(document["manifest_id"], "manifest_id")
         _reference(document["input_schema_ref"], "input_schema_ref")
-    if document["version"] == 3:
+    if document["version"] >= 3:
         _reference(document["output_schema_ref"], "output_schema_ref")
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
+    if document["version"] == 4:
+        for field in ("author", "owner", "attribution_notes"):
+            _text(document[field], field)
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -196,6 +204,15 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         **{field: document[field] for field in _identity_fields(document)},
         "creator_node_id": document["creator_node_id"],
         "created_at": document["created_at"],
+        **(
+            {
+                "author": document["author"],
+                "owner": document["owner"],
+                "attribution_notes": document["attribution_notes"],
+            }
+            if document["version"] == 4
+            else {}
+        ),
         "artifact_hash": document["artifact_hash"],
         **(
             {"input_schema_ref": document["input_schema_ref"]}
@@ -204,7 +221,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         ),
         **(
             {"output_schema_ref": document["output_schema_ref"]}
-            if document["version"] == 3
+            if document["version"] >= 3
             else {}
         ),
         **(
@@ -212,7 +229,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
                 "lineage": document["lineage"],
                 "contribution_attribution": document["contribution_attribution"],
             }
-            if document["version"] == 3
+            if document["version"] >= 3
             else {}
         ),
         "validated_at": validation["last_validated_at"],
@@ -237,7 +254,9 @@ def _top_level_object(value: object) -> dict[str, Any]:
         )
     _manifest_version(value["version"])
     allowed = (
-        _V3_TOP_LEVEL
+        _V4_TOP_LEVEL
+        if value["version"] == 4
+        else _V3_TOP_LEVEL
         if value["version"] == 3
         else _V2_TOP_LEVEL
         if value["version"] == 2
@@ -276,8 +295,8 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value not in {1, 2, MANIFEST_SCHEMA_VERSION}:
-        raise ExpertManifestError("version must be 1, 2, or 3")
+    if type(value) is not int or value not in {1, 2, 3, MANIFEST_SCHEMA_VERSION}:
+        raise ExpertManifestError("version must be 1, 2, 3, or 4")
 
 
 def _string(value: object, context: str) -> None:

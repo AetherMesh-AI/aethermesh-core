@@ -26,7 +26,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
-        self.assertEqual(document["version"], 3)
+        self.assertEqual(document["version"], 4)
         self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
@@ -104,6 +104,9 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("capabilities")
         document.pop("input_schema_ref")
         document.pop("output_schema_ref")
+        document.pop("author")
+        document.pop("owner")
+        document.pop("attribution_notes")
         document["validation"].update(
             {
                 "status": "passed",
@@ -151,6 +154,9 @@ class ExpertManifestTests(unittest.TestCase):
         document = self._sample()
         document["version"] = 2
         document.pop("output_schema_ref")
+        document.pop("author")
+        document.pop("owner")
+        document.pop("attribution_notes")
         document["validation"].update(
             {
                 "status": "passed",
@@ -176,6 +182,50 @@ class ExpertManifestTests(unittest.TestCase):
             "created_at": document["created_at"],
             "artifact_hash": document["artifact_hash"],
             "input_schema_ref": document["input_schema_ref"],
+            "validated_at": document["validation"]["last_validated_at"],
+            "validator_node_id": document["validation"]["validator_node_id"],
+            "status": "passed",
+        }
+
+        validate_expert_manifest(document)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            receipt = Path(temp_dir) / "receipt.json"
+            receipt.write_text(json.dumps(receipt_document), encoding="utf-8")
+            self.assertTrue(_receipt_matches_manifest(receipt, document))
+
+    def test_version_3_receipt_remains_accepted_without_version_4_fields(self) -> None:
+        document = self._sample()
+        document["version"] = 3
+        for field in ("author", "owner", "attribution_notes"):
+            document.pop(field)
+        document["validation"].update(
+            {
+                "status": "passed",
+                "test_command": "python -m unittest",
+                "expected_inputs_ref": "input.json",
+                "receipt_path": "receipt.json",
+                "last_validated_at": "2026-07-18T00:00:01Z",
+                "validator_node_id": "node-validator",
+            }
+        )
+        document["contribution_attribution"].update(
+            {
+                "validator_node_id": "node-validator",
+                "receipt_refs": ["receipt.json"],
+            }
+        )
+        receipt_document = {
+            "receipt_version": RECEIPT_VERSION,
+            "name": document["name"],
+            "manifest_id": document["manifest_id"],
+            "expert_id": document["expert_id"],
+            "creator_node_id": document["creator_node_id"],
+            "created_at": document["created_at"],
+            "artifact_hash": document["artifact_hash"],
+            "input_schema_ref": document["input_schema_ref"],
+            "output_schema_ref": document["output_schema_ref"],
+            "lineage": document["lineage"],
+            "contribution_attribution": document["contribution_attribution"],
             "validated_at": document["validation"]["last_validated_at"],
             "validator_node_id": document["validation"]["validator_node_id"],
             "status": "passed",
@@ -417,7 +467,10 @@ class ExpertManifestTests(unittest.TestCase):
             "manifest_id": document["manifest_id"],
             "expert_id": document["expert_id"],
             "creator_node_id": document["creator_node_id"],
+            "author": document["author"],
+            "owner": document["owner"],
             "created_at": document["created_at"],
+            "attribution_notes": document["attribution_notes"],
             "artifact_hash": document["artifact_hash"],
             "input_schema_ref": document["input_schema_ref"],
             "output_schema_ref": document["output_schema_ref"],
@@ -498,7 +551,10 @@ class ExpertManifestTests(unittest.TestCase):
             "version",
             "expert_id",
             "creator_node_id",
+            "author",
+            "owner",
             "created_at",
+            "attribution_notes",
             "lineage",
             "validation",
             "contribution_attribution",
@@ -530,9 +586,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1, 2, or 3"),
-            ("version", 4, "version must be 1, 2, or 3"),
-            ("version", True, "version must be 1, 2, or 3"),
+            ("version", "1", "version must be 1, 2, 3, or 4"),
+            ("version", 5, "version must be 1, 2, 3, or 4"),
+            ("version", True, "version must be 1, 2, 3, or 4"),
             (
                 "expert_id",
                 "",
@@ -541,6 +597,9 @@ class ExpertManifestTests(unittest.TestCase):
             ("created_at", "yesterday", "created_at must be"),
             ("creator_node_id", "", "creator_node_id must be"),
             ("creator_node_id", "   ", "creator_node_id must be"),
+            ("author", "   ", "author must be a non-empty string"),
+            ("owner", "", "owner must be a non-empty string"),
+            ("attribution_notes", "\t", "attribution_notes must be a non-empty string"),
             ("name", "   ", "name must be a non-empty string"),
             ("supported_task_categories", [], "supported_task_categories must be"),
             ("runtime_requirements", [""], "runtime_requirements must be"),
@@ -565,6 +624,15 @@ class ExpertManifestTests(unittest.TestCase):
             ExpertManifestError, "missing required field\\(s\\): creator_node_id"
         ):
             validate_expert_manifest(document)
+
+        for field in ("author", "owner", "attribution_notes"):
+            with self.subTest(field=field):
+                document = self._sample()
+                document.pop(field)
+                with self.assertRaisesRegex(
+                    ExpertManifestError, f"missing required field\\(s\\): {field}"
+                ):
+                    validate_expert_manifest(document)
 
         document = self._sample()
         document.pop("created_at")
@@ -696,7 +764,10 @@ class ExpertManifestTests(unittest.TestCase):
                 "manifest_id": document["manifest_id"],
                 "expert_id": document["expert_id"],
                 "creator_node_id": document["creator_node_id"],
+                "author": document["author"],
+                "owner": document["owner"],
                 "created_at": document["created_at"],
+                "attribution_notes": document["attribution_notes"],
                 "artifact_hash": document["artifact_hash"],
                 "input_schema_ref": document["input_schema_ref"],
                 "output_schema_ref": document["output_schema_ref"],
