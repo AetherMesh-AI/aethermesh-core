@@ -118,6 +118,7 @@ def dispatch_local_batch(
                 "job_type": job.job_type,
                 "payload": dict(job.payload),
                 "node_id": assignment.node_id,
+                "manifest_ref": manifest_path,
             },
             correlation_id=job.job_id,
         )
