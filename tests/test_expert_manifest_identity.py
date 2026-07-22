@@ -99,6 +99,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
                 "input_schema_ref": document["input_schema_ref"],
                 "output_schema_ref": document["output_schema_ref"],
                 "lineage": document["lineage"],
+                "training_lineage": document["training_lineage"],
                 "contribution_attribution": document["contribution_attribution"],
                 "validated_at": document["validation"]["last_validated_at"],
                 "validator_node_id": document["validation"]["validator_node_id"],
