@@ -9,6 +9,7 @@ description = "Minimal local AetherMesh Core prototype."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "jsonschema>=4.23",
   "typer>=0.26.8",
   "rich>=15.0.0",
 ]
@@ -20,6 +21,7 @@ ui = [
 ]
 dev = [
   "httpx>=0.27",
+  "types-jsonschema>=4.23",
 ]
 
 [project.scripts]
@@ -37,6 +39,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.aethermesh.dependency_justifications]
+"jsonschema>=4.23" = "Validates local expert input contracts against the declared JSON Schema draft before they become routing or validation evidence."
 "typer>=0.26.8" = "Provides the first-class installable aethermesh CLI without duplicating core node logic."
 "rich>=15.0.0" = "Provides readable terminal status tables for the first-class local CLI."
 

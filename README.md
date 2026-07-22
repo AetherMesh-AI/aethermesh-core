@@ -37,6 +37,16 @@ validation receipt references, lineage, or contribution attribution, and they
 do not represent a price, payment, reward, token value, staking, yield, or
 financial settlement. Token-economic field names and wording are rejected.
 
+## Local expert input schemas
+
+Version 2 local model/expert manifests require `input_schema_ref`. It is a safe
+relative reference resolved from the manifest directory without network access.
+Manifest loading fails when the field is missing, empty, unresolved, or does
+not point to a JSON Schema draft 2020-12 file that declares required input
+fields, accepted types, and validation constraints. Passed validation receipts
+record the manifest ID, creator node ID, input schema reference, and pass
+status alongside the existing lineage and contribution attribution evidence.
+
 ## Install for development
 
 Requires Python 3.11 or newer.
