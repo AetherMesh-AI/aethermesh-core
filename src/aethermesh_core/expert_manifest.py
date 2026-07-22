@@ -18,6 +18,7 @@ _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
 _TOP_LEVEL = {
     "version",
+    "manifest_id",
     "model_id",
     "expert_id",
     "name",
@@ -27,6 +28,7 @@ _TOP_LEVEL = {
     "artifact",
     "supported_task_categories",
     "runtime_requirements",
+    "capabilities",
     "lineage",
     "validation",
     "contribution_attribution",
@@ -60,6 +62,7 @@ def validate_expert_manifest(document: object) -> None:
     """Validate required version 1 fields without claiming network trust or capability."""
     document = _top_level_object(document)
     _manifest_version(document["version"])
+    _string(document["manifest_id"], "manifest_id")
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
@@ -69,6 +72,7 @@ def validate_expert_manifest(document: object) -> None:
     _artifact_hash(document)
     _strings(document["supported_task_categories"], "supported_task_categories", True)
     _strings(document["runtime_requirements"], "runtime_requirements", True)
+    _capabilities(document["capabilities"])
     _lineage(document["lineage"])
     _validation(document["validation"])
     _attribution(document["contribution_attribution"], document["creator_node_id"])
@@ -291,6 +295,24 @@ _VALIDATION = {
     "status",
     "validator_node_id",
 }
+_CAPABILITY = {
+    "capability_id",
+    "name",
+    "description",
+    "input_modality",
+    "output_modality",
+    "supported_task_type",
+    "local_constraints",
+    "known_limitations",
+    "validation",
+}
+_CAPABILITY_VALIDATION = {
+    "status",
+    "local_test_name",
+    "validation_receipt_id",
+    "validated_at",
+    "result_summary",
+}
 _LINEAGE = {
     "source_model",
     "adapter_ref",
@@ -299,6 +321,52 @@ _LINEAGE = {
     "parent_manifest_ids",
     "derived_artifact_refs",
 }
+
+
+def _capabilities(value: object) -> None:
+    if not isinstance(value, list) or not value:
+        raise ExpertManifestError("capabilities must be a non-empty list")
+    seen_ids: set[str] = set()
+    for index, capability in enumerate(value):
+        context = f"capabilities[{index}]"
+        capability = _object(capability, _CAPABILITY, context)
+        capability_id = capability["capability_id"]
+        _string(capability_id, f"{context}.capability_id")
+        if capability_id in seen_ids:
+            raise ExpertManifestError("capability_id values must be unique")
+        seen_ids.add(cast(str, capability_id))
+        for field in (
+            "name",
+            "description",
+            "input_modality",
+            "output_modality",
+            "supported_task_type",
+        ):
+            _text(capability[field], f"{context}.{field}")
+        _strings(capability["local_constraints"], f"{context}.local_constraints")
+        _strings(capability["known_limitations"], f"{context}.known_limitations")
+        _capability_validation(capability["validation"], context)
+
+
+def _capability_validation(value: object, capability_context: str) -> None:
+    context = f"{capability_context}.validation"
+    validation = _object(value, _CAPABILITY_VALIDATION, context)
+    status = validation["status"]
+    if not isinstance(status, str) or status not in _STATUSES:
+        raise ExpertManifestError(
+            f"{context}.status must be unvalidated, passed, or failed"
+        )
+    evidence_fields = _CAPABILITY_VALIDATION - {"status"}
+    if status == "unvalidated":
+        if any(validation[field] is not None for field in evidence_fields):
+            raise ExpertManifestError(
+                f"{context} must not claim validation evidence when unvalidated"
+            )
+        return
+    _text(validation["local_test_name"], f"{context}.local_test_name")
+    _string(validation["validation_receipt_id"], f"{context}.validation_receipt_id")
+    _text(validation["result_summary"], f"{context}.result_summary")
+    _timestamp(validation["validated_at"], f"{context}.validated_at")
 
 
 def _validation(value: object) -> None:

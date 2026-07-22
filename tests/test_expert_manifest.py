@@ -1,6 +1,5 @@
 import copy
 import json
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,20 +25,23 @@ class ExpertManifestTests(unittest.TestCase):
         document = load_expert_manifest(SAMPLE)
 
         self.assertEqual(document["version"], 1)
+        self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
         self.assertTrue(document["creator_node_id"])
         self.assertEqual(document["created_at"], "2026-07-18T00:00:00Z")
         self.assertEqual(document["validation"]["receipt_path"], None)
+        self.assertEqual(
+            document["capabilities"][0]["validation"]["status"], "unvalidated"
+        )
         self.assertFalse(expert_is_usable(SAMPLE))
 
-    def test_copy_preserves_lineage_and_attribution(self) -> None:
+    def test_save_and_load_preserve_lineage_and_attribution(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            copied = Path(temp_dir) / "manifest.json"
-            shutil.copyfile(SAMPLE, copied)
-
+            saved = Path(temp_dir) / "manifest.json"
             original = load_expert_manifest(SAMPLE)
-            handoff = load_expert_manifest(copied)
+            saved.write_text(json.dumps(original, sort_keys=True), encoding="utf-8")
+            handoff = load_expert_manifest(saved)
 
         self.assertEqual(handoff["lineage"], original["lineage"])
         self.assertEqual(
@@ -47,6 +49,44 @@ class ExpertManifestTests(unittest.TestCase):
         )
         self.assertEqual(handoff["creator_node_id"], original["creator_node_id"])
         self.assertEqual(handoff["created_at"], original["created_at"])
+        self.assertEqual(handoff["manifest_id"], original["manifest_id"])
+        self.assertEqual(handoff["capabilities"], original["capabilities"])
+
+    def test_capability_metadata_requires_complete_evidence_or_unvalidated_status(
+        self,
+    ) -> None:
+        document = self._sample()
+        document.pop("capabilities")
+        with self.assertRaisesRegex(ExpertManifestError, "missing required field"):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        capability = document["capabilities"][0]
+        capability["validation"] = {
+            "status": "passed",
+            "local_test_name": "test_local_echo",
+            "validation_receipt_id": "receipt-local-echo-v0",
+            "validated_at": "2026-07-18T00:00:01Z",
+            "result_summary": "fixture output matched exactly",
+        }
+        validate_expert_manifest(document)
+
+        capability["validation"]["validation_receipt_id"] = None
+        with self.assertRaisesRegex(
+            ExpertManifestError,
+            "validation_receipt_id must be a non-empty whitespace-free string",
+        ):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        document["capabilities"][0]["validation"]["status"] = []
+        with self.assertRaisesRegex(ExpertManifestError, "validation.status must be"):
+            validate_expert_manifest(document)
+
+        document = self._sample()
+        document["capabilities"][0]["validation"]["local_test_name"] = "test_local_echo"
+        with self.assertRaisesRegex(ExpertManifestError, "when unvalidated"):
+            validate_expert_manifest(document)
 
     def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
         self,

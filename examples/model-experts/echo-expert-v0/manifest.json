@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "manifest_id": "local-echo-fixture-manifest-v0",
   "expert_id": "local-echo-fixture-v0",
   "name": "Local Echo Fixture Expert",
   "creator_node_id": "node-local-fixture",
@@ -11,6 +12,25 @@
   },
   "supported_task_categories": ["echo"],
   "runtime_requirements": ["python-local-runner", "text-fixture"],
+  "capabilities": [
+    {
+      "capability_id": "capability.local-echo-v0",
+      "name": "Local echo text",
+      "description": "Returns the supplied local text fixture unchanged.",
+      "input_modality": "text",
+      "output_modality": "text",
+      "supported_task_type": "echo",
+      "local_constraints": ["local fixture input only", "python local runner required"],
+      "known_limitations": ["not validated against arbitrary user input", "not a network service"],
+      "validation": {
+        "status": "unvalidated",
+        "local_test_name": null,
+        "validation_receipt_id": null,
+        "validated_at": null,
+        "result_summary": null
+      }
+    }
+  ],
   "lineage": {
     "source_model": "local-fixture",
     "adapter_ref": null,
