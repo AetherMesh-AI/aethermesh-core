@@ -132,6 +132,19 @@ class ExpertManifestTests(unittest.TestCase):
         ):
             validate_expert_manifest(document)
 
+        for reference in (
+            "",
+            "../input.schema.json",
+            "https://example.com/schema.json",
+        ):
+            with self.subTest(reference=reference):
+                document = self._sample()
+                document["input_schema_ref"] = reference
+                with self.assertRaisesRegex(
+                    ExpertManifestError, "input_schema_ref must be"
+                ):
+                    validate_expert_manifest(document)
+
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "manifest.json"
             document = self._sample()

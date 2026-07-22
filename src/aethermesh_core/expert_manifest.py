@@ -113,6 +113,7 @@ def validate_expert_manifest(document: object) -> None:
     document = _top_level_object(document)
     if document["version"] == 2:
         _string(document["manifest_id"], "manifest_id")
+        _reference(document["input_schema_ref"], "input_schema_ref")
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
@@ -343,7 +344,6 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
     if document["version"] == 1:
         return
     reference = document["input_schema_ref"]
-    _reference(reference, "input_schema_ref")
     try:
         contents = _local_reference_path(manifest_root, cast(str, reference)).read_text(
             encoding="utf-8"
