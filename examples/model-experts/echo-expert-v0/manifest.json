@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "manifest_id": "local-echo-fixture-manifest-v0",
   "expert_id": "local-echo-fixture-v0",
   "name": "Local Echo Fixture Expert",
@@ -11,6 +11,7 @@
     "sha256": "sha256:f0dfa5bb9b76a4cc47883babe74f0666e7198e1659769a6f229da929c4af12d1"
   },
   "input_schema_ref": "schemas/local-echo-input.schema.json",
+  "output_schema_ref": "schemas/local-echo-output.schema.json",
   "supported_task_categories": ["echo"],
   "runtime_requirements": ["python-local-runner", "text-fixture"],
   "capabilities": [

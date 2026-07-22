@@ -1,4 +1,4 @@
-"""Small, local-only version 1 and 2 model/expert manifest validation."""
+"""Small, local-only version 1 through 3 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import SchemaError
+from jsonschema.exceptions import SchemaError, ValidationError
+from referencing.exceptions import Unresolvable
 
-MANIFEST_SCHEMA_VERSION = 2
+MANIFEST_SCHEMA_VERSION = 3
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
@@ -86,6 +87,7 @@ _V1_TOP_LEVEL = {
     "contribution_attribution",
 }
 _V2_TOP_LEVEL = _V1_TOP_LEVEL | {"manifest_id", "capabilities", "input_schema_ref"}
+_V3_TOP_LEVEL = _V2_TOP_LEVEL | {"output_schema_ref"}
 
 
 class ExpertManifestError(ValueError):
@@ -108,15 +110,18 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
         ) from exc
     validate_expert_manifest(document)
     _input_schema_ref(document, Path(path).parent)
+    _output_schema_ref(document, Path(path).parent)
     return cast(dict[str, Any], document)
 
 
 def validate_expert_manifest(document: object) -> None:
     """Validate required manifest fields without claiming network trust or capability."""
     document = _top_level_object(document)
-    if document["version"] == 2:
+    if document["version"] >= 2:
         _string(document["manifest_id"], "manifest_id")
         _reference(document["input_schema_ref"], "input_schema_ref")
+    if document["version"] == 3:
+        _reference(document["output_schema_ref"], "output_schema_ref")
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
@@ -126,7 +131,7 @@ def validate_expert_manifest(document: object) -> None:
     _artifact_hash(document)
     _strings(document["supported_task_categories"], "supported_task_categories", True)
     _strings(document["runtime_requirements"], "runtime_requirements", True)
-    if document["version"] == 2:
+    if document["version"] >= 2:
         _capabilities(document["capabilities"])
     _lineage(document["lineage"])
     _validation(document["validation"])
@@ -158,6 +163,21 @@ def expert_is_usable(path: str | Path) -> bool:
         return False
 
 
+def validate_expert_output(path: str | Path, output: object) -> None:
+    """Validate one local expert output against its declared version 3 contract."""
+    manifest_path = Path(path)
+    document = load_expert_manifest(manifest_path)
+    if document["version"] < 3:
+        raise ExpertManifestError(
+            "expert manifest does not declare an output_schema_ref"
+        )
+    schema = _output_schema_ref(document, manifest_path.parent)
+    try:
+        Draft202012Validator(cast(Any, schema)).validate(output)
+    except (ValidationError, Unresolvable) as exc:
+        raise ExpertManifestError("output does not satisfy output_schema_ref") from exc
+
+
 def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
     """Require receipt evidence to bind the manifest and validation result."""
     try:
@@ -171,7 +191,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         "receipt_version": RECEIPT_VERSION,
         "name": document["name"],
         **(
-            {"manifest_id": document["manifest_id"]} if document["version"] == 2 else {}
+            {"manifest_id": document["manifest_id"]} if document["version"] >= 2 else {}
         ),
         **{field: document[field] for field in _identity_fields(document)},
         "creator_node_id": document["creator_node_id"],
@@ -179,7 +199,20 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
         "artifact_hash": document["artifact_hash"],
         **(
             {"input_schema_ref": document["input_schema_ref"]}
-            if document["version"] == 2
+            if document["version"] >= 2
+            else {}
+        ),
+        **(
+            {"output_schema_ref": document["output_schema_ref"]}
+            if document["version"] == 3
+            else {}
+        ),
+        **(
+            {
+                "lineage": document["lineage"],
+                "contribution_attribution": document["contribution_attribution"],
+            }
+            if document["version"] == 3
             else {}
         ),
         "validated_at": validation["last_validated_at"],
@@ -203,7 +236,13 @@ def _top_level_object(value: object) -> dict[str, Any]:
             "expert manifest is missing required field(s): version"
         )
     _manifest_version(value["version"])
-    allowed = _V2_TOP_LEVEL if value["version"] == 2 else _V1_TOP_LEVEL
+    allowed = (
+        _V3_TOP_LEVEL
+        if value["version"] == 3
+        else _V2_TOP_LEVEL
+        if value["version"] == 2
+        else _V1_TOP_LEVEL
+    )
     required = allowed - {"model_id", "expert_id"}
     fields = set(value)
     missing = required - fields
@@ -237,8 +276,8 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value not in {1, MANIFEST_SCHEMA_VERSION}:
-        raise ExpertManifestError("version must be 1 or 2")
+    if type(value) is not int or value not in {1, 2, MANIFEST_SCHEMA_VERSION}:
+        raise ExpertManifestError("version must be 1, 2, or 3")
 
 
 def _string(value: object, context: str) -> None:
@@ -410,6 +449,66 @@ def _input_schema_ref(document: dict[str, Any], manifest_root: Path) -> None:
         raise ExpertManifestError(
             "input_schema_ref must contain a valid JSON Schema draft 2020-12 schema"
         ) from exc
+
+
+def _output_schema_ref(
+    document: dict[str, Any], manifest_root: Path
+) -> dict[str, Any] | None:
+    """Require a readable local JSON Schema for each version 3 expert output."""
+    if document["version"] < 3:
+        return None
+    reference = document["output_schema_ref"]
+    try:
+        contents = _local_reference_path(manifest_root, cast(str, reference)).read_text(
+            encoding="utf-8"
+        )
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ExpertManifestError(
+            "output_schema_ref must name a readable local JSON Schema"
+        ) from exc
+    try:
+        schema = json.loads(contents)
+    except json.JSONDecodeError as exc:
+        raise ExpertManifestError(
+            "output_schema_ref must contain readable JSON"
+        ) from exc
+    if not isinstance(schema, dict) or schema.get("$schema") != (
+        "https://json-schema.org/draft/2020-12/schema"
+    ):
+        raise ExpertManifestError(
+            "output_schema_ref must point to a JSON Schema draft 2020-12 file"
+        )
+    schema_type = schema.get("type")
+    if not isinstance(schema_type, str) or schema_type not in _JSON_SCHEMA_TYPES:
+        raise ExpertManifestError(
+            "output_schema_ref schema must declare a JSON output type"
+        )
+    _require_local_schema_refs(schema)
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        raise ExpertManifestError(
+            "output_schema_ref must contain a valid JSON Schema draft 2020-12 schema"
+        ) from exc
+    return cast(dict[str, Any], schema)
+
+
+def _require_local_schema_refs(value: object) -> None:
+    """Reject schema references that could require non-local resolution."""
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if (
+                key in {"$ref", "$dynamicRef"}
+                and isinstance(nested, str)
+                and not nested.startswith("#")
+            ):
+                raise ExpertManifestError(
+                    "output_schema_ref schema references must be local fragments"
+                )
+            _require_local_schema_refs(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            _require_local_schema_refs(nested)
 
 
 def _lineage(value: object) -> None:
