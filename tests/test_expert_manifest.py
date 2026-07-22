@@ -737,6 +737,34 @@ class ExpertManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ExpertManifestError, "invalid UTF-8"):
                 load_expert_manifest(path)
 
+    def test_creator_node_id_is_required_before_local_manifest_use(self) -> None:
+        missing = self._sample()
+        missing.pop("creator_node_id")
+        with self.assertRaisesRegex(
+            ExpertManifestError,
+            "missing required field\\(s\\): creator_node_id",
+        ):
+            validate_expert_manifest(missing)
+
+        for value, message in (
+            (None, "creator_node_id must be a non-empty whitespace-free string"),
+            ("", "creator_node_id must be a non-empty whitespace-free string"),
+            (" \t ", "creator_node_id must be a non-empty whitespace-free string"),
+            ("placeholder", "creator_node_id must name a concrete creator node"),
+            ("node-placeholder", "creator_node_id must name a concrete creator node"),
+            ("unknown", "creator_node_id must name a concrete creator node"),
+            ("unset", "creator_node_id must name a concrete creator node"),
+        ):
+            with self.subTest(value=value):
+                document = self._sample()
+                document["creator_node_id"] = value
+                with self.assertRaisesRegex(ExpertManifestError, message):
+                    validate_expert_manifest(document)
+
+        valid = self._sample()
+        validate_expert_manifest(valid)
+        self.assertEqual(valid["creator_node_id"], "node-local-fixture")
+
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
             ("version", "1", "version must be 1, 2, 3, 4, 5, 6, or 7"),

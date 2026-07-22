@@ -17,6 +17,10 @@ MANIFEST_SCHEMA_VERSION = 7
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
+_PLACEHOLDER_CREATOR_NODE_ID = re.compile(
+    r"(?:node[-_.]?)?(?:placeholder|unknown|unset|none|null)(?:[-_.]?(?:node|id|node[-_.]?id))?\Z",
+    re.IGNORECASE,
+)
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
@@ -131,8 +135,8 @@ def validate_expert_manifest(document: object) -> None:
     if document["version"] >= 3:
         _reference(document["output_schema_ref"], "output_schema_ref")
     _identity(document)
-    for field in ("creator_node_id", "created_at"):
-        _string(document[field], field)
+    _creator_node_id(document["creator_node_id"])
+    _string(document["created_at"], "created_at")
     if document["version"] >= 4:
         for field in ("author", "owner", "attribution_notes"):
             _text(document[field], field)
@@ -348,6 +352,15 @@ def _string(value: object, context: str) -> None:
     ):
         raise ExpertManifestError(
             f"{context} must be a non-empty whitespace-free string"
+        )
+
+
+def _creator_node_id(value: object) -> None:
+    """Require a concrete local creator identity without constraining its future format."""
+    _string(value, "creator_node_id")
+    if _PLACEHOLDER_CREATOR_NODE_ID.fullmatch(cast(str, value)):
+        raise ExpertManifestError(
+            "creator_node_id must name a concrete creator node, not a placeholder"
         )
 
 
