@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "manifest_id": "local-echo-fixture-manifest-v0",
   "expert_id": "local-echo-fixture-v0",
   "name": "Local Echo Fixture Expert",
@@ -45,6 +45,7 @@
     "derived_artifact_refs": []
   },
   "training_lineage": [],
+  "validation_history": [],
   "validation": {
     "test_command": null,
     "expected_inputs_ref": null,

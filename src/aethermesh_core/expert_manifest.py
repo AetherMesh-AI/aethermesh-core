@@ -1,4 +1,4 @@
-"""Small, local-only version 1 through 5 model/expert manifest validation."""
+"""Small, local-only version 1 through 6 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from referencing.exceptions import Unresolvable
 
-MANIFEST_SCHEMA_VERSION = 5
+MANIFEST_SCHEMA_VERSION = 6
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
@@ -94,6 +94,7 @@ _V4_TOP_LEVEL = _V3_TOP_LEVEL | {
     "attribution_notes",
 }
 _V5_TOP_LEVEL = _V4_TOP_LEVEL | {"training_lineage"}
+_V6_TOP_LEVEL = _V5_TOP_LEVEL | {"validation_history"}
 
 
 class ExpertManifestError(ValueError):
@@ -136,6 +137,8 @@ def validate_expert_manifest(document: object) -> None:
             _text(document[field], field)
     if document["version"] >= 5:
         _training_lineage(document["training_lineage"])
+    if document["version"] >= 6:
+        _validation_history(document["validation_history"])
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -240,6 +243,11 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
             if document["version"] >= 5
             else {}
         ),
+        **(
+            {"validation_history": document["validation_history"]}
+            if document["version"] >= 6
+            else {}
+        ),
         "validated_at": validation["last_validated_at"],
         "validator_node_id": validation["validator_node_id"],
         "status": validation["status"],
@@ -262,7 +270,9 @@ def _top_level_object(value: object) -> dict[str, Any]:
         )
     _manifest_version(value["version"])
     allowed = (
-        _V5_TOP_LEVEL
+        _V6_TOP_LEVEL
+        if value["version"] == 6
+        else _V5_TOP_LEVEL
         if value["version"] == 5
         else _V4_TOP_LEVEL
         if value["version"] == 4
@@ -305,8 +315,8 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value not in {1, 2, 3, 4, MANIFEST_SCHEMA_VERSION}:
-        raise ExpertManifestError("version must be 1, 2, 3, 4, or 5")
+    if type(value) is not int or value not in {1, 2, 3, 4, 5, MANIFEST_SCHEMA_VERSION}:
+        raise ExpertManifestError("version must be 1, 2, 3, 4, 5, or 6")
 
 
 def _string(value: object, context: str) -> None:
@@ -603,6 +613,12 @@ def _training_lineage(value: object) -> None:
             raise ExpertManifestError(
                 f"{context}.sha256 must be a lowercase sha256 content hash"
             )
+
+
+def _validation_history(value: object) -> None:
+    """Reserve an evidence-only append point without treating it as network trust."""
+    if not isinstance(value, list):
+        raise ExpertManifestError("validation_history must be a list")
 
 
 def _capabilities(value: object) -> None:

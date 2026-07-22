@@ -26,7 +26,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
-        self.assertEqual(document["version"], 5)
+        self.assertEqual(document["version"], 6)
         self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
@@ -40,12 +40,13 @@ class ExpertManifestTests(unittest.TestCase):
         )
         self.assertEqual(document["validation"]["receipt_path"], None)
         self.assertEqual(document["training_lineage"], [])
+        self.assertEqual(document["validation_history"], [])
         self.assertEqual(
             document["capabilities"][0]["validation"]["status"], "unvalidated"
         )
         self.assertFalse(expert_is_usable(SAMPLE))
 
-    def test_save_and_load_preserve_lineage_attribution_and_training_lineage(
+    def test_save_and_load_preserve_provenance_and_validation_history(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -57,6 +58,7 @@ class ExpertManifestTests(unittest.TestCase):
 
         self.assertEqual(handoff["lineage"], original["lineage"])
         self.assertEqual(handoff["training_lineage"], original["training_lineage"])
+        self.assertEqual(handoff["validation_history"], original["validation_history"])
         self.assertEqual(
             handoff["contribution_attribution"], original["contribution_attribution"]
         )
@@ -71,10 +73,31 @@ class ExpertManifestTests(unittest.TestCase):
         validate_expert_manifest(document)
 
         document.pop("training_lineage")
+        document.pop("validation_history")
         with self.assertRaisesRegex(
             ExpertManifestError, "missing required field\\(s\\): training_lineage"
         ):
             validate_expert_manifest(document)
+
+    def test_validation_history_is_required_and_accepts_empty_v0_list(self) -> None:
+        document = self._sample()
+        self.assertEqual(document["validation_history"], [])
+        validate_expert_manifest(document)
+
+        document.pop("validation_history")
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): validation_history"
+        ):
+            validate_expert_manifest(document)
+
+        for value in (None, "not-an-array"):
+            with self.subTest(value=value):
+                document = self._sample()
+                document["validation_history"] = value
+                with self.assertRaisesRegex(
+                    ExpertManifestError, "validation_history must be a list"
+                ):
+                    validate_expert_manifest(document)
 
     def test_training_lineage_entries_require_verified_local_hashes(self) -> None:
         document = self._sample()
@@ -93,6 +116,15 @@ class ExpertManifestTests(unittest.TestCase):
             "training_lineage\\[0\\].sha256 must be a lowercase sha256 content hash",
         ):
             validate_expert_manifest(document)
+
+    def test_version_5_manifest_remains_readable_without_validation_history(
+        self,
+    ) -> None:
+        document = self._sample()
+        document["version"] = 5
+        document.pop("validation_history")
+
+        validate_expert_manifest(document)
 
     def test_capability_metadata_requires_complete_evidence_or_unvalidated_status(
         self,
@@ -141,6 +173,7 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("owner")
         document.pop("attribution_notes")
         document.pop("training_lineage")
+        document.pop("validation_history")
         document["validation"].update(
             {
                 "status": "passed",
@@ -192,6 +225,7 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("owner")
         document.pop("attribution_notes")
         document.pop("training_lineage")
+        document.pop("validation_history")
         document["validation"].update(
             {
                 "status": "passed",
@@ -234,6 +268,7 @@ class ExpertManifestTests(unittest.TestCase):
         for field in ("author", "owner", "attribution_notes"):
             document.pop(field)
         document.pop("training_lineage")
+        document.pop("validation_history")
         document["validation"].update(
             {
                 "status": "passed",
@@ -512,6 +547,7 @@ class ExpertManifestTests(unittest.TestCase):
             "output_schema_ref": document["output_schema_ref"],
             "lineage": document["lineage"],
             "training_lineage": document["training_lineage"],
+            "validation_history": document["validation_history"],
             "contribution_attribution": document["contribution_attribution"],
             "validated_at": validation["last_validated_at"],
             "validator_node_id": validation["validator_node_id"],
@@ -623,9 +659,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1, 2, 3, 4, or 5"),
-            ("version", 6, "version must be 1, 2, 3, 4, or 5"),
-            ("version", True, "version must be 1, 2, 3, 4, or 5"),
+            ("version", "1", "version must be 1, 2, 3, 4, 5, or 6"),
+            ("version", 7, "version must be 1, 2, 3, 4, 5, or 6"),
+            ("version", True, "version must be 1, 2, 3, 4, 5, or 6"),
             (
                 "expert_id",
                 "",
@@ -810,6 +846,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "output_schema_ref": document["output_schema_ref"],
                 "lineage": document["lineage"],
                 "training_lineage": document["training_lineage"],
+                "validation_history": document["validation_history"],
                 "contribution_attribution": document["contribution_attribution"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
