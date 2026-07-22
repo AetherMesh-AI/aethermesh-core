@@ -76,6 +76,19 @@ class ExpertManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ExpertManifestError, "must match artifact.sha256"):
             validate_expert_manifest(document)
 
+    def test_model_entry_cannot_use_non_model_placeholder(self) -> None:
+        document = self._sample()
+        document["model_id"] = "local-echo-model-v0"
+        document["artifact"] = {"reference": "local-echo-interface-v0", "sha256": None}
+        document["artifact_hash"] = deterministic_non_model_artifact_placeholder(
+            document
+        )
+
+        with self.assertRaisesRegex(
+            ExpertManifestError, "non-model expert placeholder"
+        ):
+            validate_expert_manifest(document)
+
     def test_concrete_artifact_content_hash_changes_only_with_content(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact = Path(temp_dir) / "worker.py"

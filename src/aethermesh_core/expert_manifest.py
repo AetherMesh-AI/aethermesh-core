@@ -259,12 +259,14 @@ def _artifact_hash(document: dict[str, Any]) -> None:
         return
     expected = deterministic_non_model_artifact_placeholder(document)
     if (
-        artifact["sha256"] is not None
+        "model_id" in document
+        or artifact["sha256"] is not None
         or artifact_hash != expected
         or not _PLACEHOLDER_HASH.fullmatch(str(artifact_hash))
     ):
         raise ExpertManifestError(
-            "artifact_hash must be a concrete sha256 hash or its deterministic placeholder"
+            "artifact_hash must be a concrete sha256 hash or a deterministic "
+            "non-model expert placeholder"
         )
 
 
