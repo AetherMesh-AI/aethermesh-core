@@ -482,6 +482,7 @@ def _output_schema_ref(
         raise ExpertManifestError(
             "output_schema_ref schema must declare a JSON output type"
         )
+    _require_local_schema_refs(schema)
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
@@ -489,6 +490,24 @@ def _output_schema_ref(
             "output_schema_ref must contain a valid JSON Schema draft 2020-12 schema"
         ) from exc
     return cast(dict[str, Any], schema)
+
+
+def _require_local_schema_refs(value: object) -> None:
+    """Reject schema references that could require non-local resolution."""
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            if (
+                key in {"$ref", "$dynamicRef"}
+                and isinstance(nested, str)
+                and not nested.startswith("#")
+            ):
+                raise ExpertManifestError(
+                    "output_schema_ref schema references must be local fragments"
+                )
+            _require_local_schema_refs(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            _require_local_schema_refs(nested)
 
 
 def _lineage(value: object) -> None:

@@ -359,6 +359,28 @@ class ExpertManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ExpertManifestError, "JSON output type"):
                 load_expert_manifest(path)
 
+            for ref_keyword in ("$ref", "$dynamicRef"):
+                with self.subTest(ref_keyword=ref_keyword):
+                    schema.write_text(
+                        json.dumps(
+                            {
+                                "$schema": (
+                                    "https://json-schema.org/draft/2020-12/schema"
+                                ),
+                                "type": "string",
+                                "examples": [],
+                                "allOf": [
+                                    {ref_keyword: "https://example.com/output.json"}
+                                ],
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(
+                        ExpertManifestError, "references must be local fragments"
+                    ):
+                        load_expert_manifest(path)
+
     def test_output_schema_validates_local_expert_output(self) -> None:
         validate_expert_output(SAMPLE, "echoed local value")
         with self.assertRaisesRegex(
