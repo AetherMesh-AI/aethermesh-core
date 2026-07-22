@@ -2535,6 +2535,88 @@ class RuntimeServiceTests(unittest.TestCase):
             )
             self.assertEqual(report_path.read_bytes(), report_before_read)
 
+    def test_local_job_attribution_trace_is_validation_gated_and_fails_closed(
+        self,
+    ) -> None:
+        request, _expected_output = _valid_local_work_fixture()
+        request["creator_node_id"] = "creator-byte-preserved"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            service = NodeRuntimeService.from_home(root)
+            submission = service.submit_local_job(request)
+            service.execute_submitted_local_job(
+                submission["job_id"], "worker-local-fixture"
+            )
+            evidence_before = {
+                path: path.read_bytes() for path in (root / "data").rglob("*.json")
+            }
+
+            trace = service.trace_local_job_attribution(submission["job_id"])
+
+            self.assertEqual(
+                trace["trace_scope"], "local-only-validation-gated-attribution"
+            )
+            self.assertEqual(
+                [item["record_type"] for item in trace["chain"]],
+                [
+                    "job",
+                    "result",
+                    "validation_receipt",
+                    "contribution",
+                    "manifest",
+                    "creator_node",
+                ],
+            )
+            job, result, receipt, contribution, manifest, creator = trace["chain"]
+            self.assertEqual(job["result_id"], result["result_id"])
+            self.assertEqual(
+                result["validation_receipt_id"], receipt["validation_receipt_id"]
+            )
+            self.assertEqual(
+                receipt["contribution_id"], contribution["contribution_id"]
+            )
+            self.assertEqual(contribution["manifest_ref"], manifest["manifest_ref"])
+            self.assertEqual(creator["creator_node_id"], request["creator_node_id"])
+            self.assertEqual(
+                evidence_before,
+                {path: path.read_bytes() for path in (root / "data").rglob("*.json")},
+            )
+
+            api = create_app(service)
+
+            async def fetch_trace() -> httpx.Response:
+                transport = httpx.ASGITransport(app=api)
+                async with httpx.AsyncClient(
+                    transport=transport, base_url="http://testserver"
+                ) as client:
+                    return await client.get(f"/api/jobs/{submission['job_id']}/trace")
+
+            response = asyncio.run(fetch_trace())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), trace)
+
+            receipt_path = (
+                root
+                / "data"
+                / "job-validation-receipts"
+                / f"{submission['job_id']}.json"
+            )
+            stored_receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            stored_receipt["manifest_ref"] = "data/job-submissions/other.json"
+            receipt_path.write_text(json.dumps(stored_receipt), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeServiceError, "trace validation receipt"
+            ):
+                service.trace_local_job_attribution(submission["job_id"])
+            failed_response = asyncio.run(fetch_trace())
+            self.assertEqual(failed_response.status_code, 400)
+            self.assertEqual(
+                failed_response.json()["error"]["code"], "TRACE_LINEAGE_FAILURE"
+            )
+            receipt_path.unlink()
+            with self.assertRaisesRegex(RuntimeServiceError, "receipt not found"):
+                service.trace_local_job_attribution(submission["job_id"])
+
     def test_execution_writes_a_provenanced_result_report_only_after_runner_finishes(
         self,
     ) -> None:

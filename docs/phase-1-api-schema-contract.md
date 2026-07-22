@@ -23,7 +23,7 @@ Every HTTP failure from the local API uses this stable envelope. Successful resp
 
 `request_id` is a fresh local trace identifier for correlating a caller response with local process logs. `error.details` is deliberately an empty object in version 1: API failures must not return exception text, stack traces, creator node IDs, manifests, receipts, lineage records, or contribution-attribution data. Local logs retain the original diagnostic.
 
-The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 route lookup), `MISSING_MANIFEST` (404), `VALIDATION_FAILURE` (400 or 404 when evidence is absent), `LINEAGE_LOOKUP_FAILURE` (400), `CONTRIBUTION_ATTRIBUTION_FAILURE` (400), and `INTERNAL_ERROR` (500). Callers should test `error.code` rather than response messages or log text.
+The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 route lookup), `MISSING_MANIFEST` (404), `VALIDATION_FAILURE` (400 or 404 when evidence is absent), `LINEAGE_LOOKUP_FAILURE` (400), `CONTRIBUTION_ATTRIBUTION_FAILURE` (400), `TRACE_LINEAGE_FAILURE` (400), and `INTERNAL_ERROR` (500). Callers should test `error.code` rather than response messages or log text.
 
 ## Route index
 
@@ -32,6 +32,7 @@ The current stable codes are `INVALID_INPUT` (400 or 405), `NOT_FOUND` (404 rout
 | `GET /health`, `/status`, `/api/status`, `/version`, `/node`, `/api/node`, `/peers`, `/api/peers`, `/api/jobs`, `/capabilities`, `/api/capabilities`, `/api/model-manifests`, `/api/package`, `/api/network`, `/logs`, `/api/logs`, `/api/events`, `/`, `/shutdown`, `/restart` | None, except local control signal posts | Current local status/control shape described in the API boundary; none writes provenance. |
 | `POST /api/jobs` | Local Job Submission v1 | Local Job Submission Acceptance v1 |
 | `GET /api/jobs/{job_id}` | Required path `job_id` | Local Job Status v1 artifact projection |
+| `GET /api/jobs/{job_id}/trace` | Required path `job_id` | Local Job Attribution Trace v1 |
 | `GET /api/validation-receipts` | None to list receipt metadata; legacy detail lookup accepts exactly one of `receipt_id`, `work_id`, or `latest=true` | Local Validation Receipt List v1 or Local Validation Receipt v5 |
 | `GET /api/validation-receipts/{receipt_id}` | Required stable local receipt ID | Local Validation Receipt v5 |
 | `GET /api/contributions` | None | Local Contribution Lookup v1 |
@@ -74,6 +75,8 @@ A known submission response includes `schema_version` (`1`), `job_id`, `status`,
 The only local job states are: `created` (a submission manifest and initial local record exist), `queued` (the created record is ready for one local execution attempt), `running` (a worker is executing the queued job), `succeeded` (execution and local validation completed successfully), `failed` (execution or local validation completed unsuccessfully), and `canceled` (the job was stopped locally before a terminal result). Valid transitions are only `created -> queued`, `queued -> running`, `running -> succeeded`, `running -> failed`, and `created`, `queued`, or `running -> canceled`. Terminal `succeeded`, `failed`, and `canceled` jobs cannot be executed or restarted in place; a replacement must be a new job with explicit lineage back to the prior job. Each transition appends a local audit entry before the current status record is updated; manifests and inherited attribution are never overwritten by a transition.
 
 Queued jobs have `null` worker/result/validation evidence. Completed jobs preserve a validation receipt reference and validation-gated attribution; a receipt is local evidence, not consensus. A well-formed but unknown local job ID returns `schema_version`, `job_id`, `status: not_found`, and `error`; malformed path IDs are rejected as invalid input.
+
+`GET /api/jobs/{job_id}/trace` is a read-only local evidence join. Local Job Attribution Trace v1 returns `schema_version: 1`, `trace_scope: local-only-validation-gated-attribution`, the requested `job_id`, and an ordered `chain` containing job, result, validation-receipt, contribution, manifest, and creator-node records. It succeeds only for an accepted, passed local validation receipt whose persisted result hash, manifest reference and hash, creator ID, and contribution attribution agree with the linked local artifacts. Missing or inconsistent links fail closed; the endpoint does not create contribution evidence or imply network consensus.
 
 Example completed projection (dynamic IDs and timestamps omitted):
 
