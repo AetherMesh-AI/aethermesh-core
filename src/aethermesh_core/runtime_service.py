@@ -1987,6 +1987,132 @@ class NodeRuntimeService:
             ],
         }
 
+    def trace_local_job_attribution(self, job_id: str) -> dict[str, Any]:
+        """Return one validation-gated local job attribution chain.
+
+        This is an inspection-only join over persisted evidence. Every link is
+        checked directly; attribution is never inferred from loose metadata.
+        """
+        if not self._is_local_job_id(job_id):
+            raise RuntimeServiceError("job_id must be a local job ID")
+        manifest_ref = f"data/job-submissions/{job_id}.json"
+        manifest_path = self.paths.home / manifest_ref
+        if not manifest_path.exists():
+            raise RuntimeServiceError("trace missing required local job manifest")
+        manifest = self._load_local_job_document(
+            manifest_path, "job submission manifest"
+        )
+        manifest_job = manifest.get("job")
+        creator_node_id = manifest.get("creator_node_id")
+        if (
+            not isinstance(manifest_job, dict)
+            or manifest_job.get("job_id") != job_id
+            or not isinstance(creator_node_id, str)
+            or not creator_node_id
+        ):
+            raise RuntimeServiceError("trace has invalid local job manifest linkage")
+
+        result = self.get_local_job_result(job_id)
+        try:
+            receipt = self.get_local_validation_receipt(work_id=job_id)
+        except ValidationReceiptNotFoundError:
+            raise
+        except RuntimeServiceError as exc:
+            raise RuntimeServiceError(
+                "trace validation receipt is missing or has invalid lineage evidence"
+            ) from exc
+        status_path = self._job_status_path(job_id)
+        if not status_path.exists():
+            raise RuntimeServiceError("trace missing required local job status")
+        status = self._load_local_job_document(status_path, "job status record")
+        contribution = status.get("contribution_attribution")
+        expected_receipt_id = self._receipt_id_for_job(job_id)
+        expected_result_id = f"local-result-{job_id}"
+        manifest_id = canonical_json_hash(manifest, prefix="sha256:")
+        contribution_id = f"local-contribution-{job_id}"
+
+        if receipt["status"] != "accepted" or receipt["validation_status"] != "passed":
+            raise RuntimeServiceError(
+                "trace requires an accepted passed validation receipt"
+            )
+        if (
+            result.get("result_id") != expected_result_id
+            or result.get("job_id") != job_id
+            or result.get("validation_receipt_id") != expected_receipt_id
+            or result.get("references", {}).get("validation_receipt_ids")
+            != [expected_receipt_id]
+            or result.get("manifest_id") != manifest_id
+            or result.get("references", {}).get("manifest_hash") != manifest_id
+            or result.get("creator_node_id") != creator_node_id
+        ):
+            raise RuntimeServiceError(
+                "trace result does not match job manifest lineage"
+            )
+        if (
+            receipt["receipt_id"] != expected_receipt_id
+            or receipt["job_id"] != job_id
+            or receipt["manifest_ref"] != manifest_ref
+            or receipt["result_hash"] != result.get("result_hash")
+            or receipt["creator_node_id"] != creator_node_id
+        ):
+            raise RuntimeServiceError(
+                "trace validation receipt does not match result lineage"
+            )
+        if (
+            not isinstance(contribution, dict)
+            or contribution.get("job_id") != job_id
+            or contribution.get("creator_node_id") != creator_node_id
+            or contribution != receipt["contribution_attribution"]
+        ):
+            raise RuntimeServiceError(
+                "trace contribution does not match validation receipt"
+            )
+
+        return {
+            "schema_version": 1,
+            "trace_scope": "local-only-validation-gated-attribution",
+            "job_id": job_id,
+            "chain": [
+                {
+                    "record_type": "job",
+                    "job_id": job_id,
+                    "result_id": expected_result_id,
+                    "manifest_ref": manifest_ref,
+                },
+                {
+                    "record_type": "result",
+                    "result_id": expected_result_id,
+                    "job_id": result["job_id"],
+                    "validation_receipt_id": result["validation_receipt_id"],
+                    "manifest_id": result["manifest_id"],
+                },
+                {
+                    "record_type": "validation_receipt",
+                    "validation_receipt_id": receipt["receipt_id"],
+                    "job_id": receipt["job_id"],
+                    "result_id": expected_result_id,
+                    "manifest_ref": receipt["manifest_ref"],
+                    "contribution_id": contribution_id,
+                },
+                {
+                    "record_type": "contribution",
+                    "contribution_id": contribution_id,
+                    "job_id": contribution["job_id"],
+                    "validation_receipt_id": expected_receipt_id,
+                    "manifest_ref": manifest_ref,
+                    "creator_node_id": contribution["creator_node_id"],
+                },
+                {
+                    "record_type": "manifest",
+                    "manifest_id": manifest_id,
+                    "manifest_ref": manifest_ref,
+                    "job_id": manifest_job["job_id"],
+                    "creator_node_id": creator_node_id,
+                },
+                {"record_type": "creator_node", "creator_node_id": creator_node_id},
+            ],
+        }
+
     @staticmethod
     def _receipt_id_for_job(job_id: str) -> str:
         return f"{VALIDATION_RECEIPT_ID_PREFIX}{job_id}"

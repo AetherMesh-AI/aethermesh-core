@@ -64,6 +64,12 @@ def _runtime_error_code(
             "CONTRIBUTION_ATTRIBUTION_FAILURE",
             "Contribution attribution could not be read.",
         )
+    if "trace" in diagnostic:
+        return (
+            400,
+            "TRACE_LINEAGE_FAILURE",
+            "Local attribution trace evidence is incomplete.",
+        )
     if "lineage" in diagnostic:
         return 400, "LINEAGE_LOOKUP_FAILURE", "Lineage evidence could not be read."
     if "manifest" in diagnostic:
@@ -249,6 +255,12 @@ def create_app(service: NodeRuntimeService | None = None) -> FastAPI:
         """Read one persisted local result report without changing job state."""
 
         return runtime_service.get_local_job_result(job_id)
+
+    @app.get("/api/jobs/{job_id}/trace")
+    def job_attribution_trace(job_id: str) -> dict[str, Any]:
+        """Read one validation-gated local attribution chain without mutation."""
+
+        return runtime_service.trace_local_job_attribution(job_id)
 
     @app.get("/api/result-reports")
     def result_reports() -> dict[str, Any]:
