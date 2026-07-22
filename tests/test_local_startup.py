@@ -119,9 +119,17 @@ class LocalNodeStartupTests(unittest.TestCase):
                 config["paths"]["contribution_attribution"], "contributions"
             )
             receipt = self._load(runtime / str(first["validation_receipt_path"]))
+            second_receipt = self._load(
+                runtime / str(second["validation_receipt_path"])
+            )
             lineage = self._load(runtime / str(first["lineage_path"]))
             manifest = self._load(runtime / str(first["manifest_path"]))
             self.assertEqual(receipt["receipt_type"], "startup_validation")
+            self.assertEqual(receipt["command_invoked"], "start-local-node")
+            self.assertEqual(second_receipt["command_invoked"], "start-local-node")
+            self.assertNotEqual(
+                first["validation_receipt_path"], second["validation_receipt_path"]
+            )
             self.assertEqual(receipt["node_id"], first["node_id"])
             self.assertEqual(receipt["creator_node_id"], first["creator_node_id"])
             self.assertEqual(receipt["manifest_hash"], first["manifest_hash"])
