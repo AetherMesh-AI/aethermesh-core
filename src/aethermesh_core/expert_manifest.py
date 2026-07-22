@@ -1,4 +1,4 @@
-"""Small, local-only version 1 model/expert manifest validation."""
+"""Small, local-only version 1 and 2 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -9,16 +9,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION = 2
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
 _SAFE_REFERENCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z")
 _STATUSES = {"unvalidated", "passed", "failed"}
-_TOP_LEVEL = {
+_V1_TOP_LEVEL = {
     "version",
-    "manifest_id",
     "model_id",
     "expert_id",
     "name",
@@ -28,12 +27,11 @@ _TOP_LEVEL = {
     "artifact",
     "supported_task_categories",
     "runtime_requirements",
-    "capabilities",
     "lineage",
     "validation",
     "contribution_attribution",
 }
-_REQUIRED_TOP_LEVEL = _TOP_LEVEL - {"model_id", "expert_id"}
+_V2_TOP_LEVEL = _V1_TOP_LEVEL | {"manifest_id", "capabilities"}
 
 
 class ExpertManifestError(ValueError):
@@ -41,7 +39,7 @@ class ExpertManifestError(ValueError):
 
 
 def load_expert_manifest(path: str | Path) -> dict[str, Any]:
-    """Load and structurally validate one hand-authored version 1 expert manifest."""
+    """Load and structurally validate one hand-authored expert manifest."""
     try:
         document = json.loads(Path(path).read_text(encoding="utf-8"))
     except OSError as exc:
@@ -59,10 +57,10 @@ def load_expert_manifest(path: str | Path) -> dict[str, Any]:
 
 
 def validate_expert_manifest(document: object) -> None:
-    """Validate required version 1 fields without claiming network trust or capability."""
+    """Validate required manifest fields without claiming network trust or capability."""
     document = _top_level_object(document)
-    _manifest_version(document["version"])
-    _string(document["manifest_id"], "manifest_id")
+    if document["version"] == 2:
+        _string(document["manifest_id"], "manifest_id")
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
@@ -72,7 +70,8 @@ def validate_expert_manifest(document: object) -> None:
     _artifact_hash(document)
     _strings(document["supported_task_categories"], "supported_task_categories", True)
     _strings(document["runtime_requirements"], "runtime_requirements", True)
-    _capabilities(document["capabilities"])
+    if document["version"] == 2:
+        _capabilities(document["capabilities"])
     _lineage(document["lineage"])
     _validation(document["validation"])
     _attribution(document["contribution_attribution"], document["creator_node_id"])
@@ -115,6 +114,9 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
     return receipt == {
         "receipt_version": RECEIPT_VERSION,
         "name": document["name"],
+        **(
+            {"manifest_id": document["manifest_id"]} if document["version"] == 2 else {}
+        ),
         **{field: document[field] for field in _identity_fields(document)},
         "creator_node_id": document["creator_node_id"],
         "created_at": document["created_at"],
@@ -135,15 +137,22 @@ def _object(value: object, keys: set[str], context: str) -> dict[str, Any]:
 def _top_level_object(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ExpertManifestError("expert manifest must be a JSON object")
+    if "version" not in value:
+        raise ExpertManifestError(
+            "expert manifest is missing required field(s): version"
+        )
+    _manifest_version(value["version"])
+    allowed = _V2_TOP_LEVEL if value["version"] == 2 else _V1_TOP_LEVEL
+    required = allowed - {"model_id", "expert_id"}
     fields = set(value)
-    missing = _REQUIRED_TOP_LEVEL - fields
+    missing = required - fields
     if missing:
         raise ExpertManifestError(
             "expert manifest is missing required field(s): "
             + ", ".join(sorted(missing))
         )
-    if not fields <= _TOP_LEVEL:
-        listed = ", ".join(sorted(_TOP_LEVEL))
+    if not fields <= allowed:
+        listed = ", ".join(sorted(allowed))
         raise ExpertManifestError(
             f"expert manifest must contain exactly these allowed fields: {listed}"
         )
@@ -167,10 +176,8 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value != MANIFEST_SCHEMA_VERSION:
-        raise ExpertManifestError(
-            f"version must be {MANIFEST_SCHEMA_VERSION} (the integer for this manifest format)"
-        )
+    if type(value) is not int or value not in {1, MANIFEST_SCHEMA_VERSION}:
+        raise ExpertManifestError("version must be 1 or 2")
 
 
 def _string(value: object, context: str) -> None:

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "manifest_id": "local-echo-fixture-manifest-v0",
   "expert_id": "local-echo-fixture-v0",
   "name": "Local Echo Fixture Expert",

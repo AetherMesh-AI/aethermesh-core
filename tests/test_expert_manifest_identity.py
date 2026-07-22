@@ -87,6 +87,7 @@ class ExpertManifestIdentityTests(unittest.TestCase):
             receipt = {
                 "receipt_version": RECEIPT_VERSION,
                 "name": document["name"],
+                "manifest_id": document["manifest_id"],
                 "model_id": document["model_id"],
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],

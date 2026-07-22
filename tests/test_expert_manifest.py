@@ -24,7 +24,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
-        self.assertEqual(document["version"], 1)
+        self.assertEqual(document["version"], 2)
         self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
@@ -87,6 +87,14 @@ class ExpertManifestTests(unittest.TestCase):
         document["capabilities"][0]["validation"]["local_test_name"] = "test_local_echo"
         with self.assertRaisesRegex(ExpertManifestError, "when unvalidated"):
             validate_expert_manifest(document)
+
+    def test_version_1_manifest_remains_readable_without_version_2_fields(self) -> None:
+        document = self._sample()
+        document["version"] = 1
+        document.pop("manifest_id")
+        document.pop("capabilities")
+
+        validate_expert_manifest(document)
 
     def test_non_model_placeholder_is_repeatable_and_binds_explicit_identity(
         self,
@@ -182,9 +190,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1"),
-            ("version", 2, "version must be 1"),
-            ("version", True, "version must be 1"),
+            ("version", "1", "version must be 1 or 2"),
+            ("version", 3, "version must be 1 or 2"),
+            ("version", True, "version must be 1 or 2"),
             (
                 "expert_id",
                 "",
@@ -344,6 +352,7 @@ class ExpertManifestTests(unittest.TestCase):
             receipt_document = {
                 "receipt_version": RECEIPT_VERSION,
                 "name": document["name"],
+                "manifest_id": document["manifest_id"],
                 "expert_id": document["expert_id"],
                 "creator_node_id": document["creator_node_id"],
                 "created_at": document["created_at"],
