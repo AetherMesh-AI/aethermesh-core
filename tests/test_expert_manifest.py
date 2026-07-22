@@ -26,7 +26,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
-        self.assertEqual(document["version"], 4)
+        self.assertEqual(document["version"], 5)
         self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
@@ -39,12 +39,15 @@ class ExpertManifestTests(unittest.TestCase):
             document["output_schema_ref"], "schemas/local-echo-output.schema.json"
         )
         self.assertEqual(document["validation"]["receipt_path"], None)
+        self.assertEqual(document["training_lineage"], [])
         self.assertEqual(
             document["capabilities"][0]["validation"]["status"], "unvalidated"
         )
         self.assertFalse(expert_is_usable(SAMPLE))
 
-    def test_save_and_load_preserve_lineage_and_attribution(self) -> None:
+    def test_save_and_load_preserve_lineage_attribution_and_training_lineage(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             saved = Path(temp_dir) / "manifest.json"
             original = load_expert_manifest(SAMPLE)
@@ -53,6 +56,7 @@ class ExpertManifestTests(unittest.TestCase):
             handoff = load_expert_manifest(saved)
 
         self.assertEqual(handoff["lineage"], original["lineage"])
+        self.assertEqual(handoff["training_lineage"], original["training_lineage"])
         self.assertEqual(
             handoff["contribution_attribution"], original["contribution_attribution"]
         )
@@ -60,6 +64,35 @@ class ExpertManifestTests(unittest.TestCase):
         self.assertEqual(handoff["created_at"], original["created_at"])
         self.assertEqual(handoff["manifest_id"], original["manifest_id"])
         self.assertEqual(handoff["capabilities"], original["capabilities"])
+
+    def test_training_lineage_is_required_and_accepts_empty_v0_list(self) -> None:
+        document = self._sample()
+        self.assertEqual(document["training_lineage"], [])
+        validate_expert_manifest(document)
+
+        document.pop("training_lineage")
+        with self.assertRaisesRegex(
+            ExpertManifestError, "missing required field\\(s\\): training_lineage"
+        ):
+            validate_expert_manifest(document)
+
+    def test_training_lineage_entries_require_verified_local_hashes(self) -> None:
+        document = self._sample()
+        document["training_lineage"] = [
+            {
+                "kind": "weights",
+                "reference": "weights.bin",
+                "sha256": "sha256:" + "0" * 64,
+            }
+        ]
+        validate_expert_manifest(document)
+
+        document["training_lineage"][0]["sha256"] = "sha256:unverified"
+        with self.assertRaisesRegex(
+            ExpertManifestError,
+            "training_lineage\\[0\\].sha256 must be a lowercase sha256 content hash",
+        ):
+            validate_expert_manifest(document)
 
     def test_capability_metadata_requires_complete_evidence_or_unvalidated_status(
         self,
@@ -107,6 +140,7 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("author")
         document.pop("owner")
         document.pop("attribution_notes")
+        document.pop("training_lineage")
         document["validation"].update(
             {
                 "status": "passed",
@@ -157,6 +191,7 @@ class ExpertManifestTests(unittest.TestCase):
         document.pop("author")
         document.pop("owner")
         document.pop("attribution_notes")
+        document.pop("training_lineage")
         document["validation"].update(
             {
                 "status": "passed",
@@ -198,6 +233,7 @@ class ExpertManifestTests(unittest.TestCase):
         document["version"] = 3
         for field in ("author", "owner", "attribution_notes"):
             document.pop(field)
+        document.pop("training_lineage")
         document["validation"].update(
             {
                 "status": "passed",
@@ -475,6 +511,7 @@ class ExpertManifestTests(unittest.TestCase):
             "input_schema_ref": document["input_schema_ref"],
             "output_schema_ref": document["output_schema_ref"],
             "lineage": document["lineage"],
+            "training_lineage": document["training_lineage"],
             "contribution_attribution": document["contribution_attribution"],
             "validated_at": validation["last_validated_at"],
             "validator_node_id": validation["validator_node_id"],
@@ -586,9 +623,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1, 2, 3, or 4"),
-            ("version", 5, "version must be 1, 2, 3, or 4"),
-            ("version", True, "version must be 1, 2, 3, or 4"),
+            ("version", "1", "version must be 1, 2, 3, 4, or 5"),
+            ("version", 6, "version must be 1, 2, 3, 4, or 5"),
+            ("version", True, "version must be 1, 2, 3, 4, or 5"),
             (
                 "expert_id",
                 "",
@@ -772,6 +809,7 @@ class ExpertManifestTests(unittest.TestCase):
                 "input_schema_ref": document["input_schema_ref"],
                 "output_schema_ref": document["output_schema_ref"],
                 "lineage": document["lineage"],
+                "training_lineage": document["training_lineage"],
                 "contribution_attribution": document["contribution_attribution"],
                 "validated_at": validation["last_validated_at"],
                 "validator_node_id": validation["validator_node_id"],
@@ -795,6 +833,9 @@ class ExpertManifestTests(unittest.TestCase):
                 receipt_document["output_schema_ref"], document["output_schema_ref"]
             )
             self.assertEqual(receipt_document["lineage"], document["lineage"])
+            self.assertEqual(
+                receipt_document["training_lineage"], document["training_lineage"]
+            )
             self.assertEqual(
                 receipt_document["contribution_attribution"],
                 document["contribution_attribution"],

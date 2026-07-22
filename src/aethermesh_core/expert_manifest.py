@@ -1,4 +1,4 @@
-"""Small, local-only version 1 through 4 model/expert manifest validation."""
+"""Small, local-only version 1 through 5 model/expert manifest validation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from referencing.exceptions import Unresolvable
 
-MANIFEST_SCHEMA_VERSION = 4
+MANIFEST_SCHEMA_VERSION = 5
 RECEIPT_VERSION = "aethermesh-expert-validation-receipt/v0"
 _HASH = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _PLACEHOLDER_HASH = re.compile(r"placeholder:sha256:[0-9a-f]{64}\Z")
@@ -93,6 +93,7 @@ _V4_TOP_LEVEL = _V3_TOP_LEVEL | {
     "owner",
     "attribution_notes",
 }
+_V5_TOP_LEVEL = _V4_TOP_LEVEL | {"training_lineage"}
 
 
 class ExpertManifestError(ValueError):
@@ -130,9 +131,11 @@ def validate_expert_manifest(document: object) -> None:
     _identity(document)
     for field in ("creator_node_id", "created_at"):
         _string(document[field], field)
-    if document["version"] == 4:
+    if document["version"] >= 4:
         for field in ("author", "owner", "attribution_notes"):
             _text(document[field], field)
+    if document["version"] >= 5:
+        _training_lineage(document["training_lineage"])
     _text(document["name"], "name")
     _timestamp(document["created_at"], "created_at")
     _artifact(document["artifact"])
@@ -210,7 +213,7 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
                 "owner": document["owner"],
                 "attribution_notes": document["attribution_notes"],
             }
-            if document["version"] == 4
+            if document["version"] >= 4
             else {}
         ),
         "artifact_hash": document["artifact_hash"],
@@ -230,6 +233,11 @@ def _receipt_matches_manifest(path: Path, document: dict[str, Any]) -> bool:
                 "contribution_attribution": document["contribution_attribution"],
             }
             if document["version"] >= 3
+            else {}
+        ),
+        **(
+            {"training_lineage": document["training_lineage"]}
+            if document["version"] >= 5
             else {}
         ),
         "validated_at": validation["last_validated_at"],
@@ -254,7 +262,9 @@ def _top_level_object(value: object) -> dict[str, Any]:
         )
     _manifest_version(value["version"])
     allowed = (
-        _V4_TOP_LEVEL
+        _V5_TOP_LEVEL
+        if value["version"] == 5
+        else _V4_TOP_LEVEL
         if value["version"] == 4
         else _V3_TOP_LEVEL
         if value["version"] == 3
@@ -295,8 +305,8 @@ def _identity_fields(document: dict[str, Any]) -> set[str]:
 
 
 def _manifest_version(value: object) -> None:
-    if type(value) is not int or value not in {1, 2, 3, MANIFEST_SCHEMA_VERSION}:
-        raise ExpertManifestError("version must be 1, 2, 3, or 4")
+    if type(value) is not int or value not in {1, 2, 3, 4, MANIFEST_SCHEMA_VERSION}:
+        raise ExpertManifestError("version must be 1, 2, 3, 4, or 5")
 
 
 def _string(value: object, context: str) -> None:
@@ -577,6 +587,22 @@ _LINEAGE = {
     "parent_manifest_ids",
     "derived_artifact_refs",
 }
+_TRAINING_LINEAGE_ENTRY = {"kind", "reference", "sha256"}
+
+
+def _training_lineage(value: object) -> None:
+    """Accept declared, local training inputs without inventing unknown provenance."""
+    if not isinstance(value, list):
+        raise ExpertManifestError("training_lineage must be a list")
+    for index, entry in enumerate(value):
+        context = f"training_lineage[{index}]"
+        entry = _object(entry, _TRAINING_LINEAGE_ENTRY, context)
+        _text(entry["kind"], f"{context}.kind")
+        _reference(entry["reference"], f"{context}.reference")
+        if not isinstance(entry["sha256"], str) or not _HASH.fullmatch(entry["sha256"]):
+            raise ExpertManifestError(
+                f"{context}.sha256 must be a lowercase sha256 content hash"
+            )
 
 
 def _capabilities(value: object) -> None:
