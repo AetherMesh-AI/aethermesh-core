@@ -26,7 +26,7 @@ class ExpertManifestTests(unittest.TestCase):
     def test_sample_parses_and_unvalidated_manifest_is_not_usable(self) -> None:
         document = load_expert_manifest(SAMPLE)
 
-        self.assertEqual(document["version"], 5)
+        self.assertEqual(document["version"], 6)
         self.assertEqual(document["manifest_id"], "local-echo-fixture-manifest-v0")
         self.assertEqual(document["expert_id"], "local-echo-fixture-v0")
         self.assertEqual(document["name"], "Local Echo Fixture Expert")
@@ -116,6 +116,15 @@ class ExpertManifestTests(unittest.TestCase):
             "training_lineage\\[0\\].sha256 must be a lowercase sha256 content hash",
         ):
             validate_expert_manifest(document)
+
+    def test_version_5_manifest_remains_readable_without_validation_history(
+        self,
+    ) -> None:
+        document = self._sample()
+        document["version"] = 5
+        document.pop("validation_history")
+
+        validate_expert_manifest(document)
 
     def test_capability_metadata_requires_complete_evidence_or_unvalidated_status(
         self,
@@ -650,9 +659,9 @@ class ExpertManifestTests(unittest.TestCase):
 
     def test_schema_rejects_invalid_required_values(self) -> None:
         cases = [
-            ("version", "1", "version must be 1, 2, 3, 4, or 5"),
-            ("version", 6, "version must be 1, 2, 3, 4, or 5"),
-            ("version", True, "version must be 1, 2, 3, 4, or 5"),
+            ("version", "1", "version must be 1, 2, 3, 4, 5, or 6"),
+            ("version", 7, "version must be 1, 2, 3, 4, 5, or 6"),
+            ("version", True, "version must be 1, 2, 3, 4, 5, or 6"),
             (
                 "expert_id",
                 "",
