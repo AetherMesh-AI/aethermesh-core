@@ -130,6 +130,33 @@ class JobResultSchemaTests(unittest.TestCase):
                 ):
                     validate_job_result_document(document)
 
+    def test_manifest_ref_is_a_stable_fallback_when_hash_is_unavailable(self) -> None:
+        fallback = copy.deepcopy(self.pending)
+        manifest_ref = (
+            "data/job-submissions/local-job-0123456789abcdef0123456789abcdef.json"
+        )
+        fallback["manifest_id"] = manifest_ref
+        fallback["references"]["manifest_hash"] = None
+        fallback["references"]["manifest_ref"] = manifest_ref
+        fallback["lineage"]["input_manifest_ids"] = [manifest_ref]
+        self.assertIs(validate_job_result_document(fallback), fallback)
+
+        missing_linkage = copy.deepcopy(fallback)
+        missing_linkage["references"]["manifest_ref"] = None
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "exactly one of manifest_hash or manifest_ref"
+        ):
+            validate_job_result_document(missing_linkage)
+
+        mutable_ref = copy.deepcopy(fallback)
+        mutable_ref["manifest_id"] = "draft-work-manifest"
+        mutable_ref["references"]["manifest_ref"] = "draft-work-manifest"
+        mutable_ref["lineage"]["input_manifest_ids"] = ["draft-work-manifest"]
+        with self.assertRaisesRegex(
+            JobResultSchemaError, "immutable local work manifest"
+        ):
+            validate_job_result_document(mutable_ref)
+
     def test_output_payload_requires_one_safe_delivery_mode_for_success(self) -> None:
         missing = copy.deepcopy(self.success)
         missing.pop("output_payload")
